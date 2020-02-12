@@ -8,6 +8,7 @@ using Fumen.Converters;
 
 namespace GenDoublesStaminaCharts
 {
+	// WIP
 	class Program
 	{
 		private const int P1L = 0;
