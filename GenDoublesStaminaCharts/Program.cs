@@ -188,17 +188,75 @@ namespace GenDoublesStaminaCharts
 			Jump
 		}
 
+		private class Step
+		{
+			public MetricPosition Postion { get; set; }
+
+		}
+
+		private enum SingleStepType
+		{
+			Step,
+			HoldStart,
+			HoldEnd,
+			RollStart,
+			RollEnd,
+			Fake,
+			Mine,
+		}
+
+		private enum JumpIndividualStepType
+		{
+			Step,
+			HoldStart,
+			RollStart,
+		}
+
+		private enum JumpType
+		{
+			BothSame,
+			OnlyLeftSame,
+			OnlyRightSame,
+			// TODO: Neither Same? There are some doubles jumps of this type which shouldn't be preserved:
+			// e.g. both middles.
+		}
+
+		private class SingleStep : Step
+		{
+			public bool Left { get; set; }
+			public SingleStepType Type { get; set; }
+			public int LRUIndex { get; set; }
+		}
+
+		private class JumpStep : Step
+		{
+			public JumpType JumpStepType { get; set; }
+			public JumpIndividualStepType LeftStepType { get; set; }
+			public JumpIndividualStepType RightStepType { get; set; }
+		}
 
 		static void Main(string[] args)
 		{
 			var song = Fumen.Converters.SMReader.Load(
-				@"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\hey.sm");
-			Fumen.Converters.SMWriter.Save(song, @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\hey_2.sm");
+				@"C:\Users\perry\Sync\Temp\Hey Sexy Lady (Skrillex Remix)\hey.sm");
+            AddDoublesStaminaCharts(song);
+			Fumen.Converters.SMWriter.Save(song, @"C:\Users\perry\Sync\Temp\Hey Sexy Lady (Skrillex Remix)\hey_2.sm");
 		}
 
 		static List<LaneNote> GetNextSteps(ref int index, List<Event> events)
 		{
 			// ignore mines, keysounds, lifts, etc
+			// sort by hold releases first
+
+			var steps = new List<LaneNote>();
+			while (true)
+			{
+				if (index == events.Count)
+					break;
+
+
+				index++;
+			}
 		}
 
 		static LaneNote AddStep(LaneNote singlesStep, int doublesPosition, Dictionary<int, int> singleHoldLanesToDoublesHoldLanes)
@@ -252,8 +310,15 @@ namespace GenDoublesStaminaCharts
 			// Normal step
 			else
 			{
+				// Step after a jump where the step is not in either lane from the jump
+				// Need to look ahead to see if this is best interpreted as a left foot or right foot
+				if (lastStepType == StepType.Jump)
+				{
+
+				}
+
 				// Last step was with L, try to interpret this as a step with R
-				if (lastStepType == StepType.L)
+				else if (lastStepType == StepType.L)
 				{
 					var nextSinglesPos = singlesPosition.GetNextR(step.Lane);
 					if (null != nextSinglesPos && bCanAddSteps)
@@ -295,6 +360,9 @@ namespace GenDoublesStaminaCharts
 				if (chart.Layers.Count > 0 && chart.Type == SMCommon.ChartType.dance_single.ToString() && chart.NumPlayers == 1 &&
 				    chart.NumInputs == 4)
 				{
+
+
+
 					Chart doublesChart = new Chart();
 					doublesChart.Layers.Add(new Layer());
 					var doublesEvents = doublesChart.Layers[0].Events;
