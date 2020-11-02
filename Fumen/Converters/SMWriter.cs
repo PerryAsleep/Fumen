@@ -399,7 +399,7 @@ namespace Fumen.Converters
 				}
 				else
 				{
-					if(null == rankedCharts[smChartType])
+					if(!rankedCharts.ContainsKey(smChartType))
 						rankedCharts[smChartType] = new List<Chart>();
 					rankedCharts[smChartType].Add(chart);
 				}
