@@ -10,13 +10,9 @@ namespace GenDoublesStaminaCharts
 {
 	public enum GraphArrowState
 	{
-		Free,
-		RResting,
-		RHeld,
-		RRolling,
-		LResting,
-		LHeld,
-		LRolling
+		Resting,
+		Held,
+		Rolling,
 	}
 
 	public class GraphLink : IEquatable<GraphLink>
@@ -28,7 +24,6 @@ namespace GenDoublesStaminaCharts
 				Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>().Count(),
 				Enum.GetValues(typeof(FootAction)).Cast<FootAction>().Count()).GetHashCode();
 		}
-
 
 		public readonly Tuple<SingleStepType, FootAction>[,] Links = new Tuple<SingleStepType, FootAction>[NumFeet, MaxArrowsPerFoot];
 
@@ -78,12 +73,57 @@ namespace GenDoublesStaminaCharts
 
 	public class GraphNode : IEquatable<GraphNode>
 	{
-		public readonly GraphArrowState[] State;
+		public struct FootArrowState
+		{
+			public FootArrowState(int arrow, GraphArrowState state)
+			{
+				Arrow = arrow;
+				State = state;
+			}
+
+			public int Arrow { get; }
+			public GraphArrowState State { get; }
+
+			public override bool Equals(object obj)
+			{
+				if (obj == null)
+					return false;
+				if (obj is FootArrowState f)
+					return Arrow == f.Arrow && State == f.State;
+				return false;
+			}
+
+			public override int GetHashCode()
+			{
+				var hash = 17;
+				hash = unchecked(hash * 31 + Arrow);
+				hash = unchecked(hash * 31 + (int)State);
+				return hash;
+			}
+		}
+
+		public static readonly FootArrowState InvalidFootArrowState;
+		static GraphNode()
+		{
+			InvalidFootArrowState = new FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
+		}
+
+		public readonly FootArrowState[,] State;
 		public Dictionary<GraphLink, List<GraphNode>> Links = new Dictionary<GraphLink, List<GraphNode>>();
 
-		public GraphNode(GraphArrowState[] state)
+		public GraphNode(FootArrowState[,] state)
 		{
 			State = state;
+			// Sort so that comparisons are easier
+			for (var foot = 0; foot < NumFeet; foot++)
+			{
+				// TODO: Remove assumption that MaxArrowsPerFoot == 2.
+				if (State[foot, 0].Arrow <= State[foot, 1].Arrow)
+					continue;
+				var swap = State[foot, 0];
+				State[foot, 0] = State[foot, 1];
+				State[foot, 1] = swap;
+			}
 		}
 
 		public bool Equals(GraphNode other)
@@ -92,11 +132,10 @@ namespace GenDoublesStaminaCharts
 				return false;
 			if (State.Length != other.State.Length)
 				return false;
-			for (var arrow = 0; arrow < State.Length; arrow++)
-			{
-				if (State[arrow] != other.State[arrow])
-					return false;
-			}
+			for(var foot = 0; foot < NumFeet; foot++)
+				for(var arrow = 0; arrow < MaxArrowsPerFoot; arrow++)
+					if (!State[foot,arrow].Equals(other.State[foot, arrow]))
+						return false;
 			return true;
 		}
 
@@ -113,7 +152,7 @@ namespace GenDoublesStaminaCharts
 		{
 			var hash = 17;
 			foreach (var state in State)
-				hash = unchecked(hash * 31 + (int)state);
+				hash = unchecked(hash * 31 + state.GetHashCode());
 			return hash;
 		}
 	}
@@ -211,9 +250,6 @@ namespace GenDoublesStaminaCharts
 				return ret;
 			}
 
-			const int l = (int) Foot.Left;
-			const int r = (int) Foot.Right;
-
 			DPArrowData = new[]
 			{
 				// P1L
@@ -227,49 +263,49 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P1L is bracketable with P1U and P1D
-						[l] = FromDP(new[] {P1D, P1U}),
+						[L] = FromDP(new[] {P1D, P1U}),
 						// Right foot on P1L is a crossover and not bracketable
-						[r] = noneDP
+						[R] = noneDP
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P1L supports right foot on P1D, P1U, and P1R without crossovers
-						[l] = FromDP(new[] {P1D, P1U, P1R}),
+						[L] = FromDP(new[] {P1D, P1U, P1R}),
 						// Right foot on P1L is a crossover with no normal left foot pairing
-						[r] = noneDP,
+						[R] = noneDP,
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// Left foot on P1L is never a crossover position
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P1L is a crossover with right in front when left is on P1D
-						[r] = FromDP(new[] {P1D}),
+						[R] = FromDP(new[] {P1D}),
 					},
 
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// Left foot on P1L is never a crossover position
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P1L is a crossover with right in back when left is on P1U
-						[r] = FromDP(new[] {P1U}),
+						[R] = FromDP(new[] {P1U}),
 					},
 
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1L is never a crossover position
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P1L is a crossover with left in front when left is on P1U
-						[r] = FromDP(new[] {P1U}),
+						[R] = FromDP(new[] {P1U}),
 					},
 
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P1L is never a crossover position
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P1L is a crossover with left in back when left is on P1D
-						[r] = FromDP(new[] {P1D}),
+						[R] = FromDP(new[] {P1D}),
 					}
 				},
 
@@ -284,46 +320,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P1D is bracketable with P1L and P1R
-						[l] = FromDP(new[] {P1L, P1R}),
+						[L] = FromDP(new[] {P1L, P1R}),
 						// Right foot on P1D is bracketable with P1R
-						[r] = FromDP(new[] {P1R})
+						[R] = FromDP(new[] {P1R})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P1D supports right foot on P1U, P1R, and P2L without crossovers
-						[l] = FromDP(new[] {P1U, P1R, P2L}),
+						[L] = FromDP(new[] {P1U, P1R, P2L}),
 						// Right foot on P1D supports Left foot on P1L and P1U without crossovers
-						[r] = FromDP(new[] {P1L, P1U})
+						[R] = FromDP(new[] {P1L, P1U})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P1D is not a crossover with right in front
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// Left foot on P1D is a crossover with left in back with right is on P1L
-						[l] = FromDP(new[] {P1L}),
+						[L] = FromDP(new[] {P1L}),
 						// Right foot on P1D is a crossover with right in back when left is on P1R
-						[r] = FromDP(new[] {P1R})
+						[R] = FromDP(new[] {P1R})
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1D is a crossover with right in front with right is on P1L
-						[l] = FromDP(new[] {P1L}),
+						[L] = FromDP(new[] {P1L}),
 						// Right foot on P1D is a crossover with left in front when left is on P1R
-						[r] = FromDP(new[] {P1R})
+						[R] = FromDP(new[] {P1R})
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P1D is not a crossover with left in back
-						[r] = noneDP
+						[R] = noneDP
 					},
 				},
 
@@ -338,46 +374,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P1U is bracketable with P1L and P1R
-						[l] = FromDP(new[] {P1L, P1R}),
+						[L] = FromDP(new[] {P1L, P1R}),
 						// Right foot on P1U is bracketable with P1R
-						[r] = FromDP(new[] {P1R})
+						[R] = FromDP(new[] {P1R})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P1U supports right foot on P1D, P1R, and P2L without crossovers
-						[l] = FromDP(new[] {P1D, P1R, P2L}),
+						[L] = FromDP(new[] {P1D, P1R, P2L}),
 						// Right foot on P1U supports left foot on P1L and P1D without crossovers
-						[r] = FromDP(new[] {P1L, P1D})
+						[R] = FromDP(new[] {P1L, P1D})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// Left foot on P1U is a crossover with left in front when right is on P1L
-						[l] = FromDP(new[] {P1L}),
+						[L] = FromDP(new[] {P1L}),
 						// Right foot on P1U is a crossover with right in front when left is on P1R
-						[r] = FromDP(new[] {P1R})
+						[R] = FromDP(new[] {P1R})
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P1U is a crossover with right in back when right is on P1L
-						[l] = FromDP(new[] {P1L}),
+						[L] = FromDP(new[] {P1L}),
 						// Right foot on P1U is a crossover with left in back when left is on P1R
-						[r] = FromDP(new[] {P1R})
+						[R] = FromDP(new[] {P1R})
 					},
 				},
 
@@ -392,46 +428,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P1R is bracketable with P1D, P1U, and P2R
-						[l] = FromDP(new[] {P1D, P1U, P2R}),
+						[L] = FromDP(new[] {P1D, P1U, P2R}),
 						// Right foot on P1R is bracketable with P1D, P1U, and P2R
-						[r] = FromDP(new[] {P1D, P1U, P2R})
+						[R] = FromDP(new[] {P1D, P1U, P2R})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P1R supports right foot on P2L, P2D, and P2U without crossovers
-						[l] = FromDP(new[] {P2L, P2D, P2U}),
+						[L] = FromDP(new[] {P2L, P2D, P2U}),
 						// Right foot on P1R supports left foot on P1L, P1D, and P1U without crossovers
-						[r] = FromDP(new[] {P1L, P1D, P1U})
+						[R] = FromDP(new[] {P1L, P1D, P1U})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// Left foot on P1R is a crossover with left in front when right is on P1D
-						[l] = FromDP(new[] {P1D}),
+						[L] = FromDP(new[] {P1D}),
 						// Right foot on P1R is not a crossover position. Not considering left on P2L, slightly too twisty
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// Left foot on P1R is a crossover with left in back when right is on P1U
-						[l] = FromDP(new[] {P1U}),
+						[L] = FromDP(new[] {P1U}),
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1R is a crossover with right in front when right is on P1U
-						[l] = FromDP(new[] {P1U}),
+						[L] = FromDP(new[] {P1U}),
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P1R is a crossover with right in back when right is on P1D
-						[l] = FromDP(new[] {P1D}),
+						[L] = FromDP(new[] {P1D}),
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 				},
 
@@ -446,46 +482,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P2L is bracketable with P1R, P2D, and P2U
-						[l] = FromDP(new[] {P1R, P2D, P2U}),
+						[L] = FromDP(new[] {P1R, P2D, P2U}),
 						// Right foot on P2L is bracketable with P1R, P2D, and P2U
-						[r] = FromDP(new[] {P1R, P2D, P2U})
+						[R] = FromDP(new[] {P1R, P2D, P2U})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P2L supports right foot on P2D, P2U, and P2R without crossovers
-						[l] = FromDP(new[] {P2D, P2U, P2R}),
+						[L] = FromDP(new[] {P2D, P2U, P2R}),
 						// Right foot on P2L supports left foot on P1D, P1U, and P1L without crossovers
-						[r] = FromDP(new[] {P1D, P1U, P1L})
+						[R] = FromDP(new[] {P1D, P1U, P1L})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P2L is a crossover with right in front when left is on P2D
-						[r] = FromDP(new[] {P2D})
+						[R] = FromDP(new[] {P2D})
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P2L is a crossover with right in back when left is on P2U
-						[r] = FromDP(new[] {P2U})
+						[R] = FromDP(new[] {P2U})
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P2L is not a crossover position. Not considering right on P1R, slightly too twisty
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P2L is a crossover with left in front when left is on P2U
-						[r] = FromDP(new[] {P2U})
+						[R] = FromDP(new[] {P2U})
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P2L is a crossover with left in back when left is on P2D
-						[r] = FromDP(new[] {P2D})
+						[R] = FromDP(new[] {P2D})
 					},
 				},
 
@@ -500,46 +536,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P2D is bracketable with P2L
-						[l] = FromDP(new[] {P2L}),
+						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2D is bracketable with P2L and P2R
-						[r] = FromDP(new[] {P2L, P2R})
+						[R] = FromDP(new[] {P2L, P2R})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P2D supports right foot on P2U and P2R without crossovers
-						[l] = FromDP(new[] {P2U, P2R}),
+						[L] = FromDP(new[] {P2U, P2R}),
 						// Right foot on P2D supports left foot on P1R, P2L, and P2U without crossovers
-						[r] = FromDP(new[] {P1R, P2L, P2U})
+						[R] = FromDP(new[] {P1R, P2L, P2U})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// Left foot on P2D is a crossover with left in back when right is on P2L
-						[l] = FromDP(new[] {P2L}),
+						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2D is a crossover with right in back when left is on P2R
-						[r] = FromDP(new[] {P2R})
+						[R] = FromDP(new[] {P2R})
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P2D is a crossover with right in front when right is on P2L
-						[l] = FromDP(new[] {P2L}),
+						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2D is a crossover with left in front when left is on P2R
-						[r] = FromDP(new[] {P2R})
+						[R] = FromDP(new[] {P2R})
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 				},
 
@@ -554,46 +590,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P2U is bracketable with P2L
-						[l] = FromDP(new[] {P2L}),
+						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2U is bracketable with P2L and P2R
-						[r] = FromDP(new[] {P2L, P2R})
+						[R] = FromDP(new[] {P2L, P2R})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P2U supports right foot on P2D and P2R without crossovers
-						[l] = FromDP(new[] {P2D, P2R}),
+						[L] = FromDP(new[] {P2D, P2R}),
 						// Right foot on P2U supports left foot on P1R, P2L, and P2D without crossovers
-						[r] = FromDP(new[] {P1R, P2L, P2D})
+						[R] = FromDP(new[] {P1R, P2L, P2D})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// Left foot on P2U is a crossover with left in front when right is on P2L
-						[l] = FromDP(new[] {P2L}),
+						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2U is a crossover with right in front when left is on P2R
-						[r] = FromDP(new[] {P2R})
+						[R] = FromDP(new[] {P2R})
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// none
-						[l] = noneDP,
+						[L] = noneDP,
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P2U is a crossover with right in back when right is on P2L
-						[l] = FromDP(new[] {P2L}),
+						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2U is a crossover with left in back when left is on P2R
-						[r] = FromDP(new[] {P2R})
+						[R] = FromDP(new[] {P2R})
 					},
 				},
 
@@ -608,46 +644,46 @@ namespace GenDoublesStaminaCharts
 					BracketablePairings =
 					{
 						// Left foot on P2R is a crossover and not bracketable
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P2R is bracketable with P2D and P2U
-						[r] = FromDP(new[] {P2D, P2U})
+						[R] = FromDP(new[] {P2D, P2U})
 					},
 
 					OtherFootPairings =
 					{
 						// Left foot on P2R is a crossover with no normal right foot pairing
-						[l] = noneDP,
+						[L] = noneDP,
 						// Right foot on P2R supports left foot on P2L, P2D, and P2U without crossovers
-						[r] = FromDP(new[] {P2L, P2D, P2U})
+						[R] = FromDP(new[] {P2L, P2D, P2U})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
 					{
 						// Left foot on P2R is a crossover with left in front when right is on P2D
-						[l] = FromDP(new[] {P2D}),
+						[L] = FromDP(new[] {P2D}),
 						// Right foot on P2R is never a crossover position
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsSameFootCrossoverBehind =
 					{
 						// Left foot on P2R is a crossover with left in back when right is on P2U
-						[l] = FromDP(new[] {P2U}),
+						[L] = FromDP(new[] {P2U}),
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P2R is a crossover with right in front when right is on P2U
-						[l] = FromDP(new[] {P2U}),
+						[L] = FromDP(new[] {P2U}),
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P2R is a crossover with right in back when right is on P2D
-						[l] = FromDP(new[] {P2D}),
+						[L] = FromDP(new[] {P2D}),
 						// none
-						[r] = noneDP
+						[R] = noneDP
 					},
 				}
 			};
@@ -689,27 +725,45 @@ namespace GenDoublesStaminaCharts
 
 		public GraphNode CreateSPStepGraph()
 		{
-			var root = new GraphNode(new GraphArrowState[NumSPArrows]);
-			root.State[P1L] = GraphArrowState.LResting;
-			root.State[P1R] = GraphArrowState.RResting;
-
+			var root = new GraphNode(new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot]);
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (a == 0)
+				{
+					root.State[L, a] = new GraphNode.FootArrowState(P1L, GraphArrowState.Resting);
+					root.State[R, a] = new GraphNode.FootArrowState(P1R, GraphArrowState.Resting);
+				}
+				else
+				{
+					root.State[L, a] = GraphNode.InvalidFootArrowState;
+					root.State[R, a] = GraphNode.InvalidFootArrowState;
+				}
+			}
 			FillStepGraph(root, new HashSet<GraphNode>(), SPArrowData);
-
 			return root;
 		}
 
 		public GraphNode CreateDPStepGraph()
 		{
-			var root = new GraphNode(new GraphArrowState[NumDPArrows]);
-			root.State[P1R] = GraphArrowState.LResting;
-			root.State[P2L] = GraphArrowState.RResting;
-
+			var root = new GraphNode(new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot]);
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (a == 0)
+				{
+					root.State[L, a] = new GraphNode.FootArrowState(P1R, GraphArrowState.Resting);
+					root.State[R, a] = new GraphNode.FootArrowState(P2L, GraphArrowState.Resting);
+				}
+				else
+				{
+					root.State[L, a] = GraphNode.InvalidFootArrowState;
+					root.State[R, a] = GraphNode.InvalidFootArrowState;
+				}
+			}
 			FillStepGraph(root, new HashSet<GraphNode>(), DPArrowData);
-
 			return root;
 		}
 
-		private static Func<GraphArrowState[], ArrowData[], int, int, Foot, FootAction[], List<GraphArrowState[]>> GetFillFunc(
+		private static Func<GraphNode.FootArrowState[,], ArrowData[], int, int, Foot, FootAction[], List<GraphNode.FootArrowState[,]>> GetFillFunc(
 			SingleStepType stepType)
 		{
 			switch (stepType)
@@ -763,7 +817,7 @@ namespace GenDoublesStaminaCharts
 				FillJump(currentNode, visitedNodes, arrowData, jump);
 		}
 
-		private static GraphNode GetOrCreateNodeByState(GraphArrowState[] state, HashSet<GraphNode> visitedNodes)
+		private static GraphNode GetOrCreateNodeByState(GraphNode.FootArrowState[,] state, HashSet<GraphNode> visitedNodes)
 		{
 			var node = new GraphNode(state);
 			if (visitedNodes.TryGetValue(node, out var currentNode))
@@ -774,7 +828,7 @@ namespace GenDoublesStaminaCharts
 		private static void AddNodeAndRecurse(
 			GraphNode currentNode,
 			HashSet<GraphNode> visitedNodes,
-			GraphArrowState[] state,
+			GraphNode.FootArrowState[,] state,
 			GraphLink link,
 			ArrowData[] arrowData)
 		{
@@ -857,13 +911,13 @@ namespace GenDoublesStaminaCharts
 			}
 		}
 
-		private static Dictionary<FootAction[], List<GraphArrowState[]>> FillJumpStep(
-			GraphArrowState[] currentState,
+		private static Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>> FillJumpStep(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			SingleStepType stepType,
 			Foot foot)
 		{
-			var result = new Dictionary<FootAction[], List<GraphArrowState[]>>();
+			var result = new Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>>();
 
 			var numArrows = arrowData.Length;
 			var numStepArrows = GetNumArrowForStep(stepType);
@@ -886,8 +940,8 @@ namespace GenDoublesStaminaCharts
 			return result;
 		}
 
-		private static List<GraphArrowState[]> FillNewArrow(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillNewArrow(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -907,10 +961,10 @@ namespace GenDoublesStaminaCharts
 			if (footAction == FootAction.Release)
 				return null;
 			// Only consider moving to a new arrow when the currentIndex is on an arrow
-			if (!IsOn(currentState[currentIndex], foot))
+			if (!IsOn(currentState, currentIndex, foot))
 				return null;
 			// Cannot step on a new arrow if already holding on MaxArrowsPerFoot
-			var numHeld = currentState.Count(s => IsHeldOrRolling(s, foot));
+			var numHeld = NumHeldOrRolling(currentState, foot);
 			if (numHeld >= MaxArrowsPerFoot)
 				return null;
 			// If bracketing, skip if this is not a valid bracketable pairing.
@@ -920,7 +974,7 @@ namespace GenDoublesStaminaCharts
 			if (!arrowData[currentIndex].ValidNextArrows[newIndex])
 				return null;
 			// Skip if this next arrow is occupied.
-			if (currentState[newIndex] != GraphArrowState.Free)
+			if (!IsFree(currentState, newIndex))
 				return null;
 			// Skip if this next arrow is a crossover with any other foot pairing.
 			if (FootCrossesOverWithAnyOtherFoot(currentState, foot, arrowData, newIndex))
@@ -932,19 +986,31 @@ namespace GenDoublesStaminaCharts
 			// Set up the state for a new node.
 			// Copy the previous state, but lift from any resting arrows for the given foot.
 			// Leave holds/rolls.
-			var newState = new GraphArrowState[currentState.Length];
-			for (var i = 0; i < currentState.Length; i++)
+			var otherFoot = (int)Other(foot);
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				newState[i] = currentState[i];
-				if (IsResting(newState[i], foot))
-					newState[i] = GraphArrowState.Free;
+				newState[otherFoot, a] = currentState[otherFoot, a];
+
+				if (IsResting(currentState, newIndex, foot))
+					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+				else
+					newState[(int)foot, a] = currentState[(int)foot, a];
 			}
-			newState[newIndex] = StateAfterAction(footAction, foot);
-			return new List<GraphArrowState[]> { newState };
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (newState[(int) foot, a].Arrow == InvalidArrowIndex)
+				{
+					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					break;
+				}
+			}
+
+			return new List<GraphNode.FootArrowState[,]> { newState };
 		}
 
-		private static List<GraphArrowState[]> FillSameArrow(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillSameArrow(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -959,46 +1025,45 @@ namespace GenDoublesStaminaCharts
 			if (currentIndex != newIndex)
 				return null;
 			// Release logic. Lift from a hold or roll.
-			if (footAction == FootAction.Release && !IsHeldOrRolling(currentState[currentIndex], foot))
+			if (footAction == FootAction.Release && !IsHeldOrRolling(currentState, currentIndex, foot))
 				return null;
 			// Normal logic. Placement action on a resting arrow.
-			if (footAction != FootAction.Release && !IsResting(currentState[currentIndex], foot))
+			if (footAction != FootAction.Release && !IsResting(currentState, currentIndex, foot))
 				return null;
 
 			// Set up the state for a new node.
 			// Copy the previous state and if placing a new foot, lift from any resting arrows.
 			// It is necessary to lift for, e.g. the step after an SP quad.
-			var newState = new GraphArrowState[currentState.Length];
-			for (var i = 0; i < currentState.Length; i++)
+			var otherFoot = (int) Other(foot);
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				newState[i] = currentState[i];
-				if (footAction != FootAction.Release && IsResting(newState[i], foot))
-					newState[i] = GraphArrowState.Free;
+				newState[otherFoot, a] = currentState[otherFoot, a];
+
+				if(footAction != FootAction.Release && IsResting(currentState, newIndex, foot))
+					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+				else
+					newState[(int)foot, a] = currentState[(int)foot, a];
 			}
-			newState[newIndex] = StateAfterAction(footAction, foot);
-			return new List<GraphArrowState[]> { newState };
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (newState[(int)foot, a].Arrow == InvalidArrowIndex)
+				{
+					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					break;
+				}
+			}
+			return new List<GraphNode.FootArrowState[,]> { newState };
 		}
 
-		private static List<GraphArrowState[]> FillFootSwap(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillFootSwap(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			Foot foot,
 			FootAction[] footActions)
 		{
-			// TODO: If you are already crossed over, should you be able to swap?
-			// TODO: Double check lifting in new state setup.
-			// TODO: If you swap and the other foot is now not resting anywhere, is that a problem?
-			// Yes, it will be.
-			// With current data structures, can't have two feet resting on the same arrow
-			// Solution 1) For the next step, if there are no resting arrows, can you assume that the foot is resting on
-			// the other foot?
-			// What about alternating swaps on the same arrow?
-			// Solution 2) Find an arrow in this method to put the other foot on as resting?
-			// probably a bracketable pairing?
-			return null;
-
 			if (footActions.Length != 1)
 				return null;
 			var footAction = footActions[0];
@@ -1013,35 +1078,40 @@ namespace GenDoublesStaminaCharts
 			var otherFoot = Other(foot);
 
 			// Only consider moving to a new arrow when the currentIndex is resting.
-			if (!IsResting(currentState[currentIndex], foot))
+			if (!IsResting(currentState, currentIndex, foot))
 				return null;
 			// The new index must have the other foot resting so it can be swapped to.
-			if (!IsResting(currentState[newIndex], otherFoot))
+			if (!IsResting(currentState, newIndex, otherFoot))
 				return null;
 			// Disallow foot swap if this foot is holding or rolling
-			if (currentState.Count(s => IsHeldOrRolling(s, foot)) > 0)
+			if (NumHeldOrRolling(currentState, foot) > 0)
 				return null;
 			// Disallow foot swap if the other foot is holding or rolling
-			if (currentState.Count(s => IsHeldOrRolling(s, otherFoot)) > 0)
+			if (NumHeldOrRolling(currentState, otherFoot) > 0)
 				return null;
 
 			// Set up the state for a new node.
-			// Copy the previous state and update the state for the arrow under consideration.
-			// Lift all resting arrows in case swapping from a bracket
-			// The new index will now have the new foot on it and old index will be free.
-			var newState = new GraphArrowState[currentState.Length];
-			for (var i = 0; i < currentState.Length; i++)
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				newState[i] = currentState[i];
-				if (IsResting(newState[i], foot))
-					newState[i] = GraphArrowState.Free;
+				// The other foot should remain Resting on the newIndex, even though it is slightly lifted
+				if(currentState[(int)otherFoot, a].Arrow == newIndex)
+					newState[(int)otherFoot, a] = new GraphNode.FootArrowState(newIndex, GraphArrowState.Resting);
+				// All other arrows under the other foot should be lifted.
+				else
+					newState[(int)otherFoot, a] = GraphNode.InvalidFootArrowState;
+				// The first arrow under the foot in the new state should be at the newIndex, with the appropriate state.
+				if (a == 0)
+					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+				// All other arrows under the foot should be lifted. 
+				else
+					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
 			}
-			newState[newIndex] = StateAfterAction(footAction, foot);
-			return new List<GraphArrowState[]> { newState };
+			return new List<GraphNode.FootArrowState[,]> { newState };
 		}
 
-		private static List<GraphArrowState[]> FillCrossoverFront(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillCrossoverFront(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -1051,8 +1121,8 @@ namespace GenDoublesStaminaCharts
 			return FillCrossoverInternal(currentState, arrowData, currentIndex, newIndex, foot, footActions, true);
 		}
 
-		private static List<GraphArrowState[]> FillCrossoverBack(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillCrossoverBack(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -1062,8 +1132,8 @@ namespace GenDoublesStaminaCharts
 			return FillCrossoverInternal(currentState, arrowData, currentIndex, newIndex, foot, footActions, false);
 		}
 
-		private static List<GraphArrowState[]> FillCrossoverInternal(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillCrossoverInternal(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -1082,17 +1152,16 @@ namespace GenDoublesStaminaCharts
 			if (footAction == FootAction.Release)
 				return null;
 			// Only consider moving to a new arrow when the currentIndex is resting.
-			if (!IsResting(currentState[currentIndex], foot))
+			if (!IsResting(currentState, currentIndex, foot))
 				return null;
 			// Cannot crossover if any arrows are held by this foot.
-			var numHeld = currentState.Count(s => IsHeldOrRolling(s, foot));
-			if (numHeld > 0)
+			if (NumHeldOrRolling(currentState, foot) > 0)
 				return null;
 			// Skip if this isn't a valid next arrow for the current placement.
 			if (!arrowData[currentIndex].ValidNextArrows[newIndex])
 				return null;
 			// Skip if this next arrow is occupied.
-			if (currentState[newIndex] != GraphArrowState.Free)
+			if (!IsFree(currentState, newIndex))
 				return null;
 			// Skip if this next arrow is not a crossover
 			if (front && !FootCrossesOverInFrontWithAnyOtherFoot(currentState, foot, arrowData, newIndex))
@@ -1101,21 +1170,34 @@ namespace GenDoublesStaminaCharts
 				return null;
 
 			// Set up the state for a new node.
-			// Copy the previous state, but lift from any resting arrows for the given foot.
-			// We know at this point the given foot is not holding or rolling due to a check above.
-			var newState = new GraphArrowState[currentState.Length];
-			for (var i = 0; i < currentState.Length; i++)
+			var otherFoot = (int)Other(foot);
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				newState[i] = currentState[i];
-				if (IsResting(newState[i], foot))
-					newState[i] = GraphArrowState.Free;
+				// Copy previous state for other foot
+				newState[otherFoot, a] = currentState[otherFoot, a];
+
+				// Lift any resting arrows for the given foot.
+				if (IsResting(currentState, newIndex, foot))
+					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+				else
+					newState[(int)foot, a] = currentState[(int)foot, a];
 			}
-			newState[newIndex] = StateAfterAction(footAction, foot);
-			return new List<GraphArrowState[]> { newState };
+			// Set up the FootArrowState for the new arrow
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (newState[(int)foot, a].Arrow == InvalidArrowIndex)
+				{
+					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					break;
+				}
+			}
+
+			return new List<GraphNode.FootArrowState[,]> { newState };
 		}
 
-		private static List<GraphArrowState[]> FillBracketBothNew(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillBracketBothNew(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -1132,14 +1214,13 @@ namespace GenDoublesStaminaCharts
 					return null;
 			}
 			// Only consider moving to a new arrow when the currentIndex is resting.
-			if (!IsResting(currentState[currentIndex], foot))
+			if (!IsResting(currentState, currentIndex, foot))
 				return null;
 			// Cannot step on a new bracket if already holding on an arrow
-			var numHeld = currentState.Count(s => IsHeldOrRolling(s, foot));
-			if (numHeld > 0)
+			if (NumHeldOrRolling(currentState, foot) > 0)
 				return null;
 			// Skip if this next arrow is occupied.
-			if (currentState[newIndex] != GraphArrowState.Free)
+			if (!IsFree(currentState, newIndex))
 				return null;
 			// Skip if this next arrow is a crossover with any other foot pairing.
 			if (FootCrossesOverWithAnyOtherFoot(currentState, foot, arrowData, newIndex))
@@ -1152,17 +1233,14 @@ namespace GenDoublesStaminaCharts
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
-			var newStates = new List<GraphArrowState[]>();
+			var newStates = new List<GraphNode.FootArrowState[,]>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
-				// Skip if this next arrow is occupied.
-				if (currentState[secondIndex] != GraphArrowState.Free)
-					continue;
 				// Skip if this is not a valid bracketable pairing.
 				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
 					continue;
-				// Skip if this second arrow is occupied.
-				if (currentState[secondIndex] != GraphArrowState.Free)
+				// Skip if this next arrow is occupied.
+				if (!IsFree(currentState, secondIndex))
 					continue;
 				// Skip if this second arrow is a crossover with any other foot pairing.
 				if (FootCrossesOverWithAnyOtherFoot(currentState, foot, arrowData, secondIndex))
@@ -1182,25 +1260,22 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				// Copy the previous state, but lift from any arrows for the given foot.
-				// We know at this point the given foot is not holding or rolling due to a check above.
-				var newState = new GraphArrowState[currentState.Length];
-				for (var i = 0; i < currentState.Length; i++)
-				{
-					newState[i] = currentState[i];
-					if (IsResting(newState[i], foot))
-						newState[i] = GraphArrowState.Free;
-				}
-				newState[newIndex] = StateAfterAction(footActions[0], foot);
-				newState[secondIndex] = StateAfterAction(footActions[1], foot);
-				newStates.Add(newState);
+				var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+				var otherFoot = (int)Other(foot);
+				// The other foot doesn't change
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+					newState[otherFoot, a] = currentState[otherFoot, a];
+				// The given foot brackets the two new arrows
+				newState[(int)foot, 0] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footActions[0]));
+				newState[(int)foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
+				return new List<GraphNode.FootArrowState[,]> { newState };
 			}
 
 			return newStates;
 		}
 
-		private static List<GraphArrowState[]> FillBracketOneNew(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillBracketOneNew(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -1210,14 +1285,17 @@ namespace GenDoublesStaminaCharts
 			return null;
 		}
 
-		private static List<GraphArrowState[]> FillBracketBothSame(
-			GraphArrowState[] currentState,
+		private static List<GraphNode.FootArrowState[,]> FillBracketBothSame(
+			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			Foot foot,
 			FootAction[] footActions)
 		{
+			//TODO: Implement. This is currently a copy of FillBracketBothNew
+			return null;
+
 			if (footActions.Length != MaxArrowsPerFoot)
 				return null;
 
@@ -1228,14 +1306,13 @@ namespace GenDoublesStaminaCharts
 					return null;
 			}
 			// Only consider moving to a new arrow when the currentIndex is resting.
-			if (!IsResting(currentState[currentIndex], foot))
+			if (!IsResting(currentState, currentIndex, foot))
 				return null;
 			// Cannot step on a new bracket if already holding on an arrow
-			var numHeld = currentState.Count(s => IsHeldOrRolling(s, foot));
-			if (numHeld > 0)
+			if (NumHeldOrRolling(currentState, foot) > 0)
 				return null;
 			// Skip if this next arrow is occupied.
-			if (currentState[newIndex] != GraphArrowState.Free)
+			if (!IsFree(currentState, newIndex))
 				return null;
 			// Skip if this next arrow is a crossover with any other foot pairing.
 			if (FootCrossesOverWithAnyOtherFoot(currentState, foot, arrowData, newIndex))
@@ -1248,17 +1325,14 @@ namespace GenDoublesStaminaCharts
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
-			var newStates = new List<GraphArrowState[]>();
+			var newStates = new List<GraphNode.FootArrowState[,]>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
-				// Skip if this next arrow is occupied.
-				if (currentState[secondIndex] != GraphArrowState.Free)
-					continue;
 				// Skip if this is not a valid bracketable pairing.
 				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
 					continue;
 				// Skip if this second arrow is occupied.
-				if (currentState[secondIndex] != GraphArrowState.Free)
+				if (!IsFree(currentState, secondIndex))
 					continue;
 				// Skip if this second arrow is a crossover with any other foot pairing.
 				if (FootCrossesOverWithAnyOtherFoot(currentState, foot, arrowData, secondIndex))
@@ -1278,96 +1352,115 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				// Copy the previous state, but lift from any arrows for the given foot.
-				// We know at this point the given foot is not holding or rolling due to a check above.
-				var newState = new GraphArrowState[currentState.Length];
-				for (var i = 0; i < currentState.Length; i++)
-				{
-					newState[i] = currentState[i];
-					if (IsResting(newState[i], foot))
-						newState[i] = GraphArrowState.Free;
-				}
-				newState[newIndex] = StateAfterAction(footActions[0], foot);
-				newState[secondIndex] = StateAfterAction(footActions[1], foot);
-				newStates.Add(newState);
+				var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+				var otherFoot = (int)Other(foot);
+				// The other foot doesn't change
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+					newState[otherFoot, a] = currentState[otherFoot, a];
+				// The given foot brackets the two new arrows
+				newState[(int)foot, 0] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footActions[0]));
+				newState[(int)foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
+				return new List<GraphNode.FootArrowState[,]> { newState };
 			}
 
 			return newStates;
 		}
 
-		private static bool IsValidPairingWithAnyOtherFoot(GraphArrowState[] state, Foot foot, ArrowData[] arrowData, int index)
+		private static bool IsValidPairingWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
 		{
-			return GetValidPairingsWithOtherFoot(state, foot, arrowData, index).Count > 0;
+			return GetValidPairingsWithOtherFoot(state, foot, arrowData, arrow).Count > 0;
 		}
 
-		private static List<int> GetValidPairingsWithOtherFoot(GraphArrowState[] state, Foot foot, ArrowData[] arrowData, int index)
+		private static List<int> GetValidPairingsWithOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
 		{
 			var result = new List<int>();
 			var otherFoot = Other(foot);
-			for (var i = 0; i < state.Length; i++)
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				if (!IsOn(state[i], otherFoot))
-					continue;
-				if (arrowData[i].OtherFootPairings[(int)otherFoot][index])
-					result.Add(i);
+				var otherFootArrowIndex = state[(int)otherFoot, a].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+				    && arrowData[otherFootArrowIndex].OtherFootPairings[(int) otherFoot][arrow])
+					result.Add(otherFootArrowIndex);
 			}
-
 			return result;
 		}
 
-		private static bool FootCrossesOverWithAnyOtherFoot(GraphArrowState[] state, Foot foot, ArrowData[] arrowData, int index)
+		private static bool FootCrossesOverWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
 		{
-			return FootCrossesOverInFrontWithAnyOtherFoot(state, foot, arrowData, index)
-			       || FootCrossesOverInBackWithAnyOtherFoot(state, foot, arrowData, index);
+			return FootCrossesOverInFrontWithAnyOtherFoot(state, foot, arrowData, arrow)
+			       || FootCrossesOverInBackWithAnyOtherFoot(state, foot, arrowData, arrow);
 		}
 
-		private static bool FootCrossesOverInFrontWithAnyOtherFoot(GraphArrowState[] state, Foot foot, ArrowData[] arrowData, int index)
+		private static bool FootCrossesOverInFrontWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
 		{
 			var otherFoot = Other(foot);
-			for (var i = 0; i < state.Length; i++)
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				if (!IsOn(state[i], otherFoot))
-					continue;
-
-				if (arrowData[i].OtherFootPairingsOtherFootCrossoverFront[(int)otherFoot][index])
+				var otherFootArrowIndex = state[(int) otherFoot, a].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[(int)otherFoot][arrow])
 					return true;
 			}
 			return false;
 		}
 
-		private static bool FootCrossesOverInBackWithAnyOtherFoot(GraphArrowState[] state, Foot foot, ArrowData[] arrowData, int index)
+		private static bool FootCrossesOverInBackWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
 		{
 			var otherFoot = Other(foot);
-			for (var i = 0; i < state.Length; i++)
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				if (!IsOn(state[i], otherFoot))
-					continue;
-
-				if (arrowData[i].OtherFootPairingsOtherFootCrossoverBehind[(int)otherFoot][index])
+				var otherFootArrowIndex = state[(int)otherFoot, a].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[(int)otherFoot][arrow])
 					return true;
 			}
 			return false;
 		}
 
-		private static bool IsHeldOrRolling(GraphArrowState state, Foot foot)
+		private static bool IsFree(GraphNode.FootArrowState[,] state, int arrow)
 		{
-			if (foot == Foot.Left)
-				return state == GraphArrowState.LHeld || state == GraphArrowState.LRolling;
-			return state == GraphArrowState.RHeld || state == GraphArrowState.RRolling;
+			for (var f = 0; f < NumFeet; f++)
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+					if (state[f, a].Arrow == arrow)
+						return false;
+			return true;
 		}
 
-		private static bool IsResting(GraphArrowState state, Foot foot)
+		private static int NumHeldOrRolling(GraphNode.FootArrowState[,] state, Foot foot)
 		{
-			if (foot == Foot.Left)
-				return state == GraphArrowState.LResting;
-			return state == GraphArrowState.RResting;
+			var num = 0;
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+				if (state[(int)foot, a].Arrow != InvalidArrowIndex
+					&& (state[(int)foot, a].State == GraphArrowState.Held
+				        || state[(int)foot, a].State == GraphArrowState.Rolling))
+					num++;
+			return num;
 		}
 
-		public static bool IsOn(GraphArrowState state, Foot foot)
+		private static bool IsHeldOrRolling(GraphNode.FootArrowState[,] state, int arrow, Foot foot)
 		{
-			if (foot == Foot.Left)
-				return state == GraphArrowState.LHeld || state == GraphArrowState.LRolling || state == GraphArrowState.LResting;
-			return state == GraphArrowState.RHeld || state == GraphArrowState.RRolling || state == GraphArrowState.RResting;
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+				if (state[(int)foot, a].Arrow == arrow
+				    && (state[(int)foot, a].State == GraphArrowState.Held
+				        || state[(int)foot, a].State == GraphArrowState.Rolling))
+					return true;
+			return false;
+		}
+
+		private static bool IsResting(GraphNode.FootArrowState[,] state, int arrow, Foot foot)
+		{
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+				if (state[(int)foot, a].Arrow == arrow && state[(int)foot, a].State == GraphArrowState.Resting)
+					return true;
+			return false;
+		}
+
+		public static bool IsOn(GraphNode.FootArrowState[,] state, int arrow, Foot foot)
+		{
+			for(var a = 0; a < MaxArrowsPerFoot; a++)
+				if (state[(int)foot, a].Arrow == arrow)
+					return true;
+			return false;
 		}
 
 		private static Foot Other(Foot foot)
@@ -1375,19 +1468,17 @@ namespace GenDoublesStaminaCharts
 			return foot == Foot.Left ? Foot.Right : Foot.Left;
 		}
 
-		private static GraphArrowState StateAfterAction(FootAction footAction, Foot foot)
+		private static GraphArrowState StateAfterAction(FootAction footAction)
 		{
 			switch (footAction)
 			{
-				case FootAction.Tap:
-				case FootAction.Release:
-					return foot == Foot.Left ? GraphArrowState.LResting : GraphArrowState.RResting;
 				case FootAction.Hold:
-					return foot == Foot.Left ? GraphArrowState.LHeld : GraphArrowState.RHeld;
+					return GraphArrowState.Held;
 				case FootAction.Roll:
-					return foot == Foot.Left ? GraphArrowState.LRolling : GraphArrowState.RRolling;
+					return GraphArrowState.Rolling;
+				default:
+					return GraphArrowState.Resting;
 			}
-			return GraphArrowState.Free;
 		}
 
 		private static List<T[]> Combinations<T>(int size) where T : Enum

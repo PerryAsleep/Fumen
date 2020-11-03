@@ -12,6 +12,11 @@ namespace GenDoublesStaminaCharts
 		public const int NumDPArrows = 8;
 		public const int MaxArrowsPerFoot = 2;
 		public const int NumFeet = 2;
+		public const int InvalidArrowIndex = -1;
+
+		// Indices in Foot
+		public const int L = (int)Foot.Left;
+		public const int R = (int)Foot.Right;
 
 		public const int P1L = 0;
 		public const int P1D = 1;

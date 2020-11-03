@@ -16,8 +16,8 @@ namespace GenDoublesStaminaCharts
 		static void Main(string[] args)
 		{
 			var stepGraph = new StepGraph();
-			//var spGraph = stepGraph.CreateSPStepGraph();
-			var dpGraph = stepGraph.CreateDPStepGraph();
+			var spGraph = stepGraph.CreateSPStepGraph();
+			//var dpGraph = stepGraph.CreateDPStepGraph();
 
 			var song = Fumen.Converters.SMReader.Load(
 				@"C:\Users\perry\Sync\Temp\Hey Sexy Lady (Skrillex Remix)\hey.sm");
