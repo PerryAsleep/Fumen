@@ -725,41 +725,43 @@ namespace GenDoublesStaminaCharts
 
 		public GraphNode CreateSPStepGraph()
 		{
-			var root = new GraphNode(new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot]);
+			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
 				if (a == 0)
 				{
-					root.State[L, a] = new GraphNode.FootArrowState(P1L, GraphArrowState.Resting);
-					root.State[R, a] = new GraphNode.FootArrowState(P1R, GraphArrowState.Resting);
+					state[L, a] = new GraphNode.FootArrowState(P1L, GraphArrowState.Resting);
+					state[R, a] = new GraphNode.FootArrowState(P1R, GraphArrowState.Resting);
 				}
 				else
 				{
-					root.State[L, a] = GraphNode.InvalidFootArrowState;
-					root.State[R, a] = GraphNode.InvalidFootArrowState;
+					state[L, a] = GraphNode.InvalidFootArrowState;
+					state[R, a] = GraphNode.InvalidFootArrowState;
 				}
 			}
-			FillStepGraph(root, new HashSet<GraphNode>(), SPArrowData);
+			var root = new GraphNode(state);
+			FillStepGraph(root, SPArrowData);
 			return root;
 		}
 
 		public GraphNode CreateDPStepGraph()
 		{
-			var root = new GraphNode(new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot]);
+			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
 				if (a == 0)
 				{
-					root.State[L, a] = new GraphNode.FootArrowState(P1R, GraphArrowState.Resting);
-					root.State[R, a] = new GraphNode.FootArrowState(P2L, GraphArrowState.Resting);
+					state[L, a] = new GraphNode.FootArrowState(P1R, GraphArrowState.Resting);
+					state[R, a] = new GraphNode.FootArrowState(P2L, GraphArrowState.Resting);
 				}
 				else
 				{
-					root.State[L, a] = GraphNode.InvalidFootArrowState;
-					root.State[R, a] = GraphNode.InvalidFootArrowState;
+					state[L, a] = GraphNode.InvalidFootArrowState;
+					state[R, a] = GraphNode.InvalidFootArrowState;
 				}
 			}
-			FillStepGraph(root, new HashSet<GraphNode>(), DPArrowData);
+			var root = new GraphNode(state);
+			FillStepGraph(root, DPArrowData);
 			return root;
 		}
 
@@ -803,18 +805,37 @@ namespace GenDoublesStaminaCharts
 			}
 		}
 
-		private static void FillStepGraph(GraphNode currentNode, HashSet<GraphNode> visitedNodes, ArrowData[] arrowData)
+		private static void FillStepGraph(GraphNode root, ArrowData[] arrowData)
 		{
-			if (!visitedNodes.Add(currentNode))
-				return;
+			var completeNodes = new HashSet<GraphNode>();
+			var currentNodes = new List<GraphNode> { root };
+			while (currentNodes.Count > 0)
+			{
+				var allChildren = new HashSet<GraphNode>();
+				foreach (var currentNode in currentNodes)
+				{
+					// Mark node complete
+					// Doing this before filling so it is retrievable as a visited node when linking.
+					completeNodes.Add(currentNode);
 
-			// Single Steps
-			foreach (var stepType in Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>())
-				FillSingleFootStep(currentNode, visitedNodes, arrowData, stepType);
+					// Fill node
+					foreach (var stepType in Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>())
+						FillSingleFootStep(currentNode, completeNodes, arrowData, stepType);
+					foreach (var jump in JumpCombinations)
+						FillJump(currentNode, completeNodes, arrowData, jump);
 
-			// Jumps
-			foreach (var jump in JumpCombinations)
-				FillJump(currentNode, visitedNodes, arrowData, jump);
+					// Collect children
+					foreach (var linkEntry in currentNode.Links)
+						foreach (var childNode in linkEntry.Value)
+							allChildren.Add(childNode);
+				}
+
+				// Remove all complete nodes
+				allChildren.RemoveWhere(n => completeNodes.Contains(n));
+
+				// Search one level deeper
+				currentNodes = allChildren.ToList();
+			}
 		}
 
 		private static GraphNode GetOrCreateNodeByState(GraphNode.FootArrowState[,] state, HashSet<GraphNode> visitedNodes)
@@ -825,12 +846,11 @@ namespace GenDoublesStaminaCharts
 			return node;
 		}
 
-		private static void AddNodeAndRecurse(
+		private static void AddNode(
 			GraphNode currentNode,
 			HashSet<GraphNode> visitedNodes,
 			GraphNode.FootArrowState[,] state,
-			GraphLink link,
-			ArrowData[] arrowData)
+			GraphLink link)
 		{
 			if (!currentNode.Links.ContainsKey(link))
 				currentNode.Links[link] = new List<GraphNode>();
@@ -838,8 +858,6 @@ namespace GenDoublesStaminaCharts
 			var newNode = GetOrCreateNodeByState(state, visitedNodes);
 			if (!currentNode.Links[link].Contains(newNode))
 				currentNode.Links[link].Add(newNode);
-
-			FillStepGraph(newNode, visitedNodes, arrowData);
 		}
 
 		private static void FillSingleFootStep(GraphNode currentNode,
@@ -872,7 +890,7 @@ namespace GenDoublesStaminaCharts
 									link.Links[(int) foot, f] = new Tuple<SingleStepType, FootAction>(stepType, actionSet[f]);
 								}
 
-								AddNodeAndRecurse(currentNode, visitedNodes, newState, link, arrowData);
+								AddNode(currentNode, visitedNodes, newState, link);
 							}
 						}
 					}
@@ -886,25 +904,22 @@ namespace GenDoublesStaminaCharts
 			ArrowData[] arrowData,
 			SingleStepType[] stepTypes)
 		{
-			var l = (int)Foot.Left;
-			var r = (int)Foot.Right;
-
-			var actionsToStatesL = FillJumpStep(currentNode.State, arrowData, stepTypes[l], Foot.Left);
+			var actionsToStatesL = FillJumpStep(currentNode.State, arrowData, stepTypes[L], Foot.Left);
 			foreach (var actionStateL in actionsToStatesL)
 			{
 				foreach (var newStateL in actionStateL.Value)
 				{
-					var actionsToStatesR = FillJumpStep(newStateL, arrowData, stepTypes[r], Foot.Right);
+					var actionsToStatesR = FillJumpStep(newStateL, arrowData, stepTypes[R], Foot.Right);
 					foreach (var actionStateR in actionsToStatesR)
 					{
 						foreach (var newStateR in actionStateR.Value)
 						{
 							var link = new GraphLink();
-							for (var f = 0; f < GetNumArrowForStep(stepTypes[l]); f++)
-								link.Links[l, f] = new Tuple<SingleStepType, FootAction>(stepTypes[l], actionStateL.Key[f]);
-							for (var f = 0; f < GetNumArrowForStep(stepTypes[r]); f++)
-								link.Links[r, f] = new Tuple<SingleStepType, FootAction>(stepTypes[r], actionStateR.Key[f]);
-							AddNodeAndRecurse(currentNode, visitedNodes, newStateR, link, arrowData);
+							for (var f = 0; f < GetNumArrowForStep(stepTypes[L]); f++)
+								link.Links[L, f] = new Tuple<SingleStepType, FootAction>(stepTypes[L], actionStateL.Key[f]);
+							for (var f = 0; f < GetNumArrowForStep(stepTypes[R]); f++)
+								link.Links[R, f] = new Tuple<SingleStepType, FootAction>(stepTypes[R], actionStateR.Key[f]);
+							AddNode(currentNode, visitedNodes, newStateR, link);
 						}
 					}
 				}

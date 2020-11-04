@@ -31,20 +31,6 @@ SP algorithm:
 	4) when eliminating, prune parent up until a node that shares an unpruned path.
 
 
-Memory:
-	need to kill recursion
-	bfs?
-	do the first node, but don't recurse. just continue to find all links out of it to new nodes. do this until complete.
-	while(any child is not fully done)
-	{
-		foreach(child)
-			fillnode(child)
-
-		children = sum of all children of current child nodes
-		remove those children which are fully done.
-	}
-
-
 look at Hella Deep in Technical Showcase 4 - crazy bpm stuff
 NewAlone has roll chord
 Primitive Vides - LR hold, alternate jacks on down 
