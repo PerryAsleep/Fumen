@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static GenDoublesStaminaCharts.Constants;
+using Fumen;
 
 namespace GenDoublesStaminaCharts
 {
@@ -20,11 +21,13 @@ namespace GenDoublesStaminaCharts
 		private static readonly int NullLinkHash;
 		static GraphLink()
 		{
+			// TODO: Feels hacky
 			NullLinkHash = new Tuple<int, int>(
 				Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>().Count(),
 				Enum.GetValues(typeof(FootAction)).Cast<FootAction>().Count()).GetHashCode();
 		}
 
+		// TODO: Consider struct
 		public readonly Tuple<SingleStepType, FootAction>[,] Links = new Tuple<SingleStepType, FootAction>[NumFeet, MaxArrowsPerFoot];
 
 		// Jumps - any problems?
@@ -807,10 +810,15 @@ namespace GenDoublesStaminaCharts
 
 		private static void FillStepGraph(GraphNode root, ArrowData[] arrowData)
 		{
+			Logger.Info($"Generating {arrowData.Length}-panel StepGraph.");
+
 			var completeNodes = new HashSet<GraphNode>();
 			var currentNodes = new List<GraphNode> { root };
+			int level = 0;
 			while (currentNodes.Count > 0)
 			{
+				Logger.Info($"Level {level + 1}: Searching {currentNodes.Count} nodes...");
+
 				var allChildren = new HashSet<GraphNode>();
 				foreach (var currentNode in currentNodes)
 				{
@@ -831,11 +839,17 @@ namespace GenDoublesStaminaCharts
 				}
 
 				// Remove all complete nodes
+				var previousCount = allChildren.Count;
 				allChildren.RemoveWhere(n => completeNodes.Contains(n));
+
+				Logger.Info($"Level {level + 1}: Found {allChildren.Count} children (pruned from {previousCount}).");
 
 				// Search one level deeper
 				currentNodes = allChildren.ToList();
+				level++;
 			}
+
+			Logger.Info($"{arrowData.Length}-panel StepGraph generation complete. {completeNodes.Count} Nodes.");
 		}
 
 		private static GraphNode GetOrCreateNodeByState(GraphNode.FootArrowState[,] state, HashSet<GraphNode> visitedNodes)
@@ -1248,7 +1262,6 @@ namespace GenDoublesStaminaCharts
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
-			var newStates = new List<GraphNode.FootArrowState[,]>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
@@ -1275,18 +1288,10 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-				var otherFoot = (int)Other(foot);
-				// The other foot doesn't change
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					newState[otherFoot, a] = currentState[otherFoot, a];
-				// The given foot brackets the two new arrows
-				newState[(int)foot, 0] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footActions[0]));
-				newState[(int)foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
-				return new List<GraphNode.FootArrowState[,]> { newState };
+				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
 			}
 
-			return newStates;
+			return null;
 		}
 
 		private static List<GraphNode.FootArrowState[,]> FillBracketOneNew(
@@ -1297,20 +1302,6 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			return null;
-		}
-
-		private static List<GraphNode.FootArrowState[,]> FillBracketBothSame(
-			GraphNode.FootArrowState[,] currentState,
-			ArrowData[] arrowData,
-			int currentIndex,
-			int newIndex,
-			Foot foot,
-			FootAction[] footActions)
-		{
-			//TODO: Implement. This is currently a copy of FillBracketBothNew
-			return null;
-
 			if (footActions.Length != MaxArrowsPerFoot)
 				return null;
 
@@ -1326,7 +1317,26 @@ namespace GenDoublesStaminaCharts
 			// Cannot step on a new bracket if already holding on an arrow
 			if (NumHeldOrRolling(currentState, foot) > 0)
 				return null;
-			// Skip if this next arrow is occupied.
+
+			var results = new List<GraphNode.FootArrowState[,]>();
+			var resultFirst = FillBracketFirstNew(currentState, arrowData, currentIndex, newIndex, foot, footActions);
+			var resultSecond = FillBracketSecondNew(currentState, arrowData, currentIndex, newIndex, foot, footActions);
+			if (resultFirst != null && resultFirst.Count > 0)
+				results.AddRange(resultFirst);
+			if (resultSecond != null && resultSecond.Count > 0)
+				results.AddRange(resultSecond);
+			return results;
+		}
+
+		private static List<GraphNode.FootArrowState[,]> FillBracketFirstNew(
+			GraphNode.FootArrowState[,] currentState,
+			ArrowData[] arrowData,
+			int currentIndex,
+			int newIndex,
+			Foot foot,
+			FootAction[] footActions)
+		{
+			// The first index must be a step on a new arrow
 			if (!IsFree(currentState, newIndex))
 				return null;
 			// Skip if this next arrow is a crossover with any other foot pairing.
@@ -1340,13 +1350,63 @@ namespace GenDoublesStaminaCharts
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
-			var newStates = new List<GraphNode.FootArrowState[,]>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
 				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
 					continue;
-				// Skip if this second arrow is occupied.
+				// The second index must be a step on the same arrow (only the first is new)
+				if (!IsResting(currentState, secondIndex, foot))
+					continue;
+				// Skip if this second arrow is a crossover with any other foot pairing.
+				if (FootCrossesOverWithAnyOtherFoot(currentState, foot, arrowData, secondIndex))
+					continue;
+				// Skip if the second arrow is not a valid pairing for any other foot arrows.
+				var secondOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, arrowData, secondIndex);
+				if (secondOtherFootValidPairings.Count == 0)
+					continue;
+
+				// One of the pair must be a valid next placement
+				var secondNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[secondIndex];
+				if (!firstNewArrowIsValidPlacement && !secondNewArrowIsValidPlacement)
+					continue;
+
+				// Both feet on the bracket must be reachable from at least one of the other foot's arrows
+				if (!newIndexOtherFootValidPairings.Intersect(secondOtherFootValidPairings).Any())
+					continue;
+
+				// Set up the state for a new node.
+				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
+			}
+
+			return null;
+		}
+
+		private static List<GraphNode.FootArrowState[,]> FillBracketSecondNew(
+			GraphNode.FootArrowState[,] currentState,
+			ArrowData[] arrowData,
+			int currentIndex,
+			int newIndex,
+			Foot foot,
+			FootAction[] footActions)
+		{
+			// The first index must be a step on the same arrow (only the second is new)
+			if (!IsResting(currentState, newIndex, foot))
+				return null;
+
+			// Skip if this next arrow is not a valid pairing for any other foot arrows.
+			var newIndexOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, arrowData, newIndex);
+			if (newIndexOtherFootValidPairings.Count == 0)
+				return null;
+
+			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
+
+			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
+			{
+				// Skip if this is not a valid bracketable pairing.
+				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
+					continue;
+				// The second index must be a step on a new arrow
 				if (!IsFree(currentState, secondIndex))
 					continue;
 				// Skip if this second arrow is a crossover with any other foot pairing.
@@ -1367,18 +1427,77 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-				var otherFoot = (int)Other(foot);
-				// The other foot doesn't change
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					newState[otherFoot, a] = currentState[otherFoot, a];
-				// The given foot brackets the two new arrows
-				newState[(int)foot, 0] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footActions[0]));
-				newState[(int)foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
-				return new List<GraphNode.FootArrowState[,]> { newState };
+				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
 			}
 
-			return newStates;
+			return null;
+		}
+
+		private static List<GraphNode.FootArrowState[,]> FillBracketBothSame(
+			GraphNode.FootArrowState[,] currentState,
+			ArrowData[] arrowData,
+			int currentIndex,
+			int newIndex,
+			Foot foot,
+			FootAction[] footActions)
+		{
+			if (footActions.Length != MaxArrowsPerFoot)
+				return null;
+
+			// Must be all releases or all placements
+			// One release and one placement will be treated as two separate events, a release first
+			// and a separate placement afterwards.
+			var numReleases = 0;
+			foreach (var footAction in footActions)
+				if (footAction == FootAction.Release)
+					numReleases++;
+			if (numReleases != 0 && numReleases != MaxArrowsPerFoot)
+				return null;
+			var releasing = numReleases > 0;
+
+			// Check to make sure we are acting on the same arrow.
+			// This is to ensure we do not process the bracket twice from the caller.
+			if (currentIndex != newIndex)
+				return null;
+
+			// Check for state at newIndex matching expected state for whether releasing or placing
+			if (!releasing && !IsResting(currentState, newIndex, foot))
+				return null;
+			if (releasing && !IsHeldOrRolling(currentState, newIndex, foot))
+				return null;
+
+			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
+			{
+				// Check for state at secondIndex matching expected state for whether releasing or placing
+				if (!releasing && !IsResting(currentState, secondIndex, foot))
+					continue;
+				if (releasing && !IsHeldOrRolling(currentState, secondIndex, foot))
+					continue;
+
+				// Set up the state for a new node.
+				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
+			}
+
+			return null;
+		}
+
+		private static GraphNode.FootArrowState[,] CreateNewBracketState(
+			GraphNode.FootArrowState[,] currentState,
+			Foot foot,
+			int firstIndex,
+			int secondIndex,
+			FootAction[] footActions)
+		{
+			// Set up the state for a new node.
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			var otherFoot = (int)Other(foot);
+			// The other foot doesn't change
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+				newState[otherFoot, a] = currentState[otherFoot, a];
+			// The given foot brackets the two new arrows
+			newState[(int)foot, 0] = new GraphNode.FootArrowState(firstIndex, StateAfterAction(footActions[0]));
+			newState[(int)foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
+			return newState;
 		}
 
 		private static bool IsValidPairingWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)

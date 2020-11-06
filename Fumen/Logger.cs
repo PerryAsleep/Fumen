@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Fumen
 {
-	class Logger
+	public class Logger
 	{
 		public static void Info(string message)
 		{
