@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static GenDoublesStaminaCharts.Constants;
 using Fumen;
 
@@ -13,22 +10,41 @@ namespace GenDoublesStaminaCharts
 	{
 		Resting,
 		Held,
-		Rolling,
+		Rolling
 	}
 
 	public class GraphLink : IEquatable<GraphLink>
 	{
-		private static readonly int NullLinkHash;
-		static GraphLink()
+		public struct FootArrowState
 		{
-			// TODO: Feels hacky
-			NullLinkHash = new Tuple<int, int>(
-				Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>().Count(),
-				Enum.GetValues(typeof(FootAction)).Cast<FootAction>().Count()).GetHashCode();
+			public FootArrowState(SingleStepType step, FootAction action)
+			{
+				Step = step;
+				Action = action;
+			}
+
+			public SingleStepType Step { get; }
+			public FootAction Action { get; }
+
+			public override bool Equals(object obj)
+			{
+				if (obj == null)
+					return false;
+				if (obj is FootArrowState f)
+					return Step == f.Step && Action == f.Action;
+				return false;
+			}
+
+			public override int GetHashCode()
+			{
+				var hash = 17;
+				hash = unchecked(hash * 31 + (int) Step);
+				hash = unchecked(hash * 31 + (int) Action);
+				return hash;
+			}
 		}
 
-		// TODO: Consider struct
-		public readonly Tuple<SingleStepType, FootAction>[,] Links = new Tuple<SingleStepType, FootAction>[NumFeet, MaxArrowsPerFoot];
+		public readonly FootArrowState[,] Links = new FootArrowState[NumFeet, MaxArrowsPerFoot];
 
 		// Jumps - any problems?
 		// We may want to know IsJump(), IsJumpBothNew() etc
@@ -41,17 +57,9 @@ namespace GenDoublesStaminaCharts
 			if (other == null)
 				return false;
 			for (var foot = 0; foot < NumFeet; foot++)
-			{
 				for (var arrow = 0; arrow < MaxArrowsPerFoot; arrow++)
-				{
-					if (Links[foot, arrow] == null && other.Links[foot, arrow] == null)
-						continue;
-					if (Links[foot, arrow] == null || other.Links[foot, arrow] == null)
-						return false;
 					if (!Links[foot, arrow].Equals(other.Links[foot, arrow]))
 						return false;
-				}
-			}
 			return true;
 		}
 
@@ -68,8 +76,8 @@ namespace GenDoublesStaminaCharts
 		{
 			var hash = 17;
 			for (var foot = 0; foot < NumFeet; foot++)
-				for (var arrow = 0; arrow < MaxArrowsPerFoot; arrow++)
-					hash = unchecked(hash * 31 + Links[foot, arrow]?.GetHashCode() ?? NullLinkHash);
+			for (var arrow = 0; arrow < MaxArrowsPerFoot; arrow++)
+				hash = unchecked(hash * 31 + Links[foot, arrow].GetHashCode());
 			return hash;
 		}
 	}
@@ -100,12 +108,13 @@ namespace GenDoublesStaminaCharts
 			{
 				var hash = 17;
 				hash = unchecked(hash * 31 + Arrow);
-				hash = unchecked(hash * 31 + (int)State);
+				hash = unchecked(hash * 31 + (int) State);
 				return hash;
 			}
 		}
 
 		public static readonly FootArrowState InvalidFootArrowState;
+
 		static GraphNode()
 		{
 			InvalidFootArrowState = new FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
@@ -166,16 +175,19 @@ namespace GenDoublesStaminaCharts
 		/// The position / index of this arrow.
 		/// </summary>
 		public int Position;
+
 		/// <summary>
 		/// Which arrows are valid as a next step from this arrow for either foot.
 		/// Index is arrow.
 		/// </summary>
 		public bool[] ValidNextArrows;
+
 		/// <summary>
 		/// Which arrows are bracketable with this arrow for the given foot.
 		/// First index is foot, second is arrow.
 		/// </summary>
 		public bool[][] BracketablePairings = new bool[NumFeet][];
+
 		/// <summary>
 		/// Which arrows are valid pairings for the other foot.
 		/// For example, if the first index is Left, the arrows listed are the valid
@@ -183,6 +195,7 @@ namespace GenDoublesStaminaCharts
 		/// First index is foot, second is arrow.
 		/// </summary>
 		public bool[][] OtherFootPairings = new bool[NumFeet][];
+
 		/// <summary>
 		/// Which arrows form a front crossover with the original arrow in front.
 		/// For example, if the first index is Left, the arrows listed are the valid
@@ -190,6 +203,7 @@ namespace GenDoublesStaminaCharts
 		/// First index is foot, second is arrow.
 		/// </summary>
 		public bool[][] OtherFootPairingsSameFootCrossoverFront = new bool[NumFeet][];
+
 		/// <summary>
 		/// Which arrows form a front crossover with the original arrow in back.
 		/// For example, if the first index is Left, the arrows listed are the valid
@@ -197,6 +211,7 @@ namespace GenDoublesStaminaCharts
 		/// First index is foot, second is arrow.
 		/// </summary>
 		public bool[][] OtherFootPairingsSameFootCrossoverBehind = new bool[NumFeet][];
+
 		/// <summary>
 		/// Which arrows form a front crossover.
 		/// For example, if the first index is Left, the arrows listed are the valid
@@ -204,6 +219,7 @@ namespace GenDoublesStaminaCharts
 		/// First index is foot, second is arrow.
 		/// </summary>
 		public bool[][] OtherFootPairingsOtherFootCrossoverFront = new bool[NumFeet][];
+
 		/// <summary>
 		/// Which arrows form a back crossover.
 		/// For example, if the first index is Left, the arrows listed are the valid
@@ -217,8 +233,11 @@ namespace GenDoublesStaminaCharts
 	{
 		private static ArrowData[] SPArrowData;
 		private static ArrowData[] DPArrowData;
-		private static readonly List<SingleStepType[]> JumpCombinations;
-		private static readonly List<FootAction[]>[] ActionCombinations;
+		private static readonly SingleStepType[][] JumpCombinations;
+		private static readonly FootAction[][][] ActionCombinations;
+		private static readonly int[] NumArrowsForStepType;
+		private static readonly Func<GraphNode.FootArrowState[,], ArrowData[], int, int, Foot, FootAction[],
+			List<GraphNode.FootArrowState[,]>>[] FillFuncs;
 
 		static StepGraph()
 		{
@@ -233,12 +252,63 @@ namespace GenDoublesStaminaCharts
 				SingleStepType.BracketOneNew,
 				SingleStepType.BracketBothSame,
 			};
-			JumpCombinations = Combinations(jumpSingleSteps, NumFeet);
+			JumpCombinations = Combinations(jumpSingleSteps, NumFeet).ToArray();
 
 			// Initialize ActionCombination
-			ActionCombinations = new List<FootAction[]>[MaxArrowsPerFoot];
-			for(var i = 0; i < MaxArrowsPerFoot; i++)
-				ActionCombinations[i] = Combinations<FootAction>(i + 1);
+			ActionCombinations = new FootAction[MaxArrowsPerFoot][][];
+			for (var i = 0; i < MaxArrowsPerFoot; i++)
+			{
+				var combinations = Combinations<FootAction>(i + 1);
+
+				// For brackets you can never release and place at the same time
+				// This would be split into two events, a release first, and a step after.
+				// Prune those combinations out now so we don't loop over them and need to check for them
+				// when searching.
+				if (i > 1)
+				{
+					combinations.RemoveAll(actions =>
+					{
+						var hasAtLeastOneRelease = false;
+						var isAllReleases = true;
+						foreach (var action in actions)
+						{
+							if (action == FootAction.Release)
+								hasAtLeastOneRelease = true;
+							else
+								isAllReleases = false;
+						}
+						return hasAtLeastOneRelease != isAllReleases;
+					});
+				}
+
+				ActionCombinations[i] = combinations.ToArray();
+			}
+
+			// Initialize NumArrowsForStepType
+			var steps = Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>().ToList();
+			NumArrowsForStepType = new int[steps.Count];
+			NumArrowsForStepType[(int)SingleStepType.SameArrow] = 1;
+			NumArrowsForStepType[(int)SingleStepType.NewArrow] = 1;
+			NumArrowsForStepType[(int)SingleStepType.DoubleStep] = 1;
+			NumArrowsForStepType[(int)SingleStepType.CrossoverFront] = 1;
+			NumArrowsForStepType[(int)SingleStepType.CrossoverBehind] = 1;
+			NumArrowsForStepType[(int)SingleStepType.FootSwap] = 1;
+			NumArrowsForStepType[(int)SingleStepType.BracketBothNew] = 2;
+			NumArrowsForStepType[(int)SingleStepType.BracketOneNew] = 2;
+			NumArrowsForStepType[(int)SingleStepType.BracketBothSame] = 2;
+
+			// Initialize FillFuncs
+			FillFuncs = new Func<GraphNode.FootArrowState[,], ArrowData[], int, int, Foot, FootAction[],
+				List<GraphNode.FootArrowState[,]>>[steps.Count];
+			FillFuncs[(int)SingleStepType.SameArrow] = FillSameArrow;
+			FillFuncs[(int)SingleStepType.NewArrow] = FillNewArrow;
+			FillFuncs[(int)SingleStepType.DoubleStep] = FillNewArrow;
+			FillFuncs[(int)SingleStepType.CrossoverFront] = FillCrossoverFront;
+			FillFuncs[(int)SingleStepType.CrossoverBehind] = FillCrossoverBack;
+			FillFuncs[(int)SingleStepType.FootSwap] = FillFootSwap;
+			FillFuncs[(int)SingleStepType.BracketBothNew] = FillBracketBothNew;
+			FillFuncs[(int)SingleStepType.BracketOneNew] = FillBracketOneNew;
+			FillFuncs[(int)SingleStepType.BracketBothSame] = FillBracketBothSame;
 		}
 
 		private static void InitArrowData()
@@ -699,12 +769,12 @@ namespace GenDoublesStaminaCharts
 				{
 					Position = DPArrowData[arrow].Position,
 					ValidNextArrows = new bool[NumSPArrows],
-					BracketablePairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairings = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsSameFootCrossoverFront = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsSameFootCrossoverBehind = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsOtherFootCrossoverFront = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsOtherFootCrossoverBehind = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
+					BracketablePairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsSameFootCrossoverFront = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsSameFootCrossoverBehind = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsOtherFootCrossoverFront = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsOtherFootCrossoverBehind = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
 				};
 
 				Array.Copy(DPArrowData[arrow].ValidNextArrows, SPArrowData[arrow].ValidNextArrows, NumSPArrows);
@@ -742,6 +812,7 @@ namespace GenDoublesStaminaCharts
 					state[R, a] = GraphNode.InvalidFootArrowState;
 				}
 			}
+
 			var root = new GraphNode(state);
 			FillStepGraph(root, SPArrowData);
 			return root;
@@ -763,49 +834,10 @@ namespace GenDoublesStaminaCharts
 					state[R, a] = GraphNode.InvalidFootArrowState;
 				}
 			}
+
 			var root = new GraphNode(state);
 			FillStepGraph(root, DPArrowData);
 			return root;
-		}
-
-		private static Func<GraphNode.FootArrowState[,], ArrowData[], int, int, Foot, FootAction[], List<GraphNode.FootArrowState[,]>> GetFillFunc(
-			SingleStepType stepType)
-		{
-			switch (stepType)
-			{
-				case SingleStepType.SameArrow:
-					return FillSameArrow;
-				case SingleStepType.NewArrow:
-				case SingleStepType.DoubleStep:
-					return FillNewArrow;
-				case SingleStepType.CrossoverFront:
-					return FillCrossoverFront;
-				case SingleStepType.CrossoverBehind:
-					return FillCrossoverBack;
-				case SingleStepType.FootSwap:
-					return FillFootSwap;
-				case SingleStepType.BracketBothNew:
-					return FillBracketBothNew;
-				case SingleStepType.BracketOneNew:
-					return FillBracketOneNew;
-				case SingleStepType.BracketBothSame:
-					return FillBracketBothSame;
-			}
-
-			return null;
-		}
-
-		private static int GetNumArrowForStep(SingleStepType stepType)
-		{
-			switch (stepType)
-			{
-				case SingleStepType.BracketBothNew:
-				case SingleStepType.BracketOneNew:
-				case SingleStepType.BracketBothSame:
-					return 2;
-				default:
-					return 1;
-			}
 		}
 
 		private static void FillStepGraph(GraphNode root, ArrowData[] arrowData)
@@ -813,7 +845,7 @@ namespace GenDoublesStaminaCharts
 			Logger.Info($"Generating {arrowData.Length}-panel StepGraph.");
 
 			var completeNodes = new HashSet<GraphNode>();
-			var currentNodes = new List<GraphNode> { root };
+			var currentNodes = new List<GraphNode> {root};
 			int level = 0;
 			while (currentNodes.Count > 0)
 			{
@@ -879,8 +911,8 @@ namespace GenDoublesStaminaCharts
 			ArrowData[] arrowData,
 			SingleStepType stepType)
 		{
-			var numStepArrows = GetNumArrowForStep(stepType);
-			var fillFunc = GetFillFunc(stepType);
+			var numStepArrows = NumArrowsForStepType[(int)stepType];
+			var fillFunc = FillFuncs[(int)stepType];
 			var actionSets = ActionCombinations[numStepArrows - 1];
 			var feet = Enum.GetValues(typeof(Foot)).Cast<Foot>().ToList();
 			var numArrows = arrowData.Length;
@@ -890,9 +922,10 @@ namespace GenDoublesStaminaCharts
 				{
 					foreach (var foot in feet)
 					{
-						foreach (var actionSet in actionSets)
+						for (var setIndex = 0; setIndex < actionSets.Length; setIndex++)
 						{
-							var newStates = fillFunc(currentNode.State, arrowData, currentIndex, newIndex, foot, actionSet);
+							var newStates = fillFunc(currentNode.State, arrowData, currentIndex, newIndex, foot,
+								actionSets[setIndex]);
 							if (newStates == null || newStates.Count == 0)
 								continue;
 
@@ -901,7 +934,7 @@ namespace GenDoublesStaminaCharts
 								var link = new GraphLink();
 								for (var f = 0; f < numStepArrows; f++)
 								{
-									link.Links[(int) foot, f] = new Tuple<SingleStepType, FootAction>(stepType, actionSet[f]);
+									link.Links[(int) foot, f] = new GraphLink.FootArrowState(stepType, actionSets[setIndex][f]);
 								}
 
 								AddNode(currentNode, visitedNodes, newState, link);
@@ -929,10 +962,10 @@ namespace GenDoublesStaminaCharts
 						foreach (var newStateR in actionStateR.Value)
 						{
 							var link = new GraphLink();
-							for (var f = 0; f < GetNumArrowForStep(stepTypes[L]); f++)
-								link.Links[L, f] = new Tuple<SingleStepType, FootAction>(stepTypes[L], actionStateL.Key[f]);
-							for (var f = 0; f < GetNumArrowForStep(stepTypes[R]); f++)
-								link.Links[R, f] = new Tuple<SingleStepType, FootAction>(stepTypes[R], actionStateR.Key[f]);
+							for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[L]]; f++)
+								link.Links[L, f] = new GraphLink.FootArrowState(stepTypes[L], actionStateL.Key[f]);
+							for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[R]]; f++)
+								link.Links[R, f] = new GraphLink.FootArrowState(stepTypes[R], actionStateR.Key[f]);
 							AddNode(currentNode, visitedNodes, newStateR, link);
 						}
 					}
@@ -949,19 +982,19 @@ namespace GenDoublesStaminaCharts
 			var result = new Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>>();
 
 			var numArrows = arrowData.Length;
-			var numStepArrows = GetNumArrowForStep(stepType);
-			var fillFunc = GetFillFunc(stepType);
+			var numStepArrows = NumArrowsForStepType[(int)stepType];
+			var fillFunc = FillFuncs[(int)stepType];
 			var actionSets = ActionCombinations[numStepArrows - 1];
 			for (var currentIndex = 0; currentIndex < numArrows; currentIndex++)
 			{
 				for (var newIndex = 0; newIndex < numArrows; newIndex++)
 				{
-					foreach (var actionSet in actionSets)
+					for (var setIndex = 0; setIndex < actionSets.Length; setIndex++)
 					{
-						var newStates = fillFunc(currentState, arrowData, currentIndex, newIndex, foot, actionSet);
+						var newStates = fillFunc(currentState, arrowData, currentIndex, newIndex, foot, actionSets[setIndex]);
 						if (newStates == null || newStates.Count == 0)
 							continue;
-						result[actionSet] = newStates;
+						result[actionSets[setIndex]] = newStates;
 					}
 				}
 			}
@@ -977,8 +1010,6 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			if (footActions.Length != 1)
-				return null;
 			var footAction = footActions[0];
 
 			// TODO: Double-Step is maybe slightly different since it isn't a bracket?
@@ -997,7 +1028,7 @@ namespace GenDoublesStaminaCharts
 			if (numHeld >= MaxArrowsPerFoot)
 				return null;
 			// If bracketing, skip if this is not a valid bracketable pairing.
-			if (numHeld == 1 && !arrowData[currentIndex].BracketablePairings[(int)foot][newIndex])
+			if (numHeld == 1 && !arrowData[currentIndex].BracketablePairings[(int) foot][newIndex])
 				return null;
 			// Skip if this isn't a valid next arrow for the current placement.
 			if (!arrowData[currentIndex].ValidNextArrows[newIndex])
@@ -1015,27 +1046,28 @@ namespace GenDoublesStaminaCharts
 			// Set up the state for a new node.
 			// Copy the previous state, but lift from any resting arrows for the given foot.
 			// Leave holds/rolls.
-			var otherFoot = (int)Other(foot);
+			var otherFoot = (int) Other(foot);
 			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
 				newState[otherFoot, a] = currentState[otherFoot, a];
 
 				if (IsResting(currentState, newIndex, foot))
-					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+					newState[(int) foot, a] = GraphNode.InvalidFootArrowState;
 				else
-					newState[(int)foot, a] = currentState[(int)foot, a];
+					newState[(int) foot, a] = currentState[(int) foot, a];
 			}
+
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
 				if (newState[(int) foot, a].Arrow == InvalidArrowIndex)
 				{
-					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					newState[(int) foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
 					break;
 				}
 			}
 
-			return new List<GraphNode.FootArrowState[,]> { newState };
+			return new List<GraphNode.FootArrowState[,]> {newState};
 		}
 
 		private static List<GraphNode.FootArrowState[,]> FillSameArrow(
@@ -1046,8 +1078,6 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			if (footActions.Length != 1)
-				return null;
 			var footAction = footActions[0];
 
 			// Must be same arrow.
@@ -1069,20 +1099,22 @@ namespace GenDoublesStaminaCharts
 			{
 				newState[otherFoot, a] = currentState[otherFoot, a];
 
-				if(footAction != FootAction.Release && IsResting(currentState, newIndex, foot))
-					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+				if (footAction != FootAction.Release && IsResting(currentState, newIndex, foot))
+					newState[(int) foot, a] = GraphNode.InvalidFootArrowState;
 				else
-					newState[(int)foot, a] = currentState[(int)foot, a];
+					newState[(int) foot, a] = currentState[(int) foot, a];
 			}
+
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				if (newState[(int)foot, a].Arrow == InvalidArrowIndex)
+				if (newState[(int) foot, a].Arrow == InvalidArrowIndex)
 				{
-					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					newState[(int) foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
 					break;
 				}
 			}
-			return new List<GraphNode.FootArrowState[,]> { newState };
+
+			return new List<GraphNode.FootArrowState[,]> {newState};
 		}
 
 		private static List<GraphNode.FootArrowState[,]> FillFootSwap(
@@ -1093,8 +1125,6 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			if (footActions.Length != 1)
-				return null;
 			var footAction = footActions[0];
 
 			// Cannot release on a new arrow
@@ -1124,19 +1154,20 @@ namespace GenDoublesStaminaCharts
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
 				// The other foot should remain Resting on the newIndex, even though it is slightly lifted
-				if(currentState[(int)otherFoot, a].Arrow == newIndex)
-					newState[(int)otherFoot, a] = new GraphNode.FootArrowState(newIndex, GraphArrowState.Resting);
+				if (currentState[(int) otherFoot, a].Arrow == newIndex)
+					newState[(int) otherFoot, a] = new GraphNode.FootArrowState(newIndex, GraphArrowState.Resting);
 				// All other arrows under the other foot should be lifted.
 				else
-					newState[(int)otherFoot, a] = GraphNode.InvalidFootArrowState;
+					newState[(int) otherFoot, a] = GraphNode.InvalidFootArrowState;
 				// The first arrow under the foot in the new state should be at the newIndex, with the appropriate state.
 				if (a == 0)
-					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					newState[(int) foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
 				// All other arrows under the foot should be lifted. 
 				else
-					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+					newState[(int) foot, a] = GraphNode.InvalidFootArrowState;
 			}
-			return new List<GraphNode.FootArrowState[,]> { newState };
+
+			return new List<GraphNode.FootArrowState[,]> {newState};
 		}
 
 		private static List<GraphNode.FootArrowState[,]> FillCrossoverFront(
@@ -1170,8 +1201,6 @@ namespace GenDoublesStaminaCharts
 			FootAction[] footActions,
 			bool front)
 		{
-			if (footActions.Length != 1)
-				return null;
 			var footAction = footActions[0];
 
 			// Must be new arrow.
@@ -1199,7 +1228,7 @@ namespace GenDoublesStaminaCharts
 				return null;
 
 			// Set up the state for a new node.
-			var otherFoot = (int)Other(foot);
+			var otherFoot = (int) Other(foot);
 			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
@@ -1208,23 +1237,36 @@ namespace GenDoublesStaminaCharts
 
 				// Lift any resting arrows for the given foot.
 				if (IsResting(currentState, newIndex, foot))
-					newState[(int)foot, a] = GraphNode.InvalidFootArrowState;
+					newState[(int) foot, a] = GraphNode.InvalidFootArrowState;
 				else
-					newState[(int)foot, a] = currentState[(int)foot, a];
+					newState[(int) foot, a] = currentState[(int) foot, a];
 			}
+
 			// Set up the FootArrowState for the new arrow
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				if (newState[(int)foot, a].Arrow == InvalidArrowIndex)
+				if (newState[(int) foot, a].Arrow == InvalidArrowIndex)
 				{
-					newState[(int)foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					newState[(int) foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
 					break;
 				}
 			}
 
-			return new List<GraphNode.FootArrowState[,]> { newState };
+			return new List<GraphNode.FootArrowState[,]> {newState};
 		}
 
+		// TODO: Apply these comments about assumptions to other methods.
+		/// <summary>
+		/// Assumes that footActions length is MaxArrowsPerFoot.
+		/// Assumes that if one FootAction is a release, they are all a release.
+		/// </summary>
+		/// <param name="currentState"></param>
+		/// <param name="arrowData"></param>
+		/// <param name="currentIndex"></param>
+		/// <param name="newIndex"></param>
+		/// <param name="foot"></param>
+		/// <param name="footActions"></param>
+		/// <returns></returns>
 		private static List<GraphNode.FootArrowState[,]> FillBracketBothNew(
 			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
@@ -1233,15 +1275,11 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			if (footActions.Length != MaxArrowsPerFoot)
+			// Cannot release on a new arrow.
+			// If one is a release they are both a release due to ActionCombinations creation logic.
+			if (footActions[0] == FootAction.Release)
 				return null;
 
-			// Cannot release on a new arrow
-			foreach (var footAction in footActions)
-			{
-				if (footAction == FootAction.Release)
-					return null;
-			}
 			// Only consider moving to a new arrow when the currentIndex is resting.
 			if (!IsResting(currentState, currentIndex, foot))
 				return null;
@@ -1265,7 +1303,7 @@ namespace GenDoublesStaminaCharts
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
-				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
+				if (!arrowData[newIndex].BracketablePairings[(int) foot][secondIndex])
 					continue;
 				// Skip if this next arrow is occupied.
 				if (!IsFree(currentState, secondIndex))
@@ -1288,7 +1326,8 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
+				return new List<GraphNode.FootArrowState[,]>
+					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
 			}
 
 			return null;
@@ -1302,15 +1341,11 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			if (footActions.Length != MaxArrowsPerFoot)
+			// Cannot release on a new arrow.
+			// If one is a release they are both a release due to ActionCombinations creation logic.
+			if (footActions[0] == FootAction.Release)
 				return null;
 
-			// Cannot release on a new arrow
-			foreach (var footAction in footActions)
-			{
-				if (footAction == FootAction.Release)
-					return null;
-			}
 			// Only consider moving to a new arrow when the currentIndex is resting.
 			if (!IsResting(currentState, currentIndex, foot))
 				return null;
@@ -1353,7 +1388,7 @@ namespace GenDoublesStaminaCharts
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
-				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
+				if (!arrowData[newIndex].BracketablePairings[(int) foot][secondIndex])
 					continue;
 				// The second index must be a step on the same arrow (only the first is new)
 				if (!IsResting(currentState, secondIndex, foot))
@@ -1376,7 +1411,8 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
+				return new List<GraphNode.FootArrowState[,]>
+					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
 			}
 
 			return null;
@@ -1404,7 +1440,7 @@ namespace GenDoublesStaminaCharts
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
-				if (!arrowData[newIndex].BracketablePairings[(int)foot][secondIndex])
+				if (!arrowData[newIndex].BracketablePairings[(int) foot][secondIndex])
 					continue;
 				// The second index must be a step on a new arrow
 				if (!IsFree(currentState, secondIndex))
@@ -1427,7 +1463,8 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
+				return new List<GraphNode.FootArrowState[,]>
+					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
 			}
 
 			return null;
@@ -1441,19 +1478,10 @@ namespace GenDoublesStaminaCharts
 			Foot foot,
 			FootAction[] footActions)
 		{
-			if (footActions.Length != MaxArrowsPerFoot)
-				return null;
-
-			// Must be all releases or all placements
-			// One release and one placement will be treated as two separate events, a release first
-			// and a separate placement afterwards.
-			var numReleases = 0;
-			foreach (var footAction in footActions)
-				if (footAction == FootAction.Release)
-					numReleases++;
-			if (numReleases != 0 && numReleases != MaxArrowsPerFoot)
-				return null;
-			var releasing = numReleases > 0;
+			// Must be all releases or all placements.
+			// This check is performed when creating ActionCombinations so we do not
+			// need to perform it again here.
+			var releasing = footActions[0] == FootAction.Release;
 
 			// Check to make sure we are acting on the same arrow.
 			// This is to ensure we do not process the bracket twice from the caller.
@@ -1475,7 +1503,8 @@ namespace GenDoublesStaminaCharts
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]> { CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions) };
+				return new List<GraphNode.FootArrowState[,]>
+					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
 			}
 
 			return null;
@@ -1490,73 +1519,81 @@ namespace GenDoublesStaminaCharts
 		{
 			// Set up the state for a new node.
 			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			var otherFoot = (int)Other(foot);
+			var otherFoot = (int) Other(foot);
 			// The other foot doesn't change
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 				newState[otherFoot, a] = currentState[otherFoot, a];
 			// The given foot brackets the two new arrows
-			newState[(int)foot, 0] = new GraphNode.FootArrowState(firstIndex, StateAfterAction(footActions[0]));
-			newState[(int)foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
+			newState[(int) foot, 0] = new GraphNode.FootArrowState(firstIndex, StateAfterAction(footActions[0]));
+			newState[(int) foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
 			return newState;
 		}
 
-		private static bool IsValidPairingWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
+		private static bool IsValidPairingWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData,
+			int arrow)
 		{
 			return GetValidPairingsWithOtherFoot(state, foot, arrowData, arrow).Count > 0;
 		}
 
-		private static List<int> GetValidPairingsWithOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
+		private static List<int> GetValidPairingsWithOtherFoot(GraphNode.FootArrowState[,] state, Foot foot,
+			ArrowData[] arrowData, int arrow)
 		{
 			var result = new List<int>();
 			var otherFoot = Other(foot);
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				var otherFootArrowIndex = state[(int)otherFoot, a].Arrow;
+				var otherFootArrowIndex = state[(int) otherFoot, a].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 				    && arrowData[otherFootArrowIndex].OtherFootPairings[(int) otherFoot][arrow])
 					result.Add(otherFootArrowIndex);
 			}
+
 			return result;
 		}
 
-		private static bool FootCrossesOverWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
+		private static bool FootCrossesOverWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData,
+			int arrow)
 		{
 			return FootCrossesOverInFrontWithAnyOtherFoot(state, foot, arrowData, arrow)
 			       || FootCrossesOverInBackWithAnyOtherFoot(state, foot, arrowData, arrow);
 		}
 
-		private static bool FootCrossesOverInFrontWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
+		private static bool FootCrossesOverInFrontWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot,
+			ArrowData[] arrowData, int arrow)
 		{
 			var otherFoot = Other(foot);
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
 				var otherFootArrowIndex = state[(int) otherFoot, a].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[(int)otherFoot][arrow])
+				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[(int) otherFoot][arrow])
 					return true;
 			}
+
 			return false;
 		}
 
-		private static bool FootCrossesOverInBackWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot, ArrowData[] arrowData, int arrow)
+		private static bool FootCrossesOverInBackWithAnyOtherFoot(GraphNode.FootArrowState[,] state, Foot foot,
+			ArrowData[] arrowData, int arrow)
 		{
 			var otherFoot = Other(foot);
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
-				var otherFootArrowIndex = state[(int)otherFoot, a].Arrow;
+				var otherFootArrowIndex = state[(int) otherFoot, a].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[(int)otherFoot][arrow])
+				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[(int) otherFoot][arrow])
 					return true;
 			}
+
 			return false;
 		}
 
 		private static bool IsFree(GraphNode.FootArrowState[,] state, int arrow)
 		{
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					if (state[f, a].Arrow == arrow)
-						return false;
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+				if (state[f, a].Arrow == arrow)
+					return false;
 			return true;
 		}
 
@@ -1564,9 +1601,9 @@ namespace GenDoublesStaminaCharts
 		{
 			var num = 0;
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[(int)foot, a].Arrow != InvalidArrowIndex
-					&& (state[(int)foot, a].State == GraphArrowState.Held
-				        || state[(int)foot, a].State == GraphArrowState.Rolling))
+				if (state[(int) foot, a].Arrow != InvalidArrowIndex
+				    && (state[(int) foot, a].State == GraphArrowState.Held
+				        || state[(int) foot, a].State == GraphArrowState.Rolling))
 					num++;
 			return num;
 		}
@@ -1574,9 +1611,9 @@ namespace GenDoublesStaminaCharts
 		private static bool IsHeldOrRolling(GraphNode.FootArrowState[,] state, int arrow, Foot foot)
 		{
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[(int)foot, a].Arrow == arrow
-				    && (state[(int)foot, a].State == GraphArrowState.Held
-				        || state[(int)foot, a].State == GraphArrowState.Rolling))
+				if (state[(int) foot, a].Arrow == arrow
+				    && (state[(int) foot, a].State == GraphArrowState.Held
+				        || state[(int) foot, a].State == GraphArrowState.Rolling))
 					return true;
 			return false;
 		}
@@ -1584,15 +1621,15 @@ namespace GenDoublesStaminaCharts
 		private static bool IsResting(GraphNode.FootArrowState[,] state, int arrow, Foot foot)
 		{
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[(int)foot, a].Arrow == arrow && state[(int)foot, a].State == GraphArrowState.Resting)
+				if (state[(int) foot, a].Arrow == arrow && state[(int) foot, a].State == GraphArrowState.Resting)
 					return true;
 			return false;
 		}
 
 		public static bool IsOn(GraphNode.FootArrowState[,] state, int arrow, Foot foot)
 		{
-			for(var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[(int)foot, a].Arrow == arrow)
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+				if (state[(int) foot, a].Arrow == arrow)
 					return true;
 			return false;
 		}
@@ -1638,6 +1675,7 @@ namespace GenDoublesStaminaCharts
 					indices[i] = 0;
 					i--;
 				}
+
 				if (i < 0)
 					return false;
 				indices[i]++;
@@ -1654,6 +1692,5 @@ namespace GenDoublesStaminaCharts
 
 			return result;
 		}
-
 	}
 }
