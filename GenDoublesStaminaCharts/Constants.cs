@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace GenDoublesStaminaCharts
 {
 	public static class Constants
@@ -13,10 +8,10 @@ namespace GenDoublesStaminaCharts
 		public const int MaxArrowsPerFoot = 2;
 		public const int NumFeet = 2;
 		public const int InvalidArrowIndex = -1;
+		public const int InvalidFoot = -1;
 
-		// Indices in Foot
-		public const int L = (int)Foot.Left;
-		public const int R = (int)Foot.Right;
+		public const int L = 0;
+		public const int R = 1;
 
 		public const int P1L = 0;
 		public const int P1D = 1;
@@ -27,24 +22,17 @@ namespace GenDoublesStaminaCharts
 		public const int P2U = 6;
 		public const int P2R = 7;
 
-		public enum MineType
+		// TODO: Find a better spot
+		public static int OtherFoot(int foot)
 		{
-			SingleAfterLast,
-			SingleAfterSecondLast,
-			SingleAfterThirdLast,
-			SingleAfterFourthLast,
-			// hm what about after a jump? just pick one I guess.
-
-
-
-			Quad,
+			return foot == L ? R : L;
 		}
 
+		// TODO: Rename
 		public enum SingleStepType
 		{
 			SameArrow,
 			NewArrow,
-			DoubleStep,
 			CrossoverFront,
 			CrossoverBehind,
 			FootSwap,
@@ -59,12 +47,6 @@ namespace GenDoublesStaminaCharts
 			Hold,
 			Roll,
 			Release
-		}
-
-		public enum Foot
-		{
-			Left,
-			Right
 		}
 	}
 }

@@ -11,46 +11,6 @@ namespace Fumen.Converters
 {
 	public class SMReader
 	{
-		private class SMEventComparer : IComparer<Event>
-		{
-			private static readonly List<Type> SMEventOrder = new List<Type>
-			{
-				typeof(TimeSignature),
-				typeof(TempoChange),
-				typeof(LaneTapNote),
-				typeof(LaneHoldStartNote),
-				typeof(LaneHoldEndNote),
-				typeof(Stop),	// Stops occur after other notes at the same time.
-			};
-
-			int IComparer<Event>.Compare(Event e1, Event e2)
-			{
-				if (null == e1 && null == e2)
-					return 0;
-				if (null == e1)
-					return -1;
-				if (null == e2)
-					return 1;
-
-				// Order by time / position
-				var timeComparison = e1.CompareTo(e2);
-				if (timeComparison != 0)
-					return timeComparison;
-
-				// Order by type
-				var e1Index = SMEventOrder.IndexOf(e1.GetType());
-				var e2Index = SMEventOrder.IndexOf(e2.GetType());
-				if (e1Index >= 0 && e2Index >= 0)
-					return e1Index.CompareTo(e2Index);
-
-				// Order by lane
-				if (e1 is LaneNote note1 && e2 is LaneNote note2)
-					return note1.Lane.CompareTo(note2.Lane);
-
-				return 0;
-			}
-		}
-
 		protected abstract class PropertyParser
 		{
 			protected readonly string PropertyName;
@@ -613,7 +573,7 @@ namespace Fumen.Converters
 
 			// Sort events
 			foreach (var chart in song.Charts)
-				chart.Layers[0].Events.Sort(new SMEventComparer());
+				chart.Layers[0].Events.Sort(new SMCommon.SMEventComparer());
 
 			song.GenreTransliteration = song.Genre;
 

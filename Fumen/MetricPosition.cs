@@ -24,6 +24,31 @@ namespace Fumen
 		public int Beat { get; set; }
 		public Fraction SubDivision { get; set; } = new Fraction(0, 0);
 
+		public static bool operator >(MetricPosition a, MetricPosition b)
+		{
+			return a.CompareTo(b) > 0;
+		}
+		public static bool operator <(MetricPosition a, MetricPosition b)
+		{
+			return a.CompareTo(b) < 0;
+		}
+		public static bool operator ==(MetricPosition a, MetricPosition b)
+		{
+			return a.CompareTo(b) == 0;
+		}
+		public static bool operator !=(MetricPosition a, MetricPosition b)
+		{
+			return a.CompareTo(b) != 0;
+		}
+		public static bool operator >=(MetricPosition a, MetricPosition b)
+		{
+			return a.CompareTo(b) >= 0;
+		}
+		public static bool operator <=(MetricPosition a, MetricPosition b)
+		{
+			return a.CompareTo(b) <= 0;
+		}
+
 		public int CompareTo(object obj)
 		{
 			var other = (MetricPosition)obj;
