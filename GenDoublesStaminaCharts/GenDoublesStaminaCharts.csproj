@@ -44,9 +44,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArrowData.cs" />
-    <Compile Include="ChartSearch.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="ExpressedChart.cs" />
+    <Compile Include="MineUtils.cs" />
     <Compile Include="PerformedChart.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

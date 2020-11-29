@@ -76,7 +76,7 @@ namespace GenDoublesStaminaCharts
 					}
 
 					// Generate a new series of Events for this Chart from the singles Chart.
-					var expressedChart = ChartSearch.FindExpressedChart(chart.Layers[0].Events, SPGraph);
+					var expressedChart = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
 					var performedChart = PerformedChart.CreateFromExpressedChart(DPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);

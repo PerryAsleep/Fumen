@@ -63,10 +63,14 @@ namespace GenDoublesStaminaCharts
 			}
 		}
 
-		private class StepPerformanceNode : PerformanceNode
+		private class StepPerformanceNode : PerformanceNode, MineUtils.INodeLink
 		{
 			public GraphNode GraphNode;
 			public GraphLink GraphLink;
+
+			public GraphNode GetGraphNode() { return GraphNode; }
+			public GraphLink GetGraphLink() { return GraphLink; }
+			public MetricPosition GetPosition() { return Position; }
 		}
 
 		private class MinePerformanceNode : PerformanceNode
@@ -74,14 +78,15 @@ namespace GenDoublesStaminaCharts
 			public int Arrow;
 		}
 
-		private readonly PerformanceNode Root = new PerformanceNode();
+		private readonly PerformanceNode Root;
 		private readonly int NumArrows;
 
 		private PerformedChart() {}
 
-		private PerformedChart(int numArrows)
+		private PerformedChart(int numArrows, PerformanceNode root)
 		{
 			NumArrows = numArrows;
+			Root = root;
 		}
 
 		/// <summary>
@@ -97,33 +102,27 @@ namespace GenDoublesStaminaCharts
 		/// </returns>
 		public static PerformedChart CreateFromExpressedChart(StepGraph stepGraph, ExpressedChart expressedChart)
 		{
-			var performedChart = new PerformedChart(stepGraph.NumArrows);
-
+			// Find a path of SearchNodes through the ExpressedChart
 			var random = new Random();
-
-			var root = new SearchNode
-			{
-				GraphNode = stepGraph.Root
-			};
-
-			var currentNode = root;
+			var rootSearchNode = new SearchNode { GraphNode = stepGraph.Root };
+			var currentSearchNode = rootSearchNode;
 			while (true)
 			{
 				// Finished
-				if (currentNode.Depth >= expressedChart.StepEvents.Count)
+				if (currentSearchNode.Depth >= expressedChart.StepEvents.Count)
 					break;
 
 				// Dead end
-				while (currentNode.GraphNode.Links[expressedChart.StepEvents[currentNode.Depth].Link] == null
-					   || currentNode.CurrentIndex >
-					   currentNode.GraphNode.Links[expressedChart.StepEvents[currentNode.Depth].Link].Count - 1)
+				while (currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link] == null
+					   || currentSearchNode.CurrentIndex >
+					   currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link].Count - 1)
 				{
 					// Back up
-					var prevNode = currentNode.PreviousNode;
+					var prevNode = currentSearchNode.PreviousNode;
 					if (prevNode != null)
 					{
 						prevNode.NextNode = null;
-						currentNode = prevNode;
+						currentSearchNode = prevNode;
 					}
 					else
 					{
@@ -132,71 +131,178 @@ namespace GenDoublesStaminaCharts
 					}
 				}
 
-				var links = currentNode.GraphNode.Links[expressedChart.StepEvents[currentNode.Depth].Link];
+				var links = currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link];
 
 				// If this node's indices have not been set up, set them up
-				if (currentNode.CurrentIndex == 0)
+				if (currentSearchNode.CurrentIndex == 0)
 				{
 					for (var i = 0; i < links.Count; i++)
-						currentNode.Indices.Add(i);
-					currentNode.Indices = currentNode.Indices.OrderBy(a => random.Next()).ToList();
+						currentSearchNode.Indices.Add(i);
+					currentSearchNode.Indices = currentSearchNode.Indices.OrderBy(a => random.Next()).ToList();
 				}
 
 				// We can search further, pick a new index and advance
-				var nextGraphNode = links[currentNode.Indices[currentNode.CurrentIndex++]];
+				var nextGraphNode = links[currentSearchNode.Indices[currentSearchNode.CurrentIndex++]];
 				var newNode = new SearchNode
 				{
-					PreviousNode = currentNode,
-					Depth = currentNode.Depth + 1,
+					PreviousNode = currentSearchNode,
+					Depth = currentSearchNode.Depth + 1,
 					GraphNode = nextGraphNode
 				};
-				currentNode.NextNode = newNode;
-				currentNode = newNode;
+				currentSearchNode.NextNode = newNode;
+				currentSearchNode = newNode;
 			}
 
-			// TODO: Mines
+			// Set up a new PerformedChart
+			var performedChart = new PerformedChart(
+				stepGraph.NumArrows,
+				new StepPerformanceNode
+				{
+					Position = new MetricPosition(),
+					GraphNode = stepGraph.Root
+				});
+
+			// Add the StepPerformanceNodes to the PerformedChart
+			var currentPerformanceNode = performedChart.Root;
+			currentSearchNode = rootSearchNode;
+			while (currentSearchNode != null)
+			{
+				// Add new StepPerformanceNode and advance
+				var newNode = new StepPerformanceNode
+				{
+					Position = expressedChart.StepEvents[currentSearchNode.Depth].Position,
+					GraphLink = expressedChart.StepEvents[currentSearchNode.Depth].Link,
+					GraphNode = currentSearchNode.GraphNode,
+					Prev = currentPerformanceNode
+				};
+				currentPerformanceNode.Next = newNode;
+				currentPerformanceNode = newNode;
+				currentSearchNode = currentSearchNode.NextNode;
+			}
+			var lastPerformanceNode = currentPerformanceNode;
+
+			// Add Mines
+			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, rootSearchNode, lastPerformanceNode);
+			return performedChart;
+		}
+
+		private static void AddMinesToPerformedChart(
+			PerformedChart performedChart,
+			StepGraph stepGraph,
+			ExpressedChart expressedChart,
+			SearchNode rootSearchNode,
+			PerformanceNode lastPerformanceNode)
+		{
+			// Record which lanes have arrows in them.
+			var lanesWithNoArrows = new bool[stepGraph.NumArrows];
+			for (var a = 0; a < stepGraph.NumArrows; a++)
+				lanesWithNoArrows[a] = true;
+			var currentSearchNode = rootSearchNode;
+			while (currentSearchNode != null)
+			{
+				for (var f = 0; f < NumFeet; f++)
+					for (var a = 0; a < MaxArrowsPerFoot; a++)
+						if (currentSearchNode.GraphNode.State[f, a].Arrow != InvalidArrowIndex)
+							lanesWithNoArrows[currentSearchNode.GraphNode.State[f, a].Arrow] = false;
+				currentSearchNode = currentSearchNode.NextNode;
+			}
+
+			// Get the first lane with no arrow, if one exists.
+			var firstLaneWithNoArrow = -1;
+			for (var a = 0; a < stepGraph.NumArrows; a++)
+			{
+				if (!lanesWithNoArrows[a])
+					continue;
+				firstLaneWithNoArrow = a;
+				break;
+			}
+
+			// Create sorted lists of releases and steps to simplify the mine logic
+			var stepEvents = new List<StepPerformanceNode>();
+			var currentPerformanceNode = performedChart.Root;
+			while (currentPerformanceNode != null)
+			{
+				if (currentPerformanceNode is StepPerformanceNode stepNode)
+					stepEvents.Add(stepNode);
+				currentPerformanceNode = currentPerformanceNode.Next;
+			}
+			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents);
+
+			// Add the MinePerformanceNodes to the PerformedChart.
+			// For simplicity add all the nodes to the end. They will be sorted later.
+			var stepIndex = 0;
+			var releaseIndex = 0;
+			MetricPosition previousMinePosition = null;
+			var arrowsOccupiedByMines = new bool[stepGraph.NumArrows];
 			foreach (var mineEvent in expressedChart.MineEvents)
 			{
+				// Advance currentStepNode to the preceding step.
+				while (stepIndex < steps.Count && steps[stepIndex].Position <= mineEvent.Position)
+					stepIndex++;
+				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < mineEvent.Position)
+					releaseIndex++;
+
+				// Reset arrows occupied by mines if this mine is at a new position.
+				if (previousMinePosition == null || previousMinePosition < mineEvent.Position)
+				{
+					for (var a = 0; a < stepGraph.NumArrows; a++)
+						arrowsOccupiedByMines[a] = false;
+				}
+				previousMinePosition = mineEvent.Position;
+
 				switch (mineEvent.Type)
 				{
 					case MineType.AfterArrow:
-					{
-						break;
-					}
-
 					case MineType.BeforeArrow:
 					{
-						// Scan ahead to find which arrow is in the nth closest.
+						var bestArrow = MineUtils.FindBestNthMostRecentArrow(
+							mineEvent.Type == MineType.AfterArrow,
+							mineEvent.ArrowIsNthClosest,
+							mineEvent.FootAssociatedWithPairedNote,
+							stepGraph.NumArrows,
+							releases,
+							releaseIndex,
+							steps,
+							stepIndex,
+							arrowsOccupiedByMines);
+						if (bestArrow != InvalidArrowIndex)
+						{
+							// Add mine event
+							var newNode = new MinePerformanceNode
+							{
+								Position = mineEvent.Position,
+								Arrow = bestArrow,
+								Prev = lastPerformanceNode
+							};
+							lastPerformanceNode.Next = newNode;
+							lastPerformanceNode = newNode;
 
-
-						// If there are more than one arrow, prefer the one matching the foot for this mine event
-
-
-						// Make sure that arrow is free now
-
-						// If the arrow is not free, repeat the scan for n - 1 until an arrow is found.
-
-						// If no arrow is found, skip the mine?
-
-
+							arrowsOccupiedByMines[bestArrow] = true;
+						}
 						break;
 					}
 					case MineType.NoArrow:
 					{
+						// If this PerformedChart has a lane with no arrows in it, use that for this mine.
+						// If it doesn't then just skip the mine.
+						// TODO: Log warning
+						if (firstLaneWithNoArrow >= 0)
+						{
+							var newNode = new MinePerformanceNode
+							{
+								Position = mineEvent.Position,
+								Arrow = firstLaneWithNoArrow,
+								Prev = lastPerformanceNode
+							};
+							lastPerformanceNode.Next = newNode;
+							lastPerformanceNode = newNode;
+
+							arrowsOccupiedByMines[firstLaneWithNoArrow] = true;
+						}
 						break;
 					}
 				}
-
 			}
-
-			currentNode = root;
-			while (currentNode != null)
-			{
-
-				currentNode = currentNode.NextNode;
-			}
-
-			return performedChart;
 		}
 
 		/// <summary>
@@ -320,32 +426,32 @@ namespace GenDoublesStaminaCharts
 							switch (currentArrowState.State)
 							{
 								case GraphArrowState.Resting:
+								{
+									events.Add(new LaneTapNote
 									{
-										events.Add(new LaneTapNote
-										{
-											Position = stepNode.Position,
-											Lane = arrow,
-											Player = 0,
-											SourceType = SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap].ToString()
-										});
-										break;
-									}
+										Position = stepNode.Position,
+										Lane = arrow,
+										Player = 0,
+										SourceType = SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap].ToString()
+									});
+									break;
+								}
 								case GraphArrowState.Held:
 								case GraphArrowState.Rolling:
+								{
+									// Hold or Roll Start
+									var holdRollType = currentArrowState.State == GraphArrowState.Held
+										? SMCommon.NoteType.HoldStart
+										: SMCommon.NoteType.RollStart;
+									events.Add(new LaneHoldStartNote
 									{
-										// Hold or Roll Start
-										var holdRollType = currentArrowState.State == GraphArrowState.Held
-											? SMCommon.NoteType.HoldStart
-											: SMCommon.NoteType.RollStart;
-										events.Add(new LaneHoldStartNote
-										{
-											Position = stepNode.Position,
-											Lane = arrow,
-											Player = 0,
-											SourceType = SMCommon.SNoteChars[(int)holdRollType].ToString()
-										});
-										break;
-									}
+										Position = stepNode.Position,
+										Lane = arrow,
+										Player = 0,
+										SourceType = SMCommon.SNoteChars[(int)holdRollType].ToString()
+									});
+									break;
+								}
 							}
 						}
 					}
