@@ -63,7 +63,7 @@ namespace GenDoublesStaminaCharts
 			}
 		}
 
-		private class StepPerformanceNode : PerformanceNode, MineUtils.INodeLink
+		private class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
 		{
 			public GraphNode GraphNode;
 			public GraphLink GraphLink;
@@ -217,7 +217,7 @@ namespace GenDoublesStaminaCharts
 				break;
 			}
 
-			// Create sorted lists of releases and steps to simplify the mine logic
+			// Create sorted lists of releases.
 			var stepEvents = new List<StepPerformanceNode>();
 			var currentPerformanceNode = performedChart.Root;
 			while (currentPerformanceNode != null)
@@ -236,7 +236,7 @@ namespace GenDoublesStaminaCharts
 			var arrowsOccupiedByMines = new bool[stepGraph.NumArrows];
 			foreach (var mineEvent in expressedChart.MineEvents)
 			{
-				// Advance currentStepNode to the preceding step.
+				// Advance the step and release indices to follow and precede the event respectively.
 				while (stepIndex < steps.Count && steps[stepIndex].Position <= mineEvent.Position)
 					stepIndex++;
 				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < mineEvent.Position)

@@ -8,78 +8,6 @@ using static GenDoublesStaminaCharts.Constants;
 namespace GenDoublesStaminaCharts
 {
 	/// <summary>
-	/// Common data to both StepEvents and MineEvents.
-	/// </summary>
-	public class ExpressedChartEvent
-	{
-		public MetricPosition Position;
-	}
-
-	/// <summary>
-	/// Event representing all the steps occurring at a single Metric position in the chart.
-	/// </summary>
-	public class StepEvent : ExpressedChartEvent
-	{
-		/// <summary>
-		/// GraphLink representing the all steps occurring at a single Metric position.
-		/// This GraphLink is the Link to this Event as opposed to the link from this Event.
-		/// </summary>
-		public GraphLink Link;
-	}
-
-	/// <summary>
-	/// Enumeration of was to express a MineEvent.
-	/// </summary>
-	public enum MineType
-	{
-		/// <summary>
-		/// Expressing a mine as occurring after a specific arrow is most preferable as
-		/// this is typically done to inform future footing like a double step or a foot
-		/// swap.
-		/// </summary>
-		AfterArrow,
-
-		/// <summary>
-		/// If a mine can't be expressed as occurring after an arrow because no arrow
-		/// precedes it, then the next best way to express it is as occurring before a
-		/// specific arrow.
-		/// </summary>
-		BeforeArrow,
-
-		/// <summary>
-		/// In the rare case that a mine is in a lane with no arrows then it is expressed
-		/// as occurring with no arrow.
-		/// </summary>
-		NoArrow
-	}
-
-	/// <summary>
-	/// Event representing a single mine.
-	/// </summary>
-	public class MineEvent : ExpressedChartEvent
-	{
-		/// <summary>
-		/// The MineType to use for expressing this mine.
-		/// </summary>
-		public MineType Type = MineType.NoArrow;
-
-		/// <summary>
-		/// When expressing this mine as relative to a specific arrow, we want to know
-		/// how close the arrow was to the mine relative to other arrows. For example it
-		/// is meaningful that a mine follows the most recent arrow because that typically
-		/// indicates a double step or a foot swap, while it means something else if it
-		/// follows the least recently used arrow.
-		/// </summary>
-		public int ArrowIsNthClosest = InvalidArrowIndex;
-
-		/// <summary>
-		/// The foot associated with the arrow that is paired with this mine. This is
-		/// useful when a mine follows one arrow of a jump to indicate footing.
-		/// </summary>
-		public int FootAssociatedWithPairedNote = InvalidFoot;
-	}
-
-	/// <summary>
 	/// An ExpressedChart is a series of events which describe the intent of a chart.
 	/// Instead of specifying the specific arrows or mines in a chart is specifies
 	/// the types of steps and mines that make it up.
@@ -98,23 +26,67 @@ namespace GenDoublesStaminaCharts
 	/// </summary>
 	public class ExpressedChart
 	{
-		private class ChartSearchNode : IEquatable<ChartSearchNode>
+		/// <summary>
+		/// Common data to the events which make up an ExpressedChart.
+		/// </summary>
+		public class ChartEvent
+		{
+			public MetricPosition Position;
+		}
+
+		/// <summary>
+		/// Event representing all the steps occurring at a single Metric position in the chart.
+		/// </summary>
+		public class StepEvent : ChartEvent
+		{
+			/// <summary>
+			/// GraphLink representing the all steps occurring at a single Metric position.
+			/// This GraphLink is the Link to this Event as opposed to the link from this Event.
+			/// </summary>
+			public GraphLink Link;
+		}
+
+		/// <summary>
+		/// Event representing a single mine.
+		/// </summary>
+		public class MineEvent : ChartEvent
+		{
+			/// <summary>
+			/// The MineType to use for expressing this mine.
+			/// </summary>
+			public MineType Type = MineType.NoArrow;
+
+			/// <summary>
+			/// When expressing this mine as relative to a specific arrow, we want to know
+			/// how close the arrow was to the mine relative to other arrows. For example it
+			/// is meaningful that a mine follows the most recent arrow because that typically
+			/// indicates a double step or a foot swap, while it means something else if it
+			/// follows the least recently used arrow.
+			/// </summary>
+			public int ArrowIsNthClosest = InvalidArrowIndex;
+
+			/// <summary>
+			/// The foot associated with the arrow that is paired with this mine. This is
+			/// useful when a mine follows one arrow of a jump to indicate footing.
+			/// </summary>
+			public int FootAssociatedWithPairedNote = InvalidFoot;
+		}
+
+		private class ChartSearchNode : IEquatable<ChartSearchNode>, MineUtils.IChartNode
 		{
 			private static long IdCounter;
 
 			private readonly long Id;
 			public readonly GraphNode GraphNode;
 			public readonly MetricPosition Position;
-			public readonly int Depth;
 			public readonly int Cost;
 			public readonly ChartSearchNode PreviousNode;
 			public readonly GraphLink PreviousLink;
-			public Dictionary<GraphLink, HashSet<ChartSearchNode>> NextNodes = new Dictionary<GraphLink, HashSet<ChartSearchNode>>();
+			public readonly Dictionary<GraphLink, HashSet<ChartSearchNode>> NextNodes = new Dictionary<GraphLink, HashSet<ChartSearchNode>>();
 
 			public ChartSearchNode(
 				GraphNode graphNode,
 				MetricPosition position,
-				int depth,
 				int cost,
 				ChartSearchNode previousNode,
 				GraphLink previousLink)
@@ -122,7 +94,6 @@ namespace GenDoublesStaminaCharts
 				Id = IdCounter++;
 				GraphNode = graphNode;
 				Position = position;
-				Depth = depth;
 				Cost = cost;
 				PreviousNode = previousNode;
 				PreviousLink = previousLink;
@@ -148,6 +119,17 @@ namespace GenDoublesStaminaCharts
 			{
 				return (int)Id;
 			}
+
+			public ChartSearchNode GetNextNode()
+			{
+				if (NextNodes.Count == 0 || NextNodes.First().Value.Count == 0)
+					return null;
+				return NextNodes.First().Value.First();
+			}
+
+			public GraphNode GetGraphNode() { return GraphNode; }
+			public GraphLink GetGraphLink() { return NextNodes.Count > 0 ? NextNodes.First().Key : null; }
+			public MetricPosition GetPosition() { return Position; }
 		}
 
 		/// <summary>
@@ -164,25 +146,24 @@ namespace GenDoublesStaminaCharts
 		public static ExpressedChart CreateFromSMEvents(List<Event> events, StepGraph stepGraph)
 		{
 			var expressedChart = new ExpressedChart();
-			var root = new ChartSearchNode(stepGraph.Root, null, 0, 0, null, null);
+			var root = new ChartSearchNode(stepGraph.Root, null, 0, null, null);
 
 			var numArrows = stepGraph.NumArrows;
 			var currentState = new SearchState[numArrows];
 			var lastMines = new MetricPosition[numArrows];
 			var lastReleases = new MetricPosition[numArrows];
-			var minesByArrow = new List<MineEvent>[numArrows];
 			for (var a = 0; a < numArrows; a++)
 			{
 				currentState[a] = SearchState.Empty;
 				lastMines[a] = new MetricPosition();
 				lastReleases[a] = new MetricPosition();
-				minesByArrow[a] = new List<MineEvent>();
 			}
+
+			var smMines = new List<LaneNote>();
 
 			var eventIndex = 0;
 			var numEvents = events.Count;
 			var currentSearchNodes = new HashSet<ChartSearchNode> { root };
-			var depth = 0;
 			while (true)
 			{
 				// Reached the end
@@ -247,7 +228,6 @@ namespace GenDoublesStaminaCharts
 								var childSearchNode = new ChartSearchNode(
 									childNode,
 									releases[0].Position,
-									depth,
 									searchNode.Cost + cost,
 									searchNode,
 									l.Key);
@@ -259,20 +239,14 @@ namespace GenDoublesStaminaCharts
 
 					// Prune
 					currentSearchNodes = Prune(childSearchNodes);
-					depth++;
 				}
 
 				// Get mines and record them
 				if (mines.Count > 0)
 				{
+					smMines.AddRange(mines);
 					foreach (var mineNote in mines)
-					{
-						var mineEvent = new MineEvent { Position = mineNote.Position };
-
-						lastMines[mineNote.Lane] = mineEvent.Position;
-						minesByArrow[mineNote.Lane].Add(mineEvent);
-						expressedChart.MineEvents.Add(mineEvent);
-					}
+						lastMines[mineNote.Lane] = mineNote.Position;
 				}
 
 				// Get taps/holds/rolls
@@ -307,7 +281,6 @@ namespace GenDoublesStaminaCharts
 								var childSearchNode = new ChartSearchNode(
 									childNode,
 									releases[0].Position,
-									depth,
 									searchNode.Cost + cost,
 									searchNode,
 									l.Key);
@@ -319,7 +292,6 @@ namespace GenDoublesStaminaCharts
 
 					// Prune
 					currentSearchNodes = Prune(childSearchNodes);
-					depth++;
 				}
 
 				// Taps only last for a moment, clear them out before continuing.
@@ -341,159 +313,72 @@ namespace GenDoublesStaminaCharts
 				}
 			}
 
-			SetExpressedChartEvents(expressedChart, numArrows, root, minesByArrow);
+			AddStepsToExpressedChart(expressedChart, root);
+			AddMinesToExpressedChart(expressedChart, root, smMines, numArrows);
 
 			return expressedChart;
 		}
 
-		private static void SetExpressedChartEvents(
-			ExpressedChart expressedChart,
-			int numArrows,
-			ChartSearchNode root,
-			List<MineEvent>[] minesByArrow)
+		private static void AddStepsToExpressedChart(ExpressedChart expressedChart, ChartSearchNode rootSearchNode)
 		{
-			var lastReleases = new MetricPosition[numArrows];
-			var lastFeet = new int[numArrows];
-			var lastMineIndices = new int[numArrows];
-			var lastReleaseDepth = new int[numArrows];
-			// The arrow at the given index is the nth most recently released (closest in the past) arrow relative to other arrows.
-			var nthMostRecentRelease = new int[numArrows];
-			// The arrow at the given index is the nth least recently released (furthest in the past) arrow relative to other arrows.
-			var nthLeastRecentRelease = new int[numArrows];
-			for (var a = 0; a < numArrows; a++)
-			{
-				lastFeet[a] = InvalidFoot;
-				lastReleaseDepth[a] = -1;
-			}
-
 			// Current node for iterating through the chart.
-			var stepNode = root;
+			var searchNode = rootSearchNode;
 
-			// The first node is the resting position and not an event in tdhe chart.
-			var previousLink = stepNode.NextNodes.First().Key;
-			stepNode = stepNode.NextNodes.First().Value.First();
+			// The first node is the resting position and not an event in the chart.
+			searchNode = searchNode.GetNextNode();
 
-			while (stepNode != null)
+			while (searchNode != null)
 			{
 				// Create a new StepEvent for this step ChartSearchNode for adding to the ExpressedChart.
-				var stepEvent = new StepEvent { Position = stepNode.Position };
-
-				// Process AfterArrow mines.
-				// This is the most preferable way to describe a mine.
-				for (var a = 0; a < numArrows; a++)
-				{
-					// Skip if this arrow has not had a release yet.
-					if (lastReleases[a] != null)
-						continue;
-					while (lastMineIndices[a] < minesByArrow[a].Count)
-					{
-						if (minesByArrow[a][lastMineIndices[a]].Position <= stepNode.Position)
-						{
-							minesByArrow[a][lastMineIndices[a]].Type = MineType.AfterArrow;
-							minesByArrow[a][lastMineIndices[a]].ArrowIsNthClosest = nthMostRecentRelease[a];
-							minesByArrow[a][lastMineIndices[a]].FootAssociatedWithPairedNote = lastFeet[a];
-							lastMineIndices[a]++;
-						}
-					}
-				}
-
-				// Find if any feet were released on this stepNode.
-				for (var f = 0; f < NumFeet; f++)
-				{
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
-					{
-						// This is a release.
-						if (stepNode.GraphNode.State[f, a].Arrow != InvalidArrowIndex
-							&& stepNode.GraphNode.State[f, a].State == GraphArrowState.Resting
-							&& previousLink.Links[f, a].Valid
-							&& (previousLink.Links[f, a].Action == FootAction.Release ||
-								previousLink.Links[f, a].Action == FootAction.Tap))
-						{
-							lastReleaseDepth[stepNode.GraphNode.State[f, a].Arrow] = stepNode.Depth;
-							lastFeet[stepNode.GraphNode.State[f, a].Arrow] = f;
-						}
-					}
-				}
-				// Update the trackers for how recent each arrow is.
-				for (var a = 0; a < numArrows; a++)
-				{
-					nthMostRecentRelease[a] = 0;
-					nthLeastRecentRelease[a] = 0;
-					for (var other = 0; other < numArrows; other++)
-					{
-						if (other == a || lastReleaseDepth[other] == -1 || lastReleaseDepth[a] == -1)
-							continue;
-						if (lastReleaseDepth[a] < lastReleaseDepth[other])
-							nthMostRecentRelease[a]++;
-						else if (lastReleaseDepth[a] > lastReleaseDepth[other])
-							nthLeastRecentRelease[a]++;
-					}
-				}
-
-				// TODO: Is it correct to record least recent releases for BeforeArrow types?
-				// Shouldn't we be recording stepping onto an arrow, and not releasing for it?
-
-				// Update the lastReleases for released arrows, and process any mines occurring before the 
-				// first release.
-				for (var arrow = 0; arrow < numArrows; arrow++)
-				{
-					if (lastReleaseDepth[arrow] != stepNode.Depth)
-						continue;
-
-					// If this is the first stepNode for this arrow, process mines occurring before this stepNode as BeforeArrow.
-					if (lastReleases[arrow] == null)
-					{
-						while (lastMineIndices[arrow] < minesByArrow[arrow].Count)
-						{
-							if (minesByArrow[arrow][lastMineIndices[arrow]].Position >= stepNode.Position)
-								break;
-
-							minesByArrow[arrow][lastMineIndices[arrow]].Type = MineType.BeforeArrow;
-							// When using BeforeArrow types, we want to know how least recent this arrow is.
-							// This arrow is always the 0th most recent here, since it was just released.
-							minesByArrow[arrow][lastMineIndices[arrow]].ArrowIsNthClosest = nthLeastRecentRelease[arrow];
-							// lastFeet[arrow] has been updated above for this stepNode's arrow.
-							minesByArrow[arrow][lastMineIndices[arrow]].FootAssociatedWithPairedNote = lastFeet[arrow];
-							lastMineIndices[arrow]++;
-						}
-					}
-
-					// Update last release for this arrow.
-					lastReleases[arrow] = stepNode.Position;
-				}
+				var stepEvent = new StepEvent { Position = searchNode.Position };
 
 				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
-				if (stepNode.NextNodes.Count > 0)
+				if (searchNode.NextNodes.Count > 0)
 				{
-					var linkEntry = stepNode.NextNodes.First();
+					var linkEntry = searchNode.NextNodes.First();
 					stepEvent.Link = linkEntry.Key;
-					previousLink = linkEntry.Key;
-					stepNode = linkEntry.Value.First();
+					searchNode = linkEntry.Value.First();
 				}
 				else
 				{
-					stepNode = null;
+					searchNode = null;
 				}
 
 				// Record the StepEvent.
 				expressedChart.StepEvents.Add(stepEvent);
 			}
+		}
 
-			// Process any remaining mines which may have occurred after the last step.
-			for (var a = 0; a < numArrows; a++)
+		private static void AddMinesToExpressedChart(
+			ExpressedChart expressedChart,
+			ChartSearchNode rootSearchNode,
+			List<LaneNote> smMines,
+			int numArrows)
+		{
+			// Create sorted lists of releases and steps.
+			var stepEvents = new List<ChartSearchNode>();
+			var chartSearchNode = rootSearchNode;
+			while (chartSearchNode != null)
 			{
-				// It is possible for there to be no steps for an arrow. In that case the MineType
-				// will remain the default NoArrow type.
-				if (lastReleases[a] != null)
-					continue;
+				stepEvents.Add(chartSearchNode);
+				chartSearchNode = chartSearchNode.GetNextNode();
+			}
+			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents);
 
-				while (lastMineIndices[a] < minesByArrow[a].Count)
-				{
-					minesByArrow[a][lastMineIndices[a]].Type = MineType.AfterArrow;
-					minesByArrow[a][lastMineIndices[a]].ArrowIsNthClosest = nthMostRecentRelease[a];
-					minesByArrow[a][lastMineIndices[a]].FootAssociatedWithPairedNote = lastFeet[a];
-					lastMineIndices[a]++;
-				}
+			var stepIndex = 0;
+			var releaseIndex = 0;
+			foreach (var smMineEvent in smMines)
+			{
+				// Advance the step and release indices to follow and precede the event respectively.
+				while (stepIndex < steps.Count && steps[stepIndex].Position <= smMineEvent.Position)
+					stepIndex++;
+				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < smMineEvent.Position)
+					releaseIndex++;
+
+				// Create and add a new MineEvent.
+				var expressedMineEvent = MineUtils.CreateExpressedMineEvent(
+					numArrows, releases, releaseIndex, steps, stepIndex, smMineEvent);
+				expressedChart.MineEvents.Add(expressedMineEvent);
 			}
 		}
 
