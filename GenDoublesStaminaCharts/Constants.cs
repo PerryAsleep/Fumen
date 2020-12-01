@@ -50,7 +50,7 @@ namespace GenDoublesStaminaCharts
 		}
 
 		/// <summary>
-		/// Enumeration of was to express a MineEvent.
+		/// Enumeration of ways to express a MineEvent.
 		/// </summary>
 		public enum MineType
 		{

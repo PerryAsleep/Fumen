@@ -41,6 +41,7 @@ namespace GenDoublesStaminaCharts
 				Valid = true;
 			}
 
+			#region IEquatable Implementation
 			public override bool Equals(object obj)
 			{
 				if (obj == null)
@@ -58,6 +59,7 @@ namespace GenDoublesStaminaCharts
 				hash = unchecked(hash * 31 + (Valid ? 1 : 0));
 				return hash;
 			}
+			#endregion
 		}
 
 		// TODO: Document or remove the assumption that [1] will never be valid if [0] is not.
@@ -163,6 +165,7 @@ namespace GenDoublesStaminaCharts
 				State = state;
 			}
 
+			#region IEquatable Implementation
 			public override bool Equals(object obj)
 			{
 				if (obj == null)
@@ -179,6 +182,7 @@ namespace GenDoublesStaminaCharts
 				hash = unchecked(hash * 31 + (int) State);
 				return hash;
 			}
+			#endregion
 		}
 
 		/// <summary>

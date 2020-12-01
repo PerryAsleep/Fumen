@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Fumen;
 using Fumen.Converters;
@@ -72,16 +73,52 @@ namespace GenDoublesStaminaCharts
 			public int FootAssociatedWithPairedNote = InvalidFoot;
 		}
 
+		/// <summary>
+		/// Node for searching through an SM Chart and finding the best path for an
+		/// ExpressedChart. When searching each ChartSearchNode has at most one previous
+		/// ChartSearchNode and potentially many next ChartSearchNodes, one for each valid
+		/// GraphNode reachable from each valid GraphLink out of this node that match
+		/// the SM Chart at the corresponding position.
+		/// When the search is complete each ChartSearchNode will have at most one previous
+		/// ChartSearchNode and at most one next ChartSearchNode.
+		/// Each ChartSearchNode has a unique Id even if it represents the same GraphNode
+		/// and the position, so that all nodes can be stored and compared without
+		/// conflicting.
+		/// </summary>
 		private class ChartSearchNode : IEquatable<ChartSearchNode>, MineUtils.IChartNode
 		{
 			private static long IdCounter;
 
+			/// <summary>
+			/// Unique identifier for preventing conflicts when storing ChartSearchNodes in
+			/// HashSets or other data structures that rely on the IEquatable interface.
+			/// </summary>
 			private readonly long Id;
+			/// <summary>
+			/// Corresponding GraphNode.
+			/// </summary>
 			public readonly GraphNode GraphNode;
+			/// <summary>
+			/// Position in the SM Chart of this ChartSearchNode.
+			/// </summary>
 			public readonly MetricPosition Position;
+			/// <summary>
+			/// Cumulative Cost to reach this ChartSearchNode.
+			/// </summary>
 			public readonly int Cost;
+			/// <summary>
+			/// Previous ChartSearchNode.
+			/// </summary>
 			public readonly ChartSearchNode PreviousNode;
+			/// <summary>
+			/// The GraphLink from the previous ChartSearchNode that results in this ChartSearchNode.
+			/// </summary>
 			public readonly GraphLink PreviousLink;
+			/// <summary>
+			/// All possible next ChartSearchNodes.
+			/// Key is the GraphLink leading out of the GraphNode.
+			/// Value is set of all ChartSearchNodes possible from that GraphLink.
+			/// </summary>
 			public readonly Dictionary<GraphLink, HashSet<ChartSearchNode>> NextNodes = new Dictionary<GraphLink, HashSet<ChartSearchNode>>();
 
 			public ChartSearchNode(
@@ -99,6 +136,41 @@ namespace GenDoublesStaminaCharts
 				PreviousLink = previousLink;
 			}
 
+			/// <summary>
+			/// Gets the next ChartSearchNode.
+			/// Assumes that the search is complete and there is at most one next ChartSearchNode.
+			/// </summary>
+			/// <returns>The next ChartSearchNode or null if none exists.</returns>
+			public ChartSearchNode GetNextNode()
+			{
+				if (NextNodes.Count == 0 || NextNodes.First().Value.Count == 0)
+					return null;
+				Debug.Assert(NextNodes.First().Value.Count == 1);
+				return NextNodes.First().Value.First();
+			}
+
+			/// <summary>
+			/// Gets the preceding GraphLink that was a step.
+			/// Will recurse until one is found or the root ChartSearchNode has been reached.
+			/// Skips releases.
+			/// </summary>
+			/// <returns>The preceding step GraphLink or null if none exists.</returns>
+			public GraphLink GetPreviousStepLink()
+			{
+				var node = this;
+				while (node.PreviousNode != null)
+				{
+					var link = node.PreviousLink;
+					for (var f = 0; f < NumFeet; f++)
+						for (var a = 0; a < MaxArrowsPerFoot; a++)
+							if (link.Links[f, a].Valid && link.Links[f, a].Action != FootAction.Release)
+								return link;
+					node = node.PreviousNode;
+				}
+				return null;
+			}
+
+			#region IEquatable Implementation
 			public override bool Equals(object obj)
 			{
 				if (obj == null)
@@ -119,17 +191,30 @@ namespace GenDoublesStaminaCharts
 			{
 				return (int)Id;
 			}
+			#endregion
 
-			public ChartSearchNode GetNextNode()
-			{
-				if (NextNodes.Count == 0 || NextNodes.First().Value.Count == 0)
-					return null;
-				return NextNodes.First().Value.First();
-			}
-
+			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNode; }
 			public GraphLink GetGraphLink() { return NextNodes.Count > 0 ? NextNodes.First().Key : null; }
 			public MetricPosition GetPosition() { return Position; }
+			#endregion
+		}
+
+		/// <summary>
+		/// Enumeration of states that each arrow can be in at each position.
+		/// Differentiates states that last only for the duration of one position
+		/// (Tap, Hold, and Roll) and states which last for a duration of time
+		/// (Empty, Holding, Rolling). Useful to track the current state when searching
+		/// and making decisions about weights.
+		/// </summary>
+		private enum SearchState
+		{
+			Empty,
+			Tap,
+			Hold,
+			Holding,
+			Roll,
+			Rolling
 		}
 
 		/// <summary>
@@ -143,9 +228,23 @@ namespace GenDoublesStaminaCharts
 		public List<StepEvent> StepEvents = new List<StepEvent>();
 		public List<MineEvent> MineEvents = new List<MineEvent>();
 
+		/// <summary>
+		/// Creates an ExpressedChart by iteratively searching through the List of given Events
+		/// that correspond to an SM Chart. Multiple ExpressedCharts may represent the same SM
+		/// Chart. This method tries to generate the ExpressedChart that best matches the intent
+		/// of the original chart by exploring all possible paths through the given StepGraph that
+		/// result in the arrows of the original chart and pruning paths that result in a shared
+		/// state and have a high "cost". Cost is a measure of how unlikely it is to perform a
+		/// certain type of action compared to others. For example, if a series of arrows can
+		/// be performed by alternating or by double stepping, this method will choose the
+		/// alternating expression as that has a lower cost and is more natural. See GetCost for
+		/// more details on how cost is determined.
+		/// </summary>
+		/// <param name="events">List of Events from an SM Chart.</param>
+		/// <param name="stepGraph">StepGraph to use for searching the Events.</param>
+		/// <returns></returns>
 		public static ExpressedChart CreateFromSMEvents(List<Event> events, StepGraph stepGraph)
 		{
-			var expressedChart = new ExpressedChart();
 			var root = new ChartSearchNode(stepGraph.Root, null, 0, null, null);
 
 			var numArrows = stepGraph.NumArrows;
@@ -160,13 +259,13 @@ namespace GenDoublesStaminaCharts
 			}
 
 			var smMines = new List<LaneNote>();
-
 			var eventIndex = 0;
 			var numEvents = events.Count;
 			var currentSearchNodes = new HashSet<ChartSearchNode> { root };
+
 			while (true)
 			{
-				// Reached the end
+				// Reached the end.
 				if (eventIndex >= numEvents)
 				{
 					// Choose path with lowest cost.
@@ -181,8 +280,8 @@ namespace GenDoublesStaminaCharts
 						if (node.Equals(bestNode))
 							continue;
 
-						var currentNode = node;
-						// Prune up until parent that shares an unpruned path
+						// Prune up until parent that shares an unpruned path.
+						var currentNode = node; 
 						while (currentNode.PreviousNode != null)
 						{
 							currentNode.PreviousNode.NextNodes[currentNode.PreviousLink].Remove(currentNode);
@@ -198,50 +297,25 @@ namespace GenDoublesStaminaCharts
 					break;
 				}
 
-				var childSearchNodes = new HashSet<ChartSearchNode>();
-
+				// Parse all the events at the next position.
 				ParseNextEvents(events, ref eventIndex, out var releases, out var mines, out var steps);
 
-				// Process Releases
+				// Process Releases.
 				if (releases.Count > 0)
 				{
-					// Update state
+					// Update state.
 					foreach (var releaseEvent in releases)
 					{
 						currentState[releaseEvent.Lane] = SearchState.Empty;
 						lastReleases[releaseEvent.Lane] = releaseEvent.Position;
 					}
 
-					// Add
-					// TODO: method
-					foreach (var searchNode in currentSearchNodes)
-					{
-						foreach (var l in searchNode.GraphNode.Links)
-						{
-							foreach (var childNode in l.Value)
-							{
-								if (!DoesStateMatch(currentState, childNode))
-									continue;
-
-								var cost = GetCost(l.Key, searchNode, currentState, lastMines, lastReleases, stepGraph.ArrowData);
-
-								var childSearchNode = new ChartSearchNode(
-									childNode,
-									releases[0].Position,
-									searchNode.Cost + cost,
-									searchNode,
-									l.Key);
-
-								AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
-							}
-						}
-					}
-
-					// Prune
-					currentSearchNodes = Prune(childSearchNodes);
+					// Add children and prune.
+					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
+						releases[0].Position, stepGraph, lastMines, lastReleases);
 				}
 
-				// Get mines and record them
+				// Get mines and record them for processing after the search is complete.
 				if (mines.Count > 0)
 				{
 					smMines.AddRange(mines);
@@ -249,10 +323,10 @@ namespace GenDoublesStaminaCharts
 						lastMines[mineNote.Lane] = mineNote.Position;
 				}
 
-				// Get taps/holds/rolls
+				// Get taps, holds, and rolls.
 				if (steps.Count > 0)
 				{
-					// Update state
+					// Update state.
 					foreach (var stepEvent in steps)
 					{
 						if (stepEvent is LaneTapNote)
@@ -266,35 +340,12 @@ namespace GenDoublesStaminaCharts
 						}
 					}
 
-					// Add
-					foreach (var searchNode in currentSearchNodes)
-					{
-						foreach (var l in searchNode.GraphNode.Links)
-						{
-							foreach (var childNode in l.Value)
-							{
-								if (!DoesStateMatch(currentState, childNode))
-									continue;
-
-								var cost = GetCost(l.Key, searchNode, currentState, lastMines, lastReleases, stepGraph.ArrowData);
-
-								var childSearchNode = new ChartSearchNode(
-									childNode,
-									releases[0].Position,
-									searchNode.Cost + cost,
-									searchNode,
-									l.Key);
-
-								AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
-							}
-						}
-					}
-
-					// Prune
-					currentSearchNodes = Prune(childSearchNodes);
+					// Add children and prune.
+					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
+						steps[0].Position, stepGraph, lastMines, lastReleases);
 				}
 
-				// Taps only last for a moment, clear them out before continuing.
+				// Update the current state now that the events at this position have been processed.
 				for (var a = 0; a < numArrows; a++)
 				{
 					if (currentState[a] == SearchState.Tap)
@@ -313,75 +364,23 @@ namespace GenDoublesStaminaCharts
 				}
 			}
 
+			// Now that the search is complete, add all the events to a new ExpressedChart.
+			var expressedChart = new ExpressedChart();
 			AddStepsToExpressedChart(expressedChart, root);
 			AddMinesToExpressedChart(expressedChart, root, smMines, numArrows);
-
 			return expressedChart;
 		}
 
-		private static void AddStepsToExpressedChart(ExpressedChart expressedChart, ChartSearchNode rootSearchNode)
-		{
-			// Current node for iterating through the chart.
-			var searchNode = rootSearchNode;
-
-			// The first node is the resting position and not an event in the chart.
-			searchNode = searchNode.GetNextNode();
-
-			while (searchNode != null)
-			{
-				// Create a new StepEvent for this step ChartSearchNode for adding to the ExpressedChart.
-				var stepEvent = new StepEvent { Position = searchNode.Position };
-
-				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
-				if (searchNode.NextNodes.Count > 0)
-				{
-					var linkEntry = searchNode.NextNodes.First();
-					stepEvent.Link = linkEntry.Key;
-					searchNode = linkEntry.Value.First();
-				}
-				else
-				{
-					searchNode = null;
-				}
-
-				// Record the StepEvent.
-				expressedChart.StepEvents.Add(stepEvent);
-			}
-		}
-
-		private static void AddMinesToExpressedChart(
-			ExpressedChart expressedChart,
-			ChartSearchNode rootSearchNode,
-			List<LaneNote> smMines,
-			int numArrows)
-		{
-			// Create sorted lists of releases and steps.
-			var stepEvents = new List<ChartSearchNode>();
-			var chartSearchNode = rootSearchNode;
-			while (chartSearchNode != null)
-			{
-				stepEvents.Add(chartSearchNode);
-				chartSearchNode = chartSearchNode.GetNextNode();
-			}
-			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents);
-
-			var stepIndex = 0;
-			var releaseIndex = 0;
-			foreach (var smMineEvent in smMines)
-			{
-				// Advance the step and release indices to follow and precede the event respectively.
-				while (stepIndex < steps.Count && steps[stepIndex].Position <= smMineEvent.Position)
-					stepIndex++;
-				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < smMineEvent.Position)
-					releaseIndex++;
-
-				// Create and add a new MineEvent.
-				var expressedMineEvent = MineUtils.CreateExpressedMineEvent(
-					numArrows, releases, releaseIndex, steps, stepIndex, smMineEvent);
-				expressedChart.MineEvents.Add(expressedMineEvent);
-			}
-		}
-
+		/// <summary>
+		/// Parses the next events from the given List of Events that occur at or after the given
+		/// eventIndex and occur at the same position into releases, steps, and mines. Updates
+		/// eventIndex based on which events were parsed.
+		/// </summary>
+		/// <param name="events">List of Events to parse.</param>
+		/// <param name="eventIndex">Current index into Events. Will be updated.</param>
+		/// <param name="releases">List of LaneHoldEndNotes to hold all releases.</param>
+		/// <param name="mines">List of LaneNotes to hold all mines.</param>
+		/// <param name="steps">List of LaneNotes to hold all taps, holds, and rolls.</param>
 		private static void ParseNextEvents(
 			List<Event> events,
 			ref int eventIndex,
@@ -411,32 +410,72 @@ namespace GenDoublesStaminaCharts
 			}
 		}
 
-		private enum SearchState
+		/// <summary>
+		/// Adds children to all current ChartSearchNode that satisfy the new state and are the lowest
+		/// cost paths to their respective GraphNodes.
+		/// </summary>
+		/// <param name="currentSearchNodes">All lowest-cost current ChartSearchNodes from previous state.</param>
+		/// <param name="currentState">Current state to search for paths into.</param>
+		/// <param name="position">Position of the state.</param>
+		/// <param name="stepGraph">StepGraph. Needed for cost determination.</param>
+		/// <param name="lastMines">Position of last mines per arrow. Needed for cost determination.</param>
+		/// <param name="lastReleases">Position of last releases per arrow. Needed for cost determination.</param>
+		/// <returns>HashSet of all lowest cost ChartSearchNodes satisfying this state.</returns>
+		private static HashSet<ChartSearchNode> AddChildrenAndPrune(
+			HashSet<ChartSearchNode> currentSearchNodes,
+			SearchState[] currentState,
+			MetricPosition position,
+			StepGraph stepGraph,
+			MetricPosition[] lastMines,
+			MetricPosition[] lastReleases)
 		{
-			Empty,
-			Tap,
-			Hold,
-			Holding,
-			Roll,
-			Rolling
+			var childSearchNodes = new HashSet<ChartSearchNode>();
+
+			// Check every current ChartSearchNode.
+			foreach (var searchNode in currentSearchNodes)
+			{
+				// Check every GraphLink out of the ChartSearchNode's GraphNode.
+				foreach (var l in searchNode.GraphNode.Links)
+				{
+					// Check every resulting child GraphNode.
+					foreach (var childNode in l.Value)
+					{
+						// Most children will not match the new state. Ignore them.
+						if (!DoesStateMatch(currentState, childNode))
+							continue;
+
+						// This GraphLink and child GraphNode result in a matching state.
+						// Determine the cost to go from this GraphLink to this GraphNode.
+						var cost = GetCost(l.Key, searchNode, currentState, lastMines, lastReleases, stepGraph.ArrowData);
+
+						// Record the result as a new ChartSearchNode to be checked for pruning once
+						// all children have been determined.
+						var childSearchNode = new ChartSearchNode(
+							childNode,
+							position,
+							searchNode.Cost + cost,
+							searchNode,
+							l.Key);
+						AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
+					}
+				}
+			}
+
+			// Prune the children and return the results.
+			return Prune(childSearchNodes);
 		}
 
-		private static bool DoesArrowStateMatch(SearchState searchState, GraphArrowState graphArrowState)
-		{
-			if ((searchState == SearchState.Empty || searchState == SearchState.Tap)
-				&& graphArrowState == GraphArrowState.Resting)
-				return true;
-			if ((searchState == SearchState.Hold || searchState == SearchState.Holding)
-				&& graphArrowState == GraphArrowState.Held)
-				return true;
-			if ((searchState == SearchState.Roll || searchState == SearchState.Rolling)
-				&& graphArrowState == GraphArrowState.Rolling)
-				return true;
-			return false;
-		}
-
+		/// <summary>
+		/// Checks if the given array of SearchStates and the given GraphNode represent the same
+		/// state.
+		/// </summary>
+		/// <param name="searchState">Array of SearchStates. One SearchState per arrow.</param>
+		/// <param name="node">GraphNode with state per foot.</param>
+		/// <returns>True if the two representations match and false if they do not.</returns>
 		private static bool DoesStateMatch(SearchState[] searchState, GraphNode node)
 		{
+			// Ensure that each foot's arrow's state from the GraphNode match the corresponding
+			// arrows from the SearchState array.
 			var checkedArrows = new bool[searchState.Length];
 			for (var f = 0; f < NumFeet; f++)
 			{
@@ -450,6 +489,7 @@ namespace GenDoublesStaminaCharts
 				}
 			}
 
+			// Any arrows not covered by the GraphNode should be empty in the SearchState array.
 			for (var a = 0; a < searchState.Length; a++)
 			{
 				if (checkedArrows[a])
@@ -461,27 +501,65 @@ namespace GenDoublesStaminaCharts
 			return true;
 		}
 
-		private static void AddChildSearchNode(ChartSearchNode node, GraphLink link, ChartSearchNode child, HashSet<ChartSearchNode> childSearchNodes)
+		/// <summary>
+		/// Checks if the given SearchState matches the given GraphArrowState.
+		/// </summary>
+		/// <param name="searchState">SearchState to check.</param>
+		/// <param name="graphArrowState">GraphArrowState to check.</param>
+		/// <returns>True if the two representations match and false if they do not.</returns>
+		private static bool DoesArrowStateMatch(SearchState searchState, GraphArrowState graphArrowState)
 		{
-			if (!node.NextNodes.TryGetValue(link, out var childNodes))
+			if ((searchState == SearchState.Empty || searchState == SearchState.Tap)
+			    && graphArrowState == GraphArrowState.Resting)
+				return true;
+			if ((searchState == SearchState.Hold || searchState == SearchState.Holding)
+			    && graphArrowState == GraphArrowState.Held)
+				return true;
+			if ((searchState == SearchState.Roll || searchState == SearchState.Rolling)
+			    && graphArrowState == GraphArrowState.Rolling)
+				return true;
+			return false;
+		}
+
+		/// <summary>
+		/// Adds the given child ChartSearchNode to the given parent ChartSearchNode linked
+		/// to by the given GraphLink. Also adds the child to the given HashSet of running
+		/// child ChartSearchNode.
+		/// </summary>
+		/// <param name="parent">Parent ChartSearchNode.</param>
+		/// <param name="link">GraphLink linking to the child ChartSearchNode.</param>
+		/// <param name="child">Child ChartSearchNode.</param>
+		/// <param name="childSearchNodes">HashSet of ChartSearchNode to update with the new child.</param>
+		private static void AddChildSearchNode(ChartSearchNode parent, GraphLink link, ChartSearchNode child, HashSet<ChartSearchNode> childSearchNodes)
+		{
+			if (!parent.NextNodes.TryGetValue(link, out var childNodes))
 			{
 				childNodes = new HashSet<ChartSearchNode>();
-				node.NextNodes[link] = childNodes;
+				parent.NextNodes[link] = childNodes;
 			}
 			childNodes.Add(child);
 			childSearchNodes.Add(child);
 		}
 
+		/// <summary>
+		/// Prunes the given HashSet of ChartSearchNodes to a HashSet that contains
+		/// only one ChartSearchNode per GraphNode representing the lowest cost ChartSearchNode.
+		/// </summary>
+		/// <param name="nodes">HashSet of ChartSearchNodes to prune.</param>
+		/// <returns>Pruned ChartSearchNodes.</returns>
 		private static HashSet<ChartSearchNode> Prune(HashSet<ChartSearchNode> nodes)
 		{
+			// Set up a Dictionary to track the best ChartSearchNode per GraphNode.
 			var bestNodes = new Dictionary<GraphNode, ChartSearchNode>();
 			foreach (var node in nodes)
 			{
+				// There is already a best node for this GraphNode, compare them.
 				if (bestNodes.TryGetValue(node.GraphNode, out var currentNode))
 				{
+					// This node is better.
 					if (node.Cost < currentNode.Cost)
 					{
-						// Prune up until parent that shares an unpruned path
+						// Prune the old node up until parent that shares an unpruned path.
 						while (currentNode.PreviousNode != null)
 						{
 							currentNode.PreviousNode.NextNodes[currentNode.PreviousLink].Remove(currentNode);
@@ -492,9 +570,12 @@ namespace GenDoublesStaminaCharts
 							currentNode = currentNode.PreviousNode;
 						}
 
+						// Set the currentNode to this new best node so we record it below.
 						currentNode = node;
 					}
 				}
+				// There is not yet a best node recorded for this GraphNode. Record this node
+				// as the current best.
 				else
 				{
 					currentNode = node;
@@ -505,248 +586,7 @@ namespace GenDoublesStaminaCharts
 			return bestNodes.Values.ToHashSet();
 		}
 
-		private static GraphLink GetPreviousStepLink(ChartSearchNode node)
-		{
-			if (node == null)
-				return null;
-			while (node.PreviousNode != null)
-			{
-				node = node.PreviousNode;
-				foreach (var linkEntry in node.NextNodes)
-				{
-					var link = linkEntry.Key;
-					for (var f = 0; f < NumFeet; f++)
-					{
-						for (var a = 0; a < MaxArrowsPerFoot; a++)
-						{
-							if (link.Links[f, a].Valid && link.Links[f, a].Action != FootAction.Release)
-								return link;
-						}
-					}
-				}
-			}
-			return null;
-		}
-
-		private static void GetOneArrowStepInfo(
-			int foot,
-			int arrow,
-			MetricPosition[] lastMines,
-			MetricPosition[] lastReleases,
-			ArrowData[] arrowData,
-			GraphNode.FootArrowState[,] previousState,
-			out bool anyHeld,
-			out bool allHeld,
-			out bool canStepToNewArrow,
-			out bool canBracketToNewArrow,
-			out MetricPosition minePositionFollowingPreviousStep,
-			out MetricPosition releasePositionOfPreviousStep)
-		{
-			anyHeld = false;
-			allHeld = true;
-			canStepToNewArrow = false;
-			canBracketToNewArrow = false;
-			minePositionFollowingPreviousStep = null;
-			releasePositionOfPreviousStep = new MetricPosition();
-
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
-			{
-				if (previousState[foot, a].Arrow != InvalidArrowIndex)
-				{
-					if (previousState[foot, a].State == GraphArrowState.Held ||
-						previousState[foot, a].State == GraphArrowState.Rolling)
-					{
-						anyHeld = true;
-						canStepToNewArrow = arrowData[previousState[foot, a].Arrow].ValidNextArrows[arrow];
-						canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
-					}
-					else
-					{
-						allHeld = false;
-						if (previousState[foot, a].State == GraphArrowState.Resting)
-						{
-							if (!anyHeld)
-							{
-								canStepToNewArrow = arrowData[previousState[foot, a].Arrow].ValidNextArrows[arrow];
-								canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
-							}
-
-							if (lastMines[previousState[foot, a].Arrow] != null
-								&& lastMines[previousState[foot, a].Arrow] > lastReleases[previousState[foot, a].Arrow])
-								minePositionFollowingPreviousStep = lastMines[previousState[foot, a].Arrow];
-							releasePositionOfPreviousStep = lastReleases[previousState[foot, a].Arrow];
-						}
-					}
-				}
-				else
-				{
-					allHeld = false;
-				}
-			}
-
-			if (allHeld)
-			{
-				canStepToNewArrow = false;
-				canBracketToNewArrow = false;
-			}
-		}
-
-		private static bool GetSingleStepStepAndFoot(GraphLink link, out SingleStepType step, out int foot)
-		{
-			step = SingleStepType.SameArrow;
-			foot = 0;
-			var numValid = 0;
-			for (var f = 0; f < NumFeet; f++)
-			{
-				if (link.Links[f, 0].Valid)
-				{
-					step = link.Links[f, 0].Step;
-					foot = f;
-					numValid++;
-				}
-			}
-			return numValid == 1;
-		}
-
-		private static bool GetBracketStepAndFoot(GraphLink link, out SingleStepType step, out int foot)
-		{
-			step = SingleStepType.BracketBothNew;
-			foot = 0;
-			var numValid = 0;
-			for (var f = 0; f < NumFeet; f++)
-			{
-				if (link.Links[f, 0].Valid && (link.Links[f, 0].Step == SingleStepType.BracketBothNew
-					|| link.Links[f, 0].Step == SingleStepType.BracketOneNew
-					|| link.Links[f, 0].Step == SingleStepType.BracketBothSame))
-				{
-					step = link.Links[f, 0].Step;
-					foot = f;
-					numValid++;
-				}
-			}
-			return numValid == 1;
-		}
-
-		private static void GetTwoArrowStepInfo(
-			ChartSearchNode parentSearchNode,
-			SearchState[] state,
-			int foot,
-			ArrowData[] arrowData,
-			out bool couldBeBracketed,
-			out bool holdingAny,
-			out bool holdingAll,
-			out bool newArrowIfThisFootSteps)
-		{
-			couldBeBracketed = false;
-			holdingAny = false;
-			holdingAll = false;
-			newArrowIfThisFootSteps = false;
-
-			// Determine if any are held by this foot
-			if (parentSearchNode != null)
-			{
-				holdingAll = true;
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-				{
-					if (parentSearchNode.GraphNode.State[foot, a].Arrow != InvalidArrowIndex)
-					{
-						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Held ||
-							parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Rolling)
-						{
-							holdingAny = true;
-						}
-						else
-						{
-							holdingAll = false;
-						}
-						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Resting
-							&& state[a] == SearchState.Empty)
-						{
-							newArrowIfThisFootSteps = true;
-						}
-					}
-					else
-					{
-						holdingAll = false;
-					}
-				}
-			}
-
-			// Determine if the two arrows could be bracketed by this foot
-			if (!holdingAny)
-			{
-				couldBeBracketed = true;
-				var numSteps = 0;
-				int steppedArrow = InvalidArrowIndex;
-				for (var a = 0; a < state.Length; a++)
-				{
-					if (state[a] == SearchState.Tap || state[a] == SearchState.Hold || state[a] == SearchState.Roll)
-					{
-						numSteps++;
-						if (steppedArrow != InvalidArrowIndex)
-						{
-							if (!arrowData[a].BracketablePairings[foot][steppedArrow]
-								|| !arrowData[steppedArrow].BracketablePairings[foot][a])
-								couldBeBracketed = false;
-						}
-
-						steppedArrow = a;
-					}
-				}
-				if (numSteps != MaxArrowsPerFoot)
-					couldBeBracketed = false;
-			}
-
-		}
-
-		private static int GetCostNewArrowStepFromJump(
-			bool otherCanStepToNewArrow,
-			bool otherCanBracketToNewArrow,
-			bool thisCanBracketToNewArrow,
-			MetricPosition otherMinePositionFollowingPreviousStep,
-			MetricPosition thisMinePositionFollowingPreviousStep,
-			MetricPosition otherReleasePositionOfPreviousStep,
-			MetricPosition thisReleasePositionOfPreviousStep)
-		{
-			if (!otherCanStepToNewArrow)
-				return 0;
-
-			// Mine indication for only other foot to make this step.
-			if (otherMinePositionFollowingPreviousStep != null && thisMinePositionFollowingPreviousStep == null)
-				return 0;
-
-			// Mine indication for both but other foot is sooner
-			if (otherMinePositionFollowingPreviousStep != null
-				&& thisMinePositionFollowingPreviousStep != null
-				&& otherMinePositionFollowingPreviousStep > thisMinePositionFollowingPreviousStep)
-				return 0;
-
-			// Mine indication for both but this foot is sooner
-			if (otherMinePositionFollowingPreviousStep != null
-				&& thisMinePositionFollowingPreviousStep != null
-				&& thisMinePositionFollowingPreviousStep > otherMinePositionFollowingPreviousStep)
-				return 0;
-
-			// Mine indication for only this foot to make this step.
-			if (thisMinePositionFollowingPreviousStep != null && otherMinePositionFollowingPreviousStep == null)
-				return 0;
-
-			// Release indication for other foot
-			if (otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep)
-				return 0;
-
-			// Release indication for this foot
-			if (thisReleasePositionOfPreviousStep > otherReleasePositionOfPreviousStep)
-				return 0;
-
-			// The other foot is bracketable to this arrow and this foot is not
-			if (otherCanBracketToNewArrow && !thisCanBracketToNewArrow)
-				return 0;
-
-			// Equal choice
-			return 0;
-		}
-
+		#region Cost Evaluation
 		/// <summary>
 		/// Determine the cost of a step represented by the given GraphLink to the
 		/// given GraphNode from the given parent ChartSearchNode.
@@ -788,7 +628,7 @@ namespace GenDoublesStaminaCharts
 				}
 			}
 
-			GraphLink previousStepLink = GetPreviousStepLink(parentSearchNode);
+			GraphLink previousStepLink = parentSearchNode?.GetPreviousStepLink();
 
 			switch (numSteps)
 			{
@@ -1088,6 +928,307 @@ namespace GenDoublesStaminaCharts
 					return 0;
 				default:
 					return 0;
+			}
+		}
+
+		
+
+		private static void GetOneArrowStepInfo(
+			int foot,
+			int arrow,
+			MetricPosition[] lastMines,
+			MetricPosition[] lastReleases,
+			ArrowData[] arrowData,
+			GraphNode.FootArrowState[,] previousState,
+			out bool anyHeld,
+			out bool allHeld,
+			out bool canStepToNewArrow,
+			out bool canBracketToNewArrow,
+			out MetricPosition minePositionFollowingPreviousStep,
+			out MetricPosition releasePositionOfPreviousStep)
+		{
+			anyHeld = false;
+			allHeld = true;
+			canStepToNewArrow = false;
+			canBracketToNewArrow = false;
+			minePositionFollowingPreviousStep = null;
+			releasePositionOfPreviousStep = new MetricPosition();
+
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (previousState[foot, a].Arrow != InvalidArrowIndex)
+				{
+					if (previousState[foot, a].State == GraphArrowState.Held ||
+						previousState[foot, a].State == GraphArrowState.Rolling)
+					{
+						anyHeld = true;
+						canStepToNewArrow = arrowData[previousState[foot, a].Arrow].ValidNextArrows[arrow];
+						canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
+					}
+					else
+					{
+						allHeld = false;
+						if (previousState[foot, a].State == GraphArrowState.Resting)
+						{
+							if (!anyHeld)
+							{
+								canStepToNewArrow = arrowData[previousState[foot, a].Arrow].ValidNextArrows[arrow];
+								canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
+							}
+
+							if (lastMines[previousState[foot, a].Arrow] != null
+								&& lastMines[previousState[foot, a].Arrow] > lastReleases[previousState[foot, a].Arrow])
+								minePositionFollowingPreviousStep = lastMines[previousState[foot, a].Arrow];
+							releasePositionOfPreviousStep = lastReleases[previousState[foot, a].Arrow];
+						}
+					}
+				}
+				else
+				{
+					allHeld = false;
+				}
+			}
+
+			if (allHeld)
+			{
+				canStepToNewArrow = false;
+				canBracketToNewArrow = false;
+			}
+		}
+
+		private static bool GetSingleStepStepAndFoot(GraphLink link, out SingleStepType step, out int foot)
+		{
+			step = SingleStepType.SameArrow;
+			foot = 0;
+			var numValid = 0;
+			for (var f = 0; f < NumFeet; f++)
+			{
+				if (link.Links[f, 0].Valid)
+				{
+					step = link.Links[f, 0].Step;
+					foot = f;
+					numValid++;
+				}
+			}
+			return numValid == 1;
+		}
+
+		private static bool GetBracketStepAndFoot(GraphLink link, out SingleStepType step, out int foot)
+		{
+			step = SingleStepType.BracketBothNew;
+			foot = 0;
+			var numValid = 0;
+			for (var f = 0; f < NumFeet; f++)
+			{
+				if (link.Links[f, 0].Valid && (link.Links[f, 0].Step == SingleStepType.BracketBothNew
+					|| link.Links[f, 0].Step == SingleStepType.BracketOneNew
+					|| link.Links[f, 0].Step == SingleStepType.BracketBothSame))
+				{
+					step = link.Links[f, 0].Step;
+					foot = f;
+					numValid++;
+				}
+			}
+			return numValid == 1;
+		}
+
+		private static void GetTwoArrowStepInfo(
+			ChartSearchNode parentSearchNode,
+			SearchState[] state,
+			int foot,
+			ArrowData[] arrowData,
+			out bool couldBeBracketed,
+			out bool holdingAny,
+			out bool holdingAll,
+			out bool newArrowIfThisFootSteps)
+		{
+			couldBeBracketed = false;
+			holdingAny = false;
+			holdingAll = false;
+			newArrowIfThisFootSteps = false;
+
+			// Determine if any are held by this foot
+			if (parentSearchNode != null)
+			{
+				holdingAll = true;
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				{
+					if (parentSearchNode.GraphNode.State[foot, a].Arrow != InvalidArrowIndex)
+					{
+						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Held ||
+							parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Rolling)
+						{
+							holdingAny = true;
+						}
+						else
+						{
+							holdingAll = false;
+						}
+						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Resting
+							&& state[a] == SearchState.Empty)
+						{
+							newArrowIfThisFootSteps = true;
+						}
+					}
+					else
+					{
+						holdingAll = false;
+					}
+				}
+			}
+
+			// Determine if the two arrows could be bracketed by this foot
+			if (!holdingAny)
+			{
+				couldBeBracketed = true;
+				var numSteps = 0;
+				int steppedArrow = InvalidArrowIndex;
+				for (var a = 0; a < state.Length; a++)
+				{
+					if (state[a] == SearchState.Tap || state[a] == SearchState.Hold || state[a] == SearchState.Roll)
+					{
+						numSteps++;
+						if (steppedArrow != InvalidArrowIndex)
+						{
+							if (!arrowData[a].BracketablePairings[foot][steppedArrow]
+								|| !arrowData[steppedArrow].BracketablePairings[foot][a])
+								couldBeBracketed = false;
+						}
+
+						steppedArrow = a;
+					}
+				}
+				if (numSteps != MaxArrowsPerFoot)
+					couldBeBracketed = false;
+			}
+
+		}
+
+		private static int GetCostNewArrowStepFromJump(
+			bool otherCanStepToNewArrow,
+			bool otherCanBracketToNewArrow,
+			bool thisCanBracketToNewArrow,
+			MetricPosition otherMinePositionFollowingPreviousStep,
+			MetricPosition thisMinePositionFollowingPreviousStep,
+			MetricPosition otherReleasePositionOfPreviousStep,
+			MetricPosition thisReleasePositionOfPreviousStep)
+		{
+			if (!otherCanStepToNewArrow)
+				return 0;
+
+			// Mine indication for only other foot to make this step.
+			if (otherMinePositionFollowingPreviousStep != null && thisMinePositionFollowingPreviousStep == null)
+				return 0;
+
+			// Mine indication for both but other foot is sooner
+			if (otherMinePositionFollowingPreviousStep != null
+				&& thisMinePositionFollowingPreviousStep != null
+				&& otherMinePositionFollowingPreviousStep > thisMinePositionFollowingPreviousStep)
+				return 0;
+
+			// Mine indication for both but this foot is sooner
+			if (otherMinePositionFollowingPreviousStep != null
+				&& thisMinePositionFollowingPreviousStep != null
+				&& thisMinePositionFollowingPreviousStep > otherMinePositionFollowingPreviousStep)
+				return 0;
+
+			// Mine indication for only this foot to make this step.
+			if (thisMinePositionFollowingPreviousStep != null && otherMinePositionFollowingPreviousStep == null)
+				return 0;
+
+			// Release indication for other foot
+			if (otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep)
+				return 0;
+
+			// Release indication for this foot
+			if (thisReleasePositionOfPreviousStep > otherReleasePositionOfPreviousStep)
+				return 0;
+
+			// The other foot is bracketable to this arrow and this foot is not
+			if (otherCanBracketToNewArrow && !thisCanBracketToNewArrow)
+				return 0;
+
+			// Equal choice
+			return 0;
+		}
+		#endregion
+
+		/// <summary>
+		/// Adds StepEvents to the given ExpressedChart.
+		/// This is run after the SM Chart has been searched and a single path of
+		/// ChartSearchNodes has been generated.
+		/// </summary>
+		/// <param name="expressedChart">ExpressedChart to add step events to.</param>
+		/// <param name="rootSearchNode">Root ChartSearchNode.</param>
+		private static void AddStepsToExpressedChart(ExpressedChart expressedChart, ChartSearchNode rootSearchNode)
+		{
+			// Current node for iterating through the chart.
+			var searchNode = rootSearchNode;
+
+			// The first node is the resting position and not an event in the chart.
+			searchNode = searchNode.GetNextNode();
+
+			while (searchNode != null)
+			{
+				// Create a new StepEvent for this step ChartSearchNode for adding to the ExpressedChart.
+				var stepEvent = new StepEvent { Position = searchNode.Position };
+
+				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
+				if (searchNode.NextNodes.Count > 0)
+				{
+					var linkEntry = searchNode.NextNodes.First();
+					stepEvent.Link = linkEntry.Key;
+					searchNode = linkEntry.Value.First();
+				}
+				else
+				{
+					searchNode = null;
+				}
+
+				// Record the StepEvent.
+				expressedChart.StepEvents.Add(stepEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds MineEvents for all given mines to the given ExpressedChart.
+		/// This is run after the SM Chart has been searched and a single path of
+		/// ChartSearchNodes has been generated.
+		/// </summary>
+		/// <param name="expressedChart">ExpressedChart to add mines to.</param>
+		/// <param name="rootSearchNode">Root ChartSearchNode.</param>
+		/// <param name="smMines">List of LaneNotes representing mines from the SM Chart.</param>
+		/// <param name="numArrows">Number of arrows in the SM Chart.</param>
+		private static void AddMinesToExpressedChart(
+			ExpressedChart expressedChart,
+			ChartSearchNode rootSearchNode,
+			List<LaneNote> smMines,
+			int numArrows)
+		{
+			// Create sorted lists of releases and steps.
+			var stepEvents = new List<ChartSearchNode>();
+			var chartSearchNode = rootSearchNode;
+			while (chartSearchNode != null)
+			{
+				stepEvents.Add(chartSearchNode);
+				chartSearchNode = chartSearchNode.GetNextNode();
+			}
+			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents);
+
+			var stepIndex = 0;
+			var releaseIndex = 0;
+			foreach (var smMineEvent in smMines)
+			{
+				// Advance the step and release indices to follow and precede the event respectively.
+				while (stepIndex < steps.Count && steps[stepIndex].Position <= smMineEvent.Position)
+					stepIndex++;
+				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < smMineEvent.Position)
+					releaseIndex++;
+
+				// Create and add a new MineEvent.
+				var expressedMineEvent = MineUtils.CreateExpressedMineEvent(
+					numArrows, releases, releaseIndex, steps, stepIndex, smMineEvent);
+				expressedChart.MineEvents.Add(expressedMineEvent);
 			}
 		}
 	}

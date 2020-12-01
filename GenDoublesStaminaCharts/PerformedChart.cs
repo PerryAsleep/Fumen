@@ -68,9 +68,11 @@ namespace GenDoublesStaminaCharts
 			public GraphNode GraphNode;
 			public GraphLink GraphLink;
 
+			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNode; }
 			public GraphLink GetGraphLink() { return GraphLink; }
 			public MetricPosition GetPosition() { return Position; }
+			#endregion
 		}
 
 		private class MinePerformanceNode : PerformanceNode
