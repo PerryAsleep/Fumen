@@ -609,14 +609,13 @@ namespace GenDoublesStaminaCharts
 			MetricPosition[] lastReleases,
 			ArrowData[] arrowData)
 		{
-			// TODO: Real costs.
-
-			// Releases
+			// Releases have a 0 cost.
 			for (var f = 0; f < NumFeet; f++)
 				for (var a = 0; a < MaxArrowsPerFoot; a++)
 					if (link.Links[f, a].Valid && link.Links[f, a].Action == FootAction.Release)
-						return 0;
+						return CostRelease;
 
+			// Determine how many steps are in this state.
 			var numSteps = 0;
 			var lastArrowStep = 0;
 			for (var a = 0; a < state.Length; a++)
@@ -628,7 +627,7 @@ namespace GenDoublesStaminaCharts
 				}
 			}
 
-			GraphLink previousStepLink = parentSearchNode?.GetPreviousStepLink();
+			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink();
 
 			switch (numSteps)
 			{
@@ -657,7 +656,7 @@ namespace GenDoublesStaminaCharts
 						switch (step)
 						{
 							case SingleStepType.SameArrow:
-								return 0;
+								return CostSameArrow;
 							case SingleStepType.NewArrow:
 								{
 									// TODO: give preference to alternating in long patters
@@ -673,9 +672,9 @@ namespace GenDoublesStaminaCharts
 										{
 											// Slightly better to step on a closer arrow.
 											if (thisCanBracketToNewArrow)
-												return 0;
+												return CostNewArrow_AllOtherHeld_ThisFootCanBracketToNewArrow;
 											else
-												return 0;
+												return CostNewArrow_AllOtherHeld_ThisFootCannotBracketToNewArrow;
 										}
 
 										// Both feet are holding one arrow.
@@ -685,10 +684,10 @@ namespace GenDoublesStaminaCharts
 											// Ambiguous bracket
 											if (otherCanBracketToNewArrow)
 											{
-												// Is this better?
+												// Alternating step bracket.
 												if (previousStepLink.IsStepWithFoot(otherFoot))
 												{
-													return 0;
+													return CostNewArrow_BothFeetHolding_OtherCanBracket_AlternatingStep;
 												}
 
 												if (previousStepLink.IsJump())
@@ -703,62 +702,68 @@ namespace GenDoublesStaminaCharts
 														thisReleasePositionOfPreviousStep);
 												}
 
-
-												return 0;
+												// Double step bracket.
+												return CostNewArrow_BothFeetHolding_OtherCanBracket_DoubleStep;
 											}
 
-											// Only this foot can bracket
-											return 0;
+											// Only this foot can bracket.
+											return CostNewArrow_BothFeetHolding_OtherCannotBracket;
 										}
 
 										// The other foot is holding but this foot is not holding
 										else
 										{
-											// If the other foot can bracket this arrow and this foot can't should
-											// we prefer the bracket? I don't think so.
-											if (otherCanBracketToNewArrow && !thisCanBracketToNewArrow)
-												return 0;
-
-											return 0;
+											// TODO: There could be patterns where you roll two feet
+											// while one foot holds a bracket. This isn't considering that.
+											return CostNewArrow_OtherHoldingOne;
 										}
 									}
 
-									// Bracket step
+									// Bracket step with the other foot not holding
 									if (thisAnyHeld)
 									{
-										return 7;
+										// The other foot could make this step.
+										if (otherCanStepToNewArrow)
+											return CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep;
+
+										// The other foot cannot hit this arrow.
+										if (doubleStep)
+											return CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep_DoubleStep;
+										return CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep;
 									}
+
 									// No bracketing or holds
 
 									if (doubleStep)
 									{
 										// Mine indicated
 										if (thisMinePositionFollowingPreviousStep != null)
-											return 50;
+											return CostNewArrow_DoubleStepMineIndicated;
 
 										// No indication
-										return 100;
+										return CostNewArrow_DoubleStep;
 									}
 
-									// No previous step
+									// No previous step.
 									if (previousStepLink == null)
 									{
-										// The other foot is bracketable to this arrow and this foot is not
+										// The other foot is bracketable to this arrow and this foot is not.
 										if (otherCanBracketToNewArrow && !thisCanBracketToNewArrow)
-											return 1;
-										// Both feet are steppable but not bracketable
-										if (otherCanStepToNewArrow && !thisCanBracketToNewArrow)
-											return 1;
+											return CostNewArrow_FirstStep_OtherIsBracketable_ThisIsNotBracketable;
+										// This foot is bracketable to this arrow and the other foot is not.
+										if (!otherCanBracketToNewArrow && thisCanBracketToNewArrow)
+											return CostNewArrow_FirstStep_OtherIsNotBracketable_ThisIsBracketable;
 										// Only this foot can make the step.
 										if (!otherCanStepToNewArrow)
-											return 0;
-										return 1;
+											return CostNewArrow_FirstStep_OtherCannotStep;
+										// Ambiguous.
+										return CostNewArrow_FirstStep_Ambiguous;
 									}
 
 									// Previous step was with the other foot.
 									if (previousStepLink.IsStepWithFoot(otherFoot))
 									{
-										return 0;
+										return CostNewArrow_Alternating;
 									}
 
 									// Jump into a new arrow. This could be done with either foot.
@@ -776,44 +781,48 @@ namespace GenDoublesStaminaCharts
 									}
 
 									// Unreachable? step with same foot that is not a double step or a same arrow step
-									return 0;
+									return CostUnknown;
 								}
 							case SingleStepType.CrossoverFront:
 							case SingleStepType.CrossoverBehind:
 								{
 									if (otherAnyHeld)
-										return 5;
+										return CostNewArrow_Crossover_OtherHeld;
 
 									if (doubleStep)
 									{
 										// Mine indicated
 										if (thisMinePositionFollowingPreviousStep != null)
-											return 100;
+											return CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated;
 
 										// No indication
-										return 200;
+										return CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication;
 									}
 
-									return 25;
+									return CostNewArrow_Crossover;
 								}
 							case SingleStepType.FootSwap:
 								{
-									if (doubleStep && thisMinePositionFollowingPreviousStep == null)
-										return 100;
+									if (doubleStep)
+									{
+										if (thisMinePositionFollowingPreviousStep == null)
+											return CostNewArrow_FootSwap_DoubleStep_NoMineIndication;
+										return CostNewArrow_FootSwap_DoubleStep_MineIndication;
+									}
 
 									// Mine indicated
 									if (thisMinePositionFollowingPreviousStep != null)
-										return 15;
+										return CostNewArrow_FootSwap_MineIndication;
 
 									// If previous was swap
 									if (previousStepLink.IsFootSwap())
-										return 20;
+										return CostNewArrow_FootSwap_SubsequentSwap;
 
 									// No indication
-									return 30;
+									return CostNewArrow_FootSwap_NoIndication;
 								}
 							default:
-								return 0;
+								return CostUnknown;
 						}
 					}
 
@@ -838,30 +847,32 @@ namespace GenDoublesStaminaCharts
 						}
 
 						// If previous was step with other foot and that other foot would need to move to reach one
-						// of the new arrows, and the new set of arrows is bracketable by the other foot, we should
+						// of the new arrows, and the new set of arrows is bracketable by this foot, we should
 						// prefer the bracket.
-						var preferBracketDueToAmountOfMovement = false;
+						var preferBracketDueToAmountOfMovement = new bool[NumFeet];
+						var atLeastOneFootPrefersBracket = false;
 						if (previousStepLink != null)
 						{
 							for (var f = 0; f < NumFeet; f++)
 							{
-								if (previousStepLink.IsStepWithFoot(f)
-									&& couldBeBracketed[OtherFoot(f)]
-									&& newArrowIfThisFootSteps[f])
+								if (previousStepLink.IsStepWithFoot(OtherFoot(f))
+									&& couldBeBracketed[f]
+									&& newArrowIfThisFootSteps[OtherFoot(f)])
 								{
-									preferBracketDueToAmountOfMovement = true;
+									preferBracketDueToAmountOfMovement[f] = true;
+									atLeastOneFootPrefersBracket = true;
 								}
 							}
 						}
 
-						// Bracket
+						// Evaluate Bracket
 						if (GetBracketStepAndFoot(link, out var step, out var foot))
 						{
 							var otherFoot = OtherFoot(foot);
 
 							// If the other foot is holding all possible arrows, there is no choice.
 							if (holdingAll[otherFoot])
-								return 0;
+								return CostTwoArrows_Bracket_OtherFootHoldingBoth;
 
 							// If this is a double step we should prefer the jump
 							// A double step is fairly normal into a jump, but less normal into a bracket
@@ -870,16 +881,16 @@ namespace GenDoublesStaminaCharts
 											 && !holdingAny[otherFoot]
 											 && step != SingleStepType.BracketBothSame;
 							if (doubleStep)
-								return 100;
+								return CostTwoArrows_Bracket_DoubleStep;
 
-							if (preferBracketDueToAmountOfMovement)
-								return 5;
+							if (preferBracketDueToAmountOfMovement[foot])
+								return CostTwoArrows_Bracket_PreferredDueToMovement;
 
-							return 10;
+							return CostTwoArrows_Bracket;
 						}
 
-						// Jump
-						else if (link.IsJump())
+						// Evaluate Jump
+						if (link.IsJump())
 						{
 							var onlyFootHoldingOne = -1;
 							for (var f = 0; f < NumFeet; f++)
@@ -899,35 +910,35 @@ namespace GenDoublesStaminaCharts
 							// If only one foot is holding one, we should prefer a bracket if the two arrows
 							// are bracketable by the other foot.
 							if (onlyFootHoldingOne != -1 && couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
-								return 0;
+								return CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket;
 							// If only one foot is holding one and the two new arrows are not bracketable
 							// by the other foot, we should prefer the jump.
 							if (onlyFootHoldingOne != -1 && !couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
-								return 0;
+								return CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable;
 
-							// No hold.
+							// No hold or both feet holding
 
-							if (preferBracketDueToAmountOfMovement)
-								return 0;
+							if (atLeastOneFootPrefersBracket)
+								return CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement;
 
-							return 0;
+							return CostTwoArrows_Jump;
 						}
 
-						return 0;
+						return CostUnknown;
 					}
 
 				case 3:
 					// Bracket jump. The various ways to do this don't make an appreciable difference for cost.
 					// All three arrow steps must be a jump, must be 2 arrows with one foot and 1 arrow with the other.
 					// TODO: Same as quad, there is a choice
-					return 0;
+					return CostThreeArrows;
 
 				case 4:
 					// Quads don't have any choice.
 					// TODO: That's not true. There are two quads, LLRR and LRLR
-					return 0;
+					return CostFourArrows;
 				default:
-					return 0;
+					return CostUnknown;
 			}
 		}
 
@@ -1065,7 +1076,7 @@ namespace GenDoublesStaminaCharts
 							holdingAll = false;
 						}
 						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Resting
-							&& state[a] == SearchState.Empty)
+							&& state[parentSearchNode.GraphNode.State[foot, a].Arrow] == SearchState.Empty)
 						{
 							newArrowIfThisFootSteps = true;
 						}
@@ -1114,42 +1125,42 @@ namespace GenDoublesStaminaCharts
 			MetricPosition thisReleasePositionOfPreviousStep)
 		{
 			if (!otherCanStepToNewArrow)
-				return 0;
+				return CostNewArrow_StepFromJump_OtherCannotStep;
 
 			// Mine indication for only other foot to make this step.
 			if (otherMinePositionFollowingPreviousStep != null && thisMinePositionFollowingPreviousStep == null)
-				return 0;
+				return CostNewArrow_StepFromJump_OtherMineIndicated_ThisNotMineIndicated;
 
 			// Mine indication for both but other foot is sooner
 			if (otherMinePositionFollowingPreviousStep != null
 				&& thisMinePositionFollowingPreviousStep != null
 				&& otherMinePositionFollowingPreviousStep > thisMinePositionFollowingPreviousStep)
-				return 0;
+				return CostNewArrow_StepFromJump_BothMineIndicated_OtherSooner;
 
 			// Mine indication for both but this foot is sooner
 			if (otherMinePositionFollowingPreviousStep != null
 				&& thisMinePositionFollowingPreviousStep != null
 				&& thisMinePositionFollowingPreviousStep > otherMinePositionFollowingPreviousStep)
-				return 0;
+				return CostNewArrow_StepFromJump_BothMineIndicated_ThisSooner;
 
 			// Mine indication for only this foot to make this step.
 			if (thisMinePositionFollowingPreviousStep != null && otherMinePositionFollowingPreviousStep == null)
-				return 0;
+				return CostNewArrow_StepFromJump_OtherNotMineIndicated_ThisMineIndicated;
 
-			// Release indication for other foot
+			// Release indication for this foot (other released later)
 			if (otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep)
-				return 0;
+				return CostNewArrow_StepFromJump_OtherFootReleasedLater;
 
-			// Release indication for this foot
+			// Release indication for other foot (this released later)
 			if (thisReleasePositionOfPreviousStep > otherReleasePositionOfPreviousStep)
-				return 0;
+				return CostNewArrow_StepFromJump_ThisFootReleasedLater;
 
 			// The other foot is bracketable to this arrow and this foot is not
 			if (otherCanBracketToNewArrow && !thisCanBracketToNewArrow)
-				return 0;
+				return CostNewArrow_StepFromJump_OtherFootBracketable_ThisFootNotBracketable;
 
 			// Equal choice
-			return 0;
+			return CostNewArrow_StepFromJump_Ambiguous;
 		}
 		#endregion
 

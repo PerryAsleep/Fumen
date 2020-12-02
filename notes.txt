@@ -11,50 +11,24 @@ Logic:
 	X initialize dp graph
 
 	X load sp chart
-	- convert sp chart to expressed chart
+	X convert sp chart to expressed chart
 
 	X search for a path through the dp graph that matches the expressed chart
-	- put the mines in
+	X put the mines in
 	X convert the path to a dp chart
 	X put all the tempo changes, stops in
 
-SP algorithm:
-	examining current event, have a group of leaves from a search tree.
-	for all leaves:
-		1) pick ALL choices out of this node
-			1a) assign weights:
-			1b) weight assignment need to know things like mines and and which foot was released most recently
-				this is so we can look at a LR jump where L is a short hold, and the next note is D but we know you should step with R instead of L (L weight is higher)
-		2) eliminate choices which do not result in this state.
-	update leaves to be new leaves
-	3) look at all leaves and for any with a matching state, eliminate the most expensive
-	4) when eliminating, prune parent up until a node that shares an unpruned path.
-
+does the stepgraph support a pattern like:
+...X
+.X..
+X...
+..XX
+crossover into bonkers jump
 
 look at Hella Deep in Technical Showcase 4 - crazy bpm stuff
+	scc file
+	B - background change
+	#SCROLLS
+	#SPEEDS
 NewAlone has roll chord
 Primitive Vides - LR hold, alternate jacks on down 
-
-Mines:
-	List<MineEvents> minesByFoot[NumArrows];
-
-	loop over stepNodes stepNode
-	{
-		foreach (stepNode.GraphNode.FootArrowState)
-		{
-			get the arrow and foot for this state if it is a release
-			if it is a release:
-			{
-				look at previous release
-				
-				get all mine events for this arrow after the last update event for this arrow and before the new release
-				if there is no previous release then mark them all BeforeArrow.
-				if there is a previous release then mark them all AfterArrow.
-			}
-		}
-	}
-
-	mark any leftover mines AfterArrow
-	if any lane never had an arrow mark them NoArrow (might already be set)
-
-
