@@ -167,7 +167,7 @@ namespace Fumen.Converters
 
 		private static char GetSMCharForNote(Song song, LaneNote note)
 		{
-			if (note.DestType.Length == 1
+			if (note.DestType?.Length == 1
 				 && SMCommon.SNoteChars.Contains(note.DestType[0]))
 				return note.DestType[0];
 

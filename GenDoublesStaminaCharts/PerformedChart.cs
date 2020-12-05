@@ -66,6 +66,7 @@ namespace GenDoublesStaminaCharts
 		private class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
 		{
 			public GraphNode GraphNode;
+			// Link to this node
 			public GraphLink GraphLink;
 
 			#region MineUtils.IChartNode Implementation
@@ -115,7 +116,7 @@ namespace GenDoublesStaminaCharts
 					break;
 
 				// Dead end
-				while (currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link] == null
+				while (!currentSearchNode.GraphNode.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].Link)
 					   || currentSearchNode.CurrentIndex >
 					   currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link].Count - 1)
 				{
@@ -167,13 +168,14 @@ namespace GenDoublesStaminaCharts
 			// Add the StepPerformanceNodes to the PerformedChart
 			var currentPerformanceNode = performedChart.Root;
 			currentSearchNode = rootSearchNode;
+			currentSearchNode = currentSearchNode.NextNode;
 			while (currentSearchNode != null)
 			{
 				// Add new StepPerformanceNode and advance
 				var newNode = new StepPerformanceNode
 				{
-					Position = expressedChart.StepEvents[currentSearchNode.Depth].Position,
-					GraphLink = expressedChart.StepEvents[currentSearchNode.Depth].Link,
+					Position = expressedChart.StepEvents[currentSearchNode.Depth - 1].Position,
+					GraphLink = expressedChart.StepEvents[currentSearchNode.Depth - 1].Link,
 					GraphNode = currentSearchNode.GraphNode,
 					Prev = currentPerformanceNode
 				};

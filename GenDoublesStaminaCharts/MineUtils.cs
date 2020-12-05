@@ -64,6 +64,7 @@ namespace GenDoublesStaminaCharts
 				return (releases, steps);
 
 			// Skip first event representing the resting position.
+			// TODO: check consistency with GetGraphLink - is it to this node or from this node
 			var previousLink = events[eventIndex].GetGraphLink();
 			eventIndex++;
 

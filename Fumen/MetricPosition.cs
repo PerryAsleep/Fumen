@@ -34,10 +34,18 @@ namespace Fumen
 		}
 		public static bool operator ==(MetricPosition a, MetricPosition b)
 		{
+			if (a is null)
+				return b is null;
+			if (b is null)
+				return false;
 			return a.CompareTo(b) == 0;
 		}
 		public static bool operator !=(MetricPosition a, MetricPosition b)
 		{
+			if (a is null)
+				return !(b is null);
+			if (b is null)
+				return true;
 			return a.CompareTo(b) != 0;
 		}
 		public static bool operator >=(MetricPosition a, MetricPosition b)

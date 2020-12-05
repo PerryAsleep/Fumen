@@ -1,4 +1,6 @@
 ﻿
+using System.Collections.Generic;
+
 namespace GenDoublesStaminaCharts
 {
 	public static class Constants
@@ -89,6 +91,105 @@ namespace GenDoublesStaminaCharts
 		{
 			return foot == L ? R : L;
 		}
+
+		public static GraphArrowState StateAfterAction(FootAction footAction)
+		{
+			switch (footAction)
+			{
+				case FootAction.Hold:
+					return GraphArrowState.Held;
+				case FootAction.Roll:
+					return GraphArrowState.Rolling;
+				default:
+					return GraphArrowState.Resting;
+			}
+		}
+
+		#region Debug
+		public static void FindStateMatching(GraphNode root,
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			var trackedNodes = new HashSet<GraphNode>();
+			var nodes = new HashSet<GraphNode>();
+			nodes.Add(root);
+			trackedNodes.Add(root);
+			while (true)
+			{
+				var newNodes = new HashSet<GraphNode>();
+
+				foreach (var node in nodes)
+				{
+					if (StateMatches(node, leftArrow, leftState, rightArrow, rightState))
+					{
+						int a = 1;
+					}
+
+					foreach (var l in node.Links)
+					{
+						foreach (var g in l.Value)
+						{
+							if (!trackedNodes.Contains(g))
+							{
+								trackedNodes.Add(g);
+								newNodes.Add(g);
+							}
+						}
+					}
+				}
+
+				nodes = newNodes;
+				if (nodes.Count == 0)
+					break;
+			}
+		}
+
+		public static bool StateMatches(GraphNode node,
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var f = 0; f < NumFeet; f++)
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+					state[f, a] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
+
+			state[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
+			state[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
+			GraphNode newNode = new GraphNode(state);
+			return node.Equals(newNode);
+		}
+
+		public static bool StateMatches(GraphNode node,
+			int leftArrow, GraphArrowState leftState,
+			int leftArrow2, GraphArrowState leftState2,
+			int rightArrow, GraphArrowState rightState,
+			int rightArrow2, GraphArrowState rightState2)
+		{
+			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			state[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
+			state[0, 1] = new GraphNode.FootArrowState(leftArrow2, leftState2);
+			state[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
+			state[1, 1] = new GraphNode.FootArrowState(rightArrow2, rightState2);
+			GraphNode newNode = new GraphNode(state);
+			return node.Equals(newNode);
+		}
+
+		public static bool StateMatches(GraphNode.FootArrowState[,] state,
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			GraphNode node = new GraphNode(state);
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var f = 0; f < NumFeet; f++)
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+					newState[f, a] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
+
+			newState[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
+			newState[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
+			GraphNode newNode = new GraphNode(newState);
+			return node.Equals(newNode);
+		}
+		#endregion
 
 		// TODO: Rename
 		public enum SingleStepType

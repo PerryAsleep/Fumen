@@ -43,6 +43,7 @@ namespace GenDoublesStaminaCharts
 			/// <summary>
 			/// GraphLink representing the all steps occurring at a single Metric position.
 			/// This GraphLink is the Link to this Event as opposed to the link from this Event.
+			/// This represents how the player got to this position.
 			/// </summary>
 			public GraphLink Link;
 		}
@@ -262,7 +263,7 @@ namespace GenDoublesStaminaCharts
 			var eventIndex = 0;
 			var numEvents = events.Count;
 			var currentSearchNodes = new HashSet<ChartSearchNode> { root };
-
+			
 			while (true)
 			{
 				// Reached the end.
@@ -279,18 +280,7 @@ namespace GenDoublesStaminaCharts
 					{
 						if (node.Equals(bestNode))
 							continue;
-
-						// Prune up until parent that shares an unpruned path.
-						var currentNode = node; 
-						while (currentNode.PreviousNode != null)
-						{
-							currentNode.PreviousNode.NextNodes[currentNode.PreviousLink].Remove(currentNode);
-							if (currentNode.PreviousNode.NextNodes[currentNode.PreviousLink].Count == 0)
-								currentNode.PreviousNode.NextNodes.Remove(currentNode.PreviousLink);
-							if (currentNode.PreviousNode.NextNodes.Count != 0)
-								break;
-							currentNode = currentNode.PreviousNode;
-						}
+						Prune(node);
 					}
 
 					// Stop looping.
@@ -400,7 +390,8 @@ namespace GenDoublesStaminaCharts
 			{
 				if (events[eventIndex] is LaneHoldEndNote lhen)
 					releases.Add(lhen);
-				else if (events[eventIndex] is LaneNote ln && ln.SourceType == SMCommon.NoteType.Mine.ToString())
+				else if (events[eventIndex] is LaneNote ln
+				         && ln.SourceType == SMCommon.SNoteChars[(int)SMCommon.NoteType.Mine].ToString())
 					mines.Add(ln);
 				else if (events[eventIndex] is LaneHoldStartNote lhsn)
 					steps.Add(lhsn);
@@ -441,7 +432,7 @@ namespace GenDoublesStaminaCharts
 					foreach (var childNode in l.Value)
 					{
 						// Most children will not match the new state. Ignore them.
-						if (!DoesStateMatch(currentState, childNode))
+						if (!DoesStateMatch(currentState, childNode, l.Key))
 							continue;
 
 						// This GraphLink and child GraphNode result in a matching state.
@@ -457,7 +448,15 @@ namespace GenDoublesStaminaCharts
 							searchNode,
 							l.Key);
 						AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
+
+						deadEnd = false;
 					}
+				}
+
+				// If this node has no valid link out to the new state it should be pruned
+				if (deadEnd)
+				{
+					Prune(searchNode);
 				}
 			}
 
@@ -471,54 +470,72 @@ namespace GenDoublesStaminaCharts
 		/// </summary>
 		/// <param name="searchState">Array of SearchStates. One SearchState per arrow.</param>
 		/// <param name="node">GraphNode with state per foot.</param>
+		/// <param name="link">GraphLink that linked to the given node.</param>
 		/// <returns>True if the two representations match and false if they do not.</returns>
-		private static bool DoesStateMatch(SearchState[] searchState, GraphNode node)
+		private static bool DoesStateMatch(SearchState[] searchState, GraphNode node, GraphLink link)
 		{
-			// Ensure that each foot's arrow's state from the GraphNode match the corresponding
-			// arrows from the SearchState array.
-			var checkedArrows = new bool[searchState.Length];
+			SearchState[] generatedState = new SearchState[searchState.Length];
+			for (var s = 0; s < generatedState.Length; s++)
+				generatedState[s] = SearchState.Empty;
+
 			for (var f = 0; f < NumFeet; f++)
 			{
 				for (var a = 0; a < MaxArrowsPerFoot; a++)
 				{
 					if (node.State[f, a].Arrow == InvalidArrowIndex)
 						continue;
-					if (!DoesArrowStateMatch(searchState[node.State[f, a].Arrow], node.State[f, a].State))
-						return false;
-					checkedArrows[node.State[f, a].Arrow] = true;
+
+					// What was the step into
+					bool acted = false;
+					for (var la = 0; la < MaxArrowsPerFoot; la++)
+					{
+						if (!link.Links[f, la].Valid)
+							continue;
+
+						if (node.State[f, a].State == StateAfterAction(link.Links[f, la].Action))
+						{
+							switch (node.State[f, a].State)
+							{
+								case GraphArrowState.Held:
+									generatedState[node.State[f, a].Arrow] = SearchState.Hold;
+									break;
+								case GraphArrowState.Rolling:
+									generatedState[node.State[f, a].Arrow] = SearchState.Roll;
+									break;
+								case GraphArrowState.Resting:
+									if (link.Links[f, la].Action == FootAction.Release)
+										generatedState[node.State[f, a].Arrow] = SearchState.Empty;
+									else
+										generatedState[node.State[f, a].Arrow] = SearchState.Tap;
+									break;
+							}
+
+							acted = true;
+						}
+					}
+
+					if (!acted)
+					{
+						switch (node.State[f, a].State)
+						{
+							case GraphArrowState.Held:
+								generatedState[node.State[f, a].Arrow] = SearchState.Holding;
+								break;
+							case GraphArrowState.Rolling:
+								generatedState[node.State[f, a].Arrow] = SearchState.Rolling;
+								break;
+							case GraphArrowState.Resting:
+								generatedState[node.State[f, a].Arrow] = SearchState.Empty;
+								break;
+						}
+					}
 				}
 			}
 
-			// Any arrows not covered by the GraphNode should be empty in the SearchState array.
-			for (var a = 0; a < searchState.Length; a++)
-			{
-				if (checkedArrows[a])
-					continue;
-				if (searchState[a] != SearchState.Empty)
+			for (var s = 0; s < generatedState.Length; s++)
+				if (generatedState[s] != searchState[s])
 					return false;
-			}
-
 			return true;
-		}
-
-		/// <summary>
-		/// Checks if the given SearchState matches the given GraphArrowState.
-		/// </summary>
-		/// <param name="searchState">SearchState to check.</param>
-		/// <param name="graphArrowState">GraphArrowState to check.</param>
-		/// <returns>True if the two representations match and false if they do not.</returns>
-		private static bool DoesArrowStateMatch(SearchState searchState, GraphArrowState graphArrowState)
-		{
-			if ((searchState == SearchState.Empty || searchState == SearchState.Tap)
-			    && graphArrowState == GraphArrowState.Resting)
-				return true;
-			if ((searchState == SearchState.Hold || searchState == SearchState.Holding)
-			    && graphArrowState == GraphArrowState.Held)
-				return true;
-			if ((searchState == SearchState.Roll || searchState == SearchState.Rolling)
-			    && graphArrowState == GraphArrowState.Rolling)
-				return true;
-			return false;
 		}
 
 		/// <summary>
@@ -559,19 +576,14 @@ namespace GenDoublesStaminaCharts
 					// This node is better.
 					if (node.Cost < currentNode.Cost)
 					{
-						// Prune the old node up until parent that shares an unpruned path.
-						while (currentNode.PreviousNode != null)
-						{
-							currentNode.PreviousNode.NextNodes[currentNode.PreviousLink].Remove(currentNode);
-							if (currentNode.PreviousNode.NextNodes[currentNode.PreviousLink].Count == 0)
-								currentNode.PreviousNode.NextNodes.Remove(currentNode.PreviousLink);
-							if (currentNode.PreviousNode.NextNodes.Count != 0)
-								break;
-							currentNode = currentNode.PreviousNode;
-						}
+						Prune(currentNode);
 
 						// Set the currentNode to this new best node so we record it below.
 						currentNode = node;
+					}
+					else
+					{
+						Prune(node);
 					}
 				}
 				// There is not yet a best node recorded for this GraphNode. Record this node
@@ -584,6 +596,25 @@ namespace GenDoublesStaminaCharts
 			}
 
 			return bestNodes.Values.ToHashSet();
+		}
+
+		/// <summary>
+		/// Removes the given ChartSearchNode from the tree.
+		/// Removes all parents up until the first parent with other children.
+		/// </summary>
+		/// <param name="node">ChartSearchNode to prune.</param>
+		private static void Prune(ChartSearchNode node)
+		{
+			// Prune the node up until parent that has other children.
+			while (node.PreviousNode != null)
+			{
+				node.PreviousNode.NextNodes[node.PreviousLink].Remove(node);
+				if (node.PreviousNode.NextNodes[node.PreviousLink].Count == 0)
+					node.PreviousNode.NextNodes.Remove(node.PreviousLink);
+				if (node.PreviousNode.NextNodes.Count != 0)
+					break;
+				node = node.PreviousNode;
+			}
 		}
 
 		#region Cost Evaluation
@@ -815,7 +846,7 @@ namespace GenDoublesStaminaCharts
 										return CostNewArrow_FootSwap_MineIndication;
 
 									// If previous was swap
-									if (previousStepLink.IsFootSwap())
+									if (previousStepLink?.IsFootSwap() ?? false)
 										return CostNewArrow_FootSwap_SubsequentSwap;
 
 									// No indication
@@ -1182,19 +1213,17 @@ namespace GenDoublesStaminaCharts
 			while (searchNode != null)
 			{
 				// Create a new StepEvent for this step ChartSearchNode for adding to the ExpressedChart.
-				var stepEvent = new StepEvent { Position = searchNode.Position };
+				var stepEvent = new StepEvent
+				{
+					Position = searchNode.Position,
+					Link = searchNode.PreviousLink
+				};
 
 				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
 				if (searchNode.NextNodes.Count > 0)
-				{
-					var linkEntry = searchNode.NextNodes.First();
-					stepEvent.Link = linkEntry.Key;
-					searchNode = linkEntry.Value.First();
-				}
+					searchNode = searchNode.NextNodes.First().Value.First();
 				else
-				{
 					searchNode = null;
-				}
 
 				// Record the StepEvent.
 				expressedChart.StepEvents.Add(stepEvent);

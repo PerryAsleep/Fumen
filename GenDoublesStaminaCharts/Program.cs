@@ -28,7 +28,7 @@ namespace GenDoublesStaminaCharts
 		static void Main(string[] args)
 		{
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
-			DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
+			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
 			var song = SMReader.Load(
 				@"C:\Users\perry\Sync\Temp\Hey Sexy Lady (Skrillex Remix)\hey.sm");
@@ -44,7 +44,8 @@ namespace GenDoublesStaminaCharts
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
-				    && chart.Type == SMCommon.ChartType.dance_single.ToString()
+					// TODO: Make a method to perform this replace
+				    && chart.Type.Replace("-", "_") == SMCommon.ChartType.dance_single.ToString()
 				    && chart.NumPlayers == 1
 				    && chart.NumInputs == NumSPArrows)
 				{
@@ -77,7 +78,7 @@ namespace GenDoublesStaminaCharts
 
 					// Generate a new series of Events for this Chart from the singles Chart.
 					var expressedChart = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
-					var performedChart = PerformedChart.CreateFromExpressedChart(DPGraph, expressedChart);
+					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMCommon.SMEventComparer());
@@ -136,7 +137,7 @@ namespace GenDoublesStaminaCharts
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
-				    && chart.Type == SMCommon.ChartType.dance_double.ToString()
+				    && chart.Type.Replace("-", "_") == SMCommon.ChartType.dance_double.ToString()
 				    && chart.NumPlayers == 1
 				    && chart.NumInputs == NumDPArrows
 					&& chart.DifficultyType == difficultyType)

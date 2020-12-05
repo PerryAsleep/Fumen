@@ -436,6 +436,7 @@ namespace GenDoublesStaminaCharts
 			Logger.Info($"Generating {arrowData.Length}-panel StepGraph.");
 
 			var completeNodes = new HashSet<GraphNode>();
+			var visitedNodes = new HashSet<GraphNode>();
 			var currentNodes = new List<GraphNode> {root};
 			int level = 0;
 			while (currentNodes.Count > 0)
@@ -445,20 +446,21 @@ namespace GenDoublesStaminaCharts
 				var allChildren = new HashSet<GraphNode>();
 				foreach (var currentNode in currentNodes)
 				{
-					// Mark node complete
-					// Doing this before filling so it is retrievable as a visited node when linking.
-					completeNodes.Add(currentNode);
+					visitedNodes.Add(currentNode);
 
 					// Fill node
 					foreach (var stepType in Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>())
-						FillSingleFootStep(currentNode, completeNodes, arrowData, stepType);
+						FillSingleFootStep(currentNode, visitedNodes, arrowData, stepType);
 					foreach (var jump in JumpCombinations)
-						FillJump(currentNode, completeNodes, arrowData, jump);
+						FillJump(currentNode, visitedNodes, arrowData, jump);
 
 					// Collect children
 					foreach (var linkEntry in currentNode.Links)
 						foreach (var childNode in linkEntry.Value)
 							allChildren.Add(childNode);
+
+					// Mark node complete
+					completeNodes.Add(currentNode);
 				}
 
 				// Remove all complete nodes
@@ -478,8 +480,12 @@ namespace GenDoublesStaminaCharts
 		private static GraphNode GetOrCreateNodeByState(GraphNode.FootArrowState[,] state, HashSet<GraphNode> visitedNodes)
 		{
 			var node = new GraphNode(state);
+
 			if (visitedNodes.TryGetValue(node, out var currentNode))
 				node = currentNode;
+			else
+				visitedNodes.Add(node);
+
 			return node;
 		}
 
@@ -584,7 +590,11 @@ namespace GenDoublesStaminaCharts
 						var newStates = fillFunc(currentState, arrowData, currentIndex, newIndex, foot, actionSets[setIndex]);
 						if (newStates == null || newStates.Count == 0)
 							continue;
-						result[actionSets[setIndex]] = newStates;
+						if (!result.TryGetValue(actionSets[setIndex], out var stateLists))
+							stateLists = newStates;
+						else
+							stateLists.AddRange(newStates);
+						result[actionSets[setIndex]] = stateLists;
 					}
 				}
 			}
@@ -642,7 +652,7 @@ namespace GenDoublesStaminaCharts
 			{
 				newState[otherFoot, a] = currentState[otherFoot, a];
 
-				if (IsResting(currentState, newIndex, foot))
+				if (IsStateRestingAtIndex(currentState, a, foot))
 					newState[foot, a] = GraphNode.InvalidFootArrowState;
 				else
 					newState[foot, a] = currentState[foot, a];
@@ -689,7 +699,9 @@ namespace GenDoublesStaminaCharts
 			{
 				newState[otherFoot, a] = currentState[otherFoot, a];
 
-				if (footAction != FootAction.Release && IsResting(currentState, newIndex, foot))
+				if (footAction != FootAction.Release && IsStateRestingAtIndex(currentState, a, foot))
+					newState[foot, a] = GraphNode.InvalidFootArrowState;
+				else if (footAction == FootAction.Release && IsHeldOrRollingOnArrowAtIndex(currentState, a, newIndex, foot))
 					newState[foot, a] = GraphNode.InvalidFootArrowState;
 				else
 					newState[foot, a] = currentState[foot, a];
@@ -826,7 +838,7 @@ namespace GenDoublesStaminaCharts
 				newState[otherFoot, a] = currentState[otherFoot, a];
 
 				// Lift any resting arrows for the given foot.
-				if (IsResting(currentState, newIndex, foot))
+				if (IsStateRestingAtIndex(currentState, a, foot))
 					newState[foot, a] = GraphNode.InvalidFootArrowState;
 				else
 					newState[foot, a] = currentState[foot, a];
@@ -1208,6 +1220,13 @@ namespace GenDoublesStaminaCharts
 			return false;
 		}
 
+		private static bool IsHeldOrRollingOnArrowAtIndex(GraphNode.FootArrowState[,] state, int a, int arrow, int foot)
+		{
+			return state[foot, a].Arrow == arrow 
+			       && (state[foot, a].State == GraphArrowState.Held
+			           || state[foot, a].State == GraphArrowState.Rolling);
+		}
+
 		private static bool IsResting(GraphNode.FootArrowState[,] state, int arrow, int foot)
 		{
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
@@ -1216,25 +1235,19 @@ namespace GenDoublesStaminaCharts
 			return false;
 		}
 
-		public static bool IsOn(GraphNode.FootArrowState[,] state, int arrow, int foot)
+		private static bool IsStateRestingAtIndex(GraphNode.FootArrowState[,] state, int a, int foot)
+		{
+			if (state[foot, a].Arrow != InvalidArrowIndex && state[foot, a].State == GraphArrowState.Resting)
+				return true;
+			return false;
+		}
+
+		private static bool IsOn(GraphNode.FootArrowState[,] state, int arrow, int foot)
 		{
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 				if (state[foot, a].Arrow == arrow)
 					return true;
 			return false;
-		}
-
-		private static GraphArrowState StateAfterAction(FootAction footAction)
-		{
-			switch (footAction)
-			{
-				case FootAction.Hold:
-					return GraphArrowState.Held;
-				case FootAction.Roll:
-					return GraphArrowState.Rolling;
-				default:
-					return GraphArrowState.Resting;
-			}
 		}
 
 		private static List<T[]> Combinations<T>(int size) where T : Enum
