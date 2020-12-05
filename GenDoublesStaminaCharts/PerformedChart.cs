@@ -66,12 +66,11 @@ namespace GenDoublesStaminaCharts
 		private class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
 		{
 			public GraphNode GraphNode;
-			// Link to this node
 			public GraphLink GraphLink;
 
 			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNode; }
-			public GraphLink GetGraphLink() { return GraphLink; }
+			public GraphLink GetGraphLinkToNode() { return GraphLink; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
 		}
@@ -106,7 +105,8 @@ namespace GenDoublesStaminaCharts
 		public static PerformedChart CreateFromExpressedChart(StepGraph stepGraph, ExpressedChart expressedChart)
 		{
 			// Find a path of SearchNodes through the ExpressedChart
-			var random = new Random();
+			// HACK consistent seed
+			var random = new Random(1);
 			var rootSearchNode = new SearchNode { GraphNode = stepGraph.Root };
 			var currentSearchNode = rootSearchNode;
 			while (true)

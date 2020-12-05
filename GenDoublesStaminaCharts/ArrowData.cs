@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using static GenDoublesStaminaCharts.Constants;
 
 namespace GenDoublesStaminaCharts
@@ -83,7 +85,7 @@ namespace GenDoublesStaminaCharts
 		/// </summary>
 		static ArrowData()
 		{
-			bool[] noneDP = { false, false, false, false, false, false, false, false };
+			bool[] noneDP = {false, false, false, false, false, false, false, false};
 
 			bool[] FromDP(IEnumerable<int> arrows)
 			{
@@ -270,10 +272,10 @@ namespace GenDoublesStaminaCharts
 
 					BracketablePairings =
 					{
-						// Left foot on P1R is bracketable with P1D, P1U, and P2R
-						[L] = FromDP(new[] {P1D, P1U, P2R}),
-						// Right foot on P1R is bracketable with P1D, P1U, and P2R
-						[R] = FromDP(new[] {P1D, P1U, P2R})
+						// Left foot on P1R is bracketable with P1D, P1U, and P2L
+						[L] = FromDP(new[] {P1D, P1U, P2L}),
+						// Right foot on P1R is bracketable with P1D, P1U, and P2L
+						[R] = FromDP(new[] {P1D, P1U, P2L})
 					},
 
 					OtherFootPairings =
@@ -334,8 +336,8 @@ namespace GenDoublesStaminaCharts
 					{
 						// Left foot on P2L supports right foot on P2D, P2U, and P2R without crossovers
 						[L] = FromDP(new[] {P2D, P2U, P2R}),
-						// Right foot on P2L supports left foot on P1D, P1U, and P1L without crossovers
-						[R] = FromDP(new[] {P1D, P1U, P1L})
+						// Right foot on P2L supports left foot on P1D, P1U, and P1R without crossovers
+						[R] = FromDP(new[] {P1D, P1U, P1R})
 					},
 
 					OtherFootPairingsSameFootCrossoverFront =
@@ -539,12 +541,12 @@ namespace GenDoublesStaminaCharts
 				{
 					Position = DPArrowData[arrow].Position,
 					ValidNextArrows = new bool[NumSPArrows],
-					BracketablePairings = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairings = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsSameFootCrossoverFront = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsSameFootCrossoverBehind = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsOtherFootCrossoverFront = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
-					OtherFootPairingsOtherFootCrossoverBehind = { [0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows] },
+					BracketablePairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsSameFootCrossoverFront = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsSameFootCrossoverBehind = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsOtherFootCrossoverFront = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
+					OtherFootPairingsOtherFootCrossoverBehind = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
 				};
 
 				Array.Copy(DPArrowData[arrow].ValidNextArrows, SPArrowData[arrow].ValidNextArrows, NumSPArrows);
@@ -562,6 +564,40 @@ namespace GenDoublesStaminaCharts
 						SPArrowData[arrow].OtherFootPairingsOtherFootCrossoverFront[foot], NumSPArrows);
 					Array.Copy(DPArrowData[arrow].OtherFootPairingsOtherFootCrossoverBehind[foot],
 						SPArrowData[arrow].OtherFootPairingsOtherFootCrossoverBehind[foot], NumSPArrows);
+				}
+			}
+
+			TestSymmetry();
+		}
+
+		private static void TestSymmetry()
+		{
+			for (var a = 0; a < NumDPArrows; a++)
+			{
+				for (var a2 = 0; a2 < NumDPArrows; a2++)
+				{
+					var oppositeA = NumDPArrows - a - 1;
+					var oppositeA2 = NumDPArrows - a2 - 1;
+
+					Debug.Assert(DPArrowData[a].ValidNextArrows[a2]
+					             == DPArrowData[oppositeA].ValidNextArrows[oppositeA2]);
+
+					for (var f = 0; f < NumFeet; f++)
+					{
+						var oppositeF = NumFeet - f - 1;
+						Debug.Assert(DPArrowData[a].BracketablePairings[f][a2]
+						             != DPArrowData[oppositeA].BracketablePairings[oppositeF][oppositeA2]);
+						Debug.Assert(DPArrowData[a].OtherFootPairings[f][a2]
+						             == DPArrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
+						Debug.Assert(DPArrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2]
+						             == DPArrowData[oppositeA].OtherFootPairingsOtherFootCrossoverFront[oppositeF][oppositeA2]);
+						Debug.Assert(DPArrowData[a].OtherFootPairingsSameFootCrossoverBehind[f][a2]
+						             == DPArrowData[oppositeA].OtherFootPairingsSameFootCrossoverFront[oppositeF][oppositeA2]);
+						Debug.Assert(DPArrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2]
+						             == DPArrowData[oppositeA].OtherFootPairingsOtherFootCrossoverBehind[oppositeF][oppositeA2]);
+						Debug.Assert(DPArrowData[a].OtherFootPairingsSameFootCrossoverFront[f][a2]
+						             == DPArrowData[oppositeA].OtherFootPairingsSameFootCrossoverBehind[oppositeF][oppositeA2]);
+					}
 				}
 			}
 		}

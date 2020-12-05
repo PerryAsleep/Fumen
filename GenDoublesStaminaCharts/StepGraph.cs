@@ -341,7 +341,7 @@ namespace GenDoublesStaminaCharts
 				// This would be split into two events, a release first, and a step after.
 				// Prune those combinations out now so we don't loop over them and need to check for them
 				// when searching.
-				if (i > 1)
+				if (i >= 1)
 				{
 					combinations.RemoveAll(actions =>
 					{

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using static GenDoublesStaminaCharts.Constants;
+using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
 
@@ -28,12 +29,13 @@ namespace GenDoublesStaminaCharts
 		static void Main(string[] args)
 		{
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
-			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
+			DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
 			var song = SMReader.Load(
-				@"C:\Users\perry\Sync\Temp\Hey Sexy Lady (Skrillex Remix)\hey.sm");
+				@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
-			SMWriter.Save(song, @"C:\Users\perry\Sync\Temp\Hey Sexy Lady (Skrillex Remix)\hey_2.sm");
+			SMWriter.Save(song,
+				@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
 		}
 
 		static void AddDoublesCharts(Song song, OverwriteBehavior overwriteBehavior)
@@ -44,13 +46,12 @@ namespace GenDoublesStaminaCharts
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
-					// TODO: Make a method to perform this replace
-				    && chart.Type.Replace("-", "_") == SMCommon.ChartType.dance_single.ToString()
+				    && chart.Type == ChartTypeString(ChartType.dance_single)
 				    && chart.NumPlayers == 1
 				    && chart.NumInputs == NumSPArrows)
 				{
 					// Check if there is an existing doubles chart corresponding to this singles chart.
-					var currentDoublesChart = FindDoublesChart(song, chart.DifficultyType);
+					var (currentDoublesChart, dpChartIndex) = FindDoublesChart(song, chart.DifficultyType);
 					if (currentDoublesChart != null)
 					{
 						var fumenGenerated = GetFumenGeneratedVersion(chart, out var version);
@@ -73,12 +74,12 @@ namespace GenDoublesStaminaCharts
 								break;
 						}
 
-						chartsIndicesToRemove.Add(chartIndex);
+						chartsIndicesToRemove.Add(dpChartIndex);
 					}
 
 					// Generate a new series of Events for this Chart from the singles Chart.
 					var expressedChart = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
-					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
+					var performedChart = PerformedChart.CreateFromExpressedChart(DPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMCommon.SMEventComparer());
@@ -99,10 +100,16 @@ namespace GenDoublesStaminaCharts
 						DifficultyRating = chart.DifficultyRating,
 						DifficultyType = chart.DifficultyType,
 						SourceExtras = chart.SourceExtras,
-						Type = SMCommon.ChartType.dance_double.ToString(),
+						Type = ChartTypeString(ChartType.dance_double),
 						NumPlayers = 1,
 						NumInputs = 8
 					};
+
+					// HACK
+					//newChart.NumInputs = 4;
+					//newChart.Type = ChartTypeString(ChartType.dance_single);
+					//chartsIndicesToRemove.Add(chartIndex);
+
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);
 				}
@@ -132,21 +139,23 @@ namespace GenDoublesStaminaCharts
 			return false;
 		}
 
-		private static Chart FindDoublesChart(Song song, string difficultyType)
+		private static (Chart, int) FindDoublesChart(Song song, string difficultyType)
 		{
+			int index = 0;
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
-				    && chart.Type.Replace("-", "_") == SMCommon.ChartType.dance_double.ToString()
+				    && chart.Type == ChartTypeString(ChartType.dance_double)
 				    && chart.NumPlayers == 1
 				    && chart.NumInputs == NumDPArrows
 					&& chart.DifficultyType == difficultyType)
 				{
-					return chart;
+					return (chart, index);
 				}
+				index++;
 			}
 
-			return null;
+			return (null, 0);
 		}
 
 		private static void CopyNonPerformanceEvents(List<Event> source, List<Event> dest)

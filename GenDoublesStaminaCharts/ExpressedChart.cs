@@ -196,7 +196,7 @@ namespace GenDoublesStaminaCharts
 
 			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNode; }
-			public GraphLink GetGraphLink() { return NextNodes.Count > 0 ? NextNodes.First().Key : null; }
+			public GraphLink GetGraphLinkToNode() { return PreviousLink; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
 		}
@@ -425,6 +425,8 @@ namespace GenDoublesStaminaCharts
 			// Check every current ChartSearchNode.
 			foreach (var searchNode in currentSearchNodes)
 			{
+				var deadEnd = true;
+
 				// Check every GraphLink out of the ChartSearchNode's GraphNode.
 				foreach (var l in searchNode.GraphNode.Links)
 				{

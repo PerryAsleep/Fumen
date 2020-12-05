@@ -40,7 +40,7 @@ namespace GenDoublesStaminaCharts
 		public interface IChartNode
 		{
 			GraphNode GetGraphNode();
-			GraphLink GetGraphLink();
+			GraphLink GetGraphLinkToNode();
 			MetricPosition GetPosition();
 		}
 
@@ -64,14 +64,13 @@ namespace GenDoublesStaminaCharts
 				return (releases, steps);
 
 			// Skip first event representing the resting position.
-			// TODO: check consistency with GetGraphLink - is it to this node or from this node
-			var previousLink = events[eventIndex].GetGraphLink();
 			eventIndex++;
 
 			while (eventIndex < numEvents)
 			{
 				var node = events[eventIndex];
 				var graphNode = node.GetGraphNode();
+				var linkToNode = node.GetGraphLinkToNode();
 
 				for (var f = 0; f < NumFeet; f++)
 				{
@@ -80,9 +79,9 @@ namespace GenDoublesStaminaCharts
 						// This is a release.
 						if (graphNode.State[f, a].Arrow != InvalidArrowIndex
 						    && graphNode.State[f, a].State == GraphArrowState.Resting
-						    && previousLink.Links[f, a].Valid
-						    && (previousLink.Links[f, a].Action == FootAction.Release ||
-						        previousLink.Links[f, a].Action == FootAction.Tap))
+						    && linkToNode.Links[f, a].Valid
+						    && (linkToNode.Links[f, a].Action == FootAction.Release ||
+						        linkToNode.Links[f, a].Action == FootAction.Tap))
 						{
 							releases.Add(new FootActionEvent
 							{
@@ -97,10 +96,10 @@ namespace GenDoublesStaminaCharts
 						    && (graphNode.State[f, a].State == GraphArrowState.Resting
 						        || graphNode.State[f, a].State == GraphArrowState.Held
 						        || graphNode.State[f, a].State == GraphArrowState.Rolling)
-						    && previousLink.Links[f, a].Valid
-						    && (previousLink.Links[f, a].Action == FootAction.Tap
-						        || previousLink.Links[f, a].Action == FootAction.Hold
-						        || previousLink.Links[f, a].Action == FootAction.Roll))
+						    && linkToNode.Links[f, a].Valid
+						    && (linkToNode.Links[f, a].Action == FootAction.Tap
+						        || linkToNode.Links[f, a].Action == FootAction.Hold
+						        || linkToNode.Links[f, a].Action == FootAction.Roll))
 						{
 							steps.Add(new FootActionEvent
 							{
@@ -111,7 +110,6 @@ namespace GenDoublesStaminaCharts
 						}
 					}
 				}
-				previousLink = node.GetGraphLink();
 				eventIndex++;
 			}
 
@@ -420,7 +418,7 @@ namespace GenDoublesStaminaCharts
 				return false;
 
 			// Find the step for this arrow at or before this position.
-			var precedingStepIndex = startingStepIndex;
+			var precedingStepIndex = System.Math.Min(startingStepIndex, steps.Count - 1);
 			MetricPosition precedingStepPosition = null;
 			while (steps[precedingStepIndex].Position > position && precedingStepIndex >= 0)
 			{

@@ -51,6 +51,11 @@ namespace Fumen.Converters
 			kickbox_arachnid,
 		}
 
+		public static string ChartTypeString(ChartType type)
+		{
+			return type.ToString().Replace("_", "-");
+		}
+
 		public enum ChartDifficultyType
 		{
 			Beginner,

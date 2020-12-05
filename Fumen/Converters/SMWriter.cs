@@ -64,8 +64,6 @@ namespace Fumen.Converters
 		{
 			if (!TryGetSongExtra(SMCommon.TagOffset, song, out var value) && song.Charts.Count > 0)
 				value = song.Charts[0].ChartOffsetFromMusic.ToString(SMCommon.SMDoubleFormat);
-			else
-				value = "";
 			WriteProperty(SMCommon.TagOffset, value.ToString(), streamWriter);
 		}
 

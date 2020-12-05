@@ -5,18 +5,14 @@ how do patterns? like 123412341234...
 Way to express preference
 	e.g. RLR as 523 is less preferable than RLR as 524
 
+fix mines - somehow hey sexy lady doubles lost some mines?
+do something to address that the patterns stay on one side of the pads too much.
+going into a nebulous jump when the original chart did not.
+test crossovers.
+test footswaps.
+test brackets.
 
-Logic:
-	X initialize dp arrow data
-	X initialize dp graph
-
-	X load sp chart
-	X convert sp chart to expressed chart
-
-	X search for a path through the dp graph that matches the expressed chart
-	X put the mines in
-	X convert the path to a dp chart
-	X put all the tempo changes, stops in
+unit tests?
 
 does the stepgraph support a pattern like:
 ...X
@@ -32,3 +28,4 @@ look at Hella Deep in Technical Showcase 4 - crazy bpm stuff
 	#SPEEDS
 NewAlone has roll chord
 Primitive Vides - LR hold, alternate jacks on down 
+
