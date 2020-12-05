@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace GenDoublesStaminaCharts
 {
@@ -191,8 +190,7 @@ namespace GenDoublesStaminaCharts
 		}
 		#endregion
 
-		// TODO: Rename
-		public enum SingleStepType
+		public enum StepType
 		{
 			SameArrow,
 			NewArrow,

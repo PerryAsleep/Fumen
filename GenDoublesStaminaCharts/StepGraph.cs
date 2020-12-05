@@ -30,11 +30,11 @@ namespace GenDoublesStaminaCharts
 		/// </summary>
 		public struct FootArrowState
 		{
-			public SingleStepType Step { get; }
+			public StepType Step { get; }
 			public FootAction Action { get; }
 			public bool Valid { get; }
 
-			public FootArrowState(SingleStepType step, FootAction action)
+			public FootArrowState(StepType step, FootAction action)
 			{
 				Step = step;
 				Action = action;
@@ -102,7 +102,7 @@ namespace GenDoublesStaminaCharts
 		public bool IsFootSwap()
 		{
 			for (var f = 0; f < NumFeet; f++)
-				if (!Links[f, 0].Valid || Links[f, 0].Step == SingleStepType.FootSwap)
+				if (!Links[f, 0].Valid || Links[f, 0].Step == StepType.FootSwap)
 					return true;
 			return false;
 		}
@@ -268,35 +268,35 @@ namespace GenDoublesStaminaCharts
 	public class StepGraph
 	{
 		/// <summary>
-		/// Cached SingleStepType combinations that constitute valid jumps.
+		/// Cached StepType combinations that constitute valid jumps.
 		/// First index is the index of the combination.
 		/// Second index is foot for that combination.
 		/// </summary>
-		private static readonly SingleStepType[][] JumpCombinations;
+		private static readonly StepType[][] JumpCombinations;
 		/// <summary>
 		/// Cached FootActions for a step.
 		/// First index is the number of arrows of a single foot step in question.
 		///  Length 2.
-		///  Most SingleStepTypes have 1 arrow, but brackets have 2.
+		///  Most StepTypes have 1 arrow, but brackets have 2.
 		///  [0]: Length 1 FootAction combinations
 		///  [1]: Length 2 FootAction combinations
 		/// Second index is the set of actions.
 		///  For example, for length 2 FootAction combinations we would have roughly 16 entries
 		///  since it is combining the 4 FootActions with 4 more.
 		/// Third index is the arrow for the foot in question.
-		///  For most SingleStepTypes this will be a length 1 arrow. For brackets this will be a
+		///  For most StepTypes this will be a length 1 arrow. For brackets this will be a
 		///  length 2 array.
 		/// </summary>
 		private static readonly FootAction[][][] ActionCombinations;
 		/// <summary>
-		/// Cached number of arrows for each SingleStepType.
-		/// Most SingleStepTypes are for one arrow. Brackets are for two.
+		/// Cached number of arrows for each StepType.
+		/// Most StepTypes are for one arrow. Brackets are for two.
 		/// This array is used to provide the value for the first index in ActionCombinations.
 		/// </summary>
 		private static readonly int[] NumArrowsForStepType;
 		/// <summary>
 		/// Cached functions used to fill nodes of the StepGraph.
-		/// Index is SingleStepType.
+		/// Index is StepType.
 		/// </summary>
 		private static readonly Func<GraphNode.FootArrowState[,], ArrowData[], int, int, int, FootAction[],
 			List<GraphNode.FootArrowState[,]>>[] FillFuncs;
@@ -323,11 +323,11 @@ namespace GenDoublesStaminaCharts
 			// Initialize JumpCombinations
 			var jumpSingleSteps = new[]
 			{
-				SingleStepType.SameArrow,
-				SingleStepType.NewArrow,
-				SingleStepType.BracketBothNew,
-				SingleStepType.BracketOneNew,
-				SingleStepType.BracketBothSame,
+				StepType.SameArrow,
+				StepType.NewArrow,
+				StepType.BracketBothNew,
+				StepType.BracketOneNew,
+				StepType.BracketBothSame,
 			};
 			JumpCombinations = Combinations(jumpSingleSteps, NumFeet).ToArray();
 
@@ -362,28 +362,28 @@ namespace GenDoublesStaminaCharts
 			}
 
 			// Initialize NumArrowsForStepType
-			var steps = Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>().ToList();
+			var steps = Enum.GetValues(typeof(StepType)).Cast<StepType>().ToList();
 			NumArrowsForStepType = new int[steps.Count];
-			NumArrowsForStepType[(int)SingleStepType.SameArrow] = 1;
-			NumArrowsForStepType[(int)SingleStepType.NewArrow] = 1;
-			NumArrowsForStepType[(int)SingleStepType.CrossoverFront] = 1;
-			NumArrowsForStepType[(int)SingleStepType.CrossoverBehind] = 1;
-			NumArrowsForStepType[(int)SingleStepType.FootSwap] = 1;
-			NumArrowsForStepType[(int)SingleStepType.BracketBothNew] = 2;
-			NumArrowsForStepType[(int)SingleStepType.BracketOneNew] = 2;
-			NumArrowsForStepType[(int)SingleStepType.BracketBothSame] = 2;
+			NumArrowsForStepType[(int)StepType.SameArrow] = 1;
+			NumArrowsForStepType[(int)StepType.NewArrow] = 1;
+			NumArrowsForStepType[(int)StepType.CrossoverFront] = 1;
+			NumArrowsForStepType[(int)StepType.CrossoverBehind] = 1;
+			NumArrowsForStepType[(int)StepType.FootSwap] = 1;
+			NumArrowsForStepType[(int)StepType.BracketBothNew] = 2;
+			NumArrowsForStepType[(int)StepType.BracketOneNew] = 2;
+			NumArrowsForStepType[(int)StepType.BracketBothSame] = 2;
 
 			// Initialize FillFuncs
 			FillFuncs = new Func<GraphNode.FootArrowState[,], ArrowData[], int, int, int, FootAction[],
 				List<GraphNode.FootArrowState[,]>>[steps.Count];
-			FillFuncs[(int)SingleStepType.SameArrow] = FillSameArrow;
-			FillFuncs[(int)SingleStepType.NewArrow] = FillNewArrow;
-			FillFuncs[(int)SingleStepType.CrossoverFront] = FillCrossoverFront;
-			FillFuncs[(int)SingleStepType.CrossoverBehind] = FillCrossoverBack;
-			FillFuncs[(int)SingleStepType.FootSwap] = FillFootSwap;
-			FillFuncs[(int)SingleStepType.BracketBothNew] = FillBracketBothNew;
-			FillFuncs[(int)SingleStepType.BracketOneNew] = FillBracketOneNew;
-			FillFuncs[(int)SingleStepType.BracketBothSame] = FillBracketBothSame;
+			FillFuncs[(int)StepType.SameArrow] = FillSameArrow;
+			FillFuncs[(int)StepType.NewArrow] = FillNewArrow;
+			FillFuncs[(int)StepType.CrossoverFront] = FillCrossoverFront;
+			FillFuncs[(int)StepType.CrossoverBehind] = FillCrossoverBack;
+			FillFuncs[(int)StepType.FootSwap] = FillFootSwap;
+			FillFuncs[(int)StepType.BracketBothNew] = FillBracketBothNew;
+			FillFuncs[(int)StepType.BracketOneNew] = FillBracketOneNew;
+			FillFuncs[(int)StepType.BracketBothSame] = FillBracketBothSame;
 		}
 
 		/// <summary>
@@ -449,7 +449,7 @@ namespace GenDoublesStaminaCharts
 					visitedNodes.Add(currentNode);
 
 					// Fill node
-					foreach (var stepType in Enum.GetValues(typeof(SingleStepType)).Cast<SingleStepType>())
+					foreach (var stepType in Enum.GetValues(typeof(StepType)).Cast<StepType>())
 						FillSingleFootStep(currentNode, visitedNodes, arrowData, stepType);
 					foreach (var jump in JumpCombinations)
 						FillJump(currentNode, visitedNodes, arrowData, jump);
@@ -506,7 +506,7 @@ namespace GenDoublesStaminaCharts
 		private static void FillSingleFootStep(GraphNode currentNode,
 			HashSet<GraphNode> visitedNodes,
 			ArrowData[] arrowData,
-			SingleStepType stepType)
+			StepType stepType)
 		{
 			var numStepArrows = NumArrowsForStepType[(int)stepType];
 			var fillFunc = FillFuncs[(int)stepType];
@@ -545,7 +545,7 @@ namespace GenDoublesStaminaCharts
 			GraphNode currentNode,
 			HashSet<GraphNode> visitedNodes,
 			ArrowData[] arrowData,
-			SingleStepType[] stepTypes)
+			StepType[] stepTypes)
 		{
 			var actionsToStatesL = FillJumpStep(currentNode.State, arrowData, stepTypes[L], L);
 			foreach (var actionStateL in actionsToStatesL)
@@ -572,7 +572,7 @@ namespace GenDoublesStaminaCharts
 		private static Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>> FillJumpStep(
 			GraphNode.FootArrowState[,] currentState,
 			ArrowData[] arrowData,
-			SingleStepType stepType,
+			StepType stepType,
 			int foot)
 		{
 			var result = new Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>>();

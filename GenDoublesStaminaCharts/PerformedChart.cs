@@ -383,9 +383,9 @@ namespace GenDoublesStaminaCharts
 										{
 											if (stepNode.GraphLink.Links[currentArrowFoot, a].Valid
 												&& stepNode.GraphLink.Links[currentArrowFoot, a].Action == FootAction.Tap
-												&& (stepNode.GraphLink.Links[currentArrowFoot, a].Step == SingleStepType.SameArrow
-													|| stepNode.GraphLink.Links[currentArrowFoot, a].Step == SingleStepType.BracketOneNew
-													|| stepNode.GraphLink.Links[currentArrowFoot, a].Step == SingleStepType.BracketBothSame))
+												&& (stepNode.GraphLink.Links[currentArrowFoot, a].Step == StepType.SameArrow
+													|| stepNode.GraphLink.Links[currentArrowFoot, a].Step == StepType.BracketOneNew
+													|| stepNode.GraphLink.Links[currentArrowFoot, a].Step == StepType.BracketBothSame))
 											{
 												// Tap on the arrow again
 												addNormalStep = true;

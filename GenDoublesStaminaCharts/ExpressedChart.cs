@@ -17,7 +17,7 @@ namespace GenDoublesStaminaCharts
 	/// a step with the right foot on a different arrow, and a crossover in front with
 	/// the left foot to a new arrow.
 	/// An ExpressedChart's representation comes from GraphLinks, which specify FootActions
-	/// and SingleStepTypes for each foot.
+	/// and StepTypes for each foot.
 	/// Creating an ExpressedChart allows for converting the chart from one set of arrows
 	/// like 4-panel to a different set like 8-panel. An equivalent 4-panel and 8-panel
 	/// chart would share the same ExpressedChart, though their specific PerformedCharts
@@ -224,7 +224,7 @@ namespace GenDoublesStaminaCharts
 		/// first step in the chart. For example in singles the player will have a natural
 		/// starting position of P1L, P1R. If the first arrow in the chart is P1D, then the
 		/// first StepEvent will a be GraphLink with a Link for one foot with a NewArrow
-		/// SingleStepType and a Tap FootAction.
+		/// StepType and a Tap FootAction.
 		/// </summary>
 		public List<StepEvent> StepEvents = new List<StepEvent>();
 		public List<MineEvent> MineEvents = new List<MineEvent>();
@@ -688,9 +688,9 @@ namespace GenDoublesStaminaCharts
 
 						switch (step)
 						{
-							case SingleStepType.SameArrow:
+							case StepType.SameArrow:
 								return CostSameArrow;
-							case SingleStepType.NewArrow:
+							case StepType.NewArrow:
 								{
 									// TODO: give preference to alternating in long patters
 									// For example,		LR, U, LR, D, LR, U, LR D
@@ -816,8 +816,8 @@ namespace GenDoublesStaminaCharts
 									// Unreachable? step with same foot that is not a double step or a same arrow step
 									return CostUnknown;
 								}
-							case SingleStepType.CrossoverFront:
-							case SingleStepType.CrossoverBehind:
+							case StepType.CrossoverFront:
+							case StepType.CrossoverBehind:
 								{
 									if (otherAnyHeld)
 										return CostNewArrow_Crossover_OtherHeld;
@@ -834,7 +834,7 @@ namespace GenDoublesStaminaCharts
 
 									return CostNewArrow_Crossover;
 								}
-							case SingleStepType.FootSwap:
+							case StepType.FootSwap:
 								{
 									if (doubleStep)
 									{
@@ -912,7 +912,7 @@ namespace GenDoublesStaminaCharts
 							var doubleStep = previousStepLink != null
 											 && previousStepLink.IsStepWithFoot(foot)
 											 && !holdingAny[otherFoot]
-											 && step != SingleStepType.BracketBothSame;
+											 && step != StepType.BracketBothSame;
 							if (doubleStep)
 								return CostTwoArrows_Bracket_DoubleStep;
 
@@ -1040,9 +1040,9 @@ namespace GenDoublesStaminaCharts
 			}
 		}
 
-		private static bool GetSingleStepStepAndFoot(GraphLink link, out SingleStepType step, out int foot)
+		private static bool GetSingleStepStepAndFoot(GraphLink link, out StepType step, out int foot)
 		{
-			step = SingleStepType.SameArrow;
+			step = StepType.SameArrow;
 			foot = 0;
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
@@ -1057,16 +1057,16 @@ namespace GenDoublesStaminaCharts
 			return numValid == 1;
 		}
 
-		private static bool GetBracketStepAndFoot(GraphLink link, out SingleStepType step, out int foot)
+		private static bool GetBracketStepAndFoot(GraphLink link, out StepType step, out int foot)
 		{
-			step = SingleStepType.BracketBothNew;
+			step = StepType.BracketBothNew;
 			foot = 0;
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
 			{
-				if (link.Links[f, 0].Valid && (link.Links[f, 0].Step == SingleStepType.BracketBothNew
-					|| link.Links[f, 0].Step == SingleStepType.BracketOneNew
-					|| link.Links[f, 0].Step == SingleStepType.BracketBothSame))
+				if (link.Links[f, 0].Valid && (link.Links[f, 0].Step == StepType.BracketBothNew
+					|| link.Links[f, 0].Step == StepType.BracketOneNew
+					|| link.Links[f, 0].Step == StepType.BracketBothSame))
 				{
 					step = link.Links[f, 0].Step;
 					foot = f;
