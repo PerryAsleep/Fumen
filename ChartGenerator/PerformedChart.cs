@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Fumen;
 using Fumen.Converters;
-using static GenDoublesStaminaCharts.Constants;
+using static ChartGenerator.Constants;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	public class PerformedChart
 	{

@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using static GenDoublesStaminaCharts.Constants;
+using static ChartGenerator.Constants;
 using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	// WIP
 	class Program

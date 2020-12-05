@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using Fumen;
 using Fumen.Converters;
-using static GenDoublesStaminaCharts.Constants;
+using static ChartGenerator.Constants;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	/// <summary>
 	/// An ExpressedChart is a series of events which describe the intent of a chart.

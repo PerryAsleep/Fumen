@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using static GenDoublesStaminaCharts.Constants;
+using static ChartGenerator.Constants;
 using Fumen;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	/// <summary>
 	/// The state a foot on an arrow in StepGraph can be in.

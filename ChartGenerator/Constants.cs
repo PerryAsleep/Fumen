@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	public static class Constants
 	{

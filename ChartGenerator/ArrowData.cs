@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using static GenDoublesStaminaCharts.Constants;
+using static ChartGenerator.Constants;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	/// <summary>
 	/// Information about an arrow in an array of arrows representing the layout

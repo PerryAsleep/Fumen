@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using Fumen;
-using static GenDoublesStaminaCharts.Constants;
+using static ChartGenerator.Constants;
 
-namespace GenDoublesStaminaCharts
+namespace ChartGenerator
 {
 	/// <summary>
 	/// Utilities to help with creating mine events in ExpressedCharts and PerformedCharts.
