@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
 using static ChartGenerator.Constants;
 
 namespace ChartGenerator
@@ -85,8 +82,238 @@ namespace ChartGenerator
 		/// </summary>
 		static ArrowData()
 		{
-			bool[] noneDP = {false, false, false, false, false, false, false, false};
+			bool[] noneSP = { false, false, false, false };
+			bool[] FromSP(IEnumerable<int> arrows)
+			{
+				var ret = new bool[NumSPArrows];
+				foreach (var arrow in arrows)
+					ret[arrow] = true;
+				return ret;
+			}
 
+			SPArrowData = new[]
+			{
+				// P1L
+				new ArrowData
+				{
+					Position = P1L,
+
+					// A foot on P1L can move next to P1D, P1U, or P1R
+					ValidNextArrows = FromSP(new[] {P1D, P1U, P1R}),
+
+					BracketablePairings =
+					{
+						// Left foot on P1L is bracketable with P1U and P1D
+						[L] = FromSP(new[] {P1D, P1U}),
+						// Right foot on P1L is a crossover and not bracketable
+						[R] = noneSP
+					},
+
+					OtherFootPairings =
+					{
+						// Left foot on P1L supports right foot on P1D, P1U, and P1R without crossovers
+						[L] = FromSP(new[] {P1D, P1U, P1R}),
+						// Right foot on P1L is a crossover with no normal left foot pairing
+						[R] = noneSP,
+					},
+
+					OtherFootPairingsSameFootCrossoverFront =
+					{
+						// Left foot on P1L is never a crossover position
+						[L] = noneSP,
+						// Right foot on P1L is a crossover with right in front when left is on P1D
+						[R] = FromSP(new[] {P1D}),
+					},
+
+					OtherFootPairingsSameFootCrossoverBehind =
+					{
+						// Left foot on P1L is never a crossover position
+						[L] = noneSP,
+						// Right foot on P1L is a crossover with right in back when left is on P1U
+						[R] = FromSP(new[] {P1U}),
+					},
+
+					OtherFootPairingsOtherFootCrossoverFront =
+					{
+						// Left foot on P1L is never a crossover position
+						[L] = noneSP,
+						// Right foot on P1L is a crossover with left in front when left is on P1U
+						[R] = FromSP(new[] {P1U}),
+					},
+
+					OtherFootPairingsOtherFootCrossoverBehind =
+					{
+						// Left foot on P1L is never a crossover position
+						[L] = noneSP,
+						// Right foot on P1L is a crossover with left in back when left is on P1D
+						[R] = FromSP(new[] {P1D}),
+					}
+				},
+
+				// P1D
+				new ArrowData
+				{
+					Position = P1D,
+
+					// A foot on P1D can move next to P1L, P1U, or P1R
+					ValidNextArrows = FromSP(new[] {P1L, P1U, P1R}),
+
+					BracketablePairings =
+					{
+						// Left foot on P1D is bracketable with P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1D is bracketable with P1R
+						[R] = FromSP(new[] {P1R})
+					},
+
+					OtherFootPairings =
+					{
+						// Left foot on P1D supports right foot on P1U and P1R without crossovers
+						[L] = FromSP(new[] {P1U, P1R}),
+						// Right foot on P1D supports Left foot on P1L and P1U without crossovers
+						[R] = FromSP(new[] {P1L, P1U})
+					},
+
+					OtherFootPairingsSameFootCrossoverFront =
+					{
+						// none
+						[L] = noneSP,
+						// Right foot on P1D is not a crossover with right in front
+						[R] = noneSP
+					},
+					OtherFootPairingsSameFootCrossoverBehind =
+					{
+						// Left foot on P1D is a crossover with left in back with right is on P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1D is a crossover with right in back when left is on P1R
+						[R] = FromSP(new[] {P1R})
+					},
+					OtherFootPairingsOtherFootCrossoverFront =
+					{
+						// Left foot on P1D is a crossover with right in front with right is on P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1D is a crossover with left in front when left is on P1R
+						[R] = FromSP(new[] {P1R})
+					},
+					OtherFootPairingsOtherFootCrossoverBehind =
+					{
+						// none
+						[L] = noneSP,
+						// Right foot on P1D is not a crossover with left in back
+						[R] = noneSP
+					},
+				},
+
+				// P1U
+				new ArrowData
+				{
+					Position = P1U,
+
+					// A foot on P1U can move next to P1L, P1D, or P1R
+					ValidNextArrows = FromSP(new[] {P1L, P1D, P1R}),
+
+					BracketablePairings =
+					{
+						// Left foot on P1U is bracketable with P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1U is bracketable with P1R
+						[R] = FromSP(new[] {P1R})
+					},
+
+					OtherFootPairings =
+					{
+						// Left foot on P1U supports right foot on P1D and P1R without crossovers
+						[L] = FromSP(new[] {P1D, P1R}),
+						// Right foot on P1U supports left foot on P1L and P1D without crossovers
+						[R] = FromSP(new[] {P1L, P1D})
+					},
+
+					OtherFootPairingsSameFootCrossoverFront =
+					{
+						// Left foot on P1U is a crossover with left in front when right is on P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1U is a crossover with right in front when left is on P1R
+						[R] = FromSP(new[] {P1R})
+					},
+					OtherFootPairingsSameFootCrossoverBehind =
+					{
+						// none
+						[L] = noneSP,
+						// none
+						[R] = noneSP
+					},
+					OtherFootPairingsOtherFootCrossoverFront =
+					{
+						// none
+						[L] = noneSP,
+						// none
+						[R] = noneSP
+					},
+					OtherFootPairingsOtherFootCrossoverBehind =
+					{
+						// Left foot on P1U is a crossover with right in back when right is on P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1U is a crossover with left in back when left is on P1R
+						[R] = FromSP(new[] {P1R})
+					},
+				},
+
+				// P1R
+				new ArrowData
+				{
+					Position = P1R,
+
+					// A foot on P1R can move next to P1L, P1D, or P1U
+					ValidNextArrows = FromSP(new[] {P1L, P1D, P1U}),
+
+					BracketablePairings =
+					{
+						// Left foot on P1R is a crossover and not bracketable.
+						[L] = noneSP,
+						// Right foot on P1R is bracketable with P1D and P1U
+						[R] = FromSP(new[] {P1D, P1U})
+					},
+
+					OtherFootPairings =
+					{
+						// Left foot on P1R is a crossover with no normal right foot pairing
+						[L] = noneSP,
+						// Right foot on P1R supports left foot on P1L, P1D, and P1U without crossovers
+						[R] = FromSP(new[] {P1L, P1D, P1U})
+					},
+
+					OtherFootPairingsSameFootCrossoverFront =
+					{
+						// Left foot on P1R is a crossover with left in front when right is on P1D
+						[L] = FromSP(new[] {P1D}),
+						// Right foot on P1R is not a crossover position
+						[R] = noneSP
+					},
+					OtherFootPairingsSameFootCrossoverBehind =
+					{
+						// Left foot on P1R is a crossover with left in back when right is on P1U
+						[L] = FromSP(new[] {P1U}),
+						// Right foot on P1R is not a crossover position
+						[R] = noneSP
+					},
+					OtherFootPairingsOtherFootCrossoverFront =
+					{
+						// Left foot on P1R is a crossover with right in front when right is on P1U
+						[L] = FromSP(new[] {P1U}),
+						// Right foot on P1R is not a crossover position
+						[R] = noneSP
+					},
+					OtherFootPairingsOtherFootCrossoverBehind =
+					{
+						// Left foot on P1R is a crossover with right in back when right is on P1D
+						[L] = FromSP(new[] {P1D}),
+						// Right foot on P1R is not a crossover position
+						[R] = noneSP
+					},
+				}
+			};
+
+			bool[] noneDP = {false, false, false, false, false, false, false, false};
 			bool[] FromDP(IEnumerable<int> arrows)
 			{
 				var ret = new bool[NumDPArrows];
@@ -532,74 +759,6 @@ namespace ChartGenerator
 					},
 				}
 			};
-
-			// Copy DP data to SP
-			SPArrowData = new ArrowData[NumSPArrows];
-			for (var arrow = 0; arrow < NumSPArrows; arrow++)
-			{
-				SPArrowData[arrow] = new ArrowData
-				{
-					Position = DPArrowData[arrow].Position,
-					ValidNextArrows = new bool[NumSPArrows],
-					BracketablePairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
-					OtherFootPairings = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
-					OtherFootPairingsSameFootCrossoverFront = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
-					OtherFootPairingsSameFootCrossoverBehind = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
-					OtherFootPairingsOtherFootCrossoverFront = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
-					OtherFootPairingsOtherFootCrossoverBehind = {[0] = new bool[NumSPArrows], [1] = new bool[NumSPArrows]},
-				};
-
-				Array.Copy(DPArrowData[arrow].ValidNextArrows, SPArrowData[arrow].ValidNextArrows, NumSPArrows);
-				for (var foot = 0; foot < NumFeet; foot++)
-				{
-					Array.Copy(DPArrowData[arrow].BracketablePairings[foot], SPArrowData[arrow].BracketablePairings[foot],
-						NumSPArrows);
-					Array.Copy(DPArrowData[arrow].OtherFootPairings[foot], SPArrowData[arrow].OtherFootPairings[foot],
-						NumSPArrows);
-					Array.Copy(DPArrowData[arrow].OtherFootPairingsSameFootCrossoverFront[foot],
-						SPArrowData[arrow].OtherFootPairingsSameFootCrossoverFront[foot], NumSPArrows);
-					Array.Copy(DPArrowData[arrow].OtherFootPairingsSameFootCrossoverBehind[foot],
-						SPArrowData[arrow].OtherFootPairingsSameFootCrossoverBehind[foot], NumSPArrows);
-					Array.Copy(DPArrowData[arrow].OtherFootPairingsOtherFootCrossoverFront[foot],
-						SPArrowData[arrow].OtherFootPairingsOtherFootCrossoverFront[foot], NumSPArrows);
-					Array.Copy(DPArrowData[arrow].OtherFootPairingsOtherFootCrossoverBehind[foot],
-						SPArrowData[arrow].OtherFootPairingsOtherFootCrossoverBehind[foot], NumSPArrows);
-				}
-			}
-
-			TestSymmetry();
-		}
-
-		private static void TestSymmetry()
-		{
-			for (var a = 0; a < NumDPArrows; a++)
-			{
-				for (var a2 = 0; a2 < NumDPArrows; a2++)
-				{
-					var oppositeA = NumDPArrows - a - 1;
-					var oppositeA2 = NumDPArrows - a2 - 1;
-
-					Debug.Assert(DPArrowData[a].ValidNextArrows[a2]
-					             == DPArrowData[oppositeA].ValidNextArrows[oppositeA2]);
-
-					for (var f = 0; f < NumFeet; f++)
-					{
-						var oppositeF = NumFeet - f - 1;
-						Debug.Assert(DPArrowData[a].BracketablePairings[f][a2]
-						             != DPArrowData[oppositeA].BracketablePairings[oppositeF][oppositeA2]);
-						Debug.Assert(DPArrowData[a].OtherFootPairings[f][a2]
-						             == DPArrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
-						Debug.Assert(DPArrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2]
-						             == DPArrowData[oppositeA].OtherFootPairingsOtherFootCrossoverFront[oppositeF][oppositeA2]);
-						Debug.Assert(DPArrowData[a].OtherFootPairingsSameFootCrossoverBehind[f][a2]
-						             == DPArrowData[oppositeA].OtherFootPairingsSameFootCrossoverFront[oppositeF][oppositeA2]);
-						Debug.Assert(DPArrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2]
-						             == DPArrowData[oppositeA].OtherFootPairingsOtherFootCrossoverBehind[oppositeF][oppositeA2]);
-						Debug.Assert(DPArrowData[a].OtherFootPairingsSameFootCrossoverFront[f][a2]
-						             == DPArrowData[oppositeA].OtherFootPairingsSameFootCrossoverBehind[oppositeF][oppositeA2]);
-					}
-				}
-			}
 		}
 	}
 }

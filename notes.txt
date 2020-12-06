@@ -1,3 +1,17 @@
+
+hey sexy lady - somehow doubles lost some mines?
+hey sexy lady - going into a nebulous jump when the original chart did not.
+giga violate - lost a note - looks like a mine replaced it? measure 32.
+giga violate - has one bracket on an up-down jump.
+giga violate - sp beginner chart straight up lost a measure??? I have no idea how this would happen.
+sm reader strips spaces out of some text like "Chief Skittles"
+do something to address that the patterns stay on one side of the pads too much.
+test crossovers.
+test footswaps.
+test brackets.
+afronova walk
+exporting giga violate twice somehow lost the bpm? (or stepmania nuked it)
+
 how do patterns? like 123412341234...
 	Separate structure in Expressed charts that map a range of stepevents to another range.
 		ranges that are longer (e.g. a repeated 16 note pattern) are more important to repeat
@@ -5,14 +19,9 @@ how do patterns? like 123412341234...
 Way to express preference
 	e.g. RLR as 523 is less preferable than RLR as 524
 
-fix mines - somehow hey sexy lady doubles lost some mines?
-do something to address that the patterns stay on one side of the pads too much.
-going into a nebulous jump when the original chart did not.
-test crossovers.
-test footswaps.
-test brackets.
 
-unit tests?
+
+
 
 does the stepgraph support a pattern like:
 ...X

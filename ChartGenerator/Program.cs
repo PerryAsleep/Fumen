@@ -32,7 +32,7 @@ namespace ChartGenerator
 			DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
 			var song = SMReader.Load(
-				@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
+				@"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm");
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
 			SMWriter.Save(song,
 				@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
