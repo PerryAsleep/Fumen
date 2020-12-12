@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Fumen
 {
@@ -61,6 +59,28 @@ namespace Fumen
 		public override int GetHashCode()
 		{
 			return ShiftAndWrap(Numerator.GetHashCode(), 2) ^ Denominator.GetHashCode();
+		}
+
+		public Fraction Reduce()
+		{
+			var gcd = GreatestCommonDenominator();
+			if (gcd < 2)
+				return new Fraction(this);
+			return new Fraction(Numerator / gcd, Denominator / gcd);
+		}
+
+		public int GreatestCommonDenominator()
+		{
+			var a = Numerator;
+			var b = Denominator;
+			int r;
+			while (b > 0)
+			{
+				r = a % b;
+				a = b;
+				b = r;
+			}
+			return a;
 		}
 
 		/// <summary>

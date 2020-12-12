@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Fumen;
 using Fumen.Converters;
@@ -72,6 +71,12 @@ namespace ChartGenerator
 			/// useful when a mine follows one arrow of a jump to indicate footing.
 			/// </summary>
 			public int FootAssociatedWithPairedNote = InvalidFoot;
+
+			/// <summary>
+			/// The arrow that this mine originally occupied in the source chart. This is
+			/// only needed for illustrating the ExpressedChart.
+			/// </summary>
+			public int OriginalArrow;
 		}
 
 		/// <summary>
@@ -86,7 +91,7 @@ namespace ChartGenerator
 		/// and the position, so that all nodes can be stored and compared without
 		/// conflicting.
 		/// </summary>
-		private class ChartSearchNode : IEquatable<ChartSearchNode>, MineUtils.IChartNode
+		public class ChartSearchNode : IEquatable<ChartSearchNode>, MineUtils.IChartNode
 		{
 			private static long IdCounter;
 
@@ -105,6 +110,10 @@ namespace ChartGenerator
 			public readonly MetricPosition Position;
 			/// <summary>
 			/// Cumulative Cost to reach this ChartSearchNode.
+			/// </summary>
+			public readonly int TotalCost;
+			/// <summary>
+			/// Cost to reach this ChartSearchNode from the previous node.
 			/// </summary>
 			public readonly int Cost;
 			/// <summary>
@@ -126,6 +135,7 @@ namespace ChartGenerator
 				GraphNode graphNode,
 				MetricPosition position,
 				int cost,
+				int totalCost,
 				ChartSearchNode previousNode,
 				GraphLink previousLink)
 			{
@@ -133,6 +143,7 @@ namespace ChartGenerator
 				GraphNode = graphNode;
 				Position = position;
 				Cost = cost;
+				TotalCost = totalCost;
 				PreviousNode = previousNode;
 				PreviousLink = previousLink;
 			}
@@ -146,7 +157,6 @@ namespace ChartGenerator
 			{
 				if (NextNodes.Count == 0 || NextNodes.First().Value.Count == 0)
 					return null;
-				Debug.Assert(NextNodes.First().Value.Count == 1);
 				return NextNodes.First().Value.First();
 			}
 
@@ -244,9 +254,9 @@ namespace ChartGenerator
 		/// <param name="events">List of Events from an SM Chart.</param>
 		/// <param name="stepGraph">StepGraph to use for searching the Events.</param>
 		/// <returns></returns>
-		public static ExpressedChart CreateFromSMEvents(List<Event> events, StepGraph stepGraph)
+		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(List<Event> events, StepGraph stepGraph)
 		{
-			var root = new ChartSearchNode(stepGraph.Root, null, 0, null, null);
+			var root = new ChartSearchNode(stepGraph.Root, new MetricPosition(), 0, 0, null, null);
 
 			var numArrows = stepGraph.NumArrows;
 			var currentState = new SearchState[numArrows];
@@ -272,7 +282,7 @@ namespace ChartGenerator
 					// Choose path with lowest cost.
 					ChartSearchNode bestNode = null;
 					foreach (var node in currentSearchNodes)
-						if (bestNode == null || node.Cost < bestNode.Cost)
+						if (bestNode == null || node.TotalCost < bestNode.TotalCost)
 							bestNode = node;
 
 					// Remove any nodes that are not chosen so there is only one path through the chart.
@@ -358,7 +368,7 @@ namespace ChartGenerator
 			var expressedChart = new ExpressedChart();
 			AddStepsToExpressedChart(expressedChart, root);
 			AddMinesToExpressedChart(expressedChart, root, smMines, numArrows);
-			return expressedChart;
+			return (expressedChart, root);
 		}
 
 		/// <summary>
@@ -437,16 +447,52 @@ namespace ChartGenerator
 						if (!DoesStateMatch(currentState, childNode, l.Key))
 							continue;
 
+						if (position == new MetricPosition
+						    {
+							    Measure = 68,
+							    Beat = 3,
+							    SubDivision = new Fraction(0, 1)
+						    }
+						    && !l.Key.Links[R, 0].Valid
+						    && l.Key.Links[L, 0].Valid
+						    && l.Key.Links[L, 1].Valid
+						    && l.Key.Links[L, 0].Step == StepType.BracketBothSame
+						    && StateMatches(searchNode.GraphNode, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting,
+							    1, GraphArrowState.Resting, 3, GraphArrowState.Resting)
+						    && StateMatches(childNode, 0, GraphArrowState.Held, 2, GraphArrowState.Resting, 1,
+							    GraphArrowState.Resting, 3, GraphArrowState.Resting))
+						{
+							int a = 1;
+						}
+
+						if (position == new MetricPosition
+						    {
+							    Measure = 69,
+							    Beat = 0,
+							    SubDivision = new Fraction(0, 1)
+						    }
+						    && !l.Key.Links[L, 0].Valid
+						    && l.Key.Links[R, 0].Valid
+						    && l.Key.Links[R, 0].Step == StepType.NewArrow
+						    && StateMatches(searchNode.GraphNode, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting,
+							    -1, GraphArrowState.Resting, 1, GraphArrowState.Resting)
+						    && StateMatches(childNode, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting,
+							    -1, GraphArrowState.Resting, 3, GraphArrowState.Resting))
+						{
+							int a = 1;
+						}
+
 						// This GraphLink and child GraphNode result in a matching state.
 						// Determine the cost to go from this GraphLink to this GraphNode.
-						var cost = GetCost(l.Key, searchNode, currentState, lastMines, lastReleases, stepGraph.ArrowData);
+						var cost = GetCost(l.Key, searchNode, currentState, position, lastMines, lastReleases, stepGraph.ArrowData);
 
 						// Record the result as a new ChartSearchNode to be checked for pruning once
 						// all children have been determined.
 						var childSearchNode = new ChartSearchNode(
 							childNode,
 							position,
-							searchNode.Cost + cost,
+							cost,
+							searchNode.TotalCost + cost,
 							searchNode,
 							l.Key);
 						AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
@@ -460,6 +506,21 @@ namespace ChartGenerator
 				{
 					Prune(searchNode);
 				}
+			}
+
+			// 0, 4, 8, 10
+			// Child node is 8460
+			// 0th has it, 4 nodes up
+			// 0 cost 1363
+			// which node has the path that we know ultimately gets accepted?
+			if (position == new MetricPosition
+			    {
+				    Measure = 69,
+				    Beat = 0,
+				    SubDivision = new Fraction(1, 4)
+			    })
+			{
+				int a = 1;
 			}
 
 			// Prune the children and return the results.
@@ -526,9 +587,6 @@ namespace ChartGenerator
 							case GraphArrowState.Rolling:
 								generatedState[node.State[f, a].Arrow] = SearchState.Rolling;
 								break;
-							case GraphArrowState.Resting:
-								generatedState[node.State[f, a].Arrow] = SearchState.Empty;
-								break;
 						}
 					}
 				}
@@ -576,7 +634,7 @@ namespace ChartGenerator
 				if (bestNodes.TryGetValue(node.GraphNode, out var currentNode))
 				{
 					// This node is better.
-					if (node.Cost < currentNode.Cost)
+					if (node.TotalCost < currentNode.TotalCost)
 					{
 						Prune(currentNode);
 
@@ -610,6 +668,21 @@ namespace ChartGenerator
 			// Prune the node up until parent that has other children.
 			while (node.PreviousNode != null)
 			{
+				if (node.Position == new MetricPosition
+				    {
+					    Measure = 68,
+					    Beat = 3,
+					    SubDivision = new Fraction(0, 1)
+				    }
+				    && !node.PreviousLink.Links[R, 0].Valid
+				    && node.PreviousLink.Links[L, 0].Valid
+				    && node.PreviousLink.Links[L, 1].Valid
+				    && node.PreviousLink.Links[L, 0].Step == StepType.BracketBothSame
+				    && StateMatches(node.GraphNode, 0, GraphArrowState.Held, 2, GraphArrowState.Resting, 1, GraphArrowState.Resting, 3, GraphArrowState.Resting))
+				{
+					int a = 1;
+				}
+
 				node.PreviousNode.NextNodes[node.PreviousLink].Remove(node);
 				if (node.PreviousNode.NextNodes[node.PreviousLink].Count == 0)
 					node.PreviousNode.NextNodes.Remove(node.PreviousLink);
@@ -638,6 +711,7 @@ namespace ChartGenerator
 			GraphLink link,
 			ChartSearchNode parentSearchNode,
 			SearchState[] state,
+			MetricPosition position,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
 			ArrowData[] arrowData)
@@ -674,17 +748,34 @@ namespace ChartGenerator
 							out var thisAnyHeld,
 							out var thisAllHeld,
 							out var thisCanStepToNewArrow,
+							out var thisCanStepToNewArrowWithoutCrossover,
 							out var thisCanBracketToNewArrow,
+							out var thisCanCrossoverToNewArrow,
 							out var thisMinePositionFollowingPreviousStep,
 							out var thisReleasePositionOfPreviousStep);
 						GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
 							out var otherAnyHeld,
 							out var otherAllHeld,
 							out var otherCanStepToNewArrow,
+							out var otherCanStepToNewArrowWithoutCrossover,
 							out var otherCanBracketToNewArrow,
+							out var otherCanCrossoverToNewArrow,
 							out var otherMinePositionFollowingPreviousStep,
 							out var otherReleasePositionOfPreviousStep);
+
 						var doubleStep = previousStepLink != null && previousStepLink.IsStepWithFoot(thisFoot) && !otherAnyHeld;
+						var doubleStepOtherFootReleasedAtSameTime = false;
+						var doubleStepOtherFootReleasedAfterThisFoot = false;
+						if (otherReleasePositionOfPreviousStep == position)
+						{
+							doubleStepOtherFootReleasedAtSameTime = true;
+							doubleStepOtherFootReleasedAfterThisFoot = true;
+						}
+						else if (otherReleasePositionOfPreviousStep < position &&
+						         otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep)
+						{
+							doubleStepOtherFootReleasedAfterThisFoot = true;
+						}
 
 						switch (step)
 						{
@@ -727,7 +818,9 @@ namespace ChartGenerator
 												{
 													return GetCostNewArrowStepFromJump(
 														otherCanStepToNewArrow,
+														otherCanCrossoverToNewArrow,
 														otherCanBracketToNewArrow,
+														thisCanCrossoverToNewArrow,
 														thisCanBracketToNewArrow,
 														otherMinePositionFollowingPreviousStep,
 														thisMinePositionFollowingPreviousStep,
@@ -769,6 +862,13 @@ namespace ChartGenerator
 
 									if (doubleStep)
 									{
+										// If the other foot released later than this one then we are double-stepping
+										// out of a pattern where the author likely intended it.
+										if (doubleStepOtherFootReleasedAtSameTime)
+											return CostNewArrow_OtherHoldingOne;
+										if (doubleStepOtherFootReleasedAfterThisFoot)
+											return CostNewArrow_DoubleStepOtherFootReleasedLater;
+
 										// Mine indicated
 										if (thisMinePositionFollowingPreviousStep != null)
 											return CostNewArrow_DoubleStepMineIndicated;
@@ -805,7 +905,9 @@ namespace ChartGenerator
 									{
 										return GetCostNewArrowStepFromJump(
 											otherCanStepToNewArrow,
+											otherCanCrossoverToNewArrow,
 											otherCanBracketToNewArrow,
+											thisCanCrossoverToNewArrow,
 											thisCanBracketToNewArrow,
 											otherMinePositionFollowingPreviousStep,
 											thisMinePositionFollowingPreviousStep,
@@ -848,7 +950,7 @@ namespace ChartGenerator
 										return CostNewArrow_FootSwap_MineIndication;
 
 									// If previous was swap
-									if (previousStepLink?.IsFootSwap() ?? false)
+									if (previousStepLink?.IsFootSwap(out _) ?? false)
 										return CostNewArrow_FootSwap_SubsequentSwap;
 
 									// No indication
@@ -987,26 +1089,40 @@ namespace ChartGenerator
 			out bool anyHeld,
 			out bool allHeld,
 			out bool canStepToNewArrow,
+			out bool canStepToNewArrowWithoutCrossover,
 			out bool canBracketToNewArrow,
+			out bool canCrossoverToNewArrow,
 			out MetricPosition minePositionFollowingPreviousStep,
 			out MetricPosition releasePositionOfPreviousStep)
 		{
 			anyHeld = false;
 			allHeld = true;
 			canStepToNewArrow = false;
+			canStepToNewArrowWithoutCrossover = false;
 			canBracketToNewArrow = false;
 			minePositionFollowingPreviousStep = null;
+			canCrossoverToNewArrow = false;
 			releasePositionOfPreviousStep = new MetricPosition();
+
+			var otherFoot = OtherFoot(foot);
 
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
+				if (previousState[otherFoot, a].Arrow != InvalidArrowIndex)
+				{
+					canCrossoverToNewArrow |=
+						arrowData[previousState[otherFoot, a].Arrow].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow]
+						|| arrowData[previousState[otherFoot, a].Arrow].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow];
+					canStepToNewArrowWithoutCrossover |=
+						arrowData[previousState[otherFoot, a].Arrow].OtherFootPairings[otherFoot][arrow];
+				}
+
 				if (previousState[foot, a].Arrow != InvalidArrowIndex)
 				{
 					if (previousState[foot, a].State == GraphArrowState.Held ||
 						previousState[foot, a].State == GraphArrowState.Rolling)
 					{
 						anyHeld = true;
-						canStepToNewArrow = arrowData[previousState[foot, a].Arrow].ValidNextArrows[arrow];
 						canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
 					}
 					else
@@ -1016,14 +1132,17 @@ namespace ChartGenerator
 						{
 							if (!anyHeld)
 							{
-								canStepToNewArrow = arrowData[previousState[foot, a].Arrow].ValidNextArrows[arrow];
 								canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
 							}
 
 							if (lastMines[previousState[foot, a].Arrow] != null
 								&& lastMines[previousState[foot, a].Arrow] > lastReleases[previousState[foot, a].Arrow])
 								minePositionFollowingPreviousStep = lastMines[previousState[foot, a].Arrow];
-							releasePositionOfPreviousStep = lastReleases[previousState[foot, a].Arrow];
+
+							// A foot could be coming from a bracket with multiple releases. In this case we want to
+							// choose the latest.
+							if (releasePositionOfPreviousStep < lastReleases[previousState[foot, a].Arrow])
+								releasePositionOfPreviousStep = lastReleases[previousState[foot, a].Arrow];
 						}
 					}
 				}
@@ -1033,11 +1152,17 @@ namespace ChartGenerator
 				}
 			}
 
+			if (anyHeld)
+			{
+				canCrossoverToNewArrow = false;
+			}
 			if (allHeld)
 			{
-				canStepToNewArrow = false;
+				canStepToNewArrowWithoutCrossover = false;
 				canBracketToNewArrow = false;
 			}
+
+			canStepToNewArrow = canCrossoverToNewArrow || canStepToNewArrowWithoutCrossover;
 		}
 
 		private static bool GetSingleStepStepAndFoot(GraphLink link, out StepType step, out int foot)
@@ -1150,7 +1275,9 @@ namespace ChartGenerator
 
 		private static int GetCostNewArrowStepFromJump(
 			bool otherCanStepToNewArrow,
+			bool otherCanCrossoverToNewArrow,
 			bool otherCanBracketToNewArrow,
+			bool thisCanCrossoverToNewArrow,
 			bool thisCanBracketToNewArrow,
 			MetricPosition otherMinePositionFollowingPreviousStep,
 			MetricPosition thisMinePositionFollowingPreviousStep,
@@ -1159,6 +1286,12 @@ namespace ChartGenerator
 		{
 			if (!otherCanStepToNewArrow)
 				return CostNewArrow_StepFromJump_OtherCannotStep;
+
+			if (otherCanCrossoverToNewArrow)
+				return CostNewArrow_StepFromJump_OtherCrossover;
+
+			if (thisCanCrossoverToNewArrow)
+				return CostNewArrow_StepFromJump_ThisCrossover;
 
 			// Mine indication for only other foot to make this step.
 			if (otherMinePositionFollowingPreviousStep != null && thisMinePositionFollowingPreviousStep == null)
@@ -1191,6 +1324,10 @@ namespace ChartGenerator
 			// The other foot is bracketable to this arrow and this foot is not
 			if (otherCanBracketToNewArrow && !thisCanBracketToNewArrow)
 				return CostNewArrow_StepFromJump_OtherFootBracketable_ThisFootNotBracketable;
+
+			// The other foot is not bracketable to this arrow and this foot is
+			if (!otherCanBracketToNewArrow && thisCanBracketToNewArrow)
+				return CostNewArrow_StepFromJump_OtherFootNotBracketable_ThisFootBracketable;
 
 			// Equal choice
 			return CostNewArrow_StepFromJump_Ambiguous;
@@ -1255,7 +1392,7 @@ namespace ChartGenerator
 				stepEvents.Add(chartSearchNode);
 				chartSearchNode = chartSearchNode.GetNextNode();
 			}
-			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents);
+			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents, numArrows);
 
 			var stepIndex = 0;
 			var releaseIndex = 0;

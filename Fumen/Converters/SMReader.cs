@@ -307,10 +307,11 @@ namespace Fumen.Converters
 							if (lineInMeasure % SMCommon.NumBeatsPerMeasure == 0)
 							{
 								var measureIndex = measureEvent.Position.Beat;
-								measureEvent.Position.Beat /= SMCommon.NumBeatsPerMeasure;
+								var linesPerBeat = lineInMeasure / SMCommon.NumBeatsPerMeasure;
+								measureEvent.Position.Beat /= linesPerBeat;
 								measureEvent.Position.SubDivision = new Fraction(
-									measureIndex - (measureEvent.Position.Beat * (lineInMeasure / SMCommon.NumBeatsPerMeasure)),
-									lineInMeasure / SMCommon.NumBeatsPerMeasure);
+									measureIndex - measureEvent.Position.Beat * linesPerBeat,
+									linesPerBeat);
 							}
 						}
 

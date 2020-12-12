@@ -43,6 +43,7 @@ namespace ChartGenerator
 
 		public const int CostNewArrow_DoubleStep = 100;
 		public const int CostNewArrow_DoubleStepMineIndicated = 50;
+		public const int CostNewArrow_DoubleStepOtherFootReleasedLater = 5;
 
 		public const int CostNewArrow_FirstStep_OtherIsBracketable_ThisIsNotBracketable = 3;
 		public const int CostNewArrow_FirstStep_OtherIsNotBracketable_ThisIsBracketable = 1;
@@ -51,26 +52,29 @@ namespace ChartGenerator
 
 		public const int CostNewArrow_Alternating = 0;
 
-		public const int CostNewArrow_StepFromJump_OtherCannotStep = 0;
-		public const int CostNewArrow_StepFromJump_OtherMineIndicated_ThisNotMineIndicated = 6;
-		public const int CostNewArrow_StepFromJump_BothMineIndicated_OtherSooner = 5;
-		public const int CostNewArrow_StepFromJump_BothMineIndicated_ThisSooner = 3;
-		public const int CostNewArrow_StepFromJump_OtherNotMineIndicated_ThisMineIndicated = 0;
-		public const int CostNewArrow_StepFromJump_OtherFootReleasedLater = 1;
-		public const int CostNewArrow_StepFromJump_ThisFootReleasedLater = 4;
-		public const int CostNewArrow_StepFromJump_OtherFootBracketable_ThisFootNotBracketable = 2;
+		public const int CostNewArrow_StepFromJump_OtherCannotStep = 1;
+		public const int CostNewArrow_StepFromJump_OtherCrossover = 1;
+		public const int CostNewArrow_StepFromJump_ThisCrossover = 10;
+		public const int CostNewArrow_StepFromJump_OtherMineIndicated_ThisNotMineIndicated = 9;
+		public const int CostNewArrow_StepFromJump_BothMineIndicated_OtherSooner = 8;
+		public const int CostNewArrow_StepFromJump_BothMineIndicated_ThisSooner = 4;
+		public const int CostNewArrow_StepFromJump_OtherNotMineIndicated_ThisMineIndicated = 2;
+		public const int CostNewArrow_StepFromJump_OtherFootReleasedLater = 2;
+		public const int CostNewArrow_StepFromJump_ThisFootReleasedLater = 8;
+		public const int CostNewArrow_StepFromJump_OtherFootBracketable_ThisFootNotBracketable = 5;
+		public const int CostNewArrow_StepFromJump_OtherFootNotBracketable_ThisFootBracketable = 3;
 		public const int CostNewArrow_StepFromJump_Ambiguous = 2;
 
-		public const int CostNewArrow_Crossover_OtherHeld = 4;
+		public const int CostNewArrow_Crossover_OtherHeld = 3;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated = 100;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication = 200;
-		public const int CostNewArrow_Crossover = 5;
+		public const int CostNewArrow_Crossover = 4;
 
 		public const int CostNewArrow_FootSwap_DoubleStep_NoMineIndication = 150;
 		public const int CostNewArrow_FootSwap_DoubleStep_MineIndication = 75;
-		public const int CostNewArrow_FootSwap_MineIndication = 7;  // Worse than a crossover, but better than 2
+		public const int CostNewArrow_FootSwap_MineIndication = 5;  // Worse than a crossover, but better than 2
 		public const int CostNewArrow_FootSwap_SubsequentSwap = 6;
-		public const int CostNewArrow_FootSwap_NoIndication = 11;
+		public const int CostNewArrow_FootSwap_NoIndication = 7;
 
 		public const int CostTwoArrows_Bracket_OtherFootHoldingBoth = 1;
 		public const int CostTwoArrows_Bracket_DoubleStep = 100;

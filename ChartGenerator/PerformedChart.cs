@@ -43,7 +43,7 @@ namespace ChartGenerator
 			public SearchNode NextNode;
 		}
 
-		private class PerformanceNode
+		public class PerformanceNode
 		{
 			public MetricPosition Position;
 			public PerformanceNode Next;
@@ -63,7 +63,7 @@ namespace ChartGenerator
 			}
 		}
 
-		private class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
+		public class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
 		{
 			public GraphNode GraphNode;
 			public GraphLink GraphLink;
@@ -75,13 +75,13 @@ namespace ChartGenerator
 			#endregion
 		}
 
-		private class MinePerformanceNode : PerformanceNode
+		public class MinePerformanceNode : PerformanceNode
 		{
 			public int Arrow;
 		}
 
-		private readonly PerformanceNode Root;
-		private readonly int NumArrows;
+		public readonly PerformanceNode Root;
+		public readonly int NumArrows;
 
 		private PerformedChart() {}
 
@@ -116,9 +116,10 @@ namespace ChartGenerator
 					break;
 
 				// Dead end
-				while (!currentSearchNode.GraphNode.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].Link)
-					   || currentSearchNode.CurrentIndex >
-					   currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link].Count - 1)
+				while (DoesNodeStepOnReleaseAtSamePosition(currentSearchNode, expressedChart, stepGraph.NumArrows)
+				       || !currentSearchNode.GraphNode.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].Link)
+				       || currentSearchNode.CurrentIndex >
+				       currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link].Count - 1)
 				{
 					// Back up
 					var prevNode = currentSearchNode.PreviousNode;
@@ -179,6 +180,7 @@ namespace ChartGenerator
 					GraphNode = currentSearchNode.GraphNode,
 					Prev = currentPerformanceNode
 				};
+
 				currentPerformanceNode.Next = newNode;
 				currentPerformanceNode = newNode;
 				currentSearchNode = currentSearchNode.NextNode;
@@ -186,29 +188,111 @@ namespace ChartGenerator
 			var lastPerformanceNode = currentPerformanceNode;
 
 			// Add Mines
-			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, rootSearchNode, lastPerformanceNode);
+			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, lastPerformanceNode);
+
 			return performedChart;
 		}
 
+		/// <summary>
+		/// Checks whether the given node has a step that occurs at the same time as a release on the same arrow.
+		/// Some valid expressions might otherwise cause this kind of pattern to be generated in a PerformedChart
+		/// but this does not represent a valid SM Chart. This can happen when there is a jump and the foot in
+		/// question is supposed to jump on the same arrow but the previous step was a bracket so there are two
+		/// arrows to choose from. We could apply the SameArrow step to the arrow which just released even though
+		/// that is impossible in the ExpressedChart.
+		/// </summary>
+		/// <param name="node">The SearchNode to check.</param>
+		/// <param name="expressedChart">The ExpressedChart so we can check GraphLinks.</param>
+		/// <param name="numArrows">Number of arrows in the Chart.</param>
+		/// <returns>
+		/// True if this SearchNode has a step that occurs at the same time as a release on the same arrow.
+		/// </returns>
+		private static bool DoesNodeStepOnReleaseAtSamePosition(SearchNode node, ExpressedChart expressedChart, int numArrows)
+		{
+			// We need to look two nodes pack in order to determine the full state of the previous node.
+			var previousNode = node.PreviousNode;
+			if (previousNode == null)
+				return false;
+			var previousPreviousNode = previousNode.PreviousNode;
+			if (previousPreviousNode == null)
+				return false;
+
+			// This node and the previous node must occur at the same time for the problem to arise.
+			if (expressedChart.StepEvents[previousNode.Depth - 1].Position != expressedChart.StepEvents[node.Depth - 1].Position)
+				return false;
+
+			// Determine what actions are performed for both the current and previous node.
+			var currentActions = GetActionsForNode(
+				previousNode.GraphNode,
+				expressedChart.StepEvents[previousNode.Depth - 1].Link,
+				node.GraphNode,
+				expressedChart.StepEvents[node.Depth - 1].Link,
+				numArrows);
+			var previousActions = GetActionsForNode(
+				previousPreviousNode.GraphNode,
+				expressedChart.StepEvents[previousPreviousNode.Depth - 1].Link,
+				previousNode.GraphNode,
+				expressedChart.StepEvents[previousNode.Depth - 1].Link,
+				numArrows);
+
+			// Check if the previous node released on the same arrow tha the current node is stepping on.
+			for (var a = 0; a < numArrows; a++)
+			{
+				if (previousActions[a] == (int)FootAction.Release &&
+				    currentActions[a] != -1 && currentActions[a] != (int)FootAction.Release)
+					return true;
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// Add Mines to the PerformedChart. Done after the steps are added since mine placement is
+		/// relative to arrows in the chart. Mines are added to the end of the PerformanceNode list
+		/// and sorted later.
+		/// </summary>
+		/// <param name="performedChart">PerformedChart to add mines for.</param>
+		/// <param name="stepGraph">
+		/// StepGraph representing all possible states that can be traversed.
+		/// </param>
+		/// <param name="expressedChart">ExpressedChart being used to generate the PerformedChart.</param>
+		/// <param name="lastPerformanceNode">
+		/// Last StepPerformanceNode in the PerformedChart. Used to append MinePerformanceNodes to
+		/// the end.
+		/// </param>
 		private static void AddMinesToPerformedChart(
 			PerformedChart performedChart,
 			StepGraph stepGraph,
 			ExpressedChart expressedChart,
-			SearchNode rootSearchNode,
 			PerformanceNode lastPerformanceNode)
 		{
 			// Record which lanes have arrows in them.
+			var numLanesWithArrows = 0;
 			var lanesWithNoArrows = new bool[stepGraph.NumArrows];
 			for (var a = 0; a < stepGraph.NumArrows; a++)
 				lanesWithNoArrows[a] = true;
-			var currentSearchNode = rootSearchNode;
-			while (currentSearchNode != null)
+			var currentPerformanceNode = performedChart.Root;
+			while (currentPerformanceNode != null)
 			{
-				for (var f = 0; f < NumFeet; f++)
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
-						if (currentSearchNode.GraphNode.State[f, a].Arrow != InvalidArrowIndex)
-							lanesWithNoArrows[currentSearchNode.GraphNode.State[f, a].Arrow] = false;
-				currentSearchNode = currentSearchNode.NextNode;
+				if (currentPerformanceNode is StepPerformanceNode stepNode)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						{
+							if (stepNode.GraphNode.State[f, a].Arrow != InvalidArrowIndex)
+							{
+								if (lanesWithNoArrows[stepNode.GraphNode.State[f, a].Arrow])
+								{
+									lanesWithNoArrows[stepNode.GraphNode.State[f, a].Arrow] = false;
+									numLanesWithArrows++;
+								}
+							}
+						}
+					}
+					if (numLanesWithArrows == stepGraph.NumArrows)
+						break;
+				}
+				currentPerformanceNode = currentPerformanceNode.Next;
 			}
 
 			// Get the first lane with no arrow, if one exists.
@@ -223,14 +307,14 @@ namespace ChartGenerator
 
 			// Create sorted lists of releases.
 			var stepEvents = new List<StepPerformanceNode>();
-			var currentPerformanceNode = performedChart.Root;
+			currentPerformanceNode = performedChart.Root;
 			while (currentPerformanceNode != null)
 			{
 				if (currentPerformanceNode is StepPerformanceNode stepNode)
 					stepEvents.Add(stepNode);
 				currentPerformanceNode = currentPerformanceNode.Next;
 			}
-			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents);
+			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents, stepGraph.NumArrows);
 
 			// Add the MinePerformanceNodes to the PerformedChart.
 			// For simplicity add all the nodes to the end. They will be sorted later.
@@ -310,6 +394,162 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
+		/// Given a node and the previous node, returns a representation of what actions should be performed on what arrows
+		/// to arrive at the node. The actions are returned in an array indexed by arrow. The values in the array are
+		/// ordinal values of the FootAction enum and -1 to represent no action.
+		/// This is a helper method used when generating an SM Chart and when determining if steps and releases occur
+		/// at the same time on the same arrows when generating the PerformedChart.
+		/// This method is static and takes the number of arrows as a parameter because it can be used prior to instantiating
+		/// the PerformedChart.
+		/// </summary>
+		/// <param name="previousNode">Previous GraphNode.</param>
+		/// <param name="previousLink">GraphLink to previous GraphNode.</param>
+		/// <param name="currentNode">Current GraphNode.</param>
+		/// <param name="currentLink">GraphLink to current GraphNode.</param>
+		/// <param name="numArrows">Number of arrows in the Chart.</param>
+		/// <returns>Array of actions.</returns>
+		private static int[] GetActionsForNode(GraphNode previousNode, GraphLink previousLink, GraphNode currentNode, GraphLink currentLink, int numArrows)
+		{
+			// Initialize actions.
+			var actions = new int[numArrows];
+			for (var a = 0; a < numArrows; a++)
+				actions[a] = -1;
+
+			// Get foot swap status
+			var currentIsFootSwap = currentLink.IsFootSwap(out var currentFootSwapFoot);
+			var previousIsFootSwap = false;
+			var previousFootSwapFoot = InvalidFoot;
+			if (previousLink != null)
+				previousIsFootSwap = previousLink.IsFootSwap(out previousFootSwapFoot);
+
+			for (var arrow = 0; arrow < numArrows; arrow++)
+			{
+				// Determine the state of this arrow previously and now
+				GraphNode.FootArrowState currentArrowState = GraphNode.InvalidFootArrowState;
+				var currentArrowFoot = InvalidFoot;
+				GraphNode.FootArrowState previousArrowState = GraphNode.InvalidFootArrowState;
+				var previousArrowFoot = InvalidFoot;
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					{
+						if (currentNode.State[f, a].Arrow == arrow)
+						{
+							// During a foot swap both feet will occupy one arrow. Ensure we capture
+							// the correct one.
+							if (currentIsFootSwap && f != currentFootSwapFoot)
+								continue;
+
+							currentArrowState = currentNode.State[f, a];
+							currentArrowFoot = f;
+						}
+
+						if (previousNode.State[f, a].Arrow == arrow)
+						{
+							// During a foot swap both feet will occupy one arrow. Ensure we capture
+							// the correct one.
+							if (previousIsFootSwap && f != previousFootSwapFoot)
+								continue;
+
+							previousArrowState = previousNode.State[f, a];
+							previousArrowFoot = f;
+						}
+					}
+				}
+
+				var addNormalStep = false;
+				var addRelease = false;
+
+				// A foot was on this arrow previously and on this arrow now
+				if (previousArrowFoot != InvalidFoot && currentArrowFoot != InvalidArrowIndex)
+				{
+					// The same foot was on the arrow previously and now
+					if (previousArrowFoot == currentArrowFoot)
+					{
+						// Currently resting
+						if (currentArrowState.State == GraphArrowState.Resting)
+						{
+							// Previous was holding or rolling
+							if (previousArrowState.State == GraphArrowState.Held
+								|| previousArrowState.State == GraphArrowState.Rolling)
+							{
+								// Release
+								addRelease = true;
+							}
+							// Previous was resting
+							else
+							{
+								// Check link to see if we tapped the same arrow
+								for (var a = 0; a < MaxArrowsPerFoot; a++)
+								{
+									if (currentLink.Links[currentArrowFoot, a].Valid
+									    && currentLink.Links[currentArrowFoot, a].Action == FootAction.Tap
+									    && (currentLink.Links[currentArrowFoot, a].Step == StepType.SameArrow
+									        || currentLink.Links[currentArrowFoot, a].Step == StepType.BracketOneNew
+									        || currentLink.Links[currentArrowFoot, a].Step == StepType.BracketBothSame))
+									{
+										// Tap on the arrow again
+										addNormalStep = true;
+										break;
+									}
+								}
+							}
+						}
+						// Currently holding or rolling
+						else
+						{
+							// Previous was resting
+							if (previousArrowState.State == GraphArrowState.Resting)
+							{
+								addNormalStep = true;
+							}
+
+							// If previous was not resting then previous was also holding or rolling.
+							// Cannot switch from hold to roll without a release, so nothing to do here.
+						}
+					}
+
+					// The foot on this arrow changed due to a foot swap
+					else
+					{
+						addNormalStep = true;
+					}
+				}
+				// A foot was not on this arrow previously but is on this arrow now
+				else if (previousArrowFoot == InvalidFoot && currentArrowFoot != InvalidArrowIndex)
+				{
+					addNormalStep = true;
+				}
+
+				// If a foot was on this arrow previously but is not on this arrow now
+				// we do not need to add an event because even if held previously, a release event
+				// will already have been added by the logic above.
+
+				// Add a normal step. Either a tap, hold, or roll based off of the current state.
+				if (addNormalStep)
+				{
+					switch (currentArrowState.State)
+					{
+						case GraphArrowState.Resting:
+							actions[arrow] = (int)FootAction.Tap;
+							break;
+						case GraphArrowState.Held:
+							actions[arrow] = (int)FootAction.Hold;
+							break;
+						case GraphArrowState.Rolling:
+							actions[arrow] = (int)FootAction.Roll;
+							break;
+					}
+				}
+
+				if (addRelease)
+					actions[arrow] = (int) FootAction.Release;
+			}
+
+			return actions;
+		}
+
+		/// <summary>
 		/// Creates a List of Events representing the Events of an SM Chart.
 		/// </summary>
 		/// <returns>List of Events that represent the Events of a SM Chart.</returns>
@@ -326,136 +566,54 @@ namespace ChartGenerator
 				if (currentNode is StepPerformanceNode stepNode)
 				{
 					var previousStepNode = stepNode.GetPreviousStepNode();
+
+					var actions = GetActionsForNode(
+						previousStepNode.GraphNode,
+						previousStepNode.GraphLink,
+						stepNode.GraphNode,
+						stepNode.GraphLink,
+						NumArrows);
+
 					for (var arrow = 0; arrow < NumArrows; arrow++)
 					{
-						// Determine the state of this arrow previously and now
-						GraphNode.FootArrowState currentArrowState = GraphNode.InvalidFootArrowState;
-						var currentArrowFoot = InvalidFoot;
-						GraphNode.FootArrowState previousArrowState = GraphNode.InvalidFootArrowState;
-						var previousArrowFoot = InvalidFoot;
-						for (var f = 0; f < NumFeet; f++)
+						var action = actions[arrow];
+						switch (action)
 						{
-							for (var a = 0; a < MaxArrowsPerFoot; a++)
+							case (int)FootAction.Release:
+								events.Add(new LaneHoldEndNote
+								{
+									Position = stepNode.Position,
+									Lane = arrow,
+									Player = 0,
+									SourceType = SMCommon.SNoteChars[(int) SMCommon.NoteType.HoldEnd].ToString()
+								});
+								break;
+							case (int)FootAction.Tap:
 							{
-								if (stepNode.GraphNode.State[f, a].Arrow == arrow)
+								events.Add(new LaneTapNote
 								{
-									currentArrowState = stepNode.GraphNode.State[f, a];
-									currentArrowFoot = f;
-								}
-
-								if (previousStepNode.GraphNode.State[f, a].Arrow == arrow)
-								{
-									previousArrowState = previousStepNode.GraphNode.State[f, a];
-									previousArrowFoot = f;
-								}
+									Position = stepNode.Position,
+									Lane = arrow,
+									Player = 0,
+									SourceType = SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap].ToString()
+								});
+								break;
 							}
-						}
-
-						var addNormalStep = false;
-
-						// A foot was on this arrow previously and on this arrow now
-						if (previousArrowFoot != InvalidFoot && currentArrowFoot != InvalidArrowIndex)
-						{
-							// The same foot was on the arrow previously and now
-							if (previousArrowFoot == currentArrowFoot)
+							case (int)FootAction.Hold:
+							case (int)FootAction.Roll:
 							{
-								// Currently resting
-								if (currentArrowState.State == GraphArrowState.Resting)
+								// Hold or Roll Start
+								var holdRollType = action == (int)FootAction.Hold
+									? SMCommon.NoteType.HoldStart
+									: SMCommon.NoteType.RollStart;
+								events.Add(new LaneHoldStartNote
 								{
-									// Previous was holding or rolling
-									if (previousArrowState.State == GraphArrowState.Held
-										|| previousArrowState.State == GraphArrowState.Rolling)
-									{
-										// Release
-										events.Add(new LaneHoldEndNote
-										{
-											Position = stepNode.Position,
-											Lane = arrow,
-											Player = 0,
-											SourceType = SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldEnd].ToString()
-										});
-									}
-									// Previous was resting
-									else
-									{
-										// Check link to see if we tapped the same arrow
-										for (var a = 0; a < MaxArrowsPerFoot; a++)
-										{
-											if (stepNode.GraphLink.Links[currentArrowFoot, a].Valid
-												&& stepNode.GraphLink.Links[currentArrowFoot, a].Action == FootAction.Tap
-												&& (stepNode.GraphLink.Links[currentArrowFoot, a].Step == StepType.SameArrow
-													|| stepNode.GraphLink.Links[currentArrowFoot, a].Step == StepType.BracketOneNew
-													|| stepNode.GraphLink.Links[currentArrowFoot, a].Step == StepType.BracketBothSame))
-											{
-												// Tap on the arrow again
-												addNormalStep = true;
-												break;
-											}
-										}
-									}
-								}
-								// Currently holding or rolling
-								else
-								{
-									// Previous was resting
-									if (previousArrowState.State == GraphArrowState.Resting)
-									{
-										addNormalStep = true;
-									}
-
-									// If previous was not resting then previous was also holding or rolling.
-									// Cannot switch from hold to roll without a release, so nothing to do here.
-								}
-							}
-
-							// The foot on this arrow changed due to a foot swap
-							else
-							{
-								addNormalStep = true;
-							}
-						}
-						// A foot was not on this arrow previously but is on this arrow now
-						else if (previousArrowFoot == InvalidFoot && currentArrowFoot != InvalidArrowIndex)
-						{
-							addNormalStep = true;
-						}
-
-						// If a foot was on this arrow previously but is not on this arrow now
-						// we do not need to add an event because even if held previously, a release event
-						// will already have been added by the logic above.
-
-						// Add a normal step. Either a tap, hold, or roll based off of the current state.
-						if (addNormalStep)
-						{
-							switch (currentArrowState.State)
-							{
-								case GraphArrowState.Resting:
-								{
-									events.Add(new LaneTapNote
-									{
-										Position = stepNode.Position,
-										Lane = arrow,
-										Player = 0,
-										SourceType = SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap].ToString()
-									});
-									break;
-								}
-								case GraphArrowState.Held:
-								case GraphArrowState.Rolling:
-								{
-									// Hold or Roll Start
-									var holdRollType = currentArrowState.State == GraphArrowState.Held
-										? SMCommon.NoteType.HoldStart
-										: SMCommon.NoteType.RollStart;
-									events.Add(new LaneHoldStartNote
-									{
-										Position = stepNode.Position,
-										Lane = arrow,
-										Player = 0,
-										SourceType = SMCommon.SNoteChars[(int)holdRollType].ToString()
-									});
-									break;
-								}
+									Position = stepNode.Position,
+									Lane = arrow,
+									Player = 0,
+									SourceType = SMCommon.SNoteChars[(int)holdRollType].ToString()
+								});
+								break;
 							}
 						}
 					}

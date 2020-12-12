@@ -52,16 +52,18 @@ namespace ChartGenerator
 		/// <typeparam name="T">IChartNode, for example ExpressedChart.ChartSearchNode or
 		/// PerformedChart.StepPerformanceNode.</typeparam>
 		/// <param name="events">List of IChartNodes representing the charts nodes.</param>
+		/// <param name="numArrows">Number of arrows in the Chart or StepGraph.</param>
 		/// <returns>List representing releases and List representing steps.</returns>
-		public static (List<FootActionEvent>, List<FootActionEvent>) GetReleasesAndSteps<T>(List<T> events) where T : IChartNode
+		public static (List<FootActionEvent>, List<FootActionEvent>) GetReleasesAndSteps<T>(List<T> events, int numArrows) where T : IChartNode
 		{
 			var releases = new List<FootActionEvent>();
 			var steps = new List<FootActionEvent>();
 			var numEvents = events.Count;
-			var eventIndex = 0;
-
 			if (numEvents == 0)
 				return (releases, steps);
+			
+			var eventIndex = 0;
+			var previousState = CreateState(events[0].GetGraphNode(), numArrows);
 
 			// Skip first event representing the resting position.
 			eventIndex++;
@@ -72,48 +74,99 @@ namespace ChartGenerator
 				var graphNode = node.GetGraphNode();
 				var linkToNode = node.GetGraphLinkToNode();
 
+				// Compare current state and previous state for each foot.
+				var currentState = CreateState(graphNode, numArrows);
 				for (var f = 0; f < NumFeet; f++)
 				{
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					for (var arrow = 0; arrow < numArrows; arrow++)
 					{
-						// This is a release.
-						if (graphNode.State[f, a].Arrow != InvalidArrowIndex
-						    && graphNode.State[f, a].State == GraphArrowState.Resting
-						    && linkToNode.Links[f, a].Valid
-						    && (linkToNode.Links[f, a].Action == FootAction.Release ||
-						        linkToNode.Links[f, a].Action == FootAction.Tap))
+						var addStep = false;
+						var addRelease = false;
+
+						// Releasing a hold
+						if ((currentState[f, arrow] == (int)GraphArrowState.Resting || currentState[f, arrow] == -1)
+							&& (previousState[f, arrow] == (int)GraphArrowState.Held || previousState[f, arrow] == (int)GraphArrowState.Rolling))
 						{
-							releases.Add(new FootActionEvent
+							addRelease = true;
+						}
+						// Tapping on a new arrow
+						else if (currentState[f, arrow] == (int)GraphArrowState.Resting
+						    && previousState[f, arrow] == -1)
+						{
+							addStep = true;
+							addRelease = true;
+						}
+						// Starting a hold
+						else if ((currentState[f, arrow] == (int)GraphArrowState.Held || currentState[f, arrow] == (int)GraphArrowState.Rolling)
+						     && (previousState[f, arrow] == (int)GraphArrowState.Resting || previousState[f, arrow] == -1))
+						{
+							addStep = true;
+						}
+						// Tapping on the same arrow
+						else if (previousState[f, arrow] == (int) GraphArrowState.Resting &&
+						         currentState[f, arrow] == (int) GraphArrowState.Resting)
+						{
+							for (var a = 0; a < MaxArrowsPerFoot; a++)
 							{
-								Position = node.GetPosition(),
-								Foot = f,
-								Arrow = graphNode.State[f, a].Arrow
-							});
+								if (linkToNode.Links[f, a].Valid && linkToNode.Links[f, a].Action == FootAction.Tap)
+								{
+									addStep = true;
+									addRelease = true;
+									break;
+								}
+							}
 						}
 
-						// This is a step.
-						if (graphNode.State[f, a].Arrow != InvalidArrowIndex
-						    && (graphNode.State[f, a].State == GraphArrowState.Resting
-						        || graphNode.State[f, a].State == GraphArrowState.Held
-						        || graphNode.State[f, a].State == GraphArrowState.Rolling)
-						    && linkToNode.Links[f, a].Valid
-						    && (linkToNode.Links[f, a].Action == FootAction.Tap
-						        || linkToNode.Links[f, a].Action == FootAction.Hold
-						        || linkToNode.Links[f, a].Action == FootAction.Roll))
+						if (addStep)
 						{
 							steps.Add(new FootActionEvent
 							{
 								Position = node.GetPosition(),
 								Foot = f,
-								Arrow = graphNode.State[f, a].Arrow
+								Arrow = arrow
+							});
+						}
+
+						if (addRelease)
+						{
+							releases.Add(new FootActionEvent
+							{
+								Position = node.GetPosition(),
+								Foot = f,
+								Arrow = arrow
 							});
 						}
 					}
 				}
+				previousState = currentState;
 				eventIndex++;
 			}
 
 			return (releases, steps);
+		}
+
+		/// <summary>
+		/// Helper method for GetReleasesAndSteps.
+		/// Creates a multidimensional array representing the states of all arrows
+		/// for each foot. The first index is the foot from [0, NumFeet). The second
+		/// index is the arrow from [0, numArrows). The value in the arrow is the
+		/// ordinal value of the GraphArrowState for the given node, or -1 if that
+		/// arrow is free.
+		/// </summary>
+		/// <param name="node">Graphnode to generate state from.</param>
+		/// <param name="numArrows">Number of arrows in the Chart or StepGraph.</param>
+		/// <returns></returns>
+		private static int[,] CreateState(GraphNode node, int numArrows)
+		{
+			var state = new int[NumFeet, numArrows];
+			for (var f = 0; f < NumFeet; f++)
+				for (var arrow = 0; arrow < numArrows; arrow++)
+					state[f, arrow] = -1;
+			for (var f = 0; f < NumFeet; f++)
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
+					if (node.State[f, a].Arrow != InvalidArrowIndex)
+						state[f, node.State[f, a].Arrow] = (int)node.State[f, a].State;
+			return state;
 		}
 
 		/// <summary>
@@ -166,7 +219,8 @@ namespace ChartGenerator
 					Type = MineType.AfterArrow,
 					Position = mine.Position,
 					ArrowIsNthClosest = n,
-					FootAssociatedWithPairedNote = f
+					FootAssociatedWithPairedNote = f,
+					OriginalArrow = mine.Lane
 				};
 			}
 
@@ -180,12 +234,17 @@ namespace ChartGenerator
 					Type = MineType.BeforeArrow,
 					Position = mine.Position,
 					ArrowIsNthClosest = n,
-					FootAssociatedWithPairedNote = f
+					FootAssociatedWithPairedNote = f,
+					OriginalArrow = mine.Lane
 				};
 			}
 
 			// The mine could not be associated with an arrow, use the default NoArrow type.
-			return new ExpressedChart.MineEvent { Position = mine.Position };
+			return new ExpressedChart.MineEvent
+			{
+				Position = mine.Position,
+				OriginalArrow = mine.Lane
+			};
 		}
 
 		/// <summary>

@@ -84,6 +84,18 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
+		/// Whether or not this link represents a release with any foot.
+		/// </summary>
+		/// <returns>True if this link is a release and false otherwise.</returns>
+		public bool IsRelease()
+		{
+			for (var f = 0; f < NumFeet; f++)
+				if (Links[f, 0].Valid && Links[f, 0].Action == FootAction.Release)
+					return true;
+			return false;
+		}
+
+		/// <summary>
 		/// Whether or not this link represents a step with one foot, regardless of if
 		/// that is a bracket step.
 		/// </summary>
@@ -98,12 +110,21 @@ namespace ChartGenerator
 		/// <summary>
 		/// Whether or not this link represents a footswap.
 		/// </summary>
+		/// <param name="foot">
+		/// Out param to store the foot which performed the swap, if this is a foot swap.
+		/// </param>
 		/// <returns>True if this link is a footswap and false otherwise.</returns>
-		public bool IsFootSwap()
+		public bool IsFootSwap(out int foot)
 		{
+			foot = InvalidFoot;
 			for (var f = 0; f < NumFeet; f++)
-				if (!Links[f, 0].Valid || Links[f, 0].Step == StepType.FootSwap)
+			{
+				if (Links[f, 0].Valid && Links[f, 0].Step == StepType.FootSwap)
+				{
+					foot = f;
 					return true;
+				}
+			}
 			return false;
 		}
 
@@ -690,10 +711,23 @@ namespace ChartGenerator
 			if (footAction != FootAction.Release && !IsResting(currentState, currentIndex, foot))
 				return null;
 
+			var otherFoot = OtherFoot(foot);
+
+			// If this follows a footswap then you cannot perform this action.
+			// Ideally we should only prevent a same arrow step after a foot swap with the other foot since
+			// there is nothing wrong with tapping twice after a swap, but we are unable to that when
+			// making the StepGraph as we cannot know how the currentState was entered. The only options
+			// are to forbid any same arrow step if it follows a swap with either feet, or allow it
+			// all the time and then when making an ExpressedChart give a same arrow step movement following
+			// a swap with the other foot a high cost. I can't think of any scenario where it would
+			// actually be beneficial to do some kind of paradiddle pattern on one arrow so for now I am
+			// going to prevent it always by not including it in the StepGraph.
+			if (footAction != FootAction.Release && IsResting(currentState, currentIndex, otherFoot))
+				return null;
+
 			// Set up the state for a new node.
 			// Copy the previous state and if placing a new foot, lift from any resting arrows.
 			// It is necessary to lift for, e.g. the step after an SP quad.
-			var otherFoot = OtherFoot(foot);
 			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
@@ -829,8 +863,17 @@ namespace ChartGenerator
 			if (!front && !FootCrossesOverInBackWithAnyOtherFoot(currentState, foot, arrowData, newIndex))
 				return null;
 
-			// Set up the state for a new node.
 			var otherFoot = OtherFoot(foot);
+
+			// If the current state is already a crossover of the same type (front or back)
+			// with the other foot then we cannot create another crossover of that type
+			// with this foot as the legs would cross through eachother (or you would be spun)
+			if (front && FootCrossedOverInFront(currentState, otherFoot, arrowData))
+				return null;
+			if (!front && FootCrossedOverInBack(currentState, otherFoot, arrowData))
+				return null;
+
+			// Set up the state for a new node.
 			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
@@ -987,6 +1030,7 @@ namespace ChartGenerator
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
+			var results = new List<GraphNode.FootArrowState[,]>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
@@ -1013,11 +1057,10 @@ namespace ChartGenerator
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]>
-					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
+				results.Add(CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions));
 			}
 
-			return null;
+			return results;
 		}
 
 		private static List<GraphNode.FootArrowState[,]> FillBracketSecondNew(
@@ -1039,6 +1082,7 @@ namespace ChartGenerator
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
+			var results = new List<GraphNode.FootArrowState[,]>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
@@ -1065,11 +1109,10 @@ namespace ChartGenerator
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]>
-					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
+				results.Add(CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions));
 			}
 
-			return null;
+			return results;
 		}
 
 		private static List<GraphNode.FootArrowState[,]> FillBracketBothSame(
@@ -1151,6 +1194,30 @@ namespace ChartGenerator
 			}
 
 			return result;
+		}
+
+		private static bool FootCrossedOverInFront(GraphNode.FootArrowState[,] state, int foot, ArrowData[] arrowData)
+		{
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				var footArrowIndex = state[foot, a].Arrow;
+				if (footArrowIndex != InvalidArrowIndex
+				    && FootCrossesOverInFrontWithAnyOtherFoot(state, foot, arrowData, footArrowIndex))
+					return true;
+			}
+			return false;
+		}
+
+		private static bool FootCrossedOverInBack(GraphNode.FootArrowState[,] state, int foot, ArrowData[] arrowData)
+		{
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				var footArrowIndex = state[foot, a].Arrow;
+				if (footArrowIndex != InvalidArrowIndex
+				    && FootCrossesOverInBackWithAnyOtherFoot(state, foot, arrowData, footArrowIndex))
+					return true;
+			}
+			return false;
 		}
 
 		private static bool FootCrossesOverWithAnyOtherFoot(GraphNode.FootArrowState[,] state, int foot, ArrowData[] arrowData,

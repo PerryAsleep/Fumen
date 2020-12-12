@@ -29,13 +29,14 @@ namespace ChartGenerator
 		static void Main(string[] args)
 		{
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
-			DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
+			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
 			var song = SMReader.Load(
 				@"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm");
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
-			SMWriter.Save(song,
-				@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
+
+			//SMWriter.Save(song,
+			//	@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
 		}
 
 		static void AddDoublesCharts(Song song, OverwriteBehavior overwriteBehavior)
@@ -48,7 +49,9 @@ namespace ChartGenerator
 				if (chart.Layers.Count == 1
 				    && chart.Type == ChartTypeString(ChartType.dance_single)
 				    && chart.NumPlayers == 1
-				    && chart.NumInputs == NumSPArrows)
+				    && chart.NumInputs == NumSPArrows
+				    //HACK
+				    && chart.DifficultyType == "Challenge")
 				{
 					// Check if there is an existing doubles chart corresponding to this singles chart.
 					var (currentDoublesChart, dpChartIndex) = FindDoublesChart(song, chart.DifficultyType);
@@ -78,8 +81,10 @@ namespace ChartGenerator
 					}
 
 					// Generate a new series of Events for this Chart from the singles Chart.
-					var expressedChart = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
-					var performedChart = PerformedChart.CreateFromExpressedChart(DPGraph, expressedChart);
+					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
+
+					// HACK
+					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMCommon.SMEventComparer());
@@ -106,12 +111,24 @@ namespace ChartGenerator
 					};
 
 					// HACK
-					//newChart.NumInputs = 4;
-					//newChart.Type = ChartTypeString(ChartType.dance_single);
-					//chartsIndicesToRemove.Add(chartIndex);
+					newChart.NumInputs = 4;
+					newChart.Type = ChartTypeString(ChartType.dance_single);
+					chartsIndicesToRemove.Add(chartIndex);
 
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);
+
+					var renderer = new Renderer(
+						@"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\",
+						song,
+						chart,
+						expressedChart,
+						rootSearchNode,
+						performedChart,
+						newChart
+					);
+					renderer.Write();
+					return;
 				}
 
 				chartIndex++;
