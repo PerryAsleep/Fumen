@@ -26,6 +26,12 @@ namespace ChartGenerator
 		public const int CostUnknown = 1000;
 
 		public const int CostRelease = 0;
+
+		// This needs to be great enough such that we prefer one foot holding and
+		// the other foot rocking back and forth. If this were low the the held
+		// foot does an alternating pattern then the other foot is only going to
+		// be hitting the same arrow which has a very low cost.
+		public const int CostSameArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 7;
 		public const int CostSameArrow = 0;
 
 		public const int CostNewArrow_AllOtherHeld_ThisFootCanBracketToNewArrow = 1;
@@ -37,10 +43,11 @@ namespace ChartGenerator
 
 		public const int CostNewArrow_OtherHoldingOne = 3;
 
-		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 7;
-		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep_DoubleStep = 9;
-		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep = 8;
+		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 8;
+		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep_DoubleStep = 10;
+		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep = 9;
 
+		public const int CostNewArrow_TripleStep = 200;
 		public const int CostNewArrow_DoubleStep = 100;
 		public const int CostNewArrow_DoubleStepMineIndicated = 50;
 		public const int CostNewArrow_DoubleStepOtherFootReleasedLater = 5;
@@ -74,7 +81,8 @@ namespace ChartGenerator
 		public const int CostNewArrow_FootSwap_DoubleStep_MineIndication = 75;
 		public const int CostNewArrow_FootSwap_MineIndication = 5;  // Worse than a crossover, but better than 2
 		public const int CostNewArrow_FootSwap_SubsequentSwap = 6;
-		public const int CostNewArrow_FootSwap_NoIndication = 7;
+		public const int CostNewArrow_FootSwap_NoIndication_Bracketable = 7;
+		public const int CostNewArrow_FootSwap_NoIndication_NotBracketable = 8;
 
 		public const int CostTwoArrows_Bracket_OtherFootHoldingBoth = 1;
 		public const int CostTwoArrows_Bracket_DoubleStep = 100;

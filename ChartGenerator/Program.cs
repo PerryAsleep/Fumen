@@ -18,6 +18,10 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
+		//@"C:\Games\StepMania 5\Songs\Fumen\TestFootSwapPreferJack\test.sm"
+		private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
+		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\";
+
 		enum OverwriteBehavior
 		{
 			DoNotOverwrite,
@@ -31,8 +35,7 @@ namespace ChartGenerator
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
 			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
-			var song = SMReader.Load(
-				@"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm");
+			var song = SMReader.Load(HackChart);
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
 
 			//SMWriter.Save(song,
@@ -119,7 +122,7 @@ namespace ChartGenerator
 					newCharts.Add(newChart);
 
 					var renderer = new Renderer(
-						@"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\",
+						HackChartDir,
 						song,
 						chart,
 						expressedChart,

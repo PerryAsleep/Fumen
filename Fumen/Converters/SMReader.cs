@@ -324,7 +324,7 @@ namespace Fumen.Converters
 					}
 
 					// Parse this line as note data
-					else
+					else if (line.Length > 0)
 					{
 						for (var lineIndex = 0; lineIndex < line.Length; lineIndex++)
 						{

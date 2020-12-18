@@ -422,12 +422,12 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 ");
 				}
 
-				if (originalChart)
-					WriteExpression(currentExpressedChartSearchNode, eventY);
-
 				// Arrows
 				if (chartEvent is LaneTapNote ltn)
 				{
+					if (originalChart)
+						WriteExpression(currentExpressedChartSearchNode, eventY);
+
 					var foot = InvalidFoot;
 					if (originalChart)
 						foot = GetFootForArrow(ltn.Lane, ltn.Position, currentExpressedChartSearchNode);
@@ -437,6 +437,9 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 				}
 				else if (chartEvent is LaneHoldStartNote lhsn)
 				{
+					if (originalChart)
+						WriteExpression(currentExpressedChartSearchNode, eventY);
+
 					var foot = InvalidFoot;
 					if (originalChart)
 						foot = GetFootForArrow(lhsn.Lane, lhsn.Position, currentExpressedChartSearchNode);
@@ -449,6 +452,9 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 				}
 				else if (chartEvent is LaneHoldEndNote lhen)
 				{
+					if (originalChart)
+						WriteExpression(currentExpressedChartSearchNode, eventY);
+
 					WriteHold(lhen.Lane, firstLaneX, lastHoldStarts[lhen.Lane], eventY, lastHoldWasRoll[lhen.Lane]);
 				}
 				else if (chartEvent is LaneNote ln)
@@ -504,7 +510,7 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 			foreach (var mine in mines)
 			{
 				if (!first)
-					mineSB.Append("\r\n");
+					mineSB.Append("<br>");
 
 				mineSB.Append($"{ArrowNames[mine.OriginalArrow]}: ");
 				switch (mine.Type)

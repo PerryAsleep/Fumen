@@ -1,24 +1,33 @@
 Additions:
-	Afronova walk
 	Bracket that is also a foot swap
+	Jump that is also a foot swap (LU -> RU)
+
+	Afronova walk
+		note that this should be more expensive than a foot swap.
 	do something to address that the patterns stay on one side of the pads too much.
 
-	Unit test simple patterns and expressions to ensure tweaks to costs doesn't fuck up charts.
+Possible Bugs:
+	Footswap into jump both same / jump one same
+		Add a Lifted state.
+		Clean up existing "lifted" comment terminology
+
+Tests:
+	Jump v Bracket
+		JumpBothSame
+		JumpBothNew
+		Jump
+	Chords / Quad
 
 Bugs:
 	(likely fixed) hey sexy lady - somehow doubles lost some mines?
 	hey sexy lady - going into a nebulous jump when the original chart did not.
-	giga violate - two crossover in fronts in a row resulting in a spin at measure 33 4
+	X giga violate - two crossover in fronts in a row resulting in a spin at measure 33 4
 	X giga violate sp 68, 3, 0/0: wrong choice
 	X giga violate performed chart 17, 1, 3/4 - WHAT THE FUCK
 	X giga violate - lost a note - looks like a mine replaced it? measure 32.
 	giga violate sp 14, 0: should be a bracket AND a foot swap and NOT a jump.
 	giga violate - sp beginner chart straight up lost a measure??? I have no idea how this would happen.
 	X performed chart can put a tap at the same time a hold ends for the same arrow
-		occurs if the step is a jump on same arrow / same arrow and the previous step was a bracket with at least one held
-		the arrow(s) release and then at the same time it chooses a new arrow and that could be one of the other releases
-		possible solutions:
-			1) when generating the performed chart, on each node, do a check
 
 	sm reader strips spaces out of some text like "Chief Skittles"
 	exporting giga violate twice somehow lost the bpm? (or stepmania nuked it)

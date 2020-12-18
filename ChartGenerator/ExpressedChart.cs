@@ -166,16 +166,26 @@ namespace ChartGenerator
 			/// Skips releases.
 			/// </summary>
 			/// <returns>The preceding step GraphLink or null if none exists.</returns>
-			public GraphLink GetPreviousStepLink()
+			public GraphLink GetPreviousStepLink(int nthPrevious = 1)
 			{
 				var node = this;
 				while (node.PreviousNode != null)
 				{
 					var link = node.PreviousLink;
 					for (var f = 0; f < NumFeet; f++)
+					{
 						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						{
 							if (link.Links[f, a].Valid && link.Links[f, a].Action != FootAction.Release)
-								return link;
+							{
+								nthPrevious--;
+								if (nthPrevious <= 0)
+								{
+									return link;
+								}
+							}
+						}
+					}
 					node = node.PreviousNode;
 				}
 				return null;
@@ -238,6 +248,41 @@ namespace ChartGenerator
 		/// </summary>
 		public List<StepEvent> StepEvents = new List<StepEvent>();
 		public List<MineEvent> MineEvents = new List<MineEvent>();
+
+		/// <summary>
+		/// Custom Comparer for MineEvents so the EffectiveChart uses a consistent order.
+		/// </summary>
+		public class MineEventComparer : IComparer<MineEvent>
+		{
+			int IComparer<MineEvent>.Compare(MineEvent e1, MineEvent e2)
+			{
+				if (null == e1 && null == e2)
+					return 0;
+				if (null == e1)
+					return -1;
+				if (null == e2)
+					return 1;
+
+				// Order by position
+				var comparison = e1.Position.CompareTo(e2.Position);
+				if (comparison != 0)
+					return comparison;
+
+				// Order by type
+				comparison = e1.Type - e2.Type;
+				if (comparison != 0)
+					return comparison;
+
+				// Order by n
+				comparison = e1.ArrowIsNthClosest - e2.ArrowIsNthClosest;
+				if (comparison != 0)
+					return comparison;
+
+				// Order by foot
+				comparison = e1.FootAssociatedWithPairedNote - e2.FootAssociatedWithPairedNote;
+				return comparison;
+			}
+		}
 
 		/// <summary>
 		/// Creates an ExpressedChart by iteratively searching through the List of given Events
@@ -735,6 +780,7 @@ namespace ChartGenerator
 			}
 
 			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink();
+			GraphLink previousPreviousStepLink = parentSearchNode.GetPreviousStepLink(2);
 
 			switch (numSteps)
 			{
@@ -777,10 +823,20 @@ namespace ChartGenerator
 							doubleStepOtherFootReleasedAfterThisFoot = true;
 						}
 
+						var tripleStep = doubleStep && previousPreviousStepLink != null && previousPreviousStepLink.IsStepWithFoot(thisFoot);
+
+						// I think in all cases we should consider an arrow held if it released at this time.
+						thisAnyHeld |= thisReleasePositionOfPreviousStep == position;
+						otherAnyHeld |= otherReleasePositionOfPreviousStep == position;
+
 						switch (step)
 						{
 							case StepType.SameArrow:
+							{
+								if (thisAnyHeld && !otherAnyHeld && otherCanStepToNewArrow)
+									return CostSameArrow_OtherHoldingNone_ThisHeld_OtherCanStep;
 								return CostSameArrow;
+							}
 							case StepType.NewArrow:
 								{
 									// TODO: give preference to alternating in long patters
@@ -862,6 +918,12 @@ namespace ChartGenerator
 
 									if (doubleStep)
 									{
+										// When there are lots of double steps we want to promote alternating.
+										// It is better to hit two double steps with two feet rather than two with
+										// one foot.
+										if (tripleStep)
+											return CostNewArrow_TripleStep;
+
 										// If the other foot released later than this one then we are double-stepping
 										// out of a pattern where the author likely intended it.
 										if (doubleStepOtherFootReleasedAtSameTime)
@@ -953,8 +1015,12 @@ namespace ChartGenerator
 									if (previousStepLink?.IsFootSwap(out _) ?? false)
 										return CostNewArrow_FootSwap_SubsequentSwap;
 
-									// No indication
-									return CostNewArrow_FootSwap_NoIndication;
+									// No indication and bracketable.
+									if (thisCanBracketToNewArrow)
+										return CostNewArrow_FootSwap_NoIndication_Bracketable;
+
+									// No indication and not bracketable
+									return CostNewArrow_FootSwap_NoIndication_NotBracketable;
 								}
 							default:
 								return CostUnknown;
@@ -1301,13 +1367,13 @@ namespace ChartGenerator
 			if (otherMinePositionFollowingPreviousStep != null
 				&& thisMinePositionFollowingPreviousStep != null
 				&& otherMinePositionFollowingPreviousStep > thisMinePositionFollowingPreviousStep)
-				return CostNewArrow_StepFromJump_BothMineIndicated_OtherSooner;
+				return CostNewArrow_StepFromJump_BothMineIndicated_ThisSooner;
 
 			// Mine indication for both but this foot is sooner
 			if (otherMinePositionFollowingPreviousStep != null
 				&& thisMinePositionFollowingPreviousStep != null
 				&& thisMinePositionFollowingPreviousStep > otherMinePositionFollowingPreviousStep)
-				return CostNewArrow_StepFromJump_BothMineIndicated_ThisSooner;
+				return CostNewArrow_StepFromJump_BothMineIndicated_OtherSooner;
 
 			// Mine indication for only this foot to make this step.
 			if (thisMinePositionFollowingPreviousStep != null && otherMinePositionFollowingPreviousStep == null)
@@ -1395,7 +1461,7 @@ namespace ChartGenerator
 			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents, numArrows);
 
 			var stepIndex = 0;
-			var releaseIndex = 0;
+			var releaseIndex = -1;
 			foreach (var smMineEvent in smMines)
 			{
 				// Advance the step and release indices to follow and precede the event respectively.
@@ -1409,6 +1475,8 @@ namespace ChartGenerator
 					numArrows, releases, releaseIndex, steps, stepIndex, smMineEvent);
 				expressedChart.MineEvents.Add(expressedMineEvent);
 			}
+
+			expressedChart.MineEvents.Sort(new MineEventComparer());
 		}
 	}
 }
