@@ -1122,7 +1122,21 @@ namespace ChartGenerator
 							if (atLeastOneFootPrefersBracket)
 								return CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement;
 
-							return CostTwoArrows_Jump;
+							var bothNew = true;
+							var bothSame = true;
+							for (var f = 0; f < NumFeet; f++)
+							{
+								if (link.Links[f, 0].Step == StepType.NewArrow)
+									bothSame = false;
+								if (link.Links[f, 0].Step == StepType.SameArrow)
+									bothNew = false;
+							}
+
+							if (bothSame)
+								return CostTwoArrows_Jump_BothSame;
+							if (bothNew)
+								return CostTwoArrows_Jump_BothNew;
+							return CostTwoArrows_Jump_OneNew;
 						}
 
 						return CostUnknown;

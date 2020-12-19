@@ -270,6 +270,11 @@ namespace ChartGeneratorTests
 
 		#endregion Mines
 
+		#region Simple Patterns
+
+		/// <summary>
+		/// Simple alternating roll patten.
+		/// </summary>
 		[TestMethod]
 		public void TestSameArrowAlternating()
 		{
@@ -288,6 +293,9 @@ namespace ChartGeneratorTests
 			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.SameArrow, FootAction.Tap);
 		}
 
+		/// <summary>
+		/// Simple jack pattern.
+		/// </summary>
 		[TestMethod]
 		public void TestSameArrowJacks()
 		{
@@ -310,6 +318,9 @@ namespace ChartGeneratorTests
 			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.SameArrow, FootAction.Tap);
 		}
 
+		/// <summary>
+		/// Simple stream pattern.
+		/// </summary>
 		[TestMethod]
 		public void TestNewArrowStream()
 		{
@@ -328,6 +339,8 @@ namespace ChartGeneratorTests
 			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
 			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
 		}
+
+		#endregion Simple Patterns
 
 		#region Crossovers
 
@@ -937,7 +950,7 @@ namespace ChartGeneratorTests
 
 		#endregion FootSwap
 
-		#region StepAfterJump
+		#region Step After Jump
 
 		/// <summary>
 		/// Series of tests for stepping after a jump to a new arrow where both feet can bracket to the new
@@ -1368,6 +1381,43 @@ namespace ChartGeneratorTests
 			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
 		}
 
-		#endregion StepAfterJump
+		#endregion Step After Jump
+
+		#region Jumps
+
+		/// <summary>
+		/// Test that jumps involving one foot landing where the other foot start are performed
+		/// as expected without brackets.
+		/// </summary>
+		[TestMethod]
+		public void TestJumpFootSwap()
+		{
+			var ec = Load(GetTestChartFullPath("TestJumpFootSwap"));
+			Assert.AreEqual(17, ec.StepEvents.Count);
+			var i = 0;
+
+			// Circular jump pattern around all arrows
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+
+			// Back and forth pattern
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchJump(ec.StepEvents[i++].Link.Links, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+		}
+
+		#endregion Jumps
 	}
 }

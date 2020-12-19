@@ -92,7 +92,10 @@ namespace ChartGenerator
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket = 20;
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable = 15;
 		public const int CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement = 7;
-		public const int CostTwoArrows_Jump = 6;
+		public const int CostTwoArrows_Jump_BothSame = 2;
+		public const int CostTwoArrows_Jump_BothNew = 6;
+		public const int CostTwoArrows_Jump_OneNew = 5;
+
 
 		public const int CostThreeArrows = 0;
 		public const int CostFourArrows = 0;

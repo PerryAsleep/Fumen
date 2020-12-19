@@ -19,8 +19,11 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
 		//@"C:\Games\StepMania 5\Songs\Fumen\TestFootSwapPreferJack\test.sm"
-		private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
-		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\";
+
+		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestJumpAfterFootSwap\test.sm";
+		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestJumpAfterFootSwap\";
+		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
+		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\";
 
 		enum OverwriteBehavior
 		{
@@ -54,7 +57,7 @@ namespace ChartGenerator
 				    && chart.NumPlayers == 1
 				    && chart.NumInputs == NumSPArrows
 				    //HACK
-				    && chart.DifficultyType == "Challenge")
+				    && chart.DifficultyType == "Beginner")
 				{
 					// Check if there is an existing doubles chart corresponding to this singles chart.
 					var (currentDoublesChart, dpChartIndex) = FindDoublesChart(song, chart.DifficultyType);

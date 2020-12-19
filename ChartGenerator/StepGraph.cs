@@ -295,6 +295,12 @@ namespace ChartGenerator
 		/// </summary>
 		private static readonly StepType[][] JumpCombinations;
 		/// <summary>
+		/// Cached Foot order to use when filling jumps.
+		/// First index is the index of the order to use when looping over all orders.
+		/// Second index is array of foot indexes (e.g. [L,R] or [R,L]).
+		/// </summary>
+		private static readonly int[][] JumpFootOrder;
+		/// <summary>
 		/// Cached FootActions for a step.
 		/// First index is the number of arrows of a single foot step in question.
 		///  Length 2.
@@ -351,6 +357,13 @@ namespace ChartGenerator
 				StepType.BracketBothSame,
 			};
 			JumpCombinations = Combinations(jumpSingleSteps, NumFeet).ToArray();
+
+			// Initialize JumpFootOrder
+			JumpFootOrder = new []
+			{
+				new []{L, R},
+				new []{R, L}
+			};
 
 			// Initialize ActionCombination
 			ActionCombinations = new FootAction[MaxArrowsPerFoot][][];
@@ -568,22 +581,36 @@ namespace ChartGenerator
 			ArrowData[] arrowData,
 			StepType[] stepTypes)
 		{
-			var actionsToStatesL = FillJumpStep(currentNode.State, arrowData, stepTypes[L], L);
-			foreach (var actionStateL in actionsToStatesL)
+			// When filling a jump we fill one foot at a time, then pass the state that has been altered by the first foot
+			// to the next foot to complete the jump.
+			// We need to loop over the feet in both orders to ensure all valid states are hit.
+			// For example, if we only process left then right we will miss a jump where both feet us NewArrow and the jump
+			// goes from LU to UR since the right foot would not have moved yet to make room for the left.
+			foreach (var footOrder in JumpFootOrder)
 			{
-				foreach (var newStateL in actionStateL.Value)
+				var f1 = footOrder[0];
+				var f2 = footOrder[1];
+
+				// Find all the states from moving the first foot.
+				var actionsToStatesF1 = FillJumpStep(currentNode.State, arrowData, stepTypes[f1], f1);
+				foreach (var actionStateF1 in actionsToStatesF1)
 				{
-					var actionsToStatesR = FillJumpStep(newStateL, arrowData, stepTypes[R], R);
-					foreach (var actionStateR in actionsToStatesR)
+					foreach (var newStateF1 in actionStateF1.Value)
 					{
-						foreach (var newStateR in actionStateR.Value)
+						// Using the state from the first foot, find all the states from moving the second foot.
+						var actionsToStatesF2 = FillJumpStep(newStateF1, arrowData, stepTypes[f2], f2);
+						foreach (var actionStateF2 in actionsToStatesF2)
 						{
-							var link = new GraphLink();
-							for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[L]]; f++)
-								link.Links[L, f] = new GraphLink.FootArrowState(stepTypes[L], actionStateL.Key[f]);
-							for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[R]]; f++)
-								link.Links[R, f] = new GraphLink.FootArrowState(stepTypes[R], actionStateR.Key[f]);
-							AddNode(currentNode, visitedNodes, newStateR, link);
+							foreach (var newStateR in actionStateF2.Value)
+							{
+								// Set up a link for the final state and add a node.
+								var link = new GraphLink();
+								for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[f1]]; f++)
+									link.Links[f1, f] = new GraphLink.FootArrowState(stepTypes[f1], actionStateF1.Key[f]);
+								for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[f2]]; f++)
+									link.Links[f2, f] = new GraphLink.FootArrowState(stepTypes[f2], actionStateF2.Key[f]);
+								AddNode(currentNode, visitedNodes, newStateR, link);
+							}
 						}
 					}
 				}
@@ -632,8 +659,6 @@ namespace ChartGenerator
 			FootAction[] footActions)
 		{
 			var footAction = footActions[0];
-
-			// TODO: Double-Step is maybe slightly different since it isn't a bracket?
 
 			// Must be new arrow.
 			if (currentIndex == newIndex)
