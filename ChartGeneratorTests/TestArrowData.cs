@@ -43,12 +43,10 @@ namespace ChartGeneratorTests
 							arrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2],
 							arrowData[oppositeA].OtherFootPairingsOtherFootCrossoverFront[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsSameFootCrossoverBehind[f][a2],
-							arrowData[oppositeA].OtherFootPairingsSameFootCrossoverFront[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2],
 							arrowData[oppositeA].OtherFootPairingsOtherFootCrossoverBehind[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsSameFootCrossoverFront[f][a2],
-							arrowData[oppositeA].OtherFootPairingsSameFootCrossoverBehind[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsInverted[f][a2],
+							arrowData[oppositeA].OtherFootPairingsInverted[oppositeF][oppositeA2]);
 					}
 				}
 			}

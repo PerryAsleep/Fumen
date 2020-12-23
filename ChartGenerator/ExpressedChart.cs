@@ -1022,6 +1022,28 @@ namespace ChartGenerator
 									// No indication and not bracketable
 									return CostNewArrow_FootSwap_NoIndication_NotBracketable;
 								}
+							case StepType.InvertFront:
+							case StepType.InvertBehind:
+							{
+								// Inversion from a foot swap
+								if (previousStepLink?.IsFootSwap(out _) ?? false)
+									return CostNewArrow_Invert_FromSwap;
+
+								if (otherAnyHeld)
+									return CostNewArrow_Invert_OtherHeld;
+
+								if (doubleStep)
+								{
+									// Mine indicated
+									if (thisMinePositionFollowingPreviousStep != null)
+										return CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated;
+
+									// No indication
+									return CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication;
+								}
+
+								return CostNewArrow_Invert;
+							}
 							default:
 								return CostUnknown;
 						}

@@ -223,6 +223,11 @@ namespace ChartGenerator
 		public readonly FootArrowState[,] State;
 
 		/// <summary>
+		/// 
+		/// </summary>
+		public readonly BodyOrientation Orientation;
+
+		/// <summary>
 		/// GraphLinks to other GraphNodes.
 		/// A GraphLink may connection more than one GraphNode.
 		/// </summary>
@@ -233,9 +238,11 @@ namespace ChartGenerator
 		/// Side effect: Sorts the given state.
 		/// </summary>
 		/// <param name="state">State for the GraphNode.</param>
-		public GraphNode(FootArrowState[,] state)
+		/// <param name="orientation">BodyOrientation for the GraphNode.</param>
+		public GraphNode(FootArrowState[,] state, BodyOrientation orientation)
 		{
 			State = state;
+			Orientation = orientation;
 
 			// Sort so that comparisons are easier
 			for (var foot = 0; foot < NumFeet; foot++)
@@ -260,6 +267,8 @@ namespace ChartGenerator
 				for(var a = 0; a < MaxArrowsPerFoot; a++)
 					if (!State[f, a].Equals(other.State[f, a]))
 						return false;
+			if (Orientation != other.Orientation)
+				return false;
 			return true;
 		}
 
@@ -278,6 +287,7 @@ namespace ChartGenerator
 			for (var f = 0; f < NumFeet; f++)
 				for (var a = 0; a < MaxArrowsPerFoot; a++)
 					hash = unchecked(hash * 31 + State[f, a].GetHashCode());
+			hash = unchecked(hash * 31 + Orientation.GetHashCode());
 			return hash;
 		}
 	}
@@ -325,8 +335,8 @@ namespace ChartGenerator
 		/// Cached functions used to fill nodes of the StepGraph.
 		/// Index is StepType.
 		/// </summary>
-		private static readonly Func<GraphNode.FootArrowState[,], ArrowData[], int, int, int, FootAction[],
-			List<GraphNode.FootArrowState[,]>>[] FillFuncs;
+		private static readonly Func<GraphNode, ArrowData[], int, int, int, FootAction[],
+			List<GraphNode>>[] FillFuncs;
 
 		/// <summary>
 		/// Number of arrows in this StepGraph.
@@ -402,18 +412,22 @@ namespace ChartGenerator
 			NumArrowsForStepType[(int)StepType.NewArrow] = 1;
 			NumArrowsForStepType[(int)StepType.CrossoverFront] = 1;
 			NumArrowsForStepType[(int)StepType.CrossoverBehind] = 1;
+			NumArrowsForStepType[(int)StepType.InvertFront] = 1;
+			NumArrowsForStepType[(int)StepType.InvertBehind] = 1;
 			NumArrowsForStepType[(int)StepType.FootSwap] = 1;
 			NumArrowsForStepType[(int)StepType.BracketBothNew] = 2;
 			NumArrowsForStepType[(int)StepType.BracketOneNew] = 2;
 			NumArrowsForStepType[(int)StepType.BracketBothSame] = 2;
 
 			// Initialize FillFuncs
-			FillFuncs = new Func<GraphNode.FootArrowState[,], ArrowData[], int, int, int, FootAction[],
-				List<GraphNode.FootArrowState[,]>>[steps.Count];
+			FillFuncs = new Func<GraphNode, ArrowData[], int, int, int, FootAction[],
+				List<GraphNode>>[steps.Count];
 			FillFuncs[(int)StepType.SameArrow] = FillSameArrow;
 			FillFuncs[(int)StepType.NewArrow] = FillNewArrow;
 			FillFuncs[(int)StepType.CrossoverFront] = FillCrossoverFront;
 			FillFuncs[(int)StepType.CrossoverBehind] = FillCrossoverBack;
+			FillFuncs[(int)StepType.InvertFront] = FillInvertFront;
+			FillFuncs[(int)StepType.InvertBehind] = FillInvertBack;
 			FillFuncs[(int)StepType.FootSwap] = FillFootSwap;
 			FillFuncs[(int)StepType.BracketBothNew] = FillBracketBothNew;
 			FillFuncs[(int)StepType.BracketOneNew] = FillBracketOneNew;
@@ -455,7 +469,7 @@ namespace ChartGenerator
 				}
 			}
 
-			var root = new GraphNode(state);
+			var root = new GraphNode(state, BodyOrientation.Normal);
 			FillStepGraph(root, arrowData);
 			return new StepGraph
 			{
@@ -511,28 +525,19 @@ namespace ChartGenerator
 			Logger.Info($"{arrowData.Length}-panel StepGraph generation complete. {completeNodes.Count} Nodes.");
 		}
 
-		private static GraphNode GetOrCreateNodeByState(GraphNode.FootArrowState[,] state, HashSet<GraphNode> visitedNodes)
-		{
-			var node = new GraphNode(state);
-
-			if (visitedNodes.TryGetValue(node, out var currentNode))
-				node = currentNode;
-			else
-				visitedNodes.Add(node);
-
-			return node;
-		}
-
 		private static void AddNode(
 			GraphNode currentNode,
 			HashSet<GraphNode> visitedNodes,
-			GraphNode.FootArrowState[,] state,
+			GraphNode newNode,
 			GraphLink link)
 		{
+			if (visitedNodes.TryGetValue(newNode, out var visitedNode))
+				newNode = visitedNode;
+			else
+				visitedNodes.Add(newNode);
+
 			if (!currentNode.Links.ContainsKey(link))
 				currentNode.Links[link] = new List<GraphNode>();
-
-			var newNode = GetOrCreateNodeByState(state, visitedNodes);
 			if (!currentNode.Links[link].Contains(newNode))
 				currentNode.Links[link].Add(newNode);
 		}
@@ -554,12 +559,12 @@ namespace ChartGenerator
 					{
 						for (var setIndex = 0; setIndex < actionSets.Length; setIndex++)
 						{
-							var newStates = fillFunc(currentNode.State, arrowData, currentIndex, newIndex, foot,
+							var newNodes = fillFunc(currentNode, arrowData, currentIndex, newIndex, foot,
 								actionSets[setIndex]);
-							if (newStates == null || newStates.Count == 0)
+							if (newNodes == null || newNodes.Count == 0)
 								continue;
 
-							foreach (var newState in newStates)
+							foreach (var newNode in newNodes)
 							{
 								var link = new GraphLink();
 								for (var f = 0; f < numStepArrows; f++)
@@ -567,7 +572,7 @@ namespace ChartGenerator
 									link.Links[foot, f] = new GraphLink.FootArrowState(stepType, actionSets[setIndex][f]);
 								}
 
-								AddNode(currentNode, visitedNodes, newState, link);
+								AddNode(currentNode, visitedNodes, newNode, link);
 							}
 						}
 					}
@@ -592,24 +597,24 @@ namespace ChartGenerator
 				var f2 = footOrder[1];
 
 				// Find all the states from moving the first foot.
-				var actionsToStatesF1 = FillJumpStep(currentNode.State, arrowData, stepTypes[f1], f1);
-				foreach (var actionStateF1 in actionsToStatesF1)
+				var actionsToNodesF1 = FillJumpStep(currentNode, arrowData, stepTypes[f1], f1);
+				foreach (var actionNodeF1 in actionsToNodesF1)
 				{
-					foreach (var newStateF1 in actionStateF1.Value)
+					foreach (var newNodeF1 in actionNodeF1.Value)
 					{
 						// Using the state from the first foot, find all the states from moving the second foot.
-						var actionsToStatesF2 = FillJumpStep(newStateF1, arrowData, stepTypes[f2], f2);
-						foreach (var actionStateF2 in actionsToStatesF2)
+						var actionsToNodesF2 = FillJumpStep(newNodeF1, arrowData, stepTypes[f2], f2);
+						foreach (var actionNodeF2 in actionsToNodesF2)
 						{
-							foreach (var newStateR in actionStateF2.Value)
+							foreach (var newNodeF2 in actionNodeF2.Value)
 							{
 								// Set up a link for the final state and add a node.
 								var link = new GraphLink();
 								for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[f1]]; f++)
-									link.Links[f1, f] = new GraphLink.FootArrowState(stepTypes[f1], actionStateF1.Key[f]);
+									link.Links[f1, f] = new GraphLink.FootArrowState(stepTypes[f1], actionNodeF1.Key[f]);
 								for (var f = 0; f < NumArrowsForStepType[(int)stepTypes[f2]]; f++)
-									link.Links[f2, f] = new GraphLink.FootArrowState(stepTypes[f2], actionStateF2.Key[f]);
-								AddNode(currentNode, visitedNodes, newStateR, link);
+									link.Links[f2, f] = new GraphLink.FootArrowState(stepTypes[f2], actionNodeF2.Key[f]);
+								AddNode(currentNode, visitedNodes, newNodeF2, link);
 							}
 						}
 					}
@@ -617,13 +622,13 @@ namespace ChartGenerator
 			}
 		}
 
-		private static Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>> FillJumpStep(
-			GraphNode.FootArrowState[,] currentState,
+		private static Dictionary<FootAction[], List<GraphNode>> FillJumpStep(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			StepType stepType,
 			int foot)
 		{
-			var result = new Dictionary<FootAction[], List<GraphNode.FootArrowState[,]>>();
+			var result = new Dictionary<FootAction[], List<GraphNode>>();
 
 			var numArrows = arrowData.Length;
 			var numStepArrows = NumArrowsForStepType[(int)stepType];
@@ -635,14 +640,14 @@ namespace ChartGenerator
 				{
 					for (var setIndex = 0; setIndex < actionSets.Length; setIndex++)
 					{
-						var newStates = fillFunc(currentState, arrowData, currentIndex, newIndex, foot, actionSets[setIndex]);
-						if (newStates == null || newStates.Count == 0)
+						var newNodes = fillFunc(currentNode, arrowData, currentIndex, newIndex, foot, actionSets[setIndex]);
+						if (newNodes == null || newNodes.Count == 0)
 							continue;
-						if (!result.TryGetValue(actionSets[setIndex], out var stateLists))
-							stateLists = newStates;
+						if (!result.TryGetValue(actionSets[setIndex], out var nodeLists))
+							nodeLists = newNodes;
 						else
-							stateLists.AddRange(newStates);
-						result[actionSets[setIndex]] = stateLists;
+							nodeLists.AddRange(newNodes);
+						result[actionSets[setIndex]] = nodeLists;
 					}
 				}
 			}
@@ -650,8 +655,8 @@ namespace ChartGenerator
 			return result;
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillNewArrow(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillNewArrow(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -659,6 +664,7 @@ namespace ChartGenerator
 			FootAction[] footActions)
 		{
 			var footAction = footActions[0];
+			var currentState = currentNode.State;
 
 			// Must be new arrow.
 			if (currentIndex == newIndex)
@@ -713,11 +719,12 @@ namespace ChartGenerator
 				}
 			}
 
-			return new List<GraphNode.FootArrowState[,]> {newState};
+			// Stepping on a new arrow implies a normal orientation.
+			return new List<GraphNode> { new GraphNode(newState, BodyOrientation.Normal) };
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillSameArrow(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillSameArrow(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -725,6 +732,7 @@ namespace ChartGenerator
 			FootAction[] footActions)
 		{
 			var footAction = footActions[0];
+			var currentState = currentNode.State;
 
 			// Must be same arrow.
 			if (currentIndex != newIndex)
@@ -775,11 +783,12 @@ namespace ChartGenerator
 				}
 			}
 
-			return new List<GraphNode.FootArrowState[,]> {newState};
+			// Stepping on the same arrow maintains the previous state's orientation.
+			return new List<GraphNode> { new GraphNode(newState, currentNode.Orientation) };
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillFootSwap(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillFootSwap(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -787,6 +796,7 @@ namespace ChartGenerator
 			FootAction[] footActions)
 		{
 			var footAction = footActions[0];
+			var currentState = currentNode.State;
 
 			// Cannot release on a new arrow
 			if (footAction == FootAction.Release)
@@ -828,33 +838,34 @@ namespace ChartGenerator
 					newState[foot, a] = GraphNode.InvalidFootArrowState;
 			}
 
-			return new List<GraphNode.FootArrowState[,]> {newState};
+			// Footswaps correct inverted orientation.
+			return new List<GraphNode> { new GraphNode(newState, BodyOrientation.Normal) };
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillCrossoverFront(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillCrossoverFront(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
-			return FillCrossoverInternal(currentState, arrowData, currentIndex, newIndex, foot, footActions, true);
+			return FillCrossoverInternal(currentNode, arrowData, currentIndex, newIndex, foot, footActions, true);
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillCrossoverBack(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillCrossoverBack(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
-			return FillCrossoverInternal(currentState, arrowData, currentIndex, newIndex, foot, footActions, false);
+			return FillCrossoverInternal(currentNode, arrowData, currentIndex, newIndex, foot, footActions, false);
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillCrossoverInternal(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillCrossoverInternal(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
@@ -863,6 +874,7 @@ namespace ChartGenerator
 			bool front)
 		{
 			var footAction = footActions[0];
+			var currentState = currentNode.State;
 
 			// Must be new arrow.
 			if (currentIndex == newIndex)
@@ -892,7 +904,117 @@ namespace ChartGenerator
 
 			// If the current state is already a crossover of the same type (front or back)
 			// with the other foot then we cannot create another crossover of that type
-			// with this foot as the legs would cross through eachother (or you would be spun)
+			// with this foot as the legs would cross through each other (or you would be spun).
+			if (front && FootCrossedOverInFront(currentState, otherFoot, arrowData))
+				return null;
+			if (!front && FootCrossedOverInBack(currentState, otherFoot, arrowData))
+				return null;
+
+			// Skip if the current state is inverted and this crossover faces the player in
+			// the other direction since this would cross their legs through each other.
+			if (currentNode.Orientation == BodyOrientation.InvertedRightOverLeft
+			    && ((front && foot == L) || (!front && foot == R)))
+				return null;
+			if (currentNode.Orientation == BodyOrientation.InvertedLeftOverRight
+				&& ((front && foot == R) || (!front && foot == L)))
+				return null;
+
+			// Set up the state for a new node.
+			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				// Copy previous state for other foot
+				newState[otherFoot, a] = currentState[otherFoot, a];
+
+				// Lift any resting arrows for the given foot.
+				if (IsStateRestingAtIndex(currentState, a, foot))
+					newState[foot, a] = GraphNode.InvalidFootArrowState;
+				else
+					newState[foot, a] = currentState[foot, a];
+			}
+
+			// Set up the FootArrowState for the new arrow
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				if (newState[foot, a].Arrow == InvalidArrowIndex)
+				{
+					newState[foot, a] = new GraphNode.FootArrowState(newIndex, StateAfterAction(footAction));
+					break;
+				}
+			}
+
+			// Crossovers are not inverted.
+			return new List<GraphNode> { new GraphNode(newState, BodyOrientation.Normal) };
+		}
+
+		private static List<GraphNode> FillInvertFront(
+			GraphNode currentNode,
+			ArrowData[] arrowData,
+			int currentIndex,
+			int newIndex,
+			int foot,
+			FootAction[] footActions)
+		{
+			return FillInvertInternal(currentNode, arrowData, currentIndex, newIndex, foot, footActions, true);
+		}
+
+		private static List<GraphNode> FillInvertBack(
+			GraphNode currentNode,
+			ArrowData[] arrowData,
+			int currentIndex,
+			int newIndex,
+			int foot,
+			FootAction[] footActions)
+		{
+			return FillInvertInternal(currentNode, arrowData, currentIndex, newIndex, foot, footActions, false);
+		}
+
+		private static List<GraphNode> FillInvertInternal(
+			GraphNode currentNode,
+			ArrowData[] arrowData,
+			int currentIndex,
+			int newIndex,
+			int foot,
+			FootAction[] footActions,
+			bool front)
+		{
+			var footAction = footActions[0];
+			var currentState = currentNode.State;
+
+			// Must be new arrow.
+			if (currentIndex == newIndex)
+				return null;
+			// Cannot release on a new arrow
+			if (footAction == FootAction.Release)
+				return null;
+			// Only consider moving to a new arrow when the currentIndex is resting.
+			if (!IsResting(currentState, currentIndex, foot))
+				return null;
+			// Cannot invert if any arrows are held by this foot.
+			if (NumHeldOrRolling(currentState, foot) > 0)
+				return null;
+			// Skip if this isn't a valid next arrow for the current placement.
+			if (!arrowData[currentIndex].ValidNextArrows[newIndex])
+				return null;
+			// Skip if this next arrow is occupied.
+			if (!IsFree(currentState, newIndex))
+				return null;
+			// Skip if this next arrow is not an inversion
+			if (!FootInvertsWithAnyOtherFoot(currentState, foot, arrowData, newIndex))
+				return null;
+
+			var otherFoot = OtherFoot(foot);
+			var orientation = ((front && foot == R) || (!front && foot == L)) ?
+				BodyOrientation.InvertedRightOverLeft : BodyOrientation.InvertedLeftOverRight;
+
+			// If the current state is already inverted in the opposite orientation, skip.
+			// The player needs to right themselves first.
+			if (currentNode.Orientation != BodyOrientation.Normal && currentNode.Orientation != orientation)
+				return null;
+
+			// If the current state is crossed over with the same type (front or back)
+			// with the other foot then we cannot invert with the same type with
+			// this foot as the legs would cross through each other.
 			if (front && FootCrossedOverInFront(currentState, otherFoot, arrowData))
 				return null;
 			if (!front && FootCrossedOverInBack(currentState, otherFoot, arrowData))
@@ -922,29 +1044,23 @@ namespace ChartGenerator
 				}
 			}
 
-			return new List<GraphNode.FootArrowState[,]> {newState};
+			return new List<GraphNode> { new GraphNode(newState, orientation) };
 		}
 
-		// TODO: Apply these comments about assumptions to other methods.
 		/// <summary>
 		/// Assumes that footActions length is MaxArrowsPerFoot.
 		/// Assumes that if one FootAction is a release, they are all a release.
 		/// </summary>
-		/// <param name="currentState"></param>
-		/// <param name="arrowData"></param>
-		/// <param name="currentIndex"></param>
-		/// <param name="newIndex"></param>
-		/// <param name="foot"></param>
-		/// <param name="footActions"></param>
-		/// <returns></returns>
-		private static List<GraphNode.FootArrowState[,]> FillBracketBothNew(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillBracketBothNew(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
+			var currentState = currentNode.State;
+
 			// Cannot release on a new arrow.
 			// If one is a release they are both a release due to ActionCombinations creation logic.
 			if (footActions[0] == FootAction.Release)
@@ -996,21 +1112,23 @@ namespace ChartGenerator
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]>
-					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
+				return new List<GraphNode>
+					{CreateNewBracketNode(currentState, foot, newIndex, secondIndex, footActions)};
 			}
 
 			return null;
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillBracketOneNew(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillBracketOneNew(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
+			var currentState = currentNode.State;
+
 			// Cannot release on a new arrow.
 			// If one is a release they are both a release due to ActionCombinations creation logic.
 			if (footActions[0] == FootAction.Release)
@@ -1023,9 +1141,9 @@ namespace ChartGenerator
 			if (NumHeldOrRolling(currentState, foot) > 0)
 				return null;
 
-			var results = new List<GraphNode.FootArrowState[,]>();
-			var resultFirst = FillBracketFirstNew(currentState, arrowData, currentIndex, newIndex, foot, footActions);
-			var resultSecond = FillBracketSecondNew(currentState, arrowData, currentIndex, newIndex, foot, footActions);
+			var results = new List<GraphNode>();
+			var resultFirst = FillBracketFirstNew(currentNode, arrowData, currentIndex, newIndex, foot, footActions);
+			var resultSecond = FillBracketSecondNew(currentNode, arrowData, currentIndex, newIndex, foot, footActions);
 			if (resultFirst != null && resultFirst.Count > 0)
 				results.AddRange(resultFirst);
 			if (resultSecond != null && resultSecond.Count > 0)
@@ -1033,14 +1151,16 @@ namespace ChartGenerator
 			return results;
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillBracketFirstNew(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillBracketFirstNew(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
+			var currentState = currentNode.State;
+
 			// The first index must be a step on a new arrow
 			if (!IsFree(currentState, newIndex))
 				return null;
@@ -1055,7 +1175,7 @@ namespace ChartGenerator
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
-			var results = new List<GraphNode.FootArrowState[,]>();
+			var results = new List<GraphNode>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
@@ -1082,20 +1202,22 @@ namespace ChartGenerator
 					continue;
 
 				// Set up the state for a new node.
-				results.Add(CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions));
+				results.Add(CreateNewBracketNode(currentState, foot, newIndex, secondIndex, footActions));
 			}
 
 			return results;
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillBracketSecondNew(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillBracketSecondNew(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
+			var currentState = currentNode.State;
+
 			// The first index must be a step on the same arrow (only the second is new)
 			if (!IsResting(currentState, newIndex, foot))
 				return null;
@@ -1107,7 +1229,7 @@ namespace ChartGenerator
 
 			var firstNewArrowIsValidPlacement = arrowData[currentIndex].ValidNextArrows[newIndex];
 
-			var results = new List<GraphNode.FootArrowState[,]>();
+			var results = new List<GraphNode>();
 			for (var secondIndex = newIndex + 1; secondIndex < arrowData.Length; secondIndex++)
 			{
 				// Skip if this is not a valid bracketable pairing.
@@ -1134,20 +1256,22 @@ namespace ChartGenerator
 					continue;
 
 				// Set up the state for a new node.
-				results.Add(CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions));
+				results.Add(CreateNewBracketNode(currentState, foot, newIndex, secondIndex, footActions));
 			}
 
 			return results;
 		}
 
-		private static List<GraphNode.FootArrowState[,]> FillBracketBothSame(
-			GraphNode.FootArrowState[,] currentState,
+		private static List<GraphNode> FillBracketBothSame(
+			GraphNode currentNode,
 			ArrowData[] arrowData,
 			int currentIndex,
 			int newIndex,
 			int foot,
 			FootAction[] footActions)
 		{
+			var currentState = currentNode.State;
+
 			// Must be all releases or all placements.
 			// This check is performed when creating ActionCombinations so we do not
 			// need to perform it again here.
@@ -1173,14 +1297,14 @@ namespace ChartGenerator
 					continue;
 
 				// Set up the state for a new node.
-				return new List<GraphNode.FootArrowState[,]>
-					{CreateNewBracketState(currentState, foot, newIndex, secondIndex, footActions)};
+				return new List<GraphNode>
+					{CreateNewBracketNode(currentState, foot, newIndex, secondIndex, footActions)};
 			}
 
 			return null;
 		}
 
-		private static GraphNode.FootArrowState[,] CreateNewBracketState(
+		private static GraphNode CreateNewBracketNode(
 			GraphNode.FootArrowState[,] currentState,
 			int foot,
 			int firstIndex,
@@ -1196,7 +1320,8 @@ namespace ChartGenerator
 			// The given foot brackets the two new arrows
 			newState[foot, 0] = new GraphNode.FootArrowState(firstIndex, StateAfterAction(footActions[0]));
 			newState[foot, 1] = new GraphNode.FootArrowState(secondIndex, StateAfterAction(footActions[1]));
-			return newState;
+			// Brackets are not inverted.
+			return new GraphNode(newState, BodyOrientation.Normal);
 		}
 
 		private static bool IsValidPairingWithAnyOtherFoot(GraphNode.FootArrowState[,] state, int foot, ArrowData[] arrowData,
@@ -1276,6 +1401,21 @@ namespace ChartGenerator
 				var otherFootArrowIndex = state[otherFoot, a].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 				    && arrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow])
+					return true;
+			}
+
+			return false;
+		}
+
+		private static bool FootInvertsWithAnyOtherFoot(GraphNode.FootArrowState[,] state, int foot,
+			ArrowData[] arrowData, int arrow)
+		{
+			var otherFoot = OtherFoot(foot);
+			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			{
+				var otherFootArrowIndex = state[otherFoot, a].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+				    && arrowData[otherFootArrowIndex].OtherFootPairingsInverted[otherFoot][arrow])
 					return true;
 			}
 

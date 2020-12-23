@@ -37,22 +37,6 @@ namespace ChartGenerator
 		public bool[][] OtherFootPairings = new bool[NumFeet][];
 
 		/// <summary>
-		/// Which arrows form a front crossover with the original arrow in front.
-		/// For example, if the first index is Left, the arrows listed are the valid
-		/// positions for the Right foot such that Left is crossing over in front.
-		/// First index is foot, second is arrow.
-		/// </summary>
-		public bool[][] OtherFootPairingsSameFootCrossoverFront = new bool[NumFeet][];
-
-		/// <summary>
-		/// Which arrows form a front crossover with the original arrow in back.
-		/// For example, if the first index is Left, the arrows listed are the valid
-		/// positions for the Right foot such that Left is crossing over in back.
-		/// First index is foot, second is arrow.
-		/// </summary>
-		public bool[][] OtherFootPairingsSameFootCrossoverBehind = new bool[NumFeet][];
-
-		/// <summary>
 		/// Which arrows form a front crossover.
 		/// For example, if the first index is Left, the arrows listed are the valid
 		/// positions for the Right foot such that Right is crossing over in front.
@@ -67,6 +51,20 @@ namespace ChartGenerator
 		/// First index is foot, second is arrow.
 		/// </summary>
 		public bool[][] OtherFootPairingsOtherFootCrossoverBehind = new bool[NumFeet][];
+
+		/// <summary>
+		/// Which arrows form an inverted position.
+		/// An inverted position is one where if the player stood normally without
+		/// twisting their body to face the screen they would be facing completely backwards.
+		/// For example, left foot on right and right foot on left.
+		/// For this data structure, if the first index is Left, the arrows listed are the valid
+		/// positions for the Right foot such that the player is inverted.
+		/// While there are two BodyOrientations for being inverted, every inverted position
+		/// can be performed with right over left and left over right, so we only need one
+		/// data structure.
+		/// First index is foot, second is arrow.
+		/// </summary>
+		public bool[][] OtherFootPairingsInverted = new bool[NumFeet][];
 
 		/// <summary>
 		/// Static accessor for 4-panel SP ArrowData.
@@ -117,22 +115,6 @@ namespace ChartGenerator
 						[R] = noneSP,
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P1L is never a crossover position
-						[L] = noneSP,
-						// Right foot on P1L is a crossover with right in front when left is on P1D
-						[R] = FromSP(new[] {P1D}),
-					},
-
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P1L is never a crossover position
-						[L] = noneSP,
-						// Right foot on P1L is a crossover with right in back when left is on P1U
-						[R] = FromSP(new[] {P1U}),
-					},
-
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1L is never a crossover position
@@ -140,14 +122,21 @@ namespace ChartGenerator
 						// Right foot on P1L is a crossover with left in front when left is on P1U
 						[R] = FromSP(new[] {P1U}),
 					},
-
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P1L is never a crossover position
 						[L] = noneSP,
 						// Right foot on P1L is a crossover with left in back when left is on P1D
 						[R] = FromSP(new[] {P1D}),
-					}
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1L is never inverted.
+						[L] = noneSP,
+						// Right foot on P1L is inverted with left when left is on P1R
+						[R] = FromSP(new[] {P1R}),
+					},
 				},
 
 				// P1D
@@ -174,20 +163,6 @@ namespace ChartGenerator
 						[R] = FromSP(new[] {P1L, P1U})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// none
-						[L] = noneSP,
-						// Right foot on P1D is not a crossover with right in front
-						[R] = noneSP
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P1D is a crossover with left in back with right is on P1L
-						[L] = FromSP(new[] {P1L}),
-						// Right foot on P1D is a crossover with right in back when left is on P1R
-						[R] = FromSP(new[] {P1R})
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1D is a crossover with right in front with right is on P1L
@@ -201,6 +176,14 @@ namespace ChartGenerator
 						[L] = noneSP,
 						// Right foot on P1D is not a crossover with left in back
 						[R] = noneSP
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1D is never inverted.
+						[L] = noneSP,
+						// Right foot on P1D is never inverted.
+						[R] = noneSP,
 					},
 				},
 
@@ -228,20 +211,6 @@ namespace ChartGenerator
 						[R] = FromSP(new[] {P1L, P1D})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P1U is a crossover with left in front when right is on P1L
-						[L] = FromSP(new[] {P1L}),
-						// Right foot on P1U is a crossover with right in front when left is on P1R
-						[R] = FromSP(new[] {P1R})
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// none
-						[L] = noneSP,
-						// none
-						[R] = noneSP
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// none
@@ -255,6 +224,14 @@ namespace ChartGenerator
 						[L] = FromSP(new[] {P1L}),
 						// Right foot on P1U is a crossover with left in back when left is on P1R
 						[R] = FromSP(new[] {P1R})
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1U is never inverted.
+						[L] = noneSP,
+						// Right foot on P1U is never inverted.
+						[R] = noneSP,
 					},
 				},
 
@@ -282,20 +259,6 @@ namespace ChartGenerator
 						[R] = FromSP(new[] {P1L, P1D, P1U})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P1R is a crossover with left in front when right is on P1D
-						[L] = FromSP(new[] {P1D}),
-						// Right foot on P1R is not a crossover position
-						[R] = noneSP
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P1R is a crossover with left in back when right is on P1U
-						[L] = FromSP(new[] {P1U}),
-						// Right foot on P1R is not a crossover position
-						[R] = noneSP
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1R is a crossover with right in front when right is on P1U
@@ -309,6 +272,14 @@ namespace ChartGenerator
 						[L] = FromSP(new[] {P1D}),
 						// Right foot on P1R is not a crossover position
 						[R] = noneSP
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1R is inverted with right when right is on P1L
+						[L] = FromSP(new[] {P1L}),
+						// Right foot on P1R is never inverted.
+						[R] = noneSP,
 					},
 				}
 			};
@@ -348,22 +319,6 @@ namespace ChartGenerator
 						[R] = noneDP,
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P1L is never a crossover position
-						[L] = noneDP,
-						// Right foot on P1L is a crossover with right in front when left is on P1D
-						[R] = FromDP(new[] {P1D}),
-					},
-
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P1L is never a crossover position
-						[L] = noneDP,
-						// Right foot on P1L is a crossover with right in back when left is on P1U
-						[R] = FromDP(new[] {P1U}),
-					},
-
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1L is never a crossover position
@@ -371,14 +326,21 @@ namespace ChartGenerator
 						// Right foot on P1L is a crossover with left in front when left is on P1U
 						[R] = FromDP(new[] {P1U}),
 					},
-
 					OtherFootPairingsOtherFootCrossoverBehind =
 					{
 						// Left foot on P1L is never a crossover position
 						[L] = noneDP,
 						// Right foot on P1L is a crossover with left in back when left is on P1D
 						[R] = FromDP(new[] {P1D}),
-					}
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1L is never inverted.
+						[L] = noneDP,
+						// Right foot on P1L is inverted with left when left is on P1R
+						[R] = FromDP(new[] {P1R}),
+					},
 				},
 
 				// P1D
@@ -405,20 +367,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P1L, P1U})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// none
-						[L] = noneDP,
-						// Right foot on P1D is not a crossover with right in front
-						[R] = noneDP
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P1D is a crossover with left in back with right is on P1L
-						[L] = FromDP(new[] {P1L}),
-						// Right foot on P1D is a crossover with right in back when left is on P1R
-						[R] = FromDP(new[] {P1R})
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1D is a crossover with right in front with right is on P1L
@@ -432,6 +380,14 @@ namespace ChartGenerator
 						[L] = noneDP,
 						// Right foot on P1D is not a crossover with left in back
 						[R] = noneDP
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1D is never inverted.
+						[L] = noneDP,
+						// Right foot on P1D is never inverted.
+						[R] = noneDP,
 					},
 				},
 
@@ -459,20 +415,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P1L, P1D})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P1U is a crossover with left in front when right is on P1L
-						[L] = FromDP(new[] {P1L}),
-						// Right foot on P1U is a crossover with right in front when left is on P1R
-						[R] = FromDP(new[] {P1R})
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// none
-						[L] = noneDP,
-						// none
-						[R] = noneDP
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// none
@@ -486,6 +428,14 @@ namespace ChartGenerator
 						[L] = FromDP(new[] {P1L}),
 						// Right foot on P1U is a crossover with left in back when left is on P1R
 						[R] = FromDP(new[] {P1R})
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1U is never inverted.
+						[L] = noneDP,
+						// Right foot on P1U is never inverted.
+						[R] = noneDP,
 					},
 				},
 
@@ -513,20 +463,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P1L, P1D, P1U})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P1R is a crossover with left in front when right is on P1D
-						[L] = FromDP(new[] {P1D}),
-						// Right foot on P1R is not a crossover position. Not considering left on P2L, slightly too twisty
-						[R] = noneDP
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P1R is a crossover with left in back when right is on P1U
-						[L] = FromDP(new[] {P1U}),
-						// none
-						[R] = noneDP
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P1R is a crossover with right in front when right is on P1U
@@ -540,6 +476,14 @@ namespace ChartGenerator
 						[L] = FromDP(new[] {P1D}),
 						// none
 						[R] = noneDP
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P1R is inverted with right when right is on P1L
+						[L] = FromDP(new[] {P1L}),
+						// Right foot on P1R is inverted with left when left is on P2L
+						[R] = FromDP(new[] {P2L}),
 					},
 				},
 
@@ -567,20 +511,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P1D, P1U, P1R})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// none
-						[L] = noneDP,
-						// Right foot on P2L is a crossover with right in front when left is on P2D
-						[R] = FromDP(new[] {P2D})
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// none
-						[L] = noneDP,
-						// Right foot on P2L is a crossover with right in back when left is on P2U
-						[R] = FromDP(new[] {P2U})
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P2L is not a crossover position. Not considering right on P1R, slightly too twisty
@@ -594,6 +524,14 @@ namespace ChartGenerator
 						[L] = noneDP,
 						// Right foot on P2L is a crossover with left in back when left is on P2D
 						[R] = FromDP(new[] {P2D})
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P2L is inverted with right when right is on P1R
+						[L] = FromDP(new[] {P1R}),
+						// Right foot on P2L is inverted with left when left is on P2R
+						[R] = FromDP(new[] {P2R}),
 					},
 				},
 
@@ -621,20 +559,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P1R, P2L, P2U})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// none
-						[L] = noneDP,
-						// none
-						[R] = noneDP
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P2D is a crossover with left in back when right is on P2L
-						[L] = FromDP(new[] {P2L}),
-						// Right foot on P2D is a crossover with right in back when left is on P2R
-						[R] = FromDP(new[] {P2R})
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P2D is a crossover with right in front when right is on P2L
@@ -648,6 +572,14 @@ namespace ChartGenerator
 						[L] = noneDP,
 						// none
 						[R] = noneDP
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P2D is never inverted.
+						[L] = noneDP,
+						// Right foot on P2D is never inverted.
+						[R] = noneDP,
 					},
 				},
 
@@ -675,20 +607,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P1R, P2L, P2D})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P2U is a crossover with left in front when right is on P2L
-						[L] = FromDP(new[] {P2L}),
-						// Right foot on P2U is a crossover with right in front when left is on P2R
-						[R] = FromDP(new[] {P2R})
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// none
-						[L] = noneDP,
-						// none
-						[R] = noneDP
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// none
@@ -702,6 +620,14 @@ namespace ChartGenerator
 						[L] = FromDP(new[] {P2L}),
 						// Right foot on P2U is a crossover with left in back when left is on P2R
 						[R] = FromDP(new[] {P2R})
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P2U is never inverted.
+						[L] = noneDP,
+						// Right foot on P2U is never inverted.
+						[R] = noneDP,
 					},
 				},
 
@@ -729,20 +655,6 @@ namespace ChartGenerator
 						[R] = FromDP(new[] {P2L, P2D, P2U})
 					},
 
-					OtherFootPairingsSameFootCrossoverFront =
-					{
-						// Left foot on P2R is a crossover with left in front when right is on P2D
-						[L] = FromDP(new[] {P2D}),
-						// Right foot on P2R is never a crossover position
-						[R] = noneDP
-					},
-					OtherFootPairingsSameFootCrossoverBehind =
-					{
-						// Left foot on P2R is a crossover with left in back when right is on P2U
-						[L] = FromDP(new[] {P2U}),
-						// none
-						[R] = noneDP
-					},
 					OtherFootPairingsOtherFootCrossoverFront =
 					{
 						// Left foot on P2R is a crossover with right in front when right is on P2U
@@ -756,6 +668,14 @@ namespace ChartGenerator
 						[L] = FromDP(new[] {P2D}),
 						// none
 						[R] = noneDP
+					},
+
+					OtherFootPairingsInverted =
+					{
+						// Left foot on P2R is inverted with right when right is on P2L
+						[L] = FromDP(new[] {P2L}),
+						// Right foot on P2R is never inverted.
+						[R] = noneDP,
 					},
 				}
 			};

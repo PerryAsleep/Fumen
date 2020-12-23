@@ -65,6 +65,8 @@ namespace ChartGenerator
 			"New Arrow",
 			"Crossover In Front",
 			"Crossover In Back",
+			"Invert In Front",
+			"Invert In Back",
 			"Foot Swap",
 			"Bracket Both New",
 			"Bracket One New",

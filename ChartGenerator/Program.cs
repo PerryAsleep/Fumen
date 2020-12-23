@@ -18,12 +18,12 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
-		//@"C:\Games\StepMania 5\Songs\Fumen\TestFootSwapPreferJack\test.sm"
-
-		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestJumpAfterFootSwap\test.sm";
-		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestJumpAfterFootSwap\";
+		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestDoubleStep01\test.sm";
+		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestDoubleStep01\";
+		private const string HackDifficulty = @"Beginner";
 		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
 		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\";
+		//private const string HackDifficulty = @"Challenge";
 
 		enum OverwriteBehavior
 		{
@@ -36,11 +36,13 @@ namespace ChartGenerator
 		static void Main(string[] args)
 		{
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
+			// HACK
 			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
 			var song = SMReader.Load(HackChart);
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
 
+			// HACK
 			//SMWriter.Save(song,
 			//	@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
 		}
@@ -57,7 +59,7 @@ namespace ChartGenerator
 				    && chart.NumPlayers == 1
 				    && chart.NumInputs == NumSPArrows
 				    //HACK
-				    && chart.DifficultyType == "Beginner")
+				    && chart.DifficultyType == HackDifficulty)
 				{
 					// Check if there is an existing doubles chart corresponding to this singles chart.
 					var (currentDoublesChart, dpChartIndex) = FindDoublesChart(song, chart.DifficultyType);

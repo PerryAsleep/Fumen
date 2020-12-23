@@ -84,6 +84,12 @@ namespace ChartGenerator
 		public const int CostNewArrow_FootSwap_NoIndication_Bracketable = 7;
 		public const int CostNewArrow_FootSwap_NoIndication_NotBracketable = 8;
 
+		public const int CostNewArrow_Invert_FromSwap = 200;
+		public const int CostNewArrow_Invert_OtherHeld = 30;
+		public const int CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated = 300;
+		public const int CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication = 400;
+		public const int CostNewArrow_Invert = 30;
+
 		public const int CostTwoArrows_Bracket_OtherFootHoldingBoth = 1;
 		public const int CostTwoArrows_Bracket_DoubleStep = 100;
 		public const int CostTwoArrows_Bracket_PreferredDueToMovement = 5;
@@ -169,7 +175,7 @@ namespace ChartGenerator
 
 			state[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
 			state[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
-			GraphNode newNode = new GraphNode(state);
+			GraphNode newNode = new GraphNode(state, BodyOrientation.Normal);
 			return node.Equals(newNode);
 		}
 
@@ -184,7 +190,7 @@ namespace ChartGenerator
 			state[0, 1] = new GraphNode.FootArrowState(leftArrow2, leftState2);
 			state[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
 			state[1, 1] = new GraphNode.FootArrowState(rightArrow2, rightState2);
-			GraphNode newNode = new GraphNode(state);
+			GraphNode newNode = new GraphNode(state, BodyOrientation.Normal);
 			return node.Equals(newNode);
 		}
 
@@ -192,7 +198,7 @@ namespace ChartGenerator
 			int leftArrow, GraphArrowState leftState,
 			int rightArrow, GraphArrowState rightState)
 		{
-			GraphNode node = new GraphNode(state);
+			GraphNode node = new GraphNode(state, BodyOrientation.Normal);
 			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
 			for (var f = 0; f < NumFeet; f++)
 				for (var a = 0; a < MaxArrowsPerFoot; a++)
@@ -200,7 +206,7 @@ namespace ChartGenerator
 
 			newState[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
 			newState[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
-			GraphNode newNode = new GraphNode(newState);
+			GraphNode newNode = new GraphNode(newState, BodyOrientation.Normal);
 			return node.Equals(newNode);
 		}
 		#endregion
@@ -211,6 +217,8 @@ namespace ChartGenerator
 			NewArrow,
 			CrossoverFront,
 			CrossoverBehind,
+			InvertFront,
+			InvertBehind,
 			FootSwap,
 			BracketBothNew,
 			BracketOneNew,
@@ -223,6 +231,13 @@ namespace ChartGenerator
 			Hold,
 			Roll,
 			Release
+		}
+
+		public enum BodyOrientation
+		{
+			Normal,
+			InvertedRightOverLeft,
+			InvertedLeftOverRight,
 		}
 
 		/// <summary>

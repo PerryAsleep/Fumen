@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ChartGenerator;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
@@ -12,7 +13,7 @@ namespace ChartGeneratorTests
 	public class TestExpressedChart
 	{
 		/// <summary>
-		/// SP Stepgraph for running tests.
+		/// SP StepGraph for running tests.
 		/// </summary>
 		private static readonly StepGraph SPGraph;
 
@@ -24,10 +25,9 @@ namespace ChartGeneratorTests
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
 		}
 
-		// TODO: Fix hardcoded path
 		private string GetTestChartFullPath(string songFolder)
 		{
-			return $@"C:\Games\StepMania 5\Songs\Fumen\{songFolder}\test.sm";
+			return $"{AppDomain.CurrentDomain.BaseDirectory}\\..\\..\\TestData\\{songFolder}\\test.sm";
 		}
 
 		private ExpressedChart Load(string smFile)
@@ -485,6 +485,57 @@ namespace ChartGeneratorTests
 		}
 
 		#endregion Crossovers
+
+		#region Inverted Steps
+
+		/// <summary>
+		/// Test simple inverted patterns.
+		/// </summary>
+		[TestMethod]
+		public void TestInversion()
+		{
+			var ec = Load(GetTestChartFullPath("TestInversion"));
+			Assert.AreEqual(28, ec.StepEvents.Count);
+			var i = 0;
+
+			// Afronova walk, R over L, R leads
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.InvertBehind, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+
+			// Afronova walk, L over R, L leads
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.InvertBehind, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+
+			// Afronova walk, L over R, R leads
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.InvertFront, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+
+			// Afronova walk, R over L, L leads
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.InvertFront, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+		}
+
+		#endregion Inverted Steps
 
 		#region DoubleStep
 
