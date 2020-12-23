@@ -335,8 +335,7 @@ namespace ChartGenerator
 		/// Cached functions used to fill nodes of the StepGraph.
 		/// Index is StepType.
 		/// </summary>
-		private static readonly Func<GraphNode, ArrowData[], int, int, int, FootAction[],
-			List<GraphNode>>[] FillFuncs;
+		private static readonly Func<GraphNode, ArrowData[], int, int, int, FootAction[], List<GraphNode>>[] FillFuncs;
 
 		/// <summary>
 		/// Number of arrows in this StepGraph.

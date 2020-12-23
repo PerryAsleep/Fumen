@@ -18,10 +18,10 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
-		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestDoubleStep01\test.sm";
-		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestDoubleStep01\";
+		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestDoubleStepHold\test.sm";
+		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestDoubleStepHold\";
 		private const string HackDifficulty = @"Beginner";
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
+		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\Don't You Want Me\dontyouwantme.sm";
 		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\";
 		//private const string HackDifficulty = @"Challenge";
 

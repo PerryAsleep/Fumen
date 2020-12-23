@@ -590,6 +590,26 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
+		/// Test that when a pattern involves two feed alternating on one arrow due to holds and
+		/// a bracket is possible, we prefer the double step.
+		/// </summary>
+		[TestMethod]
+		public void TestDoubleStepHoldAlternateSameArrow()
+		{
+			var ec = Load(GetTestChartFullPath("TestDoubleStepHoldAlternateSameArrow"));
+			Assert.AreEqual(7, ec.StepEvents.Count);
+			var i = 0;
+
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.SameArrow, FootAction.Release);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.SameArrow, FootAction.Release);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+		}
+
+		/// <summary>
 		/// Test that when holding with one foot the other foot will double step the other arrows,
 		/// even if that means crossing over.
 		/// </summary>
