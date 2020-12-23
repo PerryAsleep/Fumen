@@ -1,15 +1,27 @@
 Additions:
-	Bracket that is also a foot swap
-	Jump that is also a foot swap (LU -> RU)
+	Need
+		BracketOneSwapOneSame
+		BracketOneSwapOneNew
 
-	Afronova walk
-		note that this should be more expensive than a foot swap.
-	do something to address that the patterns stay on one side of the pads too much.
+PerformedChart improvements:
+	Do something to address that the patterns stay on one side of the pads too much.
+	Prefer swaps that don't make you move so much.
+	Going into a nebulous jump when the original chart did not.
+
+Misc:
+	Script to copy from stepmania to source repo.
+
+Pref:
+	StepGraph generation:
+		I wonder if rolling is needed in StepGraph generation...
+		Save/Load?
+
 
 Possible Bugs:
-	Footswap into jump both same / jump one same
-		Add a Lifted state.
-		Clean up existing "lifted" comment terminology
+	Will a Jump with NewArrow NewArrow include UD to DU?
+	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
+		Not true. This jump will fail to be made since each foot's other foot is resting on the arrow. 
+
 
 Tests:
 	Jump v Bracket
@@ -19,15 +31,18 @@ Tests:
 	Chords / Quad
 
 Bugs:
-	(likely fixed) hey sexy lady - somehow doubles lost some mines?
-	hey sexy lady - going into a nebulous jump when the original chart did not.
-	X giga violate - two crossover in fronts in a row resulting in a spin at measure 33 4
-	X giga violate sp 68, 3, 0/0: wrong choice
-	X giga violate performed chart 17, 1, 3/4 - WHAT THE FUCK
-	X giga violate - lost a note - looks like a mine replaced it? measure 32.
-	giga violate sp 14, 0: should be a bracket AND a foot swap and NOT a jump.
-	giga violate - sp beginner chart straight up lost a measure??? I have no idea how this would happen.
-	X performed chart can put a tap at the same time a hold ends for the same arrow
+	Don't You Want Me:
+		X 11: bracketed a step during a hold (8) instead of tapping with R (3) - no idea (does this a few times)
+		18: missed a foot swap, but the path it chose was reasonable
+		20: pretty wild jump (crossed over into non crossed over, both new arrows) because missed a swap
+			the jump should be weighted higher
+			measure 52 as well
+		45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
+	Giga Violate:
+		14, Should be a bracket AND a foot swap and NOT a jump.
+
+	Hey Sexy Lady:
+		(likely fixed) Somehow doubles lost some mines?
 
 	sm reader strips spaces out of some text like "Chief Skittles"
 	exporting giga violate twice somehow lost the bpm? (or stepmania nuked it)
