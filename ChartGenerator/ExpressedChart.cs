@@ -529,7 +529,7 @@ namespace ChartGenerator
 
 						// This GraphLink and child GraphNode result in a matching state.
 						// Determine the cost to go from this GraphLink to this GraphNode.
-						var cost = GetCost(l.Key, searchNode, currentState, position, lastMines, lastReleases, stepGraph.ArrowData);
+						var cost = GetCost(l.Key, searchNode, childNode, currentState, position, lastMines, lastReleases, stepGraph.ArrowData);
 
 						// Record the result as a new ChartSearchNode to be checked for pruning once
 						// all children have been determined.
@@ -755,6 +755,7 @@ namespace ChartGenerator
 		private static int GetCost(
 			GraphLink link,
 			ChartSearchNode parentSearchNode,
+			GraphNode childNode,
 			SearchState[] state,
 			MetricPosition position,
 			MetricPosition[] lastMines,
@@ -798,7 +799,8 @@ namespace ChartGenerator
 							out var thisCanBracketToNewArrow,
 							out var thisCanCrossoverToNewArrow,
 							out var thisMinePositionFollowingPreviousStep,
-							out var thisReleasePositionOfPreviousStep);
+							out var thisReleasePositionOfPreviousStep,
+							out var thisFootPreviousArrows);
 						GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
 							out var otherAnyHeld,
 							out var otherAllHeld,
@@ -807,7 +809,8 @@ namespace ChartGenerator
 							out var otherCanBracketToNewArrow,
 							out var otherCanCrossoverToNewArrow,
 							out var otherMinePositionFollowingPreviousStep,
-							out var otherReleasePositionOfPreviousStep);
+							out var otherReleasePositionOfPreviousStep,
+							out var otherFootPreviousArrows);
 
 						var doubleStep = previousStepLink != null && previousStepLink.IsStepWithFoot(thisFoot) && !otherAnyHeld;
 						var doubleStepOtherFootReleasedAtSameTime = false;
@@ -824,8 +827,14 @@ namespace ChartGenerator
 						}
 
 						var tripleStep = doubleStep && previousPreviousStepLink != null && previousPreviousStepLink.IsStepWithFoot(thisFoot);
+						var mostRecentRelease = thisReleasePositionOfPreviousStep;
+						if ((mostRecentRelease == null && otherReleasePositionOfPreviousStep != null)
+						    || (mostRecentRelease != null
+						        && otherReleasePositionOfPreviousStep != null
+						        && otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep))
+							mostRecentRelease = otherReleasePositionOfPreviousStep;
 
-						// I think in all cases we should consider an arrow held if it released at this time.
+							// I think in all cases we should consider an arrow held if it released at this time.
 						thisAnyHeld |= thisReleasePositionOfPreviousStep == position;
 						otherAnyHeld |= otherReleasePositionOfPreviousStep == position;
 
@@ -1000,16 +1009,49 @@ namespace ChartGenerator
 								}
 							case StepType.FootSwap:
 								{
+									var mineIndicatedOnThisFootsArrow = thisMinePositionFollowingPreviousStep != null;
+
 									if (doubleStep)
 									{
-										if (thisMinePositionFollowingPreviousStep == null)
-											return CostNewArrow_FootSwap_DoubleStep_NoMineIndication;
-										return CostNewArrow_FootSwap_DoubleStep_MineIndication;
+										if (mineIndicatedOnThisFootsArrow) 
+											return CostNewArrow_FootSwap_DoubleStep_MineIndication;
+										return CostNewArrow_FootSwap_DoubleStep_NoMineIndication;
 									}
 
 									// Mine indicated
-									if (thisMinePositionFollowingPreviousStep != null)
-										return CostNewArrow_FootSwap_MineIndication;
+									if (mineIndicatedOnThisFootsArrow)
+										return CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
+
+									// Determine if there was a mine on another free lane.
+									// Some chart authors use this to signal a footswap.
+									var mineIndicatedOnFreeLaneArrow = false;
+									for (var arrow = 0; arrow < arrowData.Length; arrow++)
+									{
+										// Skip this arrow if it was hit by the other foot.
+										var thisArrowIsForOtherFoot = false;
+										for (var a = 0; a < MaxArrowsPerFoot; a++)
+										{
+											if (otherFootPreviousArrows[a] == arrow)
+											{
+												thisArrowIsForOtherFoot = true;
+												break;
+											}
+										}
+										if (thisArrowIsForOtherFoot)
+											continue;
+
+										// Check if the last mine for this arrow was at or after the last
+										// release.
+										if (lastMines[arrow] == null)
+											continue;
+										if (lastMines[arrow] >= mostRecentRelease)
+										{
+											mineIndicatedOnFreeLaneArrow = true;
+											break;
+										}
+									}
+									if (mineIndicatedOnFreeLaneArrow)
+										return CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
 
 									// If previous was swap
 									if (previousStepLink?.IsFootSwap(out _) ?? false)
@@ -1056,17 +1098,20 @@ namespace ChartGenerator
 						var holdingAny = new bool[NumFeet];
 						var holdingAll = new bool[NumFeet];
 						var newArrowIfThisFootSteps = new bool[NumFeet];
+						var bracketableDistanceIfThisFootSteps = new bool[NumFeet];
 						for (var f = 0; f < NumFeet; f++)
 						{
 							GetTwoArrowStepInfo(
 								parentSearchNode,
+								childNode,
 								state,
 								f,
 								arrowData,
 								out couldBeBracketed[f],
 								out holdingAny[f],
 								out holdingAll[f],
-								out newArrowIfThisFootSteps[f]);
+								out newArrowIfThisFootSteps[f],
+								out bracketableDistanceIfThisFootSteps[f]);
 						}
 
 						// If previous was step with other foot and that other foot would need to move to reach one
@@ -1130,6 +1175,7 @@ namespace ChartGenerator
 								}
 							}
 
+
 							// If only one foot is holding one, we should prefer a bracket if the two arrows
 							// are bracketable by the other foot.
 							if (onlyFootHoldingOne != -1 && couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
@@ -1157,7 +1203,14 @@ namespace ChartGenerator
 							if (bothSame)
 								return CostTwoArrows_Jump_BothSame;
 							if (bothNew)
+							{
+								if (!bracketableDistanceIfThisFootSteps[L] && !bracketableDistanceIfThisFootSteps[R])
+									return CostTwoArrows_Jump_BothNewAndNeitherBracketable;
+								if (!bracketableDistanceIfThisFootSteps[L] || !bracketableDistanceIfThisFootSteps[R])
+									return CostTwoArrows_Jump_BothNewAndOneBracketable;
 								return CostTwoArrows_Jump_BothNew;
+							}
+
 							return CostTwoArrows_Jump_OneNew;
 						}
 
@@ -1195,7 +1248,8 @@ namespace ChartGenerator
 			out bool canBracketToNewArrow,
 			out bool canCrossoverToNewArrow,
 			out MetricPosition minePositionFollowingPreviousStep,
-			out MetricPosition releasePositionOfPreviousStep)
+			out MetricPosition releasePositionOfPreviousStep,
+			out int[] previousArrows)
 		{
 			anyHeld = false;
 			allHeld = true;
@@ -1205,11 +1259,14 @@ namespace ChartGenerator
 			minePositionFollowingPreviousStep = null;
 			canCrossoverToNewArrow = false;
 			releasePositionOfPreviousStep = new MetricPosition();
+			previousArrows = new int[MaxArrowsPerFoot];
 
 			var otherFoot = OtherFoot(foot);
 
 			for (var a = 0; a < MaxArrowsPerFoot; a++)
 			{
+				previousArrows[a] = previousState[foot, a].Arrow;
+
 				if (previousState[otherFoot, a].Arrow != InvalidArrowIndex)
 				{
 					canCrossoverToNewArrow |=
@@ -1305,18 +1362,21 @@ namespace ChartGenerator
 
 		private static void GetTwoArrowStepInfo(
 			ChartSearchNode parentSearchNode,
+			GraphNode childNode,
 			SearchState[] state,
 			int foot,
 			ArrowData[] arrowData,
 			out bool couldBeBracketed,
 			out bool holdingAny,
 			out bool holdingAll,
-			out bool newArrowIfThisFootSteps)
+			out bool newArrowIfThisFootSteps,
+			out bool bracketableDistanceIfThisFootSteps)
 		{
 			couldBeBracketed = false;
 			holdingAny = false;
 			holdingAll = false;
 			newArrowIfThisFootSteps = false;
+			bracketableDistanceIfThisFootSteps = false;
 
 			// Determine if any are held by this foot
 			if (parentSearchNode != null)
@@ -1324,7 +1384,8 @@ namespace ChartGenerator
 				holdingAll = true;
 				for (var a = 0; a < MaxArrowsPerFoot; a++)
 				{
-					if (parentSearchNode.GraphNode.State[foot, a].Arrow != InvalidArrowIndex)
+					var previousArrow = parentSearchNode.GraphNode.State[foot, a].Arrow;
+					if (previousArrow != InvalidArrowIndex)
 					{
 						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Held ||
 							parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Rolling)
@@ -1336,9 +1397,24 @@ namespace ChartGenerator
 							holdingAll = false;
 						}
 						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Resting
-							&& state[parentSearchNode.GraphNode.State[foot, a].Arrow] == SearchState.Empty)
+							&& state[previousArrow] == SearchState.Empty)
 						{
 							newArrowIfThisFootSteps = true;
+						}
+
+						// Determine, if this foot steps as part of a jump, would that step be a
+						// bracketable distance.
+						var newArrowBeingSteppedOnByThisFoot = InvalidArrowIndex;
+						for (var newA = 0; newA < MaxArrowsPerFoot; newA++)
+						{
+							newArrowBeingSteppedOnByThisFoot = childNode.State[foot, newA].Arrow;
+							if (newArrowBeingSteppedOnByThisFoot != InvalidArrowIndex)
+								break;
+						}
+						if (newArrowBeingSteppedOnByThisFoot != InvalidArrowIndex 
+						    && arrowData[previousArrow].BracketablePairings[foot][newArrowBeingSteppedOnByThisFoot])
+						{
+							bracketableDistanceIfThisFootSteps = true;
 						}
 					}
 					else

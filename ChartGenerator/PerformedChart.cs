@@ -352,7 +352,8 @@ namespace ChartGenerator
 							releaseIndex,
 							steps,
 							stepIndex,
-							arrowsOccupiedByMines);
+							arrowsOccupiedByMines,
+							mineEvent.Position);
 						if (bestArrow != InvalidArrowIndex)
 						{
 							// Add mine event

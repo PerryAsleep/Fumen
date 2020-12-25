@@ -409,7 +409,7 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 				}
 				else if (chartEvent is Stop stop)
 				{
-					colVal = $"{stop.LengthMicros * 1000000.0}";
+					colVal = $"{stop.LengthMicros / 1000000.0}";
 					colX += ChartColumnInfo[(int)ChartColumns.Stop].X;
 				}
 				else if (chartEvent is TempoChange tc)

@@ -354,7 +354,8 @@ namespace ChartGenerator
 		/// Array of booleans representing if the lane at that index is occupied by a mine
 		/// at the position of the mine in question. Tracked externally.
 		/// </param>
-		/// <returns></returns>
+		/// <param name="minePosition">Position of the mine in question.</param>
+		/// <returns>The Nth most recent arrow or InvalidArrowIndex if none could be found.</returns>
 		public static int FindBestNthMostRecentArrow(
 			bool searchBackwards,
 			int desiredN,
@@ -364,7 +365,8 @@ namespace ChartGenerator
 			int releaseIndex,
 			List<FootActionEvent> steps,
 			int stepIndex,
-			bool[] arrowsOccupiedByMines)
+			bool[] arrowsOccupiedByMines,
+			MetricPosition minePosition)
 		{
 			var events = searchBackwards ? releases : steps;
 			var searchIndex = searchBackwards ? releaseIndex : stepIndex;
@@ -408,7 +410,7 @@ namespace ChartGenerator
 					if (currentN >= desiredN)
 					{
 						// If this arrow free then we can use it.
-						if (IsArrowFreeAtPosition(arrow, pos, releases, releaseIndex, steps, stepIndex, arrowsOccupiedByMines))
+						if (IsArrowFreeAtPosition(arrow, minePosition, releases, releaseIndex, steps, stepIndex, arrowsOccupiedByMines))
 						{
 							// Record this arrow as the best arrow.
 							bestArrow = arrow;
@@ -479,40 +481,58 @@ namespace ChartGenerator
 			// Find the step for this arrow at or before this position.
 			var precedingStepIndex = System.Math.Min(startingStepIndex, steps.Count - 1);
 			MetricPosition precedingStepPosition = null;
-			while (steps[precedingStepIndex].Position > position && precedingStepIndex >= 0)
+			while (precedingStepIndex >= 0)
 			{
-				if (steps[precedingStepIndex].Arrow == arrow)
+				if (steps[precedingStepIndex].Position <= position 
+				    && steps[precedingStepIndex].Arrow == arrow)
 				{
 					precedingStepPosition = steps[precedingStepIndex].Position;
 					break;
 				}
 				precedingStepIndex--;
 			}
+
+			// If there is no step at or before the desired position, it is free.
+			if (precedingStepPosition == null)
+				return true;
 			// If the preceding step is at the same position then it is not free.
-			if (precedingStepPosition != null && precedingStepPosition == position)
+			if (precedingStepPosition == position)
 				return false;
 
 			// Find the release for this arrow at or after this position.
+
+			// First, back the release index up to preceding step.
 			var followingReleaseIndex = startingReleaseIndex;
-			MetricPosition followingReleasePosition = null;
-			while (releases[followingReleaseIndex].Position < position && followingReleaseIndex < releases.Count)
+			while (followingReleaseIndex - 1 >= 0)
 			{
-				if (releases[followingReleaseIndex].Arrow == arrow)
+				if (releases[followingReleaseIndex].Arrow == arrow
+					&& releases[followingReleaseIndex - 1].Position < precedingStepPosition)
+					break;
+				followingReleaseIndex--;
+			}
+
+			// Now advance the release index to the following release.
+			MetricPosition followingReleasePosition = null;
+			while (followingReleaseIndex < releases.Count)
+			{
+				if (releases[followingReleaseIndex].Position >= precedingStepPosition
+					&& releases[followingReleaseIndex].Arrow == arrow)
 				{
 					followingReleasePosition = releases[followingReleaseIndex].Position;
 					break;
 				}
 				followingReleaseIndex++;
 			}
+
+			// If there is no release at or after the desired position, it is free.
+			if (followingReleasePosition == null)
+				return true;
 			// If the following release is at the same position then it is not free.
-			if (followingReleasePosition != null && followingReleasePosition == position)
+			if (followingReleasePosition == position)
 				return false;
 
 			// If a hold or roll is active over this position then it is not free.
-			if (precedingStepPosition != null
-				&& followingReleasePosition != null
-				&& precedingStepPosition < position
-				&& followingReleasePosition > position)
+			if (precedingStepPosition < position && followingReleasePosition > position)
 				return false;
 
 			// It is free.

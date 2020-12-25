@@ -79,7 +79,8 @@ namespace ChartGenerator
 
 		public const int CostNewArrow_FootSwap_DoubleStep_NoMineIndication = 150;
 		public const int CostNewArrow_FootSwap_DoubleStep_MineIndication = 75;
-		public const int CostNewArrow_FootSwap_MineIndication = 5;  // Worse than a crossover, but better than 2
+		public const int CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow = 1;
+		public const int CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow = 2;
 		public const int CostNewArrow_FootSwap_SubsequentSwap = 6;
 		public const int CostNewArrow_FootSwap_NoIndication_Bracketable = 7;
 		public const int CostNewArrow_FootSwap_NoIndication_NotBracketable = 8;
@@ -98,6 +99,8 @@ namespace ChartGenerator
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket = 20;
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable = 15;
 		public const int CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement = 7;
+		public const int CostTwoArrows_Jump_BothNewAndNeitherBracketable = 12;
+		public const int CostTwoArrows_Jump_BothNewAndOneBracketable = 10;
 		public const int CostTwoArrows_Jump_BothSame = 2;
 		public const int CostTwoArrows_Jump_BothNew = 6;
 		public const int CostTwoArrows_Jump_OneNew = 5;
