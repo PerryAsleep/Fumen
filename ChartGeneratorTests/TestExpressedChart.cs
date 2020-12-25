@@ -129,8 +129,8 @@ namespace ChartGeneratorTests
 				Assert.IsTrue(links[foot, a].Valid);
 				Assert.IsFalse(links[OtherFoot(foot), a].Valid);
 
-				if ((step1 == links[L, a].Step && action1 == links[L, a].Action)
-				    || (step2 == links[L, a].Step && action2 == links[L, a].Action))
+				if ((step1 == links[foot, a].Step && action1 == links[foot, a].Action)
+				    || (step2 == links[foot, a].Step && action2 == links[foot, a].Action))
 					matches++;
 			}
 			Assert.AreEqual(2, matches);
@@ -1490,5 +1490,29 @@ namespace ChartGeneratorTests
 		}
 
 		#endregion Jumps
+
+		#region Miscellaneous
+
+		/// <summary>
+		/// Test that if there is a choice between a jump that starts crossed over and ends on two new arrows
+		/// that aren't crossed over, that we instead prefer footswapping on a previous step and bracketing.
+		/// </summary>
+		[TestMethod]
+		public void TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump()
+		{
+			var ec = Load(GetTestChartFullPath("TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump"));
+			Assert.AreEqual(7, ec.StepEvents.Count);
+			var i = 0;
+
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinksMatchStep(ec.StepEvents[i++].Link.Links, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinksMatchBracket(ec.StepEvents[i++].Link.Links, R, StepType.BracketBothNew, FootAction.Hold, StepType.BracketBothNew, FootAction.Hold);
+			AssertLinksMatchBracket(ec.StepEvents[i++].Link.Links, R, StepType.BracketBothSame, FootAction.Release, StepType.BracketBothSame, FootAction.Release);
+		}
+
+		#endregion Miscellaneous
 	}
 }
