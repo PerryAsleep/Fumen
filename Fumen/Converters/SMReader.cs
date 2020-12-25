@@ -178,10 +178,14 @@ namespace Fumen.Converters
 						if (!double.TryParse(kvp[0], out var time))
 							continue;
 
+						var valueStr = kvp[1];
+						if (endMarkerIndex > 0)
+							valueStr = valueStr.Substring(0, valueStr.IndexOf(';'));
+
 						T value;
 						try
 						{
-							value = (T) Convert.ChangeType(kvp[1], typeof(T));
+							value = (T) Convert.ChangeType(valueStr, typeof(T));
 						}
 						catch (Exception)
 						{

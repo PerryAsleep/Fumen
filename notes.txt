@@ -24,7 +24,11 @@ Bugs:
 			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
 		Giga Violate:
 			14, Should be a bracket AND a foot swap and NOT a jump.
-			exporting giga violate twice somehow lost the bpm? (or stepmania nuked it)
+		Echidna:
+			7: Supposed to be swap instead of 3 jack?
+				same in 11, 13, 21
+			61: mine indicated foot swaps - questionable
+
 
 Misc:
 	SSC file parsing / saving
@@ -40,6 +44,7 @@ PerformedChart improvements:
 
 Perf:
 	StepGraph generation:
+		AggressiveInlining
 		I wonder if rolling is needed in StepGraph generation...
 		Save/Load?
 
