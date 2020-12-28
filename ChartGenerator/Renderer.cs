@@ -69,8 +69,13 @@ namespace ChartGenerator
 			"Invert In Back",
 			"Foot Swap",
 			"Bracket Both New",
-			"Bracket One New",
-			"Bracket Both Same"
+			"Bracket Heel New",
+			"Bracket Toe New",
+			"Bracket Both Same",
+			"Bracket 1 Heel Same",
+			"Bracket 1 Heel New",
+			"Bracket 1 Toe Same",
+			"Bracket 1 Toe New",
 		};
 
 		private StringBuilder StringBuilder = new StringBuilder();
@@ -85,6 +90,8 @@ namespace ChartGenerator
 		private readonly int OriginalChartX = 0;
 		private readonly int ExpressedChartX;
 		private readonly int GeneratedChartX;
+
+		private double[] LastExpressionPosition = new double[NumFeet];
 
 		static Renderer()
 		{
@@ -345,6 +352,9 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 
 		private void WriteChart(Chart chart, int chartXPosition, bool originalChart)
 		{
+			for (var f = 0; f < NumFeet; f++)
+				LastExpressionPosition[f] = -1.0;
+
 			var firstLaneX = chartXPosition;
 			foreach (var chartCol in ChartColumnInfo)
 				firstLaneX += chartCol.Width;
@@ -576,37 +586,48 @@ $@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width
 			var position = node.Position;
 			while (node != null && node.Position == position)
 			{
-				if (node.PreviousLink != null && !node.PreviousLink.IsRelease())
+				if (node.PreviousLink != null && !node.PreviousLink.Link.IsRelease())
 				{
-					// Left Foot
-					if (node.PreviousLink.Links[L, 0].Valid)
+					var writeCost = false;
+					for (var a = 0; a < MaxArrowsPerFoot; a++)
 					{
-						var leftX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.LeftFoot].X;
-						var stepStr = StepTypeStrings[(int)node.PreviousLink.Links[L, 0].Step];
-						if (node.PreviousLink.IsJump())
-							stepStr = "[Jump] " + stepStr;
-						StringBuilder.Append(
+						// Left Foot
+						if (LastExpressionPosition[L] < y && node.PreviousLink.Link.Links[L, a].Valid)
+						{
+							var leftX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.LeftFoot].X;
+							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[L, a].Step];
+							if (node.PreviousLink.Link.IsJump())
+								stepStr = "[Jump] " + stepStr;
+							StringBuilder.Append(
 $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{leftX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
 ");
-					}
+							writeCost = true;
+							LastExpressionPosition[L] = y;
+						}
 
-					// Right Foot
-					if (node.PreviousLink.Links[R, 0].Valid)
-					{
-						var rightX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.RightFoot].X;
-						var stepStr = StepTypeStrings[(int)node.PreviousLink.Links[R, 0].Step];
-						if (node.PreviousLink.IsJump())
-							stepStr = "[Jump] " + stepStr;
-						StringBuilder.Append(
+						// Right Foot
+						if (LastExpressionPosition[R] < y && node.PreviousLink.Link.Links[R, a].Valid)
+						{
+							var rightX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.RightFoot].X;
+							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[R, a].Step];
+							if (node.PreviousLink.Link.IsJump())
+								stepStr = "[Jump] " + stepStr;
+							StringBuilder.Append(
 $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{rightX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
 ");
+							writeCost = true;
+							LastExpressionPosition[R] = y;
+						}
 					}
 
 					// Cost
-					var costX = ExpressedChartX + ExpressionColumnInfo[(int) ExpressionColumns.Cost].X;
-					StringBuilder.Append(
+					if (writeCost)
+					{
+						var costX = ExpressedChartX + ExpressionColumnInfo[(int) ExpressionColumns.Cost].X;
+						StringBuilder.Append(
 $@"			<p style=""position:absolute; top:{(int) (y - ChartTextH * .5)}px; left:{costX}px; width:{CostColW}px; height:{ChartTextH}px; z-index:10;"">{node.Cost}</p>
 ");
+					}
 				}
 
 				node = node.GetNextNode();
@@ -630,10 +651,10 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 				// If this step is a footswap we need to ignore the other foot, which will still be resting on
 				// this arrow.
 				var previousStepLink = node.GetPreviousStepLink();
-				var footSwap = previousStepLink?.IsFootSwap(out _) ?? false;
+				var footSwap = previousStepLink?.Link.IsFootSwap(out _) ?? false;
 				for (var f = 0; f < NumFeet; f++)
 				{
-					if (footSwap && !previousStepLink.IsStepWithFoot(f))
+					if (footSwap && !previousStepLink.Link.IsStepWithFoot(f))
 						continue;
 					for (var a = 0; a < MaxArrowsPerFoot; a++)
 					{
@@ -654,15 +675,15 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 				{
 					// If this step is a footswap we need to ignore the other foot, which will still be resting on
 					// this arrow.
-					var previousStepLink = spn.GraphLink;
-					var footSwap = previousStepLink?.IsFootSwap(out _) ?? false;
+					var previousStepLink = spn.GraphLinkInstance;
+					var footSwap = previousStepLink?.Link.IsFootSwap(out _) ?? false;
 					for (var f = 0; f < NumFeet; f++)
 					{
-						if (footSwap && !previousStepLink.IsStepWithFoot(f))
+						if (footSwap && !previousStepLink.Link.IsStepWithFoot(f))
 							continue;
 						for (var a = 0; a < MaxArrowsPerFoot; a++)
 						{
-							if (spn.GraphNode.State[f, a].Arrow == arrow)
+							if (spn.GraphNodeInstance.Node.State[f, a].Arrow == arrow)
 								return f;
 						}
 					}

@@ -4,16 +4,20 @@ namespace ChartGenerator
 {
 	public static class Constants
 	{
-		public const int NumSPArrows = 4;
-		public const int NumDPArrows = 8;
-		public const int MaxArrowsPerFoot = 2;
-		public const int NumFeet = 2;
 		public const int InvalidArrowIndex = -1;
 		public const int InvalidFoot = -1;
 
+		public const int NumFeet = 2;
 		public const int L = 0;
 		public const int R = 1;
 
+		public const int MaxArrowsPerFoot = 2;
+		public const int Heel = 0;
+		public const int Toe = 1;
+		public const int DefaultFootPortion = 0;
+
+		public const int NumSPArrows = 4;
+		public const int NumDPArrows = 8;
 		public const int P1L = 0;
 		public const int P1D = 1;
 		public const int P1U = 2;
@@ -114,6 +118,10 @@ namespace ChartGenerator
 		{
 			return foot == L ? R : L;
 		}
+		public static int OtherFootPortion(int footPortion)
+		{
+			return footPortion == Heel ? Toe : Heel;
+		}
 
 		public static GraphArrowState StateAfterAction(FootAction footAction)
 		{
@@ -121,8 +129,6 @@ namespace ChartGenerator
 			{
 				case FootAction.Hold:
 					return GraphArrowState.Held;
-				case FootAction.Roll:
-					return GraphArrowState.Rolling;
 				default:
 					return GraphArrowState.Resting;
 			}
@@ -223,16 +229,22 @@ namespace ChartGenerator
 			InvertFront,
 			InvertBehind,
 			FootSwap,
+
 			BracketBothNew,
-			BracketOneNew,
-			BracketBothSame
+			BracketHeelNew,
+			BracketToeNew,
+			BracketBothSame,
+
+			BracketOneArrowHeelSame, // (for release and tap)
+			BracketOneArrowHeelNew,
+			BracketOneArrowToeSame, // (for release and tap)
+			BracketOneArrowToeNew
 		}
 
 		public enum FootAction
 		{
 			Tap,
 			Hold,
-			Roll,
 			Release
 		}
 

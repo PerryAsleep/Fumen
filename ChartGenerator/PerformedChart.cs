@@ -9,15 +9,24 @@ namespace ChartGenerator
 {
 	public class PerformedChart
 	{
+		private enum PerformanceFootAction
+		{
+			None,
+			Tap,
+			Hold,
+			Roll,
+			Release
+		}
+
 		/// <summary>
 		/// Search node for performing a search through an ExpressedChart.
 		/// </summary>
 		private class SearchNode
 		{
 			/// <summary>
-			/// The GraphNode at this SearchNode.
+			/// The GraphNodeInstance at this SearchNode.
 			/// </summary>
-			public GraphNode GraphNode;
+			public GraphNodeInstance GraphNodeInstance;
 			/// <summary>
 			/// The depth of this SearchNode.
 			/// This depth can also index the ExpressedChart StepEvents for accessing the StepType.
@@ -65,12 +74,12 @@ namespace ChartGenerator
 
 		public class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
 		{
-			public GraphNode GraphNode;
-			public GraphLink GraphLink;
+			public GraphNodeInstance GraphNodeInstance;
+			public GraphLinkInstance GraphLinkInstance;
 
 			#region MineUtils.IChartNode Implementation
-			public GraphNode GetGraphNode() { return GraphNode; }
-			public GraphLink GetGraphLinkToNode() { return GraphLink; }
+			public GraphNode GetGraphNode() { return GraphNodeInstance?.Node; }
+			public GraphLink GetGraphLinkToNode() { return GraphLinkInstance?.Link; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
 		}
@@ -107,7 +116,7 @@ namespace ChartGenerator
 			// Find a path of SearchNodes through the ExpressedChart
 			// HACK consistent seed
 			var random = new Random(1);
-			var rootSearchNode = new SearchNode { GraphNode = stepGraph.Root };
+			var rootSearchNode = new SearchNode { GraphNodeInstance = new GraphNodeInstance { Node = stepGraph.Root }};
 			var currentSearchNode = rootSearchNode;
 			while (true)
 			{
@@ -117,9 +126,9 @@ namespace ChartGenerator
 
 				// Dead end
 				while (DoesNodeStepOnReleaseAtSamePosition(currentSearchNode, expressedChart, stepGraph.NumArrows)
-				       || !currentSearchNode.GraphNode.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].Link)
+				       || !currentSearchNode.GraphNodeInstance.Node.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].Link.Link)
 				       || currentSearchNode.CurrentIndex >
-				       currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link].Count - 1)
+				       currentSearchNode.GraphNodeInstance.Node.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link.Link].Count - 1)
 				{
 					// Back up
 					var prevNode = currentSearchNode.PreviousNode;
@@ -135,7 +144,8 @@ namespace ChartGenerator
 					}
 				}
 
-				var links = currentSearchNode.GraphNode.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link];
+				var linkInstance = expressedChart.StepEvents[currentSearchNode.Depth].Link;
+				var links = currentSearchNode.GraphNodeInstance.Node.Links[linkInstance.Link];
 
 				// If this node's indices have not been set up, set them up
 				if (currentSearchNode.CurrentIndex == 0)
@@ -151,8 +161,20 @@ namespace ChartGenerator
 				{
 					PreviousNode = currentSearchNode,
 					Depth = currentSearchNode.Depth + 1,
-					GraphNode = nextGraphNode
+					GraphNodeInstance = new GraphNodeInstance {Node = nextGraphNode}
 				};
+				// Set up rolls
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					{
+						if (linkInstance.Rolls[f, a])
+						{
+							newNode.GraphNodeInstance.Rolls[f, a] = true;
+						}
+					}
+				}
+
 				currentSearchNode.NextNode = newNode;
 				currentSearchNode = newNode;
 			}
@@ -163,7 +185,7 @@ namespace ChartGenerator
 				new StepPerformanceNode
 				{
 					Position = new MetricPosition(),
-					GraphNode = stepGraph.Root
+					GraphNodeInstance = new GraphNodeInstance { Node = stepGraph.Root }
 				});
 
 			// Add the StepPerformanceNodes to the PerformedChart
@@ -176,8 +198,8 @@ namespace ChartGenerator
 				var newNode = new StepPerformanceNode
 				{
 					Position = expressedChart.StepEvents[currentSearchNode.Depth - 1].Position,
-					GraphLink = expressedChart.StepEvents[currentSearchNode.Depth - 1].Link,
-					GraphNode = currentSearchNode.GraphNode,
+					GraphLinkInstance = expressedChart.StepEvents[currentSearchNode.Depth - 1].Link,
+					GraphNodeInstance = currentSearchNode.GraphNodeInstance,
 					Prev = currentPerformanceNode
 				};
 
@@ -223,23 +245,23 @@ namespace ChartGenerator
 
 			// Determine what actions are performed for both the current and previous node.
 			var currentActions = GetActionsForNode(
-				previousNode.GraphNode,
+				previousNode.GraphNodeInstance,
 				expressedChart.StepEvents[previousNode.Depth - 1].Link,
-				node.GraphNode,
+				node.GraphNodeInstance,
 				expressedChart.StepEvents[node.Depth - 1].Link,
 				numArrows);
 			var previousActions = GetActionsForNode(
-				previousPreviousNode.GraphNode,
+				previousPreviousNode.GraphNodeInstance,
 				expressedChart.StepEvents[previousPreviousNode.Depth - 1].Link,
-				previousNode.GraphNode,
+				previousNode.GraphNodeInstance,
 				expressedChart.StepEvents[previousNode.Depth - 1].Link,
 				numArrows);
 
 			// Check if the previous node released on the same arrow tha the current node is stepping on.
 			for (var a = 0; a < numArrows; a++)
 			{
-				if (previousActions[a] == (int)FootAction.Release &&
-				    currentActions[a] != -1 && currentActions[a] != (int)FootAction.Release)
+				if (previousActions[a] == PerformanceFootAction.Release &&
+				    currentActions[a] != PerformanceFootAction.None && currentActions[a] != PerformanceFootAction.Release)
 					return true;
 			}
 			return false;
@@ -279,11 +301,11 @@ namespace ChartGenerator
 					{
 						for (var a = 0; a < MaxArrowsPerFoot; a++)
 						{
-							if (stepNode.GraphNode.State[f, a].Arrow != InvalidArrowIndex)
+							if (stepNode.GraphNodeInstance.Node.State[f, a].Arrow != InvalidArrowIndex)
 							{
-								if (lanesWithNoArrows[stepNode.GraphNode.State[f, a].Arrow])
+								if (lanesWithNoArrows[stepNode.GraphNodeInstance.Node.State[f, a].Arrow])
 								{
-									lanesWithNoArrows[stepNode.GraphNode.State[f, a].Arrow] = false;
+									lanesWithNoArrows[stepNode.GraphNodeInstance.Node.State[f, a].Arrow] = false;
 									numLanesWithArrows++;
 								}
 							}
@@ -396,8 +418,7 @@ namespace ChartGenerator
 
 		/// <summary>
 		/// Given a node and the previous node, returns a representation of what actions should be performed on what arrows
-		/// to arrive at the node. The actions are returned in an array indexed by arrow. The values in the array are
-		/// ordinal values of the FootAction enum and -1 to represent no action.
+		/// to arrive at the node. The actions are returned in an array indexed by arrow.
 		/// This is a helper method used when generating an SM Chart and when determining if steps and releases occur
 		/// at the same time on the same arrows when generating the PerformedChart.
 		/// This method is static and takes the number of arrows as a parameter because it can be used prior to instantiating
@@ -409,50 +430,57 @@ namespace ChartGenerator
 		/// <param name="currentLink">GraphLink to current GraphNode.</param>
 		/// <param name="numArrows">Number of arrows in the Chart.</param>
 		/// <returns>Array of actions.</returns>
-		private static int[] GetActionsForNode(GraphNode previousNode, GraphLink previousLink, GraphNode currentNode, GraphLink currentLink, int numArrows)
+		private static PerformanceFootAction[] GetActionsForNode(
+			GraphNodeInstance previousNode,
+			GraphLinkInstance previousLink,
+			GraphNodeInstance currentNode,
+			GraphLinkInstance currentLink,
+			int numArrows)
 		{
 			// Initialize actions.
-			var actions = new int[numArrows];
+			var actions = new PerformanceFootAction[numArrows];
 			for (var a = 0; a < numArrows; a++)
-				actions[a] = -1;
+				actions[a] = PerformanceFootAction.None;
 
 			// Get foot swap status
-			var currentIsFootSwap = currentLink.IsFootSwap(out var currentFootSwapFoot);
+			var currentIsFootSwap = currentLink.Link.IsFootSwap(out var currentFootSwapFoot);
 			var previousIsFootSwap = false;
 			var previousFootSwapFoot = InvalidFoot;
 			if (previousLink != null)
-				previousIsFootSwap = previousLink.IsFootSwap(out previousFootSwapFoot);
+				previousIsFootSwap = previousLink.Link.IsFootSwap(out previousFootSwapFoot);
 
 			for (var arrow = 0; arrow < numArrows; arrow++)
 			{
 				// Determine the state of this arrow previously and now
 				GraphNode.FootArrowState currentArrowState = GraphNode.InvalidFootArrowState;
 				var currentArrowFoot = InvalidFoot;
+				var currentArrowRoll = false;
 				GraphNode.FootArrowState previousArrowState = GraphNode.InvalidFootArrowState;
 				var previousArrowFoot = InvalidFoot;
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var a = 0; a < MaxArrowsPerFoot; a++)
 					{
-						if (currentNode.State[f, a].Arrow == arrow)
+						if (currentNode.Node.State[f, a].Arrow == arrow)
 						{
 							// During a foot swap both feet will occupy one arrow. Ensure we capture
 							// the correct one.
 							if (currentIsFootSwap && f != currentFootSwapFoot)
 								continue;
 
-							currentArrowState = currentNode.State[f, a];
+							currentArrowRoll = currentNode.Rolls[f, a];
+							currentArrowState = currentNode.Node.State[f, a];
 							currentArrowFoot = f;
 						}
 
-						if (previousNode.State[f, a].Arrow == arrow)
+						if (previousNode.Node.State[f, a].Arrow == arrow)
 						{
 							// During a foot swap both feet will occupy one arrow. Ensure we capture
 							// the correct one.
 							if (previousIsFootSwap && f != previousFootSwapFoot)
 								continue;
 
-							previousArrowState = previousNode.State[f, a];
+							previousArrowState = previousNode.Node.State[f, a];
 							previousArrowFoot = f;
 						}
 					}
@@ -471,8 +499,7 @@ namespace ChartGenerator
 						if (currentArrowState.State == GraphArrowState.Resting)
 						{
 							// Previous was holding or rolling
-							if (previousArrowState.State == GraphArrowState.Held
-								|| previousArrowState.State == GraphArrowState.Rolling)
+							if (previousArrowState.State == GraphArrowState.Held)
 							{
 								// Release
 								addRelease = true;
@@ -483,11 +510,14 @@ namespace ChartGenerator
 								// Check link to see if we tapped the same arrow
 								for (var a = 0; a < MaxArrowsPerFoot; a++)
 								{
-									if (currentLink.Links[currentArrowFoot, a].Valid
-									    && currentLink.Links[currentArrowFoot, a].Action == FootAction.Tap
-									    && (currentLink.Links[currentArrowFoot, a].Step == StepType.SameArrow
-									        || currentLink.Links[currentArrowFoot, a].Step == StepType.BracketOneNew
-									        || currentLink.Links[currentArrowFoot, a].Step == StepType.BracketBothSame))
+									if (currentLink.Link.Links[currentArrowFoot, a].Valid
+									    && currentLink.Link.Links[currentArrowFoot, a].Action == FootAction.Tap
+									    && (currentLink.Link.Links[currentArrowFoot, a].Step == StepType.SameArrow
+											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketOneArrowHeelSame
+											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketOneArrowToeSame
+											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketHeelNew
+											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketToeNew
+											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketBothSame))
 									{
 										// Tap on the arrow again
 										addNormalStep = true;
@@ -532,19 +562,16 @@ namespace ChartGenerator
 					switch (currentArrowState.State)
 					{
 						case GraphArrowState.Resting:
-							actions[arrow] = (int)FootAction.Tap;
+							actions[arrow] = PerformanceFootAction.Tap;
 							break;
 						case GraphArrowState.Held:
-							actions[arrow] = (int)FootAction.Hold;
-							break;
-						case GraphArrowState.Rolling:
-							actions[arrow] = (int)FootAction.Roll;
+							actions[arrow] = currentArrowRoll ? PerformanceFootAction.Roll : PerformanceFootAction.Hold;
 							break;
 					}
 				}
 
 				if (addRelease)
-					actions[arrow] = (int) FootAction.Release;
+					actions[arrow] = PerformanceFootAction.Release;
 			}
 
 			return actions;
@@ -569,10 +596,10 @@ namespace ChartGenerator
 					var previousStepNode = stepNode.GetPreviousStepNode();
 
 					var actions = GetActionsForNode(
-						previousStepNode.GraphNode,
-						previousStepNode.GraphLink,
-						stepNode.GraphNode,
-						stepNode.GraphLink,
+						previousStepNode.GraphNodeInstance,
+						previousStepNode.GraphLinkInstance,
+						stepNode.GraphNodeInstance,
+						stepNode.GraphLinkInstance,
 						NumArrows);
 
 					for (var arrow = 0; arrow < NumArrows; arrow++)
@@ -580,7 +607,7 @@ namespace ChartGenerator
 						var action = actions[arrow];
 						switch (action)
 						{
-							case (int)FootAction.Release:
+							case PerformanceFootAction.Release:
 								events.Add(new LaneHoldEndNote
 								{
 									Position = stepNode.Position,
@@ -589,7 +616,7 @@ namespace ChartGenerator
 									SourceType = SMCommon.SNoteChars[(int) SMCommon.NoteType.HoldEnd].ToString()
 								});
 								break;
-							case (int)FootAction.Tap:
+							case PerformanceFootAction.Tap:
 							{
 								events.Add(new LaneTapNote
 								{
@@ -600,11 +627,11 @@ namespace ChartGenerator
 								});
 								break;
 							}
-							case (int)FootAction.Hold:
-							case (int)FootAction.Roll:
+							case PerformanceFootAction.Hold:
+							case PerformanceFootAction.Roll:
 							{
 								// Hold or Roll Start
-								var holdRollType = action == (int)FootAction.Hold
+								var holdRollType = action == PerformanceFootAction.Hold
 									? SMCommon.NoteType.HoldStart
 									: SMCommon.NoteType.RollStart;
 								events.Add(new LaneHoldStartNote

@@ -37,8 +37,10 @@ namespace ChartGeneratorTests
 					for (var f = 0; f < NumFeet; f++)
 					{
 						var oppositeF = NumFeet - f - 1;
-						Assert.AreEqual(arrowData[a].BracketablePairings[f][a2],
-							arrowData[oppositeA].BracketablePairings[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].BracketablePairingsOtherHeel[f][a2],
+							arrowData[oppositeA].BracketablePairingsOtherToe[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].BracketablePairingsOtherToe[f][a2],
+							arrowData[oppositeA].BracketablePairingsOtherHeel[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairings[f][a2],
 							arrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2],

@@ -85,7 +85,7 @@ namespace ChartGenerator
 
 						// Releasing a hold
 						if ((currentState[f, arrow] == (int)GraphArrowState.Resting || currentState[f, arrow] == -1)
-							&& (previousState[f, arrow] == (int)GraphArrowState.Held || previousState[f, arrow] == (int)GraphArrowState.Rolling))
+							&& previousState[f, arrow] == (int)GraphArrowState.Held)
 						{
 							addRelease = true;
 						}
@@ -97,7 +97,7 @@ namespace ChartGenerator
 							addRelease = true;
 						}
 						// Starting a hold
-						else if ((currentState[f, arrow] == (int)GraphArrowState.Held || currentState[f, arrow] == (int)GraphArrowState.Rolling)
+						else if (currentState[f, arrow] == (int)GraphArrowState.Held
 						     && (previousState[f, arrow] == (int)GraphArrowState.Resting || previousState[f, arrow] == -1))
 						{
 							addStep = true;

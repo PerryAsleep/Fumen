@@ -18,12 +18,12 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump\test.sm";
-		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump\";
-		//private const string HackDifficulty = @"Beginner";
-		private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\ECHIDNA\Echidna.sm";
-		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\ECHIDNA";
-		private const string HackDifficulty = @"Challenge";
+		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketHoldRoll\test.sm";
+		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketHoldRoll\";
+		private const string HackDifficulty = @"Beginner";
+		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
+		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
+		//private const string HackDifficulty = @"Challenge";
 		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\hey.sm";
 		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\";
 		//private const string HackDifficulty = @"Challenge";
@@ -39,7 +39,6 @@ namespace ChartGenerator
 		static void Main(string[] args)
 		{
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
-			// HACK
 			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
 
 			var song = SMReader.Load(HackChart);
@@ -93,12 +92,11 @@ namespace ChartGenerator
 
 					// Generate a new series of Events for this Chart from the singles Chart.
 					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
-
 					// HACK
 					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
-					events.Sort(new SMCommon.SMEventComparer());
+					events.Sort(new SMEventComparer());
 
 					// Create a new Chart for these Events.
 					var formattedVersion = GetFormattedVersionStringForChart();
@@ -124,7 +122,6 @@ namespace ChartGenerator
 					// HACK
 					newChart.NumInputs = 4;
 					newChart.Type = ChartTypeString(ChartType.dance_single);
-					chartsIndicesToRemove.Add(chartIndex);
 
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);

@@ -6,7 +6,7 @@ namespace ChartGenerator
 	/// <summary>
 	/// Information about an arrow in an array of arrows representing the layout
 	/// of one or more pads. This data informs how the other arrows are associated with
-	/// this arrow. For example, per Arrow, it is useful to know which other arrows
+	/// this arrow. For example, per arrow, it is useful to know which other arrows
 	/// are bracketable with it, are steppable to from it, form crossovers with it, etc.
 	/// </summary>
 	public class ArrowData
@@ -23,10 +23,18 @@ namespace ChartGenerator
 		public bool[] ValidNextArrows;
 
 		/// <summary>
-		/// Which arrows are bracketable with this arrow for the given foot.
+		/// Which arrows are bracketable with this arrow for the given foot when the
+		/// toes are on this arrow and the heel is on the other arrow.
 		/// First index is foot, second is arrow.
 		/// </summary>
-		public bool[][] BracketablePairings = new bool[NumFeet][];
+		public bool[][] BracketablePairingsOtherHeel = new bool[NumFeet][];
+
+		/// <summary>
+		/// Which arrows are bracketable with this arrow for the given foot when the
+		/// heel is on this arrow and the toes are on the other arrow.
+		/// First index is foot, second is arrow.
+		/// </summary>
+		public bool[][] BracketablePairingsOtherToe = new bool[NumFeet][];
 
 		/// <summary>
 		/// Which arrows are valid pairings for the other foot.
@@ -99,10 +107,17 @@ namespace ChartGenerator
 					// A foot on P1L can move next to P1D, P1U, or P1R
 					ValidNextArrows = FromSP(new[] {P1D, P1U, P1R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1L is bracketable with P1U and P1D
-						[L] = FromSP(new[] {P1D, P1U}),
+						// Left foot on P1L is bracketable with the heel on other arrows on P1D
+						[L] = FromSP(new[] {P1D}),
+						// Right foot on P1L is a crossover and not bracketable
+						[R] = noneSP
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1L is bracketable with the toes on other arrows on P1U
+						[L] = FromSP(new[] {P1U}),
 						// Right foot on P1L is a crossover and not bracketable
 						[R] = noneSP
 					},
@@ -147,11 +162,18 @@ namespace ChartGenerator
 					// A foot on P1D can move next to P1L, P1U, or P1R
 					ValidNextArrows = FromSP(new[] {P1L, P1U, P1R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1D is bracketable with P1L
+						// Left foot on P1D uses the heel.
+						[L] = noneSP,
+						// Right foot on P1D uses the heel.
+						[R] = noneSP
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1D is bracketable with the toes on other arrows on P1L
 						[L] = FromSP(new[] {P1L}),
-						// Right foot on P1D is bracketable with P1R
+						// Right foot on P1D is bracketable with the toes on other arrows on P1R
 						[R] = FromSP(new[] {P1R})
 					},
 
@@ -195,12 +217,19 @@ namespace ChartGenerator
 					// A foot on P1U can move next to P1L, P1D, or P1R
 					ValidNextArrows = FromSP(new[] {P1L, P1D, P1R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1U is bracketable with P1L
+						// Left foot on P1U is bracketable with the heel on other arrows on P1L
 						[L] = FromSP(new[] {P1L}),
-						// Right foot on P1U is bracketable with P1R
+						// Right foot on P1U is bracketable with the heel on other arrows on P1R
 						[R] = FromSP(new[] {P1R})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1U uses the toes.
+						[L] = noneSP,
+						// Right foot on P1U uses the toes.
+						[R] = noneSP
 					},
 
 					OtherFootPairings =
@@ -243,12 +272,19 @@ namespace ChartGenerator
 					// A foot on P1R can move next to P1L, P1D, or P1U
 					ValidNextArrows = FromSP(new[] {P1L, P1D, P1U}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
 						// Left foot on P1R is a crossover and not bracketable.
 						[L] = noneSP,
-						// Right foot on P1R is bracketable with P1D and P1U
-						[R] = FromSP(new[] {P1D, P1U})
+						// Right foot on P1R is bracketable with the heel on other arrows on P1D
+						[R] = FromSP(new[] {P1D})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1R is a crossover and not bracketable.
+						[L] = noneSP,
+						// Right foot on P1R is bracketable with the toes on other arrows on P1U
+						[R] = FromSP(new[] {P1U})
 					},
 
 					OtherFootPairings =
@@ -303,10 +339,17 @@ namespace ChartGenerator
 					// A foot on P1L can move next to P1D, P1U, or P1R
 					ValidNextArrows = FromDP(new[] {P1D, P1U, P1R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1L is bracketable with P1U and P1D
-						[L] = FromDP(new[] {P1D, P1U}),
+						// Left foot on P1L is bracketable with the heel on other arrows on P1D
+						[L] = FromDP(new[] {P1D}),
+						// Right foot on P1L is a crossover and not bracketable
+						[R] = noneDP
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1L is bracketable with the toes on other arrows on P1U
+						[L] = FromDP(new[] {P1U}),
 						// Right foot on P1L is a crossover and not bracketable
 						[R] = noneDP
 					},
@@ -351,11 +394,18 @@ namespace ChartGenerator
 					// A foot on P1D can move next to P1L, P1U, P1R, or P2L
 					ValidNextArrows = FromDP(new[] {P1L, P1U, P1R, P2L}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1D is bracketable with P1L and P1R
-						[L] = FromDP(new[] {P1L, P1R}),
-						// Right foot on P1D is bracketable with P1R
+						// Left foot on P1D uses the heel.
+						[L] = noneDP,
+						// Right foot on P1D uses the heel.
+						[R] = noneDP
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1D is bracketable with the toes on other arrows on P1L
+						[L] = FromDP(new[] {P1L}),
+						// Right foot on P1D is bracketable with the toes on other arrows on P1R
 						[R] = FromDP(new[] {P1R})
 					},
 
@@ -399,12 +449,19 @@ namespace ChartGenerator
 					// A foot on P1U can move next to P1L, P1D, P1R, or P2L
 					ValidNextArrows = FromDP(new[] {P1L, P1D, P1R, P2L}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1U is bracketable with P1L and P1R
-						[L] = FromDP(new[] {P1L, P1R}),
-						// Right foot on P1U is bracketable with P1R
+						// Left foot on P1U is bracketable with the heel on other arrows on P1L
+						[L] = FromDP(new[] {P1L}),
+						// Right foot on P1U is bracketable with the heel on other arrows on P1R
 						[R] = FromDP(new[] {P1R})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1U uses the toes.
+						[L] = noneDP,
+						// Right foot on P1U uses the toes.
+						[R] = noneDP
 					},
 
 					OtherFootPairings =
@@ -447,12 +504,19 @@ namespace ChartGenerator
 					// A foot on P1R can move next to P1L, P1D, P1U, P2L, P2D, or P2U
 					ValidNextArrows = FromDP(new[] {P1L, P1D, P1U, P2L, P2D, P2U}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P1R is bracketable with P1D, P1U, and P2L
-						[L] = FromDP(new[] {P1D, P1U, P2L}),
-						// Right foot on P1R is bracketable with P1D, P1U, and P2L
-						[R] = FromDP(new[] {P1D, P1U, P2L})
+						// Left foot on P1R is bracketable with the heel on other arrows on P1D and P2L.
+						[L] = FromDP(new[] {P1D, P2L}),
+						// Right foot on P1R is bracketable with the heel on other arrows on P1D and P2L.
+						[R] = FromDP(new[] {P1D, P2L})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P1R is bracketable with the toes on other arrows on P1U and P2L.
+						[L] = FromDP(new[] {P1U, P2L}),
+						// Right foot on P1R is bracketable with the toes on other arrows on P1U and P2L.
+						[R] = FromDP(new[] {P1U, P2L})
 					},
 
 					OtherFootPairings =
@@ -495,12 +559,19 @@ namespace ChartGenerator
 					// A foot on P2L can move next to P1D, P1U, P1R, P2D, P2U, or P2R
 					ValidNextArrows = FromDP(new[] {P1D, P1U, P1R, P2D, P2U, P2R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P2L is bracketable with P1R, P2D, and P2U
-						[L] = FromDP(new[] {P1R, P2D, P2U}),
-						// Right foot on P2L is bracketable with P1R, P2D, and P2U
-						[R] = FromDP(new[] {P1R, P2D, P2U})
+						// Left foot on P2L is bracketable with the heel on other arrows on P1R and P2D.
+						[L] = FromDP(new[] {P1R, P2D}),
+						// Right foot on P2L is bracketable with the heel on other arrows on P1R and P2D.
+						[R] = FromDP(new[] {P1R, P2D})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P2L is bracketable with the toes on other arrows on P1R and P2U.
+						[L] = FromDP(new[] {P1R, P2U}),
+						// Right foot on P2L is bracketable with the toes on other arrows on P1R and P2U.
+						[R] = FromDP(new[] {P1R, P2U})
 					},
 
 					OtherFootPairings =
@@ -543,12 +614,19 @@ namespace ChartGenerator
 					// A foot on P2D can move next to P1R, P2L, P2U, and P2R
 					ValidNextArrows = FromDP(new[] {P1R, P2L, P2U, P2R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P2D is bracketable with P2L
+						// Left foot on P2D uses the heel.
+						[L] = noneDP,
+						// Right foot on P2D uses the heel.
+						[R] = noneDP
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P2D is bracketable with the toes on other arrows on P2L.
 						[L] = FromDP(new[] {P2L}),
-						// Right foot on P2D is bracketable with P2L and P2R
-						[R] = FromDP(new[] {P2L, P2R})
+						// Right foot on P2D is bracketable with the toes on other arrows on P2R.
+						[R] = FromDP(new[] {P2R})
 					},
 
 					OtherFootPairings =
@@ -591,12 +669,19 @@ namespace ChartGenerator
 					// A foot on P2U can move next to P1R, P2L, P2D, and P2R
 					ValidNextArrows = FromDP(new[] {P1R, P2L, P2D, P2R}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P2U is bracketable with P2L
+						// Left foot on P2U is bracketable with the heel on other arrows on P2L.
 						[L] = FromDP(new[] {P2L}),
-						// Right foot on P2U is bracketable with P2L and P2R
-						[R] = FromDP(new[] {P2L, P2R})
+						// Right foot on P2U is bracketable with the heel on other arrows on P2R.
+						[R] = FromDP(new[] {P2R})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P2U uses the toes.
+						[L] = noneDP,
+						// Right foot on P2U uses the toes.
+						[R] = noneDP
 					},
 
 					OtherFootPairings =
@@ -639,12 +724,19 @@ namespace ChartGenerator
 					// A foot on P2R can move next to P2L, P2D, and P2U
 					ValidNextArrows = FromDP(new[] {P2L, P2D, P2U}),
 
-					BracketablePairings =
+					BracketablePairingsOtherHeel =
 					{
-						// Left foot on P2R is a crossover and not bracketable
+						// Left foot on P2R is a crossover and not bracketable.
 						[L] = noneDP,
-						// Right foot on P2R is bracketable with P2D and P2U
-						[R] = FromDP(new[] {P2D, P2U})
+						// Right foot on P2R is bracketable with the heel on other arrows on P2D.
+						[R] = FromDP(new[] {P2D})
+					},
+					BracketablePairingsOtherToe =
+					{
+						// Left foot on P2R is a crossover and not bracketable.
+						[L] = noneDP,
+						// Right foot on P2R is bracketable with the toes on other arrows on P2U.
+						[R] = FromDP(new[] {P2U})
 					},
 
 					OtherFootPairings =

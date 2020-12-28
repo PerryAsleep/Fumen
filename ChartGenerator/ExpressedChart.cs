@@ -44,7 +44,7 @@ namespace ChartGenerator
 			/// This GraphLink is the Link to this Event as opposed to the link from this Event.
 			/// This represents how the player got to this position.
 			/// </summary>
-			public GraphLink Link;
+			public GraphLinkInstance Link;
 		}
 
 		/// <summary>
@@ -105,6 +105,10 @@ namespace ChartGenerator
 			/// </summary>
 			public readonly GraphNode GraphNode;
 			/// <summary>
+			/// 
+			/// </summary>
+			public readonly bool[] Rolls;
+			/// <summary>
 			/// Position in the SM Chart of this ChartSearchNode.
 			/// </summary>
 			public readonly MetricPosition Position;
@@ -123,7 +127,7 @@ namespace ChartGenerator
 			/// <summary>
 			/// The GraphLink from the previous ChartSearchNode that results in this ChartSearchNode.
 			/// </summary>
-			public readonly GraphLink PreviousLink;
+			public readonly GraphLinkInstance PreviousLink;
 			/// <summary>
 			/// All possible next ChartSearchNodes.
 			/// Key is the GraphLink leading out of the GraphNode.
@@ -137,7 +141,8 @@ namespace ChartGenerator
 				int cost,
 				int totalCost,
 				ChartSearchNode previousNode,
-				GraphLink previousLink)
+				GraphLinkInstance previousLink,
+				bool[] rolls)
 			{
 				Id = IdCounter++;
 				GraphNode = graphNode;
@@ -146,6 +151,7 @@ namespace ChartGenerator
 				TotalCost = totalCost;
 				PreviousNode = previousNode;
 				PreviousLink = previousLink;
+				Rolls = rolls;
 			}
 
 			/// <summary>
@@ -166,7 +172,7 @@ namespace ChartGenerator
 			/// Skips releases.
 			/// </summary>
 			/// <returns>The preceding step GraphLink or null if none exists.</returns>
-			public GraphLink GetPreviousStepLink(int nthPrevious = 1)
+			public GraphLinkInstance GetPreviousStepLink(int nthPrevious = 1)
 			{
 				var node = this;
 				while (node.PreviousNode != null)
@@ -176,7 +182,7 @@ namespace ChartGenerator
 					{
 						for (var a = 0; a < MaxArrowsPerFoot; a++)
 						{
-							if (link.Links[f, a].Valid && link.Links[f, a].Action != FootAction.Release)
+							if (link.Link.Links[f, a].Valid && link.Link.Links[f, a].Action != FootAction.Release)
 							{
 								nthPrevious--;
 								if (nthPrevious <= 0)
@@ -216,7 +222,7 @@ namespace ChartGenerator
 
 			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNode; }
-			public GraphLink GetGraphLinkToNode() { return PreviousLink; }
+			public GraphLink GetGraphLinkToNode() { return PreviousLink?.Link; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
 		}
@@ -301,7 +307,7 @@ namespace ChartGenerator
 		/// <returns></returns>
 		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(List<Event> events, StepGraph stepGraph)
 		{
-			var root = new ChartSearchNode(stepGraph.Root, new MetricPosition(), 0, 0, null, null);
+			var root = new ChartSearchNode(stepGraph.Root, new MetricPosition(), 0, 0, null, null, new bool[stepGraph.NumArrows]);
 
 			var numArrows = stepGraph.NumArrows;
 			var currentState = new SearchState[numArrows];
@@ -477,6 +483,10 @@ namespace ChartGenerator
 		{
 			var childSearchNodes = new HashSet<ChartSearchNode>();
 
+			var rolls = new bool[stepGraph.NumArrows];
+			for (var a = 0; a < stepGraph.NumArrows; a++)
+				rolls[a] = (currentState[a] == SearchState.Roll || currentState[a] == SearchState.Rolling);
+
 			// Check every current ChartSearchNode.
 			foreach (var searchNode in currentSearchNodes)
 			{
@@ -489,47 +499,14 @@ namespace ChartGenerator
 					foreach (var childNode in l.Value)
 					{
 						// Most children will not match the new state. Ignore them.
-						if (!DoesStateMatch(currentState, childNode, l.Key))
+						var linkInstance = GetLinkInstanceIfStateMatches(currentState, childNode, l.Key);
+						if (linkInstance == null)
 							continue;
-
-						if (position == new MetricPosition
-						    {
-							    Measure = 68,
-							    Beat = 3,
-							    SubDivision = new Fraction(0, 1)
-						    }
-						    && !l.Key.Links[R, 0].Valid
-						    && l.Key.Links[L, 0].Valid
-						    && l.Key.Links[L, 1].Valid
-						    && l.Key.Links[L, 0].Step == StepType.BracketBothSame
-						    && StateMatches(searchNode.GraphNode, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting,
-							    1, GraphArrowState.Resting, 3, GraphArrowState.Resting)
-						    && StateMatches(childNode, 0, GraphArrowState.Held, 2, GraphArrowState.Resting, 1,
-							    GraphArrowState.Resting, 3, GraphArrowState.Resting))
-						{
-							int a = 1;
-						}
-
-						if (position == new MetricPosition
-						    {
-							    Measure = 69,
-							    Beat = 0,
-							    SubDivision = new Fraction(0, 1)
-						    }
-						    && !l.Key.Links[L, 0].Valid
-						    && l.Key.Links[R, 0].Valid
-						    && l.Key.Links[R, 0].Step == StepType.NewArrow
-						    && StateMatches(searchNode.GraphNode, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting,
-							    -1, GraphArrowState.Resting, 1, GraphArrowState.Resting)
-						    && StateMatches(childNode, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting,
-							    -1, GraphArrowState.Resting, 3, GraphArrowState.Resting))
-						{
-							int a = 1;
-						}
 
 						// This GraphLink and child GraphNode result in a matching state.
 						// Determine the cost to go from this GraphLink to this GraphNode.
-						var cost = GetCost(l.Key, searchNode, childNode, currentState, position, lastMines, lastReleases, stepGraph.ArrowData);
+						var cost = GetCost(l.Key, searchNode, childNode, currentState, position, lastMines, lastReleases,
+							stepGraph.ArrowData);
 
 						// Record the result as a new ChartSearchNode to be checked for pruning once
 						// all children have been determined.
@@ -539,7 +516,8 @@ namespace ChartGenerator
 							cost,
 							searchNode.TotalCost + cost,
 							searchNode,
-							l.Key);
+							linkInstance,
+							rolls);
 						AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
 
 						deadEnd = false;
@@ -553,17 +531,8 @@ namespace ChartGenerator
 				}
 			}
 
-			// 0, 4, 8, 10
-			// Child node is 8460
-			// 0th has it, 4 nodes up
-			// 0 cost 1363
-			// which node has the path that we know ultimately gets accepted?
-			if (position == new MetricPosition
-			    {
-				    Measure = 69,
-				    Beat = 0,
-				    SubDivision = new Fraction(1, 4)
-			    })
+			// TODO: Log if childSearchNodes is Empty
+			if (childSearchNodes.Count == 0)
 			{
 				int a = 1;
 			}
@@ -580,7 +549,10 @@ namespace ChartGenerator
 		/// <param name="node">GraphNode with state per foot.</param>
 		/// <param name="link">GraphLink that linked to the given node.</param>
 		/// <returns>True if the two representations match and false if they do not.</returns>
-		private static bool DoesStateMatch(SearchState[] searchState, GraphNode node, GraphLink link)
+		private static GraphLinkInstance GetLinkInstanceIfStateMatches(
+			SearchState[] searchState,
+			GraphNode node,
+			GraphLink link)
 		{
 			SearchState[] generatedState = new SearchState[searchState.Length];
 			for (var s = 0; s < generatedState.Length; s++)
@@ -594,43 +566,31 @@ namespace ChartGenerator
 						continue;
 
 					// What was the step into
-					bool acted = false;
-					for (var la = 0; la < MaxArrowsPerFoot; la++)
+					if (link.Links[f, a].Valid && node.State[f, a].State == StateAfterAction(link.Links[f, a].Action))
 					{
-						if (!link.Links[f, la].Valid)
-							continue;
-
-						if (node.State[f, a].State == StateAfterAction(link.Links[f, la].Action))
+						switch (node.State[f, a].State)
 						{
-							switch (node.State[f, a].State)
+							case GraphArrowState.Held:
 							{
-								case GraphArrowState.Held:
-									generatedState[node.State[f, a].Arrow] = SearchState.Hold;
-									break;
-								case GraphArrowState.Rolling:
-									generatedState[node.State[f, a].Arrow] = SearchState.Roll;
-									break;
-								case GraphArrowState.Resting:
-									if (link.Links[f, la].Action == FootAction.Release)
-										generatedState[node.State[f, a].Arrow] = SearchState.Empty;
-									else
-										generatedState[node.State[f, a].Arrow] = SearchState.Tap;
-									break;
+								generatedState[node.State[f, a].Arrow] = SearchState.Hold;
+								break;
 							}
-
-							acted = true;
+							case GraphArrowState.Resting:
+							{
+								if (link.Links[f, a].Action == FootAction.Release)
+									generatedState[node.State[f, a].Arrow] = SearchState.Empty;
+								else
+									generatedState[node.State[f, a].Arrow] = SearchState.Tap;
+								break;
+							}
 						}
 					}
-
-					if (!acted)
+					else
 					{
 						switch (node.State[f, a].State)
 						{
 							case GraphArrowState.Held:
 								generatedState[node.State[f, a].Arrow] = SearchState.Holding;
-								break;
-							case GraphArrowState.Rolling:
-								generatedState[node.State[f, a].Arrow] = SearchState.Rolling;
 								break;
 						}
 					}
@@ -638,9 +598,36 @@ namespace ChartGenerator
 			}
 
 			for (var s = 0; s < generatedState.Length; s++)
-				if (generatedState[s] != searchState[s])
-					return false;
-			return true;
+			{
+				if (generatedState[s] == searchState[s])
+					continue;
+				if (generatedState[s] == SearchState.Hold && searchState[s] == SearchState.Roll)
+					continue;
+				if (generatedState[s] == SearchState.Holding && searchState[s] == SearchState.Rolling)
+					continue;
+				return null;
+			}
+
+			var instance = new GraphLinkInstance{ Link = link };
+			for (var s = 0; s < searchState.Length; s++)
+			{
+				if (searchState[s] == SearchState.Roll)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						{
+							if (node.State[f, a].Arrow == s
+							    && link.Links[f, a].Valid
+							    && link.Links[f, a].Action == FootAction.Hold)
+							{
+								instance.Rolls[f, a] = true;
+							}
+						}
+					}
+				}
+			}
+			return instance;
 		}
 
 		/// <summary>
@@ -699,7 +686,6 @@ namespace ChartGenerator
 				}
 				bestNodes[currentNode.GraphNode] = currentNode;
 			}
-
 			return bestNodes.Values.ToHashSet();
 		}
 
@@ -713,24 +699,9 @@ namespace ChartGenerator
 			// Prune the node up until parent that has other children.
 			while (node.PreviousNode != null)
 			{
-				if (node.Position == new MetricPosition
-				    {
-					    Measure = 68,
-					    Beat = 3,
-					    SubDivision = new Fraction(0, 1)
-				    }
-				    && !node.PreviousLink.Links[R, 0].Valid
-				    && node.PreviousLink.Links[L, 0].Valid
-				    && node.PreviousLink.Links[L, 1].Valid
-				    && node.PreviousLink.Links[L, 0].Step == StepType.BracketBothSame
-				    && StateMatches(node.GraphNode, 0, GraphArrowState.Held, 2, GraphArrowState.Resting, 1, GraphArrowState.Resting, 3, GraphArrowState.Resting))
-				{
-					int a = 1;
-				}
-
-				node.PreviousNode.NextNodes[node.PreviousLink].Remove(node);
-				if (node.PreviousNode.NextNodes[node.PreviousLink].Count == 0)
-					node.PreviousNode.NextNodes.Remove(node.PreviousLink);
+				node.PreviousNode.NextNodes[node.PreviousLink.Link].Remove(node);
+				if (node.PreviousNode.NextNodes[node.PreviousLink.Link].Count == 0)
+					node.PreviousNode.NextNodes.Remove(node.PreviousLink.Link);
 				if (node.PreviousNode.NextNodes.Count != 0)
 					break;
 				node = node.PreviousNode;
@@ -780,8 +751,8 @@ namespace ChartGenerator
 				}
 			}
 
-			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink();
-			GraphLink previousPreviousStepLink = parentSearchNode.GetPreviousStepLink(2);
+			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink()?.Link ?? null;
+			GraphLink previousPreviousStepLink = parentSearchNode.GetPreviousStepLink(2)?.Link ?? null;
 
 			switch (numSteps)
 			{
@@ -834,19 +805,23 @@ namespace ChartGenerator
 						        && otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep))
 							mostRecentRelease = otherReleasePositionOfPreviousStep;
 
-							// I think in all cases we should consider an arrow held if it released at this time.
+						// I think in all cases we should consider an arrow held if it released at this time.
 						thisAnyHeld |= thisReleasePositionOfPreviousStep == position;
 						otherAnyHeld |= otherReleasePositionOfPreviousStep == position;
 
 						switch (step)
 						{
 							case StepType.SameArrow:
+							case StepType.BracketOneArrowHeelSame:
+							case StepType.BracketOneArrowToeSame:
 							{
 								if (thisAnyHeld && !otherAnyHeld && otherCanStepToNewArrow)
 									return CostSameArrow_OtherHoldingNone_ThisHeld_OtherCanStep;
 								return CostSameArrow;
 							}
 							case StepType.NewArrow:
+							case StepType.BracketOneArrowHeelNew:
+							case StepType.BracketOneArrowToeNew:
 								{
 									// TODO: give preference to alternating in long patters
 									// For example,		LR, U, LR, D, LR, U, LR D
@@ -1175,7 +1150,6 @@ namespace ChartGenerator
 								}
 							}
 
-
 							// If only one foot is holding one, we should prefer a bracket if the two arrows
 							// are bracketable by the other foot.
 							if (onlyFootHoldingOne != -1 && couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
@@ -1194,10 +1168,15 @@ namespace ChartGenerator
 							var bothSame = true;
 							for (var f = 0; f < NumFeet; f++)
 							{
-								if (link.Links[f, 0].Step == StepType.NewArrow)
-									bothSame = false;
-								if (link.Links[f, 0].Step == StepType.SameArrow)
-									bothNew = false;
+								for (var a = 0; a < MaxArrowsPerFoot; a++)
+								{
+									if (!link.Links[f, a].Valid)
+										continue;
+									if (link.Links[f, a].Step == StepType.NewArrow)
+										bothSame = false;
+									if (link.Links[f, a].Step == StepType.SameArrow)
+										bothNew = false;
+								}
 							}
 
 							if (bothSame)
@@ -1231,8 +1210,6 @@ namespace ChartGenerator
 					return CostUnknown;
 			}
 		}
-
-		
 
 		private static void GetOneArrowStepInfo(
 			int foot,
@@ -1278,11 +1255,11 @@ namespace ChartGenerator
 
 				if (previousState[foot, a].Arrow != InvalidArrowIndex)
 				{
-					if (previousState[foot, a].State == GraphArrowState.Held ||
-						previousState[foot, a].State == GraphArrowState.Rolling)
+					if (previousState[foot, a].State == GraphArrowState.Held)
 					{
 						anyHeld = true;
-						canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
+						canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherHeel[foot][arrow]
+							|| arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherToe[foot][arrow];
 					}
 					else
 					{
@@ -1291,7 +1268,8 @@ namespace ChartGenerator
 						{
 							if (!anyHeld)
 							{
-								canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairings[foot][arrow];
+								canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherHeel[foot][arrow]
+									|| arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherToe[foot][arrow];
 							}
 
 							if (lastMines[previousState[foot, a].Arrow] != null
@@ -1331,11 +1309,14 @@ namespace ChartGenerator
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
 			{
-				if (link.Links[f, 0].Valid)
+				for (var a = 0; a < MaxArrowsPerFoot; a++)
 				{
-					step = link.Links[f, 0].Step;
-					foot = f;
-					numValid++;
+					if (link.Links[f, a].Valid)
+					{
+						step = link.Links[f, a].Step;
+						foot = f;
+						numValid++;
+					}
 				}
 			}
 			return numValid == 1;
@@ -1348,8 +1329,10 @@ namespace ChartGenerator
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
 			{
-				if (link.Links[f, 0].Valid && (link.Links[f, 0].Step == StepType.BracketBothNew
-					|| link.Links[f, 0].Step == StepType.BracketOneNew
+				if (link.Links[f, 0].Valid
+				    && (link.Links[f, 0].Step == StepType.BracketBothNew
+					|| link.Links[f, 0].Step == StepType.BracketHeelNew
+					|| link.Links[f, 0].Step == StepType.BracketToeNew
 					|| link.Links[f, 0].Step == StepType.BracketBothSame))
 				{
 					step = link.Links[f, 0].Step;
@@ -1387,8 +1370,7 @@ namespace ChartGenerator
 					var previousArrow = parentSearchNode.GraphNode.State[foot, a].Arrow;
 					if (previousArrow != InvalidArrowIndex)
 					{
-						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Held ||
-							parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Rolling)
+						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Held)
 						{
 							holdingAny = true;
 						}
@@ -1412,7 +1394,8 @@ namespace ChartGenerator
 								break;
 						}
 						if (newArrowBeingSteppedOnByThisFoot != InvalidArrowIndex 
-						    && arrowData[previousArrow].BracketablePairings[foot][newArrowBeingSteppedOnByThisFoot])
+						    && (arrowData[previousArrow].BracketablePairingsOtherHeel[foot][newArrowBeingSteppedOnByThisFoot]
+						    || arrowData[previousArrow].BracketablePairingsOtherToe[foot][newArrowBeingSteppedOnByThisFoot]))
 						{
 							bracketableDistanceIfThisFootSteps = true;
 						}
@@ -1429,7 +1412,7 @@ namespace ChartGenerator
 			{
 				couldBeBracketed = true;
 				var numSteps = 0;
-				int steppedArrow = InvalidArrowIndex;
+				var steppedArrow = InvalidArrowIndex;
 				for (var a = 0; a < state.Length; a++)
 				{
 					if (state[a] == SearchState.Tap || state[a] == SearchState.Hold || state[a] == SearchState.Roll)
@@ -1437,8 +1420,12 @@ namespace ChartGenerator
 						numSteps++;
 						if (steppedArrow != InvalidArrowIndex)
 						{
-							if (!arrowData[a].BracketablePairings[foot][steppedArrow]
-								|| !arrowData[steppedArrow].BracketablePairings[foot][a])
+							var bracketable =
+								(arrowData[a].BracketablePairingsOtherHeel[foot][steppedArrow]
+								&& arrowData[steppedArrow].BracketablePairingsOtherToe[foot][a])
+								|| (arrowData[a].BracketablePairingsOtherToe[foot][steppedArrow]
+								    && arrowData[steppedArrow].BracketablePairingsOtherHeel[foot][a]);
+							if (!bracketable)
 								couldBeBracketed = false;
 						}
 
@@ -1448,7 +1435,6 @@ namespace ChartGenerator
 				if (numSteps != MaxArrowsPerFoot)
 					couldBeBracketed = false;
 			}
-
 		}
 
 		private static int GetCostNewArrowStepFromJump(
@@ -1533,7 +1519,7 @@ namespace ChartGenerator
 				var stepEvent = new StepEvent
 				{
 					Position = searchNode.Position,
-					Link = searchNode.PreviousLink
+					Link = searchNode.PreviousLink,
 				};
 
 				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
