@@ -45,7 +45,7 @@ namespace ChartGenerator
 			t2.Start();
 			t1.Join();
 			t2.Join();
-			return;
+			//return;
 
 			var song = SMReader.Load(HackChart);
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);

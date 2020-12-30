@@ -220,6 +220,26 @@ namespace ChartGenerator
 				OnlyConsiderCurrentArrowsWhenFilling = true,
 				CanBeUsedInJump = true
 			};
+			//FillData[(int)StepType.BracketToeSwapHeelSame] = new StepTypeFillData
+			//{
+			//	ActionSets = actionCombinations[1],
+			//	FootPortionsForStep = new[] { Heel, Toe },
+			//};
+			//FillData[(int)StepType.BracketToeSwapHeelNew] = new StepTypeFillData
+			//{
+			//	ActionSets = actionCombinations[1],
+			//	FootPortionsForStep = new[] { Heel, Toe },
+			//};
+			//FillData[(int)StepType.BracketHeelSwapToeSame] = new StepTypeFillData
+			//{
+			//	ActionSets = actionCombinations[1],
+			//	FootPortionsForStep = new[] { Heel, Toe },
+			//};
+			//FillData[(int)StepType.BracketHeelSwapToeNew] = new StepTypeFillData
+			//{
+			//	ActionSets = actionCombinations[1],
+			//	FootPortionsForStep = new[] { Heel, Toe },
+			//};
 			FillData[(int)StepType.BracketOneArrowHeelSame] = new StepTypeFillData
 			{
 				ActionSets = actionCombinations[0],
@@ -294,6 +314,10 @@ namespace ChartGenerator
 				FillBracketHeelNew,
 				FillBracketToeNew,
 				FillBracketBothSame,
+				//FillBracketToeSwapHeelSame,
+				//FillBracketToeSwapHeelNew,
+				//FillBracketHeelSwapToeSame,
+				//FillBracketHeelSwapToeNew,
 				FillBracketOneArrowHeelSame,
 				FillBracketOneArrowHeelNew,
 				FillBracketOneArrowToeSame,
@@ -1109,61 +1133,223 @@ namespace ChartGenerator
 			// Cannot step on a new bracket if already holding on an arrow
 			if (AnyHeld(currentState, foot))
 				return null;
-			// Skip if the new arrow is occupied.
-			if (!IsFree(currentState, newArrow))
-				return null;
-			// Skip if the new arrow is a crossover with any other foot pairing.
-			if (FootCrossesOverWithAnyOtherFoot(currentState, foot, newArrow))
-				return null;
-			// Skip if the new arrow is not a valid pairing for any other foot arrows.
-			var newIndexOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, newArrow);
-			if (newIndexOtherFootValidPairings.Count == 0)
+
+			if (!FillBracketInternalFirstArrowNew(
+				currentNode,
+				foot,
+				currentFootPortion,
+				newArrow,
+				out var firstArrowOtherFootValidPairings,
+				out var firstNewArrowIsValidPlacement))
 				return null;
 
 			var heelAction = footActions[Heel];
 			var toeAction = footActions[Toe];
-
 			var allResults = new List<GraphNode>();
 
 			// Fill steps where the heel arrow precedes the toe arrow.
-			var results = FillBracketBothNewInternal(
+			var results = FillBracketInternalSecondArrowNew(
 				currentNode,
 				foot,
 				currentFootPortion,
 				newArrow,
 				new[] { Heel, Toe },
 				new[] { heelAction, toeAction },
-				newIndexOtherFootValidPairings);
+				firstNewArrowIsValidPlacement,
+				firstArrowOtherFootValidPairings);
 			if (results != null && results.Count > 0)
 				allResults.AddRange(results);
 
 			// Fill steps where the toe arrow precedes the heel arrow.
-			results = FillBracketBothNewInternal(
+			results = FillBracketInternalSecondArrowNew(
 				currentNode,
 				foot,
 				currentFootPortion,
 				newArrow,
 				new[] { Toe, Heel },
 				new[] { toeAction, heelAction },
-				newIndexOtherFootValidPairings);
+				firstNewArrowIsValidPlacement,
+				firstArrowOtherFootValidPairings);
 			if (results != null && results.Count > 0)
 				allResults.AddRange(results);
 
 			return allResults;
 		}
 
-		private List<GraphNode> FillBracketBothNewInternal(
+		private List<GraphNode> FillBracketHeelNew(
+			GraphNode currentNode,
+			int foot,
+			int currentFootPortion,
+			int newArrow,
+			FootAction[] footActions)
+		{
+#if DEBUG_STEPGRAPH
+			// Cannot release on a new arrow.
+			Debug.Assert(footActions[0] != FootAction.Release && footActions[1] != FootAction.Release);
+#endif // DEBUG_STEPGRAPH
+
+			// Cannot step on a new bracket if already holding on an arrow
+			if (AnyHeld(currentNode.State, foot))
+				return null;
+
+			var allResults = new List<GraphNode>();
+
+			// Heel first index, toe second index
+			if (FillBracketInternalFirstArrowNew(currentNode, foot, currentFootPortion, newArrow,
+				out var firstArrowOtherFootValidPairings,
+				out var firstNewArrowIsValidPlacement))
+			{
+				var results = FillBracketInternalSecondArrowSame(currentNode, foot, currentFootPortion, newArrow,
+					new[] { Heel, Toe },
+					footActions,
+					firstNewArrowIsValidPlacement,
+					firstArrowOtherFootValidPairings);
+				if (results != null && results.Count > 0)
+					allResults.AddRange(results);
+			}
+
+			// Toe first index, heel second index
+			if (FillBracketInternalFirstArrowSame(currentNode, foot, currentFootPortion, newArrow,
+				out firstArrowOtherFootValidPairings,
+				out firstNewArrowIsValidPlacement))
+			{
+				var results = FillBracketInternalSecondArrowNew(currentNode, foot, currentFootPortion, newArrow,
+					new[] { Toe, Heel },
+					new[] { footActions[Toe], footActions[Heel] },
+					firstNewArrowIsValidPlacement,
+					firstArrowOtherFootValidPairings);
+				if (results != null && results.Count > 0)
+					allResults.AddRange(results);
+			}
+
+			return allResults;
+		}
+
+		private List<GraphNode> FillBracketToeNew(
+			GraphNode currentNode,
+			int foot,
+			int currentFootPortion,
+			int newArrow,
+			FootAction[] footActions)
+		{
+#if DEBUG_STEPGRAPH
+			// Cannot release on a new arrow.
+			Debug.Assert(footActions[0] != FootAction.Release && footActions[1] != FootAction.Release);
+#endif // DEBUG_STEPGRAPH
+
+			// Cannot step on a new bracket if already holding on an arrow
+			if (AnyHeld(currentNode.State, foot))
+				return null;
+
+			var allResults = new List<GraphNode>();
+
+			// Toe first index, heel second index
+			if (FillBracketInternalFirstArrowNew(currentNode, foot, currentFootPortion, newArrow,
+				out var firstArrowOtherFootValidPairings,
+				out var firstNewArrowIsValidPlacement))
+			{
+				var results = FillBracketInternalSecondArrowSame(currentNode, foot, currentFootPortion, newArrow,
+					new[] { Toe, Heel },
+					new[] { footActions[Toe], footActions[Heel] },
+					firstNewArrowIsValidPlacement,
+					firstArrowOtherFootValidPairings);
+				if (results != null && results.Count > 0)
+					allResults.AddRange(results);
+			}
+
+			// Heel first index, toe second index
+			if (FillBracketInternalFirstArrowSame(currentNode, foot, currentFootPortion, newArrow,
+				out firstArrowOtherFootValidPairings,
+				out firstNewArrowIsValidPlacement))
+			{
+				var results = FillBracketInternalSecondArrowNew(currentNode, foot, currentFootPortion, newArrow,
+					new[] { Heel, Toe },
+					footActions,
+					firstNewArrowIsValidPlacement,
+					firstArrowOtherFootValidPairings);
+				if (results != null && results.Count > 0)
+					allResults.AddRange(results);
+			}
+
+			return allResults;
+		}
+
+		private List<GraphNode> FillBracketBothSame(
+			GraphNode currentNode,
+			int foot,
+			int currentFootPortion,
+			int newArrow,
+			FootAction[] footActions)
+		{
+			var heelAction = footActions[Heel];
+			var toeAction = footActions[Toe];
+
+			var allResults = new List<GraphNode>();
+
+			var results = FillBracketInternalBothSame(
+				currentNode,
+				foot,
+				currentFootPortion,
+				newArrow,
+				new[] { Heel, Toe },
+				new[] { heelAction, toeAction });
+			if (results != null && results.Count > 0)
+				allResults.AddRange(results);
+
+			results = FillBracketInternalBothSame(
+				currentNode,
+				foot,
+				currentFootPortion,
+				newArrow,
+				new[] { Toe, Heel },
+				new[] { toeAction, heelAction });
+			if (results != null && results.Count > 0)
+				allResults.AddRange(results);
+
+			return allResults;
+		}
+
+		private bool FillBracketInternalFirstArrowNew(
+			GraphNode currentNode,
+			int foot,
+			int currentFootPortion,
+			int firstNewArrow,
+			out List<int> otherFootValidPairings,
+			out bool validNextArrow)
+		{
+			var currentState = currentNode.State;
+
+			validNextArrow = false;
+			otherFootValidPairings = null;
+
+			// The first new arrow must be a step on a new arrow.
+			if (!IsFree(currentState, firstNewArrow))
+				return false;
+			// Skip if the first new arrow is a crossover with any other foot pairing.
+			if (FootCrossesOverWithAnyOtherFoot(currentState, foot, firstNewArrow))
+				return false;
+
+			// Skip if the first new arrow is not a valid pairing for any other foot arrows.
+			otherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, firstNewArrow);
+			if (otherFootValidPairings.Count == 0)
+				return false;
+
+			validNextArrow = ArrowData[currentNode.State[foot, currentFootPortion].Arrow].ValidNextArrows[firstNewArrow];
+			return true;
+		}
+
+		private List<GraphNode> FillBracketInternalSecondArrowNew(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
 			int firstNewArrow,
 			int[] newFootPortions,
 			FootAction[] footActions,
-			List<int> newIndexOtherFootValidPairings)
+			bool firstNewArrowIsValidPlacement,
+			List<int> firstArrowOtherFootValidPairings)
 		{
 			var currentState = currentNode.State;
 			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
-			var firstNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[firstNewArrow];
 
 			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
 			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
@@ -1190,7 +1376,7 @@ namespace ChartGenerator
 					continue;
 
 				// Both feet on the bracket must be reachable from at least one of the other foot's arrows
-				if (!newIndexOtherFootValidPairings.Intersect(secondOtherFootValidPairings).Any())
+				if (!firstArrowOtherFootValidPairings.Intersect(secondOtherFootValidPairings).Any())
 					continue;
 
 				// Set up the state for a new node.
@@ -1201,224 +1387,14 @@ namespace ChartGenerator
 			return null;
 		}
 
-		private List<GraphNode> FillBracketHeelNew(
-			GraphNode currentNode,
-			int foot,
-			int currentFootPortion,
-			int newArrow,
-			FootAction[] footActions)
-		{
-#if DEBUG_STEPGRAPH
-			// Cannot release on a new arrow.
-			Debug.Assert(footActions[0] != FootAction.Release && footActions[1] != FootAction.Release);
-#endif // DEBUG_STEPGRAPH
-
-			// Cannot step on a new bracket if already holding on an arrow
-			if (AnyHeld(currentNode.State, foot))
-				return null;
-
-			var results = new List<GraphNode>();
-			var resultFirst = FillBracketFirstNew(currentNode, foot, currentFootPortion, newArrow,
-				new[] { Heel, Toe },
-				footActions);
-			var resultSecond = FillBracketSecondNew(currentNode, foot, currentFootPortion, newArrow,
-				new[] { Toe, Heel },
-				new[] { footActions[Toe], footActions[Heel] });
-			if (resultFirst != null && resultFirst.Count > 0)
-				results.AddRange(resultFirst);
-			if (resultSecond != null && resultSecond.Count > 0)
-				results.AddRange(resultSecond);
-
-			return results;
-		}
-
-		private List<GraphNode> FillBracketToeNew(
-			GraphNode currentNode,
-			int foot,
-			int currentFootPortion,
-			int newArrow,
-			FootAction[] footActions)
-		{
-#if DEBUG_STEPGRAPH
-			// Cannot release on a new arrow.
-			Debug.Assert(footActions[0] != FootAction.Release && footActions[1] != FootAction.Release);
-#endif // DEBUG_STEPGRAPH
-
-			// Cannot step on a new bracket if already holding on an arrow.
-			if (AnyHeld(currentNode.State, foot))
-				return null;
-
-			var allResults = new List<GraphNode>();
-			var results = FillBracketFirstNew(currentNode, foot, currentFootPortion, newArrow,
-				new[] { Toe, Heel },
-				new[] { footActions[Toe], footActions[Heel] });
-			if (results != null && results.Count > 0)
-				allResults.AddRange(results);
-			results = FillBracketSecondNew(currentNode, foot, currentFootPortion, newArrow,
-				new[] { Heel, Toe },
-				footActions);
-			if (results != null && results.Count > 0)
-				allResults.AddRange(results);
-			return allResults;
-		}
-
-		private List<GraphNode> FillBracketFirstNew(
-			GraphNode currentNode,
-			int foot,
-			int currentFootPortion,
-			int firstNewArrow,
-			int[] newFootPortions,
-			FootAction[] footActions)
-		{
-			var currentState = currentNode.State;
-
-			// The first new arrow must be a step on a new arrow.
-			if (!IsFree(currentState, firstNewArrow))
-				return null;
-			// Skip if the first new arrow is a crossover with any other foot pairing.
-			if (FootCrossesOverWithAnyOtherFoot(currentState, foot, firstNewArrow))
-				return null;
-
-			// Skip if the first new arrow is not a valid pairing for any other foot arrows.
-			var newIndexOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, firstNewArrow);
-			if (newIndexOtherFootValidPairings.Count == 0)
-				return null;
-
-			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
-
-			var firstNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[firstNewArrow];
-
-			var results = new List<GraphNode>();
-			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
-			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
-			{
-				// Skip if this is not a valid bracketable pairing.
-				if (newFootPortions[1] == Heel && !ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
-					continue;
-				if (newFootPortions[1] == Toe && !ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
-					continue;
-				// The second new arrow must be a step on the same arrow (only the first is new).
-				if (!IsResting(currentState, secondNewArrow, foot))
-					continue;
-				// Skip if this second arrow is a crossover with any other foot pairing.
-				if (FootCrossesOverWithAnyOtherFoot(currentState, foot, secondNewArrow))
-					continue;
-				// Skip if the second arrow is not a valid pairing for any other foot arrows.
-				var secondOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, secondNewArrow);
-				if (secondOtherFootValidPairings.Count == 0)
-					continue;
-
-				// One of the pair must be a valid next placement.
-				var secondNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[secondNewArrow];
-				if (!firstNewArrowIsValidPlacement && !secondNewArrowIsValidPlacement)
-					continue;
-
-				// Both feet on the bracket must be reachable from at least one of the other foot's arrows.
-				if (!newIndexOtherFootValidPairings.Intersect(secondOtherFootValidPairings).Any())
-					continue;
-
-				// Set up the state for a new node.
-				results.Add(CreateNewBracketNode(currentState, foot, firstNewArrow, secondNewArrow, newFootPortions, footActions));
-			}
-
-			return results;
-		}
-
-		private List<GraphNode> FillBracketSecondNew(
-			GraphNode currentNode,
-			int foot,
-			int currentFootPortion,
-			int firstNewArrow,
-			int[] newFootPortions,
-			FootAction[] footActions)
-		{
-			var currentState = currentNode.State;
-
-			// The first new arrow must be a step on the same arrow (only the second is new).
-			if (!IsResting(currentState, firstNewArrow, foot))
-				return null;
-
-			// Skip if the first new arrow is not a valid pairing for any other foot arrows.
-			var newIndexOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, firstNewArrow);
-			if (newIndexOtherFootValidPairings.Count == 0)
-				return null;
-
-			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
-
-			var firstNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[firstNewArrow];
-
-			var results = new List<GraphNode>();
-			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
-			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
-			{
-				// Skip if this is not a valid bracketable pairing.
-				if (newFootPortions[1] == Heel && !ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
-					continue;
-				if (newFootPortions[1] == Toe && !ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
-					continue;
-				// The second new arrow must be a step on a new arrow.
-				if (!IsFree(currentState, secondNewArrow))
-					continue;
-				// Skip if the second arrow is a crossover with any other foot pairing.
-				if (FootCrossesOverWithAnyOtherFoot(currentState, foot, secondNewArrow))
-					continue;
-				// Skip if the second arrow is not a valid pairing for any other foot arrows.
-				var secondOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, secondNewArrow);
-				if (secondOtherFootValidPairings.Count == 0)
-					continue;
-
-				// One of the pair must be a valid next placement
-				var secondNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[secondNewArrow];
-				if (!firstNewArrowIsValidPlacement && !secondNewArrowIsValidPlacement)
-					continue;
-
-				// Both feet on the bracket must be reachable from at least one of the other foot's arrows
-				if (!newIndexOtherFootValidPairings.Intersect(secondOtherFootValidPairings).Any())
-					continue;
-
-				// Set up the state for a new node.
-				results.Add(CreateNewBracketNode(currentState, foot, firstNewArrow, secondNewArrow, newFootPortions, footActions));
-			}
-
-			return results;
-		}
-
-		private List<GraphNode> FillBracketBothSame(
-			GraphNode currentNode,
-			int foot,
-			int currentFootPortion,
-			int newArrow,
-			FootAction[] footActions)
-		{
-			var heelAction = footActions[Heel];
-			var toeAction = footActions[Toe];
-
-			var allResults = new List<GraphNode>();
-
-			var results = FillBracketBothSameInternal(
-				currentNode,
-				foot,
-				currentFootPortion,
-				newArrow,
-				new[] { Heel, Toe },
-				new[] { heelAction, toeAction });
-			if (results != null && results.Count > 0)
-				allResults.AddRange(results);
-
-			results = FillBracketBothSameInternal(
-				currentNode,
-				foot,
-				currentFootPortion,
-				newArrow,
-				new[] { Toe, Heel },
-				new[] { toeAction, heelAction });
-			if (results != null && results.Count > 0)
-				allResults.AddRange(results);
-
-			return allResults;
-		}
-
-		private List<GraphNode> FillBracketBothSameInternal(
+		/// <summary>
+		/// This is different enough from filling a same arrow on a bracket with a non-same arrow portion
+		/// that it makes sense to keep it as its own function. In here we care about the portion used on
+		/// the same arrow and when filling SameArrow and anything else we don't care. We also don't need
+		/// to perform any checks that the arrows are bracketable and reachable when they are both the same
+		/// since those checks were performed previously.
+		/// </summary>
+		private List<GraphNode> FillBracketInternalBothSame(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -1460,6 +1436,80 @@ namespace ChartGenerator
 			}
 
 			return null;
+		}
+
+		private bool FillBracketInternalFirstArrowSame(
+			GraphNode currentNode,
+			int foot,
+			int currentFootPortion,
+			int firstNewArrow,
+			out List<int> otherFootValidPairings,
+			out bool validNextArrow)
+		{
+			var currentState = currentNode.State;
+
+			otherFootValidPairings = null;
+			validNextArrow = false;
+
+			// Must be a step on the same arrow.
+			if (!IsResting(currentState, firstNewArrow, foot))
+				return false;
+
+			// Skip if the first new arrow is not a valid pairing for any other foot arrows.
+			otherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, firstNewArrow);
+			if (otherFootValidPairings.Count == 0)
+				return false;
+
+			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
+			validNextArrow = ArrowData[currentArrow].ValidNextArrows[firstNewArrow];
+			return true;
+		}
+
+		private List<GraphNode> FillBracketInternalSecondArrowSame(
+			GraphNode currentNode,
+			int foot,
+			int currentFootPortion,
+			int firstNewArrow,
+			int[] newFootPortions,
+			FootAction[] footActions,
+			bool firstNewArrowIsValidPlacement,
+			List<int> firstArrowOtherFootValidPairings)
+		{
+			var currentState = currentNode.State;
+			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
+
+			var results = new List<GraphNode>();
+			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
+			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
+			{
+				// Skip if this is not a valid bracketable pairing.
+				if (newFootPortions[1] == Heel && !ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
+					continue;
+				if (newFootPortions[1] == Toe && !ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
+					continue;
+				// The second new arrow must be a step on the same arrow.
+				if (!IsResting(currentState, secondNewArrow, foot))
+					continue;
+				// Skip if this second arrow is a crossover with any other foot pairing.
+				if (FootCrossesOverWithAnyOtherFoot(currentState, foot, secondNewArrow))
+					continue;
+				// Skip if the second arrow is not a valid pairing for any other foot arrows.
+				var secondOtherFootValidPairings = GetValidPairingsWithOtherFoot(currentState, foot, secondNewArrow);
+				if (secondOtherFootValidPairings.Count == 0)
+					continue;
+				// One of the pair must be a valid next placement.
+				var secondNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[secondNewArrow];
+				if (!firstNewArrowIsValidPlacement && !secondNewArrowIsValidPlacement)
+					continue;
+				// Both feet on the bracket must be reachable from at least one of the other foot's arrows.
+				if (!firstArrowOtherFootValidPairings.Intersect(secondOtherFootValidPairings).Any())
+					continue;
+
+				// Set up the state for a new node.
+				results.Add(CreateNewBracketNode(currentState, foot, firstNewArrow, secondNewArrow, newFootPortions, footActions));
+			}
+
+			return results;
 		}
 
 		private static GraphNode CreateNewBracketNode(

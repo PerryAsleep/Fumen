@@ -236,6 +236,11 @@ namespace ChartGenerator
 			BracketToeNew,
 			BracketBothSame,
 
+			//BracketToeSwapHeelSame,
+			//BracketToeSwapHeelNew,
+			//BracketHeelSwapToeSame,
+			//BracketHeelSwapToeNew,
+
 			BracketOneArrowHeelSame, // (for release and tap)
 			BracketOneArrowHeelNew,
 			BracketOneArrowToeSame, // (for release and tap)
