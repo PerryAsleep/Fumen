@@ -49,11 +49,11 @@ namespace ChartGenerator
 		/// <summary>
 		/// The actions of both feet.
 		/// First index is the foot.
-		/// Second index is the foot portion ([0-MaxArrowsPerFoot)).
+		/// Second index is the foot portion ([0-NumFootPortions)).
 		/// For brackets, Heel (index 0) and Toe (index 1) are used for the second index.
 		/// For normal steps, DefaultFootPortion (index 0) is used for the second index.
 		/// </summary>
-		public readonly FootArrowState[,] Links = new FootArrowState[NumFeet, MaxArrowsPerFoot];
+		public readonly FootArrowState[,] Links = new FootArrowState[NumFeet, NumFootPortions];
 
 		/// <summary>
 		/// Whether or not this link represents a jump with both feet.
@@ -65,9 +65,9 @@ namespace ChartGenerator
 			for (var f = 0; f < NumFeet; f++)
 			{
 				var footHasStep = false;
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, a].Valid && Links[f, a].Action != FootAction.Release)
+					if (Links[f, p].Valid && Links[f, p].Action != FootAction.Release)
 					{
 						footHasStep = true;
 						break;
@@ -88,9 +88,9 @@ namespace ChartGenerator
 		{
 			for (var f = 0; f < NumFeet; f++)
 			{
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, a].Valid && Links[f, a].Action == FootAction.Release)
+					if (Links[f, p].Valid && Links[f, p].Action == FootAction.Release)
 						return true;
 				}
 			}
@@ -107,9 +107,9 @@ namespace ChartGenerator
 		{
 			// If this foot does not step then this is not a step with this foot.
 			var thisFootSteps = false;
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (Links[foot, a].Valid && Links[foot, a].Action != FootAction.Release)
+				if (Links[foot, p].Valid && Links[foot, p].Action != FootAction.Release)
 				{
 					thisFootSteps = true;
 					break;
@@ -120,9 +120,9 @@ namespace ChartGenerator
 
 			// If the other foot performs an action this is not a step with this foot.
 			var otherFoot = OtherFoot(foot);
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (Links[otherFoot, a].Valid)
+				if (Links[otherFoot, p].Valid)
 				{
 					return false;
 				}
@@ -144,9 +144,9 @@ namespace ChartGenerator
 			foot = InvalidFoot;
 			for (var f = 0; f < NumFeet; f++)
 			{
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, a].Valid && Links[f, a].Step == StepType.FootSwap)
+					if (Links[f, p].Valid && Links[f, p].Step == StepType.FootSwap)
 					{
 						foot = f;
 						return true;
@@ -162,8 +162,8 @@ namespace ChartGenerator
 			if (other == null)
 				return false;
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					if (!Links[f, a].Equals(other.Links[f, a]))
+				for (var p = 0; p < NumFootPortions; p++)
+					if (!Links[f, p].Equals(other.Links[f, p]))
 						return false;
 			return true;
 		}
@@ -181,8 +181,8 @@ namespace ChartGenerator
 		{
 			var hash = 17;
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					hash = unchecked(hash * 31 + Links[f, a].GetHashCode());
+				for (var p = 0; p < NumFootPortions; p++)
+					hash = unchecked(hash * 31 + Links[f, p].GetHashCode());
 			return hash;
 		}
 		#endregion
@@ -204,6 +204,6 @@ namespace ChartGenerator
 		/// Per foot and portion, whether or not the step type should be treated as
 		/// a roll in the underlying GraphLink.
 		/// </summary>
-		public bool[,] Rolls = new bool[NumFeet, MaxArrowsPerFoot];
+		public bool[,] Rolls = new bool[NumFeet, NumFootPortions];
 	}
 }

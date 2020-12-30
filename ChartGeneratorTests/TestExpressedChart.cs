@@ -56,21 +56,21 @@ namespace ChartGeneratorTests
 			bool roll = false)
 		{
 			var links = link.Link.Links;
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (a == DefaultFootPortion)
+				if (p == DefaultFootPortion)
 				{
-					Assert.IsTrue(links[foot, a].Valid);
-					Assert.AreEqual(step, links[foot, a].Step);
-					Assert.AreEqual(action, links[foot, a].Action);
-					Assert.AreEqual(roll, link.Rolls[foot, a]);
+					Assert.IsTrue(links[foot, p].Valid);
+					Assert.AreEqual(step, links[foot, p].Step);
+					Assert.AreEqual(action, links[foot, p].Action);
+					Assert.AreEqual(roll, link.Rolls[foot, p]);
 				}
 				else
 				{
-					Assert.IsFalse(links[foot, a].Valid);
+					Assert.IsFalse(links[foot, p].Valid);
 				}
 
-				Assert.IsFalse(links[OtherFoot(foot), a].Valid);
+				Assert.IsFalse(links[OtherFoot(foot), p].Valid);
 			}
 		}
 
@@ -96,23 +96,23 @@ namespace ChartGeneratorTests
 		{
 			var links = link.Link.Links;
 
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (a == DefaultFootPortion)
+				if (p == DefaultFootPortion)
 				{
-					Assert.IsTrue(links[L, a].Valid);
-					Assert.AreEqual(leftStep, links[L, a].Step);
-					Assert.AreEqual(leftAction, links[L, a].Action);
-					Assert.AreEqual(leftRoll, link.Rolls[L, a]);
-					Assert.IsTrue(links[R, a].Valid);
-					Assert.AreEqual(rightStep, links[R, a].Step);
-					Assert.AreEqual(rightAction, links[R, a].Action);
-					Assert.AreEqual(rightRoll, link.Rolls[R, a]);
+					Assert.IsTrue(links[L, p].Valid);
+					Assert.AreEqual(leftStep, links[L, p].Step);
+					Assert.AreEqual(leftAction, links[L, p].Action);
+					Assert.AreEqual(leftRoll, link.Rolls[L, p]);
+					Assert.IsTrue(links[R, p].Valid);
+					Assert.AreEqual(rightStep, links[R, p].Step);
+					Assert.AreEqual(rightAction, links[R, p].Action);
+					Assert.AreEqual(rightRoll, link.Rolls[R, p]);
 				}
 				else
 				{
-					Assert.IsFalse(links[L, a].Valid);
-					Assert.IsFalse(links[R, a].Valid);
+					Assert.IsFalse(links[L, p].Valid);
+					Assert.IsFalse(links[R, p].Valid);
 				}
 			}
 		}
@@ -141,10 +141,10 @@ namespace ChartGeneratorTests
 		{
 			var links = link.Link.Links;
 
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				Assert.IsTrue(links[foot, a].Valid);
-				Assert.IsFalse(links[OtherFoot(foot), a].Valid);
+				Assert.IsTrue(links[foot, p].Valid);
+				Assert.IsFalse(links[OtherFoot(foot), p].Valid);
 			}
 
 			Assert.AreEqual(heelStep, links[foot, Heel].Step);
@@ -231,18 +231,18 @@ namespace ChartGeneratorTests
 
 			for (var f = 0; f < NumFeet; f++)
 			{
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (f == foot && a == footPortion)
+					if (f == foot && p == footPortion)
 					{
-						Assert.IsTrue(links[f, a].Valid);
-						Assert.AreEqual(step, links[f, a].Step);
-						Assert.AreEqual(action, links[f, a].Action);
-						Assert.AreEqual(roll, link.Rolls[f, a]);
+						Assert.IsTrue(links[f, p].Valid);
+						Assert.AreEqual(step, links[f, p].Step);
+						Assert.AreEqual(action, links[f, p].Action);
+						Assert.AreEqual(roll, link.Rolls[f, p]);
 					}
 					else
 					{
-						Assert.IsFalse(links[f, a].Valid);
+						Assert.IsFalse(links[f, p].Valid);
 					}
 				}
 			}
@@ -280,25 +280,25 @@ namespace ChartGeneratorTests
 
 			for (var f = 0; f < NumFeet; f++)
 			{
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (f == foot1 && a == footPortion1)
+					if (f == foot1 && p == footPortion1)
 					{
-						Assert.IsTrue(links[f, a].Valid);
-						Assert.AreEqual(step1, links[f, a].Step);
-						Assert.AreEqual(action1, links[f, a].Action);
-						Assert.AreEqual(roll1, link.Rolls[f, a]);
+						Assert.IsTrue(links[f, p].Valid);
+						Assert.AreEqual(step1, links[f, p].Step);
+						Assert.AreEqual(action1, links[f, p].Action);
+						Assert.AreEqual(roll1, link.Rolls[f, p]);
 					}
-					else if (f == foot2 && a == footPortion2)
+					else if (f == foot2 && p == footPortion2)
 					{
-						Assert.IsTrue(links[f, a].Valid);
-						Assert.AreEqual(step2, links[f, a].Step);
-						Assert.AreEqual(action2, links[f, a].Action);
-						Assert.AreEqual(roll2, link.Rolls[f, a]);
+						Assert.IsTrue(links[f, p].Valid);
+						Assert.AreEqual(step2, links[f, p].Step);
+						Assert.AreEqual(action2, links[f, p].Action);
+						Assert.AreEqual(roll2, link.Rolls[f, p]);
 					}
 					else
 					{
-						Assert.IsFalse(links[f, a].Valid);
+						Assert.IsFalse(links[f, p].Valid);
 					}
 				}
 			}
@@ -338,20 +338,20 @@ namespace ChartGeneratorTests
 		{
 			var links = link.Link.Links;
 
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (a == DefaultFootPortion)
+				if (p == DefaultFootPortion)
 				{
-					if (!(links[foot, a].Valid && links[foot, a].Step == step && links[foot, a].Action == action))
+					if (!(links[foot, p].Valid && links[foot, p].Step == step && links[foot, p].Action == action))
 						return false;
 				}
 				else
 				{
-					if (links[foot, a].Valid)
+					if (links[foot, p].Valid)
 						return false;
 				}
 
-				if (links[OtherFoot(foot), a].Valid)
+				if (links[OtherFoot(foot), p].Valid)
 					return false;
 			}
 

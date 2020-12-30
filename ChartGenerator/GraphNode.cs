@@ -20,7 +20,7 @@ namespace ChartGenerator
 	/// Node in a StepGraph.
 	/// Connected to other GraphNodes by GraphLinks.
 	/// One GraphLink may attach a GraphNode to multiple other GraphNodes.
-	/// Represents the state of each foot. Each foot may be on one or two (MaxArrowsPerFoot) arrows.
+	/// Represents the state of each foot. Each foot may be on one or two (NumFootPortions) arrows.
 	/// In this representation, a foot is never considered to be lifted or in the air.
 	/// The GraphNodes represent where the player's feet are after making a move.
 	/// Mines aren't considered in this representation.
@@ -75,7 +75,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// The state of both feet.
 		/// First index is the foot.
-		/// Second index is the foot portion ([0-MaxArrowsPerFoot)).
+		/// Second index is the foot portion ([0-NumFootPortions)).
 		/// For brackets, Heel (index 0) and Toe (index 1) are used for the second index.
 		/// For normal steps, DefaultFootPortion (index 0) is used for the second index.
 		/// </summary>
@@ -112,8 +112,8 @@ namespace ChartGenerator
 			if (State.Length != other.State.Length)
 				return false;
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					if (!State[f, a].Equals(other.State[f, a]))
+				for (var p = 0; p < NumFootPortions; p++)
+					if (!State[f, p].Equals(other.State[f, p]))
 						return false;
 			if (Orientation != other.Orientation)
 				return false;
@@ -133,8 +133,8 @@ namespace ChartGenerator
 		{
 			var hash = 17;
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					hash = unchecked(hash * 31 + State[f, a].GetHashCode());
+				for (var p = 0; p < NumFootPortions; p++)
+					hash = unchecked(hash * 31 + State[f, p].GetHashCode());
 			hash = unchecked(hash * 31 + Orientation.GetHashCode());
 			return hash;
 		}
@@ -157,6 +157,6 @@ namespace ChartGenerator
 		/// Per foot and portion, whether or not the state should be treated as
 		/// a roll in the underlying GraphNode.
 		/// </summary>
-		public bool[,] Rolls = new bool[NumFeet, MaxArrowsPerFoot];
+		public bool[,] Rolls = new bool[NumFeet, NumFootPortions];
 	}
 }

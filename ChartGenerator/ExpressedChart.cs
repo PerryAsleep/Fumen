@@ -180,9 +180,9 @@ namespace ChartGenerator
 					var link = node.PreviousLink;
 					for (var f = 0; f < NumFeet; f++)
 					{
-						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (link.Link.Links[f, a].Valid && link.Link.Links[f, a].Action != FootAction.Release)
+							if (link.Link.Links[f, p].Valid && link.Link.Links[f, p].Action != FootAction.Release)
 							{
 								nthPrevious--;
 								if (nthPrevious <= 0)
@@ -560,37 +560,37 @@ namespace ChartGenerator
 
 			for (var f = 0; f < NumFeet; f++)
 			{
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (node.State[f, a].Arrow == InvalidArrowIndex)
+					if (node.State[f, p].Arrow == InvalidArrowIndex)
 						continue;
 
 					// What was the step into
-					if (link.Links[f, a].Valid && node.State[f, a].State == StateAfterAction(link.Links[f, a].Action))
+					if (link.Links[f, p].Valid && node.State[f, p].State == StateAfterAction(link.Links[f, p].Action))
 					{
-						switch (node.State[f, a].State)
+						switch (node.State[f, p].State)
 						{
 							case GraphArrowState.Held:
 							{
-								generatedState[node.State[f, a].Arrow] = SearchState.Hold;
+								generatedState[node.State[f, p].Arrow] = SearchState.Hold;
 								break;
 							}
 							case GraphArrowState.Resting:
 							{
-								if (link.Links[f, a].Action == FootAction.Release)
-									generatedState[node.State[f, a].Arrow] = SearchState.Empty;
+								if (link.Links[f, p].Action == FootAction.Release)
+									generatedState[node.State[f, p].Arrow] = SearchState.Empty;
 								else
-									generatedState[node.State[f, a].Arrow] = SearchState.Tap;
+									generatedState[node.State[f, p].Arrow] = SearchState.Tap;
 								break;
 							}
 						}
 					}
 					else
 					{
-						switch (node.State[f, a].State)
+						switch (node.State[f, p].State)
 						{
 							case GraphArrowState.Held:
-								generatedState[node.State[f, a].Arrow] = SearchState.Holding;
+								generatedState[node.State[f, p].Arrow] = SearchState.Holding;
 								break;
 						}
 					}
@@ -615,13 +615,13 @@ namespace ChartGenerator
 				{
 					for (var f = 0; f < NumFeet; f++)
 					{
-						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (node.State[f, a].Arrow == s
-							    && link.Links[f, a].Valid
-							    && link.Links[f, a].Action == FootAction.Hold)
+							if (node.State[f, p].Arrow == s
+							    && link.Links[f, p].Valid
+							    && link.Links[f, p].Action == FootAction.Hold)
 							{
-								instance.Rolls[f, a] = true;
+								instance.Rolls[f, p] = true;
 							}
 						}
 					}
@@ -735,8 +735,8 @@ namespace ChartGenerator
 		{
 			// Releases have a 0 cost.
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					if (link.Links[f, a].Valid && link.Links[f, a].Action == FootAction.Release)
+				for (var p = 0; p < NumFootPortions; p++)
+					if (link.Links[f, p].Valid && link.Links[f, p].Action == FootAction.Release)
 						return CostRelease;
 
 			// Determine how many steps are in this state.
@@ -1004,9 +1004,9 @@ namespace ChartGenerator
 									{
 										// Skip this arrow if it was hit by the other foot.
 										var thisArrowIsForOtherFoot = false;
-										for (var a = 0; a < MaxArrowsPerFoot; a++)
+										for (var p = 0; p < NumFootPortions; p++)
 										{
-											if (otherFootPreviousArrows[a] == arrow)
+											if (otherFootPreviousArrows[p] == arrow)
 											{
 												thisArrowIsForOtherFoot = true;
 												break;
@@ -1168,13 +1168,13 @@ namespace ChartGenerator
 							var bothSame = true;
 							for (var f = 0; f < NumFeet; f++)
 							{
-								for (var a = 0; a < MaxArrowsPerFoot; a++)
+								for (var p = 0; p < NumFootPortions; p++)
 								{
-									if (!link.Links[f, a].Valid)
+									if (!link.Links[f, p].Valid)
 										continue;
-									if (link.Links[f, a].Step == StepType.NewArrow)
+									if (link.Links[f, p].Step == StepType.NewArrow)
 										bothSame = false;
-									if (link.Links[f, a].Step == StepType.SameArrow)
+									if (link.Links[f, p].Step == StepType.SameArrow)
 										bothNew = false;
 								}
 							}
@@ -1236,50 +1236,50 @@ namespace ChartGenerator
 			minePositionFollowingPreviousStep = null;
 			canCrossoverToNewArrow = false;
 			releasePositionOfPreviousStep = new MetricPosition();
-			previousArrows = new int[MaxArrowsPerFoot];
+			previousArrows = new int[NumFootPortions];
 
 			var otherFoot = OtherFoot(foot);
 
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				previousArrows[a] = previousState[foot, a].Arrow;
+				previousArrows[p] = previousState[foot, p].Arrow;
 
-				if (previousState[otherFoot, a].Arrow != InvalidArrowIndex)
+				if (previousState[otherFoot, p].Arrow != InvalidArrowIndex)
 				{
 					canCrossoverToNewArrow |=
-						arrowData[previousState[otherFoot, a].Arrow].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow]
-						|| arrowData[previousState[otherFoot, a].Arrow].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow];
+						arrowData[previousState[otherFoot, p].Arrow].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow]
+						|| arrowData[previousState[otherFoot, p].Arrow].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow];
 					canStepToNewArrowWithoutCrossover |=
-						arrowData[previousState[otherFoot, a].Arrow].OtherFootPairings[otherFoot][arrow];
+						arrowData[previousState[otherFoot, p].Arrow].OtherFootPairings[otherFoot][arrow];
 				}
 
-				if (previousState[foot, a].Arrow != InvalidArrowIndex)
+				if (previousState[foot, p].Arrow != InvalidArrowIndex)
 				{
-					if (previousState[foot, a].State == GraphArrowState.Held)
+					if (previousState[foot, p].State == GraphArrowState.Held)
 					{
 						anyHeld = true;
-						canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherHeel[foot][arrow]
-							|| arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherToe[foot][arrow];
+						canBracketToNewArrow = arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherHeel[foot][arrow]
+							|| arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherToe[foot][arrow];
 					}
 					else
 					{
 						allHeld = false;
-						if (previousState[foot, a].State == GraphArrowState.Resting)
+						if (previousState[foot, p].State == GraphArrowState.Resting)
 						{
 							if (!anyHeld)
 							{
-								canBracketToNewArrow = arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherHeel[foot][arrow]
-									|| arrowData[previousState[foot, a].Arrow].BracketablePairingsOtherToe[foot][arrow];
+								canBracketToNewArrow = arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherHeel[foot][arrow]
+									|| arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherToe[foot][arrow];
 							}
 
-							if (lastMines[previousState[foot, a].Arrow] != null
-								&& lastMines[previousState[foot, a].Arrow] > lastReleases[previousState[foot, a].Arrow])
-								minePositionFollowingPreviousStep = lastMines[previousState[foot, a].Arrow];
+							if (lastMines[previousState[foot, p].Arrow] != null
+								&& lastMines[previousState[foot, p].Arrow] > lastReleases[previousState[foot, p].Arrow])
+								minePositionFollowingPreviousStep = lastMines[previousState[foot, p].Arrow];
 
 							// A foot could be coming from a bracket with multiple releases. In this case we want to
 							// choose the latest.
-							if (releasePositionOfPreviousStep < lastReleases[previousState[foot, a].Arrow])
-								releasePositionOfPreviousStep = lastReleases[previousState[foot, a].Arrow];
+							if (releasePositionOfPreviousStep < lastReleases[previousState[foot, p].Arrow])
+								releasePositionOfPreviousStep = lastReleases[previousState[foot, p].Arrow];
 						}
 					}
 				}
@@ -1309,11 +1309,11 @@ namespace ChartGenerator
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
 			{
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (link.Links[f, a].Valid)
+					if (link.Links[f, p].Valid)
 					{
-						step = link.Links[f, a].Step;
+						step = link.Links[f, p].Step;
 						foot = f;
 						numValid++;
 					}
@@ -1365,12 +1365,12 @@ namespace ChartGenerator
 			if (parentSearchNode != null)
 			{
 				holdingAll = true;
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
-					var previousArrow = parentSearchNode.GraphNode.State[foot, a].Arrow;
+					var previousArrow = parentSearchNode.GraphNode.State[foot, p].Arrow;
 					if (previousArrow != InvalidArrowIndex)
 					{
-						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Held)
+						if (parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Held)
 						{
 							holdingAny = true;
 						}
@@ -1378,7 +1378,7 @@ namespace ChartGenerator
 						{
 							holdingAll = false;
 						}
-						if (parentSearchNode.GraphNode.State[foot, a].State == GraphArrowState.Resting
+						if (parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Resting
 							&& state[previousArrow] == SearchState.Empty)
 						{
 							newArrowIfThisFootSteps = true;
@@ -1387,9 +1387,9 @@ namespace ChartGenerator
 						// Determine, if this foot steps as part of a jump, would that step be a
 						// bracketable distance.
 						var newArrowBeingSteppedOnByThisFoot = InvalidArrowIndex;
-						for (var newA = 0; newA < MaxArrowsPerFoot; newA++)
+						for (var newP = 0; newP < NumFootPortions; newP++)
 						{
-							newArrowBeingSteppedOnByThisFoot = childNode.State[foot, newA].Arrow;
+							newArrowBeingSteppedOnByThisFoot = childNode.State[foot, newP].Arrow;
 							if (newArrowBeingSteppedOnByThisFoot != InvalidArrowIndex)
 								break;
 						}
@@ -1432,7 +1432,7 @@ namespace ChartGenerator
 						steppedArrow = a;
 					}
 				}
-				if (numSteps != MaxArrowsPerFoot)
+				if (numSteps != NumFootPortions)
 					couldBeBracketed = false;
 			}
 		}

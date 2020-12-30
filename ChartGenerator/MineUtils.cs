@@ -106,9 +106,9 @@ namespace ChartGenerator
 						else if (previousState[f, arrow] == (int) GraphArrowState.Resting &&
 						         currentState[f, arrow] == (int) GraphArrowState.Resting)
 						{
-							for (var a = 0; a < MaxArrowsPerFoot; a++)
+							for (var p = 0; p < NumFootPortions; p++)
 							{
-								if (linkToNode.Links[f, a].Valid && linkToNode.Links[f, a].Action == FootAction.Tap)
+								if (linkToNode.Links[f, p].Valid && linkToNode.Links[f, p].Action == FootAction.Tap)
 								{
 									addStep = true;
 									addRelease = true;
@@ -163,9 +163,9 @@ namespace ChartGenerator
 				for (var arrow = 0; arrow < numArrows; arrow++)
 					state[f, arrow] = -1;
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					if (node.State[f, a].Arrow != InvalidArrowIndex)
-						state[f, node.State[f, a].Arrow] = (int)node.State[f, a].State;
+				for (var p = 0; p < NumFootPortions; p++)
+					if (node.State[f, p].Arrow != InvalidArrowIndex)
+						state[f, node.State[f, p].Arrow] = (int)node.State[f, p].State;
 			return state;
 		}
 

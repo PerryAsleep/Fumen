@@ -589,13 +589,13 @@ $@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width
 				if (node.PreviousLink != null && !node.PreviousLink.Link.IsRelease())
 				{
 					var writeCost = false;
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					for (var p = 0; p < NumFootPortions; p++)
 					{
 						// Left Foot
-						if (LastExpressionPosition[L] < y && node.PreviousLink.Link.Links[L, a].Valid)
+						if (LastExpressionPosition[L] < y && node.PreviousLink.Link.Links[L, p].Valid)
 						{
 							var leftX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.LeftFoot].X;
-							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[L, a].Step];
+							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[L, p].Step];
 							if (node.PreviousLink.Link.IsJump())
 								stepStr = "[Jump] " + stepStr;
 							StringBuilder.Append(
@@ -606,10 +606,10 @@ $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{le
 						}
 
 						// Right Foot
-						if (LastExpressionPosition[R] < y && node.PreviousLink.Link.Links[R, a].Valid)
+						if (LastExpressionPosition[R] < y && node.PreviousLink.Link.Links[R, p].Valid)
 						{
 							var rightX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.RightFoot].X;
-							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[R, a].Step];
+							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[R, p].Step];
 							if (node.PreviousLink.Link.IsJump())
 								stepStr = "[Jump] " + stepStr;
 							StringBuilder.Append(
@@ -656,9 +656,9 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 				{
 					if (footSwap && !previousStepLink.Link.IsStepWithFoot(f))
 						continue;
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					for (var p = 0; p < NumFootPortions; p++)
 					{
-						if (node.GraphNode.State[f, a].Arrow == arrow)
+						if (node.GraphNode.State[f, p].Arrow == arrow)
 							return f;
 					}
 				}
@@ -681,9 +681,9 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 					{
 						if (footSwap && !previousStepLink.Link.IsStepWithFoot(f))
 							continue;
-						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (spn.GraphNodeInstance.Node.State[f, a].Arrow == arrow)
+							if (spn.GraphNodeInstance.Node.State[f, p].Arrow == arrow)
 								return f;
 						}
 					}

@@ -111,9 +111,9 @@ namespace ChartGenerator
 		{
 			// Create lists of combinations of actions for each number of foot portions.
 			// Create one list with releases and one without.
-			var actionCombinations = new FootAction[MaxArrowsPerFoot][][];
-			var actionCombinationsWithoutReleases = new FootAction[MaxArrowsPerFoot][][];
-			for (var i = 0; i < MaxArrowsPerFoot; i++)
+			var actionCombinations = new FootAction[NumFootPortions][][];
+			var actionCombinationsWithoutReleases = new FootAction[NumFootPortions][][];
+			for (var i = 0; i < NumFootPortions; i++)
 			{
 				var combinations = Combinations.CreateCombinations<FootAction>(i + 1);
 
@@ -315,18 +315,18 @@ namespace ChartGenerator
 		public static StepGraph CreateStepGraph(ArrowData[] arrowData, int leftStartingArrow, int rightStartingArrow)
 		{
 			// Set up state for root node.
-			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			var state = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (a == 0)
+				if (p == DefaultFootPortion)
 				{
-					state[L, a] = new GraphNode.FootArrowState(leftStartingArrow, GraphArrowState.Resting);
-					state[R, a] = new GraphNode.FootArrowState(rightStartingArrow, GraphArrowState.Resting);
+					state[L, p] = new GraphNode.FootArrowState(leftStartingArrow, GraphArrowState.Resting);
+					state[R, p] = new GraphNode.FootArrowState(rightStartingArrow, GraphArrowState.Resting);
 				}
 				else
 				{
-					state[L, a] = GraphNode.InvalidFootArrowState;
-					state[R, a] = GraphNode.InvalidFootArrowState;
+					state[L, p] = GraphNode.InvalidFootArrowState;
+					state[R, p] = GraphNode.InvalidFootArrowState;
 				}
 			}
 
@@ -420,7 +420,7 @@ namespace ChartGenerator
 
 			for (var foot = 0; foot < NumFeet; foot++)
 			{
-				for (var startingFootPortion = 0; startingFootPortion < MaxArrowsPerFoot; startingFootPortion++)
+				for (var startingFootPortion = 0; startingFootPortion < NumFootPortions; startingFootPortion++)
 				{
 					if (currentNode.State[foot, startingFootPortion].Arrow == InvalidArrowIndex)
 						continue;
@@ -537,7 +537,7 @@ namespace ChartGenerator
 
 			var arrows = onlyConsiderCurrent ? new int[1] : AllArrows;
 
-			for (var startingFootPortion = 0; startingFootPortion < MaxArrowsPerFoot; startingFootPortion++)
+			for (var startingFootPortion = 0; startingFootPortion < NumFootPortions; startingFootPortion++)
 			{
 				if (currentNode.State[foot, startingFootPortion].Arrow == InvalidArrowIndex)
 					continue;
@@ -640,7 +640,7 @@ namespace ChartGenerator
 				if (numHeld < 1)
 					return null;
 				// Must have one free foot.
-				if (numHeld == MaxArrowsPerFoot)
+				if (numHeld == NumFootPortions)
 					return null;
 			}
 			// NewArrow checks.
@@ -668,15 +668,15 @@ namespace ChartGenerator
 			// Copy the previous state, but lift from any resting arrows for the given foot.
 			// Leave holds.
 			var otherFoot = OtherFoot(foot);
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				newState[otherFoot, a] = currentState[otherFoot, a];
+				newState[otherFoot, p] = currentState[otherFoot, p];
 
-				if (IsStateRestingAtIndex(currentState, a, foot))
-					newState[foot, a] = GraphNode.InvalidFootArrowState;
+				if (IsStateRestingAtIndex(currentState, p, foot))
+					newState[foot, p] = GraphNode.InvalidFootArrowState;
 				else
-					newState[foot, a] = currentState[foot, a];
+					newState[foot, p] = currentState[foot, p];
 			}
 
 			// If stepping on a new bracket with the Heel (0) from a state where only one foot portion is
@@ -767,12 +767,12 @@ namespace ChartGenerator
 			// for the given type of step (release or not and also bracket or not).
 			var numHeld = 0;
 			var numHeldOrResting = 0;
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (currentState[foot, a].Arrow != InvalidArrowIndex)
+				if (currentState[foot, p].Arrow != InvalidArrowIndex)
 				{
 					numHeldOrResting++;
-					if (currentState[foot, a].State == GraphArrowState.Held)
+					if (currentState[foot, p].State == GraphArrowState.Held)
 						numHeld++;
 				}
 			}
@@ -790,7 +790,7 @@ namespace ChartGenerator
 				// the step would not be a bracket release.
 				// For stepping this is because to step on the same arrow as a bracket, the foot needs to be resting
 				// on the arrow while the other portion is held.
-				if (numHeldOrResting < MaxArrowsPerFoot)
+				if (numHeldOrResting < NumFootPortions)
 					return null;
 			}
 			// SameArrow logic.
@@ -805,7 +805,7 @@ namespace ChartGenerator
 						return null;
 					// When releasing only one foot portion can be holding. If the other foot
 					// portion were resting then this release would be a bracket release.
-					if (numHeldOrResting == MaxArrowsPerFoot)
+					if (numHeldOrResting == NumFootPortions)
 						return null;
 				}
 				// Stepping. Different logic than releasing for a non-bracket step.
@@ -833,18 +833,18 @@ namespace ChartGenerator
 				return null;
 
 			// Set up the state for a new node.
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				newState[otherFoot, a] = currentState[otherFoot, a];
+				newState[otherFoot, p] = currentState[otherFoot, p];
 
-				if (a == destinationFootPortion)
-					newState[foot, a] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
+				if (p == destinationFootPortion)
+					newState[foot, p] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
 				// When stepping is is necessary to lift all resting portions.
-				else if (!release && IsStateRestingAtIndex(currentState, a, foot))
-					newState[foot, a] = GraphNode.InvalidFootArrowState;
+				else if (!release && IsStateRestingAtIndex(currentState, p, foot))
+					newState[foot, p] = GraphNode.InvalidFootArrowState;
 				else
-					newState[foot, a] = currentState[foot, a];
+					newState[foot, p] = currentState[foot, p];
 			}
 
 			// Stepping on the same arrow maintains the previous state's orientation.
@@ -885,22 +885,22 @@ namespace ChartGenerator
 				return null;
 
 			// Set up the state for a new node.
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				if (a == DefaultFootPortion)
+				if (p == DefaultFootPortion)
 				{
 					// The other foot should remain resting on the new arrow, even though it is slightly lifted.
-					newState[otherFoot, a] = new GraphNode.FootArrowState(newArrow, GraphArrowState.Resting);
+					newState[otherFoot, p] = new GraphNode.FootArrowState(newArrow, GraphArrowState.Resting);
 					// The DefaultFootPortion for the foot in the new state should be on the new arrow,
 					// with the appropriate state.
-					newState[foot, a] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
+					newState[foot, p] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
 				}
 				else
 				{
 					// All other arrows should be lifted.
-					newState[otherFoot, a] = GraphNode.InvalidFootArrowState;
-					newState[foot, a] = GraphNode.InvalidFootArrowState;
+					newState[otherFoot, p] = GraphNode.InvalidFootArrowState;
+					newState[foot, p] = GraphNode.InvalidFootArrowState;
 				}
 			}
 
@@ -983,19 +983,19 @@ namespace ChartGenerator
 				return null;
 
 			// Set up the state for a new node.
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var p = 0; p < NumFootPortions; p++)
 			{
 				// Copy previous state for other foot
-				newState[otherFoot, a] = currentState[otherFoot, a];
+				newState[otherFoot, p] = currentState[otherFoot, p];
 
-				if (a == DefaultFootPortion)
-					newState[foot, a] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
+				if (p == DefaultFootPortion)
+					newState[foot, p] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
 				// Lift any resting arrows for the given foot.
-				else if (IsStateRestingAtIndex(currentState, a, foot))
-					newState[foot, a] = GraphNode.InvalidFootArrowState;
+				else if (IsStateRestingAtIndex(currentState, p, foot))
+					newState[foot, p] = GraphNode.InvalidFootArrowState;
 				else
-					newState[foot, a] = currentState[foot, a];
+					newState[foot, p] = currentState[foot, p];
 			}
 
 			// Crossovers are not inverted.
@@ -1074,19 +1074,19 @@ namespace ChartGenerator
 				return null;
 
 			// Set up the state for a new node.
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var p = 0; p < NumFootPortions; p++)
 			{
 				// Copy previous state for other foot.
-				newState[otherFoot, a] = currentState[otherFoot, a];
+				newState[otherFoot, p] = currentState[otherFoot, p];
 
-				if (a == DefaultFootPortion)
-					newState[foot, a] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
+				if (p == DefaultFootPortion)
+					newState[foot, p] = new GraphNode.FootArrowState(newArrow, StateAfterAction(footAction));
 				// Lift any resting arrows for the given foot.
-				else if (IsStateRestingAtIndex(currentState, a, foot))
-					newState[foot, a] = GraphNode.InvalidFootArrowState;
+				else if (IsStateRestingAtIndex(currentState, p, foot))
+					newState[foot, p] = GraphNode.InvalidFootArrowState;
 				else
-					newState[foot, a] = currentState[foot, a];
+					newState[foot, p] = currentState[foot, p];
 			}
 
 			return new List<GraphNode> { new GraphNode(newState, orientation) };
@@ -1471,11 +1471,11 @@ namespace ChartGenerator
 			FootAction[] footActions)
 		{
 			// Set up the state for a new node.
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
 			var otherFoot = OtherFoot(foot);
 			// The other foot doesn't change
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				newState[otherFoot, a] = currentState[otherFoot, a];
+			for (var p = 0; p < NumFootPortions; p++)
+				newState[otherFoot, p] = currentState[otherFoot, p];
 			// The given foot brackets the two new arrows.
 			newState[foot, footPortions[0]] = new GraphNode.FootArrowState(firstArrow, StateAfterAction(footActions[0]));
 			newState[foot, footPortions[1]] = new GraphNode.FootArrowState(secondArrow, StateAfterAction(footActions[1]));
@@ -1493,9 +1493,9 @@ namespace ChartGenerator
 		{
 			var result = new List<int>();
 			var otherFoot = OtherFoot(foot);
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				var otherFootArrowIndex = state[otherFoot, a].Arrow;
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 				    && ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
 					result.Add(otherFootArrowIndex);
@@ -1506,9 +1506,9 @@ namespace ChartGenerator
 
 		private bool FootCrossedOverInFront(GraphNode.FootArrowState[,] state, int foot)
 		{
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				var footArrowIndex = state[foot, a].Arrow;
+				var footArrowIndex = state[foot, p].Arrow;
 				if (footArrowIndex != InvalidArrowIndex
 				    && FootCrossesOverInFrontWithAnyOtherFoot(state, foot, footArrowIndex))
 					return true;
@@ -1518,9 +1518,9 @@ namespace ChartGenerator
 
 		private bool FootCrossedOverInBack(GraphNode.FootArrowState[,] state, int foot)
 		{
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				var footArrowIndex = state[foot, a].Arrow;
+				var footArrowIndex = state[foot, p].Arrow;
 				if (footArrowIndex != InvalidArrowIndex
 				    && FootCrossesOverInBackWithAnyOtherFoot(state, foot, footArrowIndex))
 					return true;
@@ -1537,9 +1537,9 @@ namespace ChartGenerator
 		private bool FootCrossesOverInFrontWithAnyOtherFoot(GraphNode.FootArrowState[,] state, int foot, int arrow)
 		{
 			var otherFoot = OtherFoot(foot);
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				var otherFootArrowIndex = state[otherFoot, a].Arrow;
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 				    && ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow])
 					return true;
@@ -1551,9 +1551,9 @@ namespace ChartGenerator
 		private bool FootCrossesOverInBackWithAnyOtherFoot(GraphNode.FootArrowState[,] state, int foot, int arrow)
 		{
 			var otherFoot = OtherFoot(foot);
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				var otherFootArrowIndex = state[otherFoot, a].Arrow;
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 				    && ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow])
 					return true;
@@ -1565,9 +1565,9 @@ namespace ChartGenerator
 		private bool FootInvertsWithAnyOtherFoot(GraphNode.FootArrowState[,] state, int foot, int arrow)
 		{
 			var otherFoot = OtherFoot(foot);
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				var otherFootArrowIndex = state[otherFoot, a].Arrow;
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 				    && ArrowData[otherFootArrowIndex].OtherFootPairingsInverted[otherFoot][arrow])
 					return true;
@@ -1579,8 +1579,8 @@ namespace ChartGenerator
 		private static bool IsFree(GraphNode.FootArrowState[,] state, int arrow)
 		{
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					if (state[f, a].Arrow == arrow)
+				for (var p = 0; p < NumFootPortions; p++)
+					if (state[f, p].Arrow == arrow)
 						return false;
 			return true;
 		}
@@ -1588,16 +1588,16 @@ namespace ChartGenerator
 		private static int NumHeld(GraphNode.FootArrowState[,] state, int foot)
 		{
 			var num = 0;
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[foot, a].Arrow != InvalidArrowIndex && state[foot, a].State == GraphArrowState.Held)
+			for (var p = 0; p < NumFootPortions; p++)
+				if (state[foot, p].Arrow != InvalidArrowIndex && state[foot, p].State == GraphArrowState.Held)
 					num++;
 			return num;
 		}
 
 		private static bool AnyHeld(GraphNode.FootArrowState[,] state, int foot)
 		{
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[foot, a].Arrow != InvalidArrowIndex && state[foot, a].State == GraphArrowState.Held)
+			for (var p = 0; p < NumFootPortions; p++)
+				if (state[foot, p].Arrow != InvalidArrowIndex && state[foot, p].State == GraphArrowState.Held)
 					return true;
 			return false;
 		}
@@ -1611,8 +1611,8 @@ namespace ChartGenerator
 
 		private static bool IsResting(GraphNode.FootArrowState[,] state, int arrow, int foot)
 		{
-			for (var a = 0; a < MaxArrowsPerFoot; a++)
-				if (state[foot, a].Arrow == arrow && state[foot, a].State == GraphArrowState.Resting)
+			for (var p = 0; p < NumFootPortions; p++)
+				if (state[foot, p].Arrow == arrow && state[foot, p].State == GraphArrowState.Resting)
 					return true;
 			return false;
 		}
@@ -1630,7 +1630,6 @@ namespace ChartGenerator
 				return true;
 			return false;
 		}
-
 		#endregion Fill Helpers
 	}
 }

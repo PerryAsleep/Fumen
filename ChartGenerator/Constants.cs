@@ -4,18 +4,20 @@ namespace ChartGenerator
 {
 	public static class Constants
 	{
-		public const int InvalidArrowIndex = -1;
+		// Feet
 		public const int InvalidFoot = -1;
-
 		public const int NumFeet = 2;
 		public const int L = 0;
 		public const int R = 1;
 
-		public const int MaxArrowsPerFoot = 2;
+		// Foot portions
+		public const int NumFootPortions = 2;
+		public const int DefaultFootPortion = 0;
 		public const int Heel = 0;
 		public const int Toe = 1;
-		public const int DefaultFootPortion = 0;
 
+		// Arrows
+		public const int InvalidArrowIndex = -1;
 		public const int NumSPArrows = 4;
 		public const int NumDPArrows = 8;
 		public const int P1L = 0;
@@ -27,8 +29,8 @@ namespace ChartGenerator
 		public const int P2U = 6;
 		public const int P2R = 7;
 
+		// Costs
 		public const int CostUnknown = 1000;
-
 		public const int CostRelease = 0;
 
 		// This needs to be great enough such that we prefer one foot holding and
@@ -109,7 +111,6 @@ namespace ChartGenerator
 		public const int CostTwoArrows_Jump_BothNew = 6;
 		public const int CostTwoArrows_Jump_OneNew = 5;
 
-
 		public const int CostThreeArrows = 0;
 		public const int CostFourArrows = 0;
 
@@ -177,10 +178,10 @@ namespace ChartGenerator
 			int leftArrow, GraphArrowState leftState,
 			int rightArrow, GraphArrowState rightState)
 		{
-			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			var state = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					state[f, a] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
+				for (var p = 0; p < NumFootPortions; p++)
+					state[f, p] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
 
 			state[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
 			state[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
@@ -194,7 +195,7 @@ namespace ChartGenerator
 			int rightArrow, GraphArrowState rightState,
 			int rightArrow2, GraphArrowState rightState2)
 		{
-			var state = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			var state = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
 			state[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
 			state[0, 1] = new GraphNode.FootArrowState(leftArrow2, leftState2);
 			state[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);
@@ -208,10 +209,10 @@ namespace ChartGenerator
 			int rightArrow, GraphArrowState rightState)
 		{
 			GraphNode node = new GraphNode(state, BodyOrientation.Normal);
-			var newState = new GraphNode.FootArrowState[NumFeet, MaxArrowsPerFoot];
+			var newState = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
 			for (var f = 0; f < NumFeet; f++)
-				for (var a = 0; a < MaxArrowsPerFoot; a++)
-					newState[f, a] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
+				for (var p = 0; p < NumFootPortions; p++)
+					newState[f, p] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
 
 			newState[0, 0] = new GraphNode.FootArrowState(leftArrow, leftState);
 			newState[1, 0] = new GraphNode.FootArrowState(rightArrow, rightState);

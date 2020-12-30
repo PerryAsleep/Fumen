@@ -166,11 +166,11 @@ namespace ChartGenerator
 				// Set up rolls
 				for (var f = 0; f < NumFeet; f++)
 				{
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					for (var p = 0; p < NumFootPortions; p++)
 					{
-						if (linkInstance.Rolls[f, a])
+						if (linkInstance.Rolls[f, p])
 						{
-							newNode.GraphNodeInstance.Rolls[f, a] = true;
+							newNode.GraphNodeInstance.Rolls[f, p] = true;
 						}
 					}
 				}
@@ -299,13 +299,13 @@ namespace ChartGenerator
 				{
 					for (var f = 0; f < NumFeet; f++)
 					{
-						for (var a = 0; a < MaxArrowsPerFoot; a++)
+						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (stepNode.GraphNodeInstance.Node.State[f, a].Arrow != InvalidArrowIndex)
+							if (stepNode.GraphNodeInstance.Node.State[f, p].Arrow != InvalidArrowIndex)
 							{
-								if (lanesWithNoArrows[stepNode.GraphNodeInstance.Node.State[f, a].Arrow])
+								if (lanesWithNoArrows[stepNode.GraphNodeInstance.Node.State[f, p].Arrow])
 								{
-									lanesWithNoArrows[stepNode.GraphNodeInstance.Node.State[f, a].Arrow] = false;
+									lanesWithNoArrows[stepNode.GraphNodeInstance.Node.State[f, p].Arrow] = false;
 									numLanesWithArrows++;
 								}
 							}
@@ -459,28 +459,28 @@ namespace ChartGenerator
 				var previousArrowFoot = InvalidFoot;
 				for (var f = 0; f < NumFeet; f++)
 				{
-					for (var a = 0; a < MaxArrowsPerFoot; a++)
+					for (var p = 0; p < NumFootPortions; p++)
 					{
-						if (currentNode.Node.State[f, a].Arrow == arrow)
+						if (currentNode.Node.State[f, p].Arrow == arrow)
 						{
 							// During a foot swap both feet will occupy one arrow. Ensure we capture
 							// the correct one.
 							if (currentIsFootSwap && f != currentFootSwapFoot)
 								continue;
 
-							currentArrowRoll = currentNode.Rolls[f, a];
-							currentArrowState = currentNode.Node.State[f, a];
+							currentArrowRoll = currentNode.Rolls[f, p];
+							currentArrowState = currentNode.Node.State[f, p];
 							currentArrowFoot = f;
 						}
 
-						if (previousNode.Node.State[f, a].Arrow == arrow)
+						if (previousNode.Node.State[f, p].Arrow == arrow)
 						{
 							// During a foot swap both feet will occupy one arrow. Ensure we capture
 							// the correct one.
 							if (previousIsFootSwap && f != previousFootSwapFoot)
 								continue;
 
-							previousArrowState = previousNode.Node.State[f, a];
+							previousArrowState = previousNode.Node.State[f, p];
 							previousArrowFoot = f;
 						}
 					}
@@ -508,16 +508,16 @@ namespace ChartGenerator
 							else
 							{
 								// Check link to see if we tapped the same arrow
-								for (var a = 0; a < MaxArrowsPerFoot; a++)
+								for (var p = 0; p < NumFootPortions; p++)
 								{
-									if (currentLink.Link.Links[currentArrowFoot, a].Valid
-									    && currentLink.Link.Links[currentArrowFoot, a].Action == FootAction.Tap
-									    && (currentLink.Link.Links[currentArrowFoot, a].Step == StepType.SameArrow
-											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketOneArrowHeelSame
-											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketOneArrowToeSame
-											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketHeelNew
-											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketToeNew
-											|| currentLink.Link.Links[currentArrowFoot, a].Step == StepType.BracketBothSame))
+									if (currentLink.Link.Links[currentArrowFoot, p].Valid
+									    && currentLink.Link.Links[currentArrowFoot, p].Action == FootAction.Tap
+									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.SameArrow
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowHeelSame
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowToeSame
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelNew
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketToeNew
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketBothSame))
 									{
 										// Tap on the arrow again
 										addNormalStep = true;
