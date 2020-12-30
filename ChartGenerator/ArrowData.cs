@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using static ChartGenerator.Constants;
 
 namespace ChartGenerator
@@ -84,7 +85,15 @@ namespace ChartGenerator
 		public static ArrowData[] DPArrowData { get; }
 
 		/// <summary>
-		/// Static initializer. Creates SPArrowData and DPArrowData.
+		/// Maximum difference in indices between arrows of a bracket in any ArrowData[] array.
+		/// Used to improve scans over ArrowData for bracketable pairings.
+		/// </summary>
+		public static readonly int MaxBracketSeparation;
+
+		/// <summary>
+		/// Static initializer.
+		/// Creates SPArrowData and DPArrowData.
+		/// Calculates MaxBracketSeparation.
 		/// </summary>
 		static ArrowData()
 		{
@@ -771,6 +780,25 @@ namespace ChartGenerator
 					},
 				}
 			};
+
+			// Determine the max bracket separation.
+			MaxBracketSeparation = 0;
+			foreach (var arrowData in new[] {SPArrowData, DPArrowData})
+			{
+				var numArrows = arrowData.Length;
+				for (var a = 0; a < numArrows; a++)
+				{
+					for (var a2 = 0; a2 < numArrows; a2++)
+					{
+						for (var f = 0; f < NumFeet; f++)
+						{
+							if (arrowData[a].BracketablePairingsOtherHeel[f][a2]
+							    || arrowData[a].BracketablePairingsOtherToe[f][a2])
+								MaxBracketSeparation = Math.Max(MaxBracketSeparation, Math.Abs(a2 - a));
+						}
+					}
+				}
+			}
 		}
 	}
 }

@@ -5,6 +5,7 @@ using static ChartGenerator.Constants;
 using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
+using System.Threading;
 
 namespace ChartGenerator
 {
@@ -18,12 +19,12 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
-		private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketHoldRoll\test.sm";
-		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketHoldRoll\";
-		private const string HackDifficulty = @"Beginner";
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
-		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
-		//private const string HackDifficulty = @"Challenge";
+		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketOneArrowUpdatesFootPortion\test.sm";
+		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketOneArrowUpdatesFootPortion\";
+		//private const string HackDifficulty = @"Beginner";
+		private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
+		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
+		private const string HackDifficulty = @"Challenge";
 		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\hey.sm";
 		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\";
 		//private const string HackDifficulty = @"Challenge";
@@ -38,8 +39,13 @@ namespace ChartGenerator
 
 		static void Main(string[] args)
 		{
-			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
-			//DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L);
+			var t1 = new Thread(() => { SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
+			var t2 = new Thread(() => { DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
+			t1.Start();
+			t2.Start();
+			t1.Join();
+			t2.Join();
+			return;
 
 			var song = SMReader.Load(HackChart);
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
@@ -93,7 +99,7 @@ namespace ChartGenerator
 					// Generate a new series of Events for this Chart from the singles Chart.
 					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
 					// HACK
-					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
+					var performedChart = PerformedChart.CreateFromExpressedChart(DPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMEventComparer());
@@ -120,8 +126,8 @@ namespace ChartGenerator
 					};
 
 					// HACK
-					newChart.NumInputs = 4;
-					newChart.Type = ChartTypeString(ChartType.dance_single);
+					//newChart.NumInputs = 4;
+					//newChart.Type = ChartTypeString(ChartType.dance_single);
 
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);

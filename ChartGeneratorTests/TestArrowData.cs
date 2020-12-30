@@ -53,5 +53,38 @@ namespace ChartGeneratorTests
 				}
 			}
 		}
+
+		[TestMethod]
+		public void TestValidNextArrows()
+		{
+			TestValidNextArrows(ArrowData.SPArrowData);
+			TestValidNextArrows(ArrowData.DPArrowData);
+		}
+
+		private void TestValidNextArrows(ArrowData[] arrowData)
+		{
+			var numArrows = arrowData.Length;
+			for (var a = 0; a < numArrows; a++)
+			{
+				for (var a2 = 0; a2 < numArrows; a2++)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						if (arrowData[a].BracketablePairingsOtherHeel[f][a2])
+							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
+						if (arrowData[a].BracketablePairingsOtherToe[f][a2])
+							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
+						if (arrowData[a].OtherFootPairings[f][a2])
+							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
+						if (arrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2])
+							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
+						if (arrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2])
+							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
+						if (arrowData[a].OtherFootPairingsInverted[f][a2])
+							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
+					}
+				}
+			}
+		}
 	}
 }

@@ -1,57 +1,3 @@
-Hold / Roll issue:
-	Problem:
-		For a bracket that is a short roll and long hold, we don't have a way in the StepGraph of distinguishing
-		that from a long roll and short hold. For example a bracket on SameArrow SameArrow with Hold and Roll. Could be either.
-	
-	Solution 1:
-		For brackets, make index 0 heel and index 1 toe.
-		When releasing we need to differentiate releasing the heel versus releasing the toe.
-		That way a bracket in the expressed chart would be:
-			pos 1: hold heel and roll toe
-			pos 2: release toe
-			pos 2: release heel
-	
-		StepGraph:
-			SameArrow,
-			NewArrow,
-			CrossoverFront,
-			CrossoverBehind,
-			InvertFront,
-			InvertBehind,
-			FootSwap,
-
-			BracketBothNew,
-			BracketHeelNew,
-			BracketToeNew,
-			BracketBothSame
-
-			BracketHeelSameArrow (for release and tap)
-			BracketHeelNewArrow
-			BracketToeSameArrow (for release and tap)
-			BracketToeNewArrow
-
-		Expressed chart:
-			when encountering a hold or roll, we need to store on that arrow what foot and what part of the foot hit it (e.g. Left Toe)
-			this way when the release follows, we can look up what type of release (Toe v Heel) it is.
-
-				We actually don't need to do this ^. the graph will choose the right one for us since only one (heel or toe) will match.
-
-			So, how do you look up if it is a heel or toe in the first place?
-			The problem is, in the StepGraph one GraphLink maps to many GraphNodes
-			There is no data that says When GraphLink A maps to GraphNode B  HOW does it map. In other words, which arrow is the heel and which is the foot?
-			Actually maybe that isn't true.
-			If we stop sorting the GraphNode State and instead have the indicies match the Link (0:heel, 1:toe) then we know heel / toe arrows
-			We still don't know the actual arrow though. Actually we do.
-
-			This also doesnt prevent us from getting rid of Rolls and attaching Rolls as Instance data.
-
-		Performed chart:
-			This should just work since the links know if they are release on BracketHeelSameArrow or BracketToeSameArrow
-
-	Solution 2:
-		Attach some stateful data to the link when generating the ExpressedChart.
-
-
 Additions:
 	Need
 		BracketToeSwapHeelSame
@@ -90,20 +36,26 @@ Misc:
 	SSC file parsing / saving
 	Write some code to export lines of code that can be used to unit test the expression.
 		This way you can easily make tests for entire charts.
+	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 PerformedChart improvements:
 	Do something to address that the patterns stay on one side of the pads too much.
 	Prefer swaps that don't make you move so much.
+		e.g. got a swap that is P1D, P2L, P2L, P2R (OOF)
 	Going into a nebulous jump when the original chart did not.
+	On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
+		e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
 	Preference for closer steps?
 		e.g. RLR as 523 is less preferable than RLR as 524
 
 Perf:
 	StepGraph generation:
-		Remove the loops over currentIndex and newIndex. This is a holdover from when the state representation was
+		X Remove the loops over currentIndex and newIndex. This is a holdover from when the state representation was
 			every arrow instead of the two arrows for each foot. We don't need to loop and can instead just check the current state's current arrows.
+		X Store some bit of data per StepType that specifies its valid FootActions to remove the early out on Release types for so many methods.
+		X Perhaps, same type of thing but the data specifies whether the step needs to be on a new arrow or on the same arrow
 		X Remove Rolls
-		AggressiveInlining
+		Multithreaded StepGraph internals?
 		Save/Load?
 
 

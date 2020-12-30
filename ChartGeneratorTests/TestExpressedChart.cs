@@ -1803,6 +1803,145 @@ namespace ChartGeneratorTests
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
 		}
 
+		/// <summary>
+		/// Tests to ensure that when holding an arrow and then tapping one more arrow as a bracket
+		/// that the step events are as expected. In these tests the foot holding the arrow will be
+		/// using DefaultFootPortion and then when performing the bracket that will update to Heel
+		/// or Toe as appropriate.
+		/// </summary>
+		[TestMethod]
+		public void TestBracketOneArrowUpdatesFootPortion()
+		{
+			var ec = Load(GetTestChartFullPath("TestBracketOneArrowUpdatesFootPortion"));
+			Assert.AreEqual(93, ec.StepEvents.Count);
+			var i = 0;
+
+			// Right foot DR bracket one heel hold, release toe first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot DR bracket one heel tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot DR bracket one toe hold, release heel first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot DR bracket one toe tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot UR bracket one toe hold, release heel first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot UR bracket one toe tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot UR bracket one heel hold, release toe first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Right foot UR bracket one heel tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LD bracket one heel hold, release toe first
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LD bracket one heel tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LD bracket one toe hold, release heel first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LD bracket one toe tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LU bracket one toe hold, release heel first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LU bracket one toe tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LU bracket one heel hold, release toe first.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+
+			// Left foot LU bracket one heel tap.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+		}
+
 		#endregion Miscellaneous
 	}
 }

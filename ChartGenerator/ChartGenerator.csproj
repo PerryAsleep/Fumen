@@ -46,6 +46,8 @@
     <Compile Include="ArrowData.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="ExpressedChart.cs" />
+    <Compile Include="GraphLink.cs" />
+    <Compile Include="GraphNode.cs" />
     <Compile Include="MineUtils.cs" />
     <Compile Include="PerformedChart.cs" />
     <Compile Include="Program.cs" />
