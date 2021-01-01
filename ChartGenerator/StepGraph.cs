@@ -108,12 +108,12 @@ namespace ChartGenerator
 				FillInvertFront,
 				FillInvertBack,
 				FillFootSwap,
-				FillBracketBothNew,
-				FillBracketHeelNew,
-				FillBracketToeNew,
-				FillBracketBothSame,
-				FillBracketToeSwapHeelSame,
-				FillBracketToeSwapHeelNew,
+				FillBracketHeelNewToeNew,
+				FillBracketHeelNewToeSame,
+				FillBracketHeelSameToeNew,
+				FillBracketHeelSameToeSame,
+				FillBracketHeelSameToeSwap,
+				FillBracketHeelNewToeSwap,
 				FillBracketHeelSwapToeSame,
 				FillBracketHeelSwapToeNew,
 				FillBracketOneArrowHeelSame,
@@ -262,10 +262,10 @@ namespace ChartGenerator
 							foreach (var newNode in newNodes)
 							{
 								// Fill the GraphLink Links at the correct foot portions.
-								// For example, if this is BracketToeNew StepType we want to only
+								// For example, if this is BracketHeelSameToeNew StepType we want to only
 								// fill the Link at the Toe foot portion index.
 								// We do not want to index the actions by the foot portion.
-								// For example, if this is BracketToeNew StepType the foot portion
+								// For example, if this is BracketHeelSameToeNew StepType the foot portion
 								// will be Toe (index 1) with only one FootAction in the actions
 								// array (at index 0).
 								var link = new GraphLink();
@@ -315,10 +315,10 @@ namespace ChartGenerator
 							foreach (var newNodeF2 in actionNodeF2.Value)
 							{
 								// Fill the GraphLink Links at the correct foot portions for each foot.
-								// For example, if this is BracketToeNew StepType we want to only
+								// For example, if this is BracketHeelSameToeNew StepType we want to only
 								// fill the Link at the Toe foot portion index.
 								// We do not want to index the actions by the foot portion.
-								// For example, if this is BracketToeNew StepType the foot portion
+								// For example, if this is BracketHeelSameToeNew StepType the foot portion
 								// will be Toe (index 1) with only one FootAction in the actions
 								// array (at index 0).
 								var link = new GraphLink();
@@ -914,7 +914,7 @@ namespace ChartGenerator
 		#endregion Fill Invert
 
 		#region Bracket Fill Functions
-		private List<GraphNode> FillBracketBothNew(
+		private List<GraphNode> FillBracketHeelNewToeNew(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -980,7 +980,7 @@ namespace ChartGenerator
 			return allResults;
 		}
 
-		private List<GraphNode> FillBracketHeelNew(
+		private List<GraphNode> FillBracketHeelNewToeSame(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -1029,7 +1029,7 @@ namespace ChartGenerator
 			return allResults;
 		}
 
-		private List<GraphNode> FillBracketToeNew(
+		private List<GraphNode> FillBracketHeelSameToeNew(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -1078,7 +1078,7 @@ namespace ChartGenerator
 			return allResults;
 		}
 
-		private List<GraphNode> FillBracketBothSame(
+		private List<GraphNode> FillBracketHeelSameToeSame(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -1090,7 +1090,7 @@ namespace ChartGenerator
 
 			var allResults = new List<GraphNode>();
 
-			var results = FillBracketInternalBothSame(
+			var results = FillBracketInternalHeelSameToeSame(
 				currentNode,
 				foot,
 				currentFootPortion,
@@ -1100,7 +1100,7 @@ namespace ChartGenerator
 			if (results != null && results.Count > 0)
 				allResults.AddRange(results);
 
-			results = FillBracketInternalBothSame(
+			results = FillBracketInternalHeelSameToeSame(
 				currentNode,
 				foot,
 				currentFootPortion,
@@ -1113,7 +1113,7 @@ namespace ChartGenerator
 			return allResults;
 		}
 
-		private List<GraphNode> FillBracketToeSwapHeelSame(
+		private List<GraphNode> FillBracketHeelSameToeSwap(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -1155,7 +1155,7 @@ namespace ChartGenerator
 			return allResults;
 		}
 
-		private List<GraphNode> FillBracketToeSwapHeelNew(
+		private List<GraphNode> FillBracketHeelNewToeSwap(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,
@@ -1428,7 +1428,7 @@ namespace ChartGenerator
 		/// to perform any checks that the arrows are bracketable and reachable when they are both the same
 		/// since those checks were performed previously.
 		/// </summary>
-		private List<GraphNode> FillBracketInternalBothSame(
+		private List<GraphNode> FillBracketInternalHeelSameToeSame(
 			GraphNode currentNode,
 			int foot,
 			int currentFootPortion,

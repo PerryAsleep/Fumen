@@ -15,12 +15,12 @@ namespace ChartGenerator
 		InvertBehind,
 		FootSwap,
 
-		BracketBothNew,
-		BracketHeelNew,
-		BracketToeNew,
-		BracketBothSame,
-		BracketToeSwapHeelSame,
-		BracketToeSwapHeelNew,
+		BracketHeelNewToeNew,
+		BracketHeelNewToeSame,
+		BracketHeelSameToeNew,
+		BracketHeelSameToeSame,
+		BracketHeelSameToeSwap,
+		BracketHeelNewToeSwap,
 		BracketHeelSwapToeSame,
 		BracketHeelSwapToeNew,
 
@@ -272,7 +272,7 @@ namespace ChartGenerator
 				isBracket: false,
 				onlyConsiderCurrentArrowsWhenFilling: false
 			);
-			Steps[(int)StepType.BracketBothNew] = new StepData(
+			Steps[(int)StepType.BracketHeelNewToeNew] = new StepData(
 				actionSets: actionCombinationsWithoutReleases[1],
 				footPortionsForStep: new[] { Heel, Toe },
 				canBeUsedInJump: true,
@@ -280,7 +280,7 @@ namespace ChartGenerator
 				isBracket: true,
 				onlyConsiderCurrentArrowsWhenFilling: false
 			);
-			Steps[(int)StepType.BracketHeelNew] = new StepData(
+			Steps[(int)StepType.BracketHeelNewToeSame] = new StepData(
 				actionSets: actionCombinationsWithoutReleases[1],
 				footPortionsForStep: new[] { Heel, Toe },
 				canBeUsedInJump: true,
@@ -288,7 +288,7 @@ namespace ChartGenerator
 				isBracket: true,
 				onlyConsiderCurrentArrowsWhenFilling: false
 			);
-			Steps[(int)StepType.BracketToeNew] = new StepData(
+			Steps[(int)StepType.BracketHeelSameToeNew] = new StepData(
 				actionSets: actionCombinationsWithoutReleases[1],
 				footPortionsForStep: new[] { Heel, Toe },
 				canBeUsedInJump: true,
@@ -296,7 +296,7 @@ namespace ChartGenerator
 				isBracket: true,
 				onlyConsiderCurrentArrowsWhenFilling: false
 			);
-			Steps[(int)StepType.BracketBothSame] = new StepData(
+			Steps[(int)StepType.BracketHeelSameToeSame] = new StepData(
 				actionSets: actionCombinations[1],
 				footPortionsForStep: new[] { Heel, Toe },
 				canBeUsedInJump: true,
@@ -304,7 +304,7 @@ namespace ChartGenerator
 				isBracket: true,
 				onlyConsiderCurrentArrowsWhenFilling: true
 			);
-			Steps[(int)StepType.BracketToeSwapHeelSame] = new StepData(
+			Steps[(int)StepType.BracketHeelSameToeSwap] = new StepData(
 				actionSets: actionCombinationsWithoutReleases[1],
 				footPortionsForStep: new[] { Heel, Toe },
 				canBeUsedInJump: false,
@@ -312,7 +312,7 @@ namespace ChartGenerator
 				isBracket: true,
 				onlyConsiderCurrentArrowsWhenFilling: false
 			);
-			Steps[(int)StepType.BracketToeSwapHeelNew] = new StepData(
+			Steps[(int)StepType.BracketHeelNewToeSwap] = new StepData(
 				actionSets: actionCombinationsWithoutReleases[1],
 				footPortionsForStep: new[] { Heel, Toe },
 				canBeUsedInJump: false,

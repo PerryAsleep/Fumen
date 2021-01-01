@@ -524,17 +524,17 @@ namespace ChartGenerator
 									}
 									if (p == Heel
 									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowHeelSame
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketBothSame
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketToeNew
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketToeSwapHeelSame))
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSame
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeNew
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSwap))
 									{
 										addNormalStep = true;
 										break;
 									}
 									if (p == Toe
 									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowToeSame
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketBothSame
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelNew
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSame
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelNewToeSame
 											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSwapToeSame))
 									{
 										addNormalStep = true;

@@ -1124,7 +1124,7 @@ namespace ChartGenerator
 							var doubleStep = previousStepLink != null
 											 && previousStepLink.IsStepWithFoot(foot)
 											 && !holdingAny[otherFoot]
-											 && step != StepType.BracketBothSame;
+											 && step != StepType.BracketHeelSameToeSame;
 							if (doubleStep)
 							{
 								// We may want to differentiate here between a double step that involves the same
@@ -1338,7 +1338,7 @@ namespace ChartGenerator
 
 		private static bool GetBracketStepAndFoot(GraphLink link, out StepType step, out int foot)
 		{
-			step = StepType.BracketBothNew;
+			step = StepType.BracketHeelNewToeNew;
 			foot = 0;
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)

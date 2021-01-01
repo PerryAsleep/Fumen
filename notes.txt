@@ -1,27 +1,3 @@
-Immediates:
-	X Missing some bracket links:
-		For example (L) going from LD to LU
-			technically this is heel new toe new
-			we wont fill this because of the IsFree check.
-				this check could maybe be changed to IsOtherFootNotOnThisArrow since we know:
-					we will always choose 2 different arrows for a bracket fill
-					we know that all of the 'current' state arrows for this foot will be updated
-			problem: ignore if your foot is on this arrow means that you might fill heel new toe same with a combo that is actually same same
-				might need to check: if there is only one portion on an arrow (default), then it really does need to be new,
-				if there are two portions on arrows then it is okay if it is occupied by the other portion
-	X If you foot swap and replace a foot, should that foot actually go invalid on other arrows?
-		if it is resting on another arrow it might make sense to keep that
-			and possibly go invalid on the arrow it was swapped on?
-
-	X Write test for the new test chart for Giga Violate
-	X Put in real cost
-		X 14: Bracket and Swap works
-		X 46: Swaps when should not
-		X 68: Still not swapping when should. Hold determination wrong? (stepgraph was wrong due to typo)
-		X 44: Should this be a bracket or a jump? I think a jump since it would be a double step on a bracket.
-
-	Rename bracket StepTypes to use consistent naming
-
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
 	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
@@ -41,8 +17,6 @@ Bugs:
 	Chart Bugs:
 		Don't You Want Me:
 			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
-		Giga Violate:
-			14, Should be a bracket AND a foot swap and NOT a jump.
 		Echidna:
 			7: Supposed to be swap instead of 3 jack?
 				same in 11, 13, 21

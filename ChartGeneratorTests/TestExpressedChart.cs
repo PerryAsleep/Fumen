@@ -1684,8 +1684,8 @@ namespace ChartGeneratorTests
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketBothNew, FootAction.Hold, StepType.BracketBothNew, FootAction.Hold);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketBothSame, FootAction.Release, StepType.BracketBothSame, FootAction.Release);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNewToeNew, FootAction.Hold, StepType.BracketHeelNewToeNew, FootAction.Hold);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeSame, FootAction.Release, StepType.BracketHeelSameToeSame, FootAction.Release);
 		}
 
 		/// <summary>
@@ -1708,8 +1708,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long holds on toes and short rolls on heels.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketToeNew, FootAction.Hold, StepType.BracketToeNew, FootAction.Hold,
-				StepType.BracketHeelNew, FootAction.Hold, StepType.BracketHeelNew, FootAction.Hold,
+				StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Hold,
+				StepType.BracketHeelNewToeSame, FootAction.Hold, StepType.BracketHeelNewToeSame, FootAction.Hold,
 				true, false, true, false);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
@@ -1720,8 +1720,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long holds on heels and short rolls on toes.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, true, false, true);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
@@ -1732,8 +1732,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long holds on the outer arrows and short rolls on the inner arrows.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				true, false, false, true);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
@@ -1744,8 +1744,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long holds on the inner arrows and short rolls on the outer arrows.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, true, true, false);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
@@ -1756,8 +1756,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long holds on the inner arrows and short holds on the outer arrows.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, false, false, false);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
@@ -1768,8 +1768,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long holds on the outer arrows and short holds on the inner arrows.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, false, false, false);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
@@ -1780,8 +1780,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long rolls on the inner arrows and short rolls on the outer arrows.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				true, true, true, true);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
@@ -1792,8 +1792,8 @@ namespace ChartGeneratorTests
 
 			// Quad with long rolls on the outer arrows and short rolls on the inner arrows.
 			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
-				StepType.BracketBothSame, FootAction.Hold, StepType.BracketBothSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
+				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				true, true, true, true);
 			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
@@ -1958,11 +1958,11 @@ namespace ChartGeneratorTests
 			// L bracket on LU, U is swapped with a R bracket on UR.
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketToeNew, FootAction.Hold, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketToeSwapHeelSame, FootAction.Tap, StepType.BracketToeSwapHeelSame, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeSwap, FootAction.Tap, StepType.BracketHeelSameToeSwap, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
 
 			// Variation.
@@ -1970,11 +1970,11 @@ namespace ChartGeneratorTests
 			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketToeNew, FootAction.Hold, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketToeSwapHeelSame, FootAction.Tap, StepType.BracketToeSwapHeelSame, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSameToeSwap, FootAction.Tap, StepType.BracketHeelSameToeSwap, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
 
 			// Variation.
@@ -1982,11 +1982,11 @@ namespace ChartGeneratorTests
 			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Hold);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Hold);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
 			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketToeNew, FootAction.Tap, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSameToeNew, FootAction.Tap, StepType.BracketHeelSameToeNew, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
 
 			// Variation.
@@ -1994,11 +1994,11 @@ namespace ChartGeneratorTests
 			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Hold);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Hold);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link,L, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
 			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketToeNew, FootAction.Tap, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeNew, FootAction.Tap, StepType.BracketHeelSameToeNew, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
 		}
 
@@ -2016,7 +2016,7 @@ namespace ChartGeneratorTests
 
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
 			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
 			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
