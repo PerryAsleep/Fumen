@@ -11,6 +11,7 @@ namespace ChartGenerator
 		public const int R = 1;
 
 		// Foot portions
+		public const int InvalidFootPortion = -1;
 		public const int NumFootPortions = 2;
 		public const int DefaultFootPortion = 0;
 		public const int Heel = 0;
@@ -100,7 +101,9 @@ namespace ChartGenerator
 		public const int CostTwoArrows_Bracket_OtherFootHoldingBoth = 1;
 		public const int CostTwoArrows_Bracket_DoubleStep = 100;
 		public const int CostTwoArrows_Bracket_PreferredDueToMovement = 5;
+		public const int CostTwoArrows_Bracket_PreferredDueToMovement_Swap = 8;
 		public const int CostTwoArrows_Bracket = 10;
+		public const int CostTwoArrows_Bracket_Swap = 11;
 
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket = 20;
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable = 15;
@@ -122,17 +125,6 @@ namespace ChartGenerator
 		public static int OtherFootPortion(int footPortion)
 		{
 			return footPortion == Heel ? Toe : Heel;
-		}
-
-		public static GraphArrowState StateAfterAction(FootAction footAction)
-		{
-			switch (footAction)
-			{
-				case FootAction.Hold:
-					return GraphArrowState.Held;
-				default:
-					return GraphArrowState.Resting;
-			}
 		}
 
 		#region Debug
@@ -220,71 +212,5 @@ namespace ChartGenerator
 			return node.Equals(newNode);
 		}
 		#endregion
-
-		public enum StepType
-		{
-			SameArrow,
-			NewArrow,
-			CrossoverFront,
-			CrossoverBehind,
-			InvertFront,
-			InvertBehind,
-			FootSwap,
-
-			BracketBothNew,
-			BracketHeelNew,
-			BracketToeNew,
-			BracketBothSame,
-
-			//BracketToeSwapHeelSame,
-			//BracketToeSwapHeelNew,
-			//BracketHeelSwapToeSame,
-			//BracketHeelSwapToeNew,
-
-			BracketOneArrowHeelSame, // (for release and tap)
-			BracketOneArrowHeelNew,
-			BracketOneArrowToeSame, // (for release and tap)
-			BracketOneArrowToeNew
-		}
-
-		public enum FootAction
-		{
-			Tap,
-			Hold,
-			Release
-		}
-
-		public enum BodyOrientation
-		{
-			Normal,
-			InvertedRightOverLeft,
-			InvertedLeftOverRight,
-		}
-
-		/// <summary>
-		/// Enumeration of ways to express a MineEvent.
-		/// </summary>
-		public enum MineType
-		{
-			/// <summary>
-			/// Expressing a mine as occurring after a specific arrow is most preferable as
-			/// this is typically done to inform future footing like a double step or a foot
-			/// swap.
-			/// </summary>
-			AfterArrow,
-
-			/// <summary>
-			/// If a mine can't be expressed as occurring after an arrow because no arrow
-			/// precedes it, then the next best way to express it is as occurring before a
-			/// specific arrow.
-			/// </summary>
-			BeforeArrow,
-
-			/// <summary>
-			/// In the rare case that a mine is in a lane with no arrows then it is expressed
-			/// as occurring with no arrow.
-			/// </summary>
-			NoArrow
-		}
 	}
 }

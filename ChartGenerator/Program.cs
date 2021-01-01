@@ -19,8 +19,8 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketOneArrowUpdatesFootPortion\test.sm";
-		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketOneArrowUpdatesFootPortion\";
+		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketIntoJumpsGigaViolate\test.sm";
+		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketIntoJumpsGigaViolate\";
 		//private const string HackDifficulty = @"Beginner";
 		private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
 		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
@@ -45,7 +45,7 @@ namespace ChartGenerator
 			t2.Start();
 			t1.Join();
 			t2.Join();
-			//return;
+			return;
 
 			var song = SMReader.Load(HackChart);
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
@@ -99,7 +99,7 @@ namespace ChartGenerator
 					// Generate a new series of Events for this Chart from the singles Chart.
 					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
 					// HACK
-					var performedChart = PerformedChart.CreateFromExpressedChart(DPGraph, expressedChart);
+					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMEventComparer());
@@ -126,8 +126,8 @@ namespace ChartGenerator
 					};
 
 					// HACK
-					//newChart.NumInputs = 4;
-					//newChart.Type = ChartTypeString(ChartType.dance_single);
+					newChart.NumInputs = 4;
+					newChart.Type = ChartTypeString(ChartType.dance_single);
 
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);

@@ -318,7 +318,7 @@ namespace ChartGenerator
 			}
 
 			// Get the first lane with no arrow, if one exists.
-			var firstLaneWithNoArrow = -1;
+			var firstLaneWithNoArrow = InvalidArrowIndex;
 			for (var a = 0; a < stepGraph.NumArrows; a++)
 			{
 				if (!lanesWithNoArrows[a])
@@ -443,12 +443,13 @@ namespace ChartGenerator
 				actions[a] = PerformanceFootAction.None;
 
 			// Get foot swap status
-			var currentIsFootSwap = currentLink.Link.IsFootSwap(out var currentFootSwapFoot);
+			var currentIsFootSwap = currentLink.Link.IsFootSwap(out var currentFootSwapFoot, out _);
 			var previousIsFootSwap = false;
 			var previousFootSwapFoot = InvalidFoot;
 			if (previousLink != null)
-				previousIsFootSwap = previousLink.Link.IsFootSwap(out previousFootSwapFoot);
+				previousIsFootSwap = previousLink.Link.IsFootSwap(out previousFootSwapFoot, out _);
 
+			// Check each arrow.
 			for (var arrow = 0; arrow < numArrows; arrow++)
 			{
 				// Determine the state of this arrow previously and now
@@ -463,7 +464,7 @@ namespace ChartGenerator
 					{
 						if (currentNode.Node.State[f, p].Arrow == arrow)
 						{
-							// During a foot swap both feet will occupy one arrow. Ensure we capture
+							// During a foot swap both feet may occupy one arrow. Ensure we capture
 							// the correct one.
 							if (currentIsFootSwap && f != currentFootSwapFoot)
 								continue;
@@ -475,7 +476,7 @@ namespace ChartGenerator
 
 						if (previousNode.Node.State[f, p].Arrow == arrow)
 						{
-							// During a foot swap both feet will occupy one arrow. Ensure we capture
+							// During a foot swap both feet may occupy one arrow. Ensure we capture
 							// the correct one.
 							if (previousIsFootSwap && f != previousFootSwapFoot)
 								continue;
@@ -510,16 +511,32 @@ namespace ChartGenerator
 								// Check link to see if we tapped the same arrow
 								for (var p = 0; p < NumFootPortions; p++)
 								{
-									if (currentLink.Link.Links[currentArrowFoot, p].Valid
-									    && currentLink.Link.Links[currentArrowFoot, p].Action == FootAction.Tap
-									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.SameArrow
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowHeelSame
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowToeSame
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelNew
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketToeNew
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketBothSame))
+									if (!currentLink.Link.Links[currentArrowFoot, p].Valid
+									    || currentLink.Link.Links[currentArrowFoot, p].Action != FootAction.Tap)
+										continue;
+
+									// TODO: Move this logic into StepData.
+									if (p == DefaultFootPortion
+									    && currentLink.Link.Links[currentArrowFoot, p].Step == StepType.SameArrow)
 									{
-										// Tap on the arrow again
+										addNormalStep = true;
+										break;
+									}
+									if (p == Heel
+									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowHeelSame
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketBothSame
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketToeNew
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketToeSwapHeelSame))
+									{
+										addNormalStep = true;
+										break;
+									}
+									if (p == Toe
+									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowToeSame
+									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketBothSame
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelNew
+											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSwapToeSame))
+									{
 										addNormalStep = true;
 										break;
 									}

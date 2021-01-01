@@ -14,9 +14,9 @@ namespace ChartGenerator
 		/// </summary>
 		public struct FootArrowState
 		{
-			public StepType Step { get; }
-			public FootAction Action { get; }
-			public bool Valid { get; }
+			public readonly StepType Step;
+			public readonly FootAction Action;
+			public readonly bool Valid;
 
 			public FootArrowState(StepType step, FootAction action)
 			{
@@ -134,21 +134,27 @@ namespace ChartGenerator
 
 		/// <summary>
 		/// Whether or not this link represents a footswap.
+		/// This includes a bracket that is also a footswap.
 		/// </summary>
 		/// <param name="foot">
 		/// Out param to store the foot which performed the swap, if this is a foot swap.
 		/// </param>
+		/// <param name="portion">
+		/// Out param to store the portion of the foot which performed the swap, if this is a foot swap.
+		/// </param>
 		/// <returns>True if this link is a footswap and false otherwise.</returns>
-		public bool IsFootSwap(out int foot)
+		public bool IsFootSwap(out int foot, out int portion)
 		{
 			foot = InvalidFoot;
+			portion = DefaultFootPortion;
 			for (var f = 0; f < NumFeet; f++)
 			{
 				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, p].Valid && Links[f, p].Step == StepType.FootSwap)
+					if (Links[f, p].Valid && StepData.Steps[(int)Links[f, p].Step].IsFootSwap[p])
 					{
 						foot = f;
+						portion = p;
 						return true;
 					}
 				}

@@ -5,18 +5,6 @@ using static ChartGenerator.Constants;
 namespace ChartGenerator
 {
 	/// <summary>
-	/// The state a foot on an arrow in StepGraph can be in.
-	/// There is no none / lifted state.
-	/// Each foot is on one or more arrows each in one of these states.
-	/// Rolls are considered no different than holds in the StepGraph.
-	/// </summary>
-	public enum GraphArrowState
-	{
-		Resting,
-		Held
-	}
-
-	/// <summary>
 	/// Node in a StepGraph.
 	/// Connected to other GraphNodes by GraphLinks.
 	/// One GraphLink may attach a GraphNode to multiple other GraphNodes.
@@ -34,8 +22,8 @@ namespace ChartGenerator
 		/// </summary>
 		public struct FootArrowState
 		{
-			public int Arrow { get; }
-			public GraphArrowState State { get; }
+			public readonly int Arrow;
+			public readonly GraphArrowState State;
 
 			public FootArrowState(int arrow, GraphArrowState state)
 			{

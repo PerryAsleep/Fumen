@@ -68,14 +68,18 @@ namespace ChartGenerator
 			"Invert In Front",
 			"Invert In Back",
 			"Foot Swap",
-			"Bracket Both New",
-			"Bracket Heel New",
-			"Bracket Toe New",
-			"Bracket Both Same",
-			"Bracket 1 Heel Same",
-			"Bracket 1 Heel New",
-			"Bracket 1 Toe Same",
-			"Bracket 1 Toe New",
+			"Br H New T New",
+			"Br H New T Same",
+			"Br H Same T New",
+			"Br H Same T Same",
+			"Br H Same T Swap",
+			"Br H New T Swap",
+			"Br H Swap T Same",
+			"Br H Swap T New",
+			"Br 1 H Same",
+			"Br 1 H New",
+			"Br 1 T Same",
+			"Br 1 T New",
 		};
 
 		private StringBuilder StringBuilder = new StringBuilder();
@@ -648,18 +652,26 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 		{
 			while (node != null && node.Position == position)
 			{
-				// If this step is a footswap we need to ignore the other foot, which will still be resting on
-				// this arrow.
-				var previousStepLink = node.GetPreviousStepLink();
-				var footSwap = previousStepLink?.Link.IsFootSwap(out _) ?? false;
-				for (var f = 0; f < NumFeet; f++)
+				if (node.PreviousLink != null && !node.PreviousLink.Link.IsRelease())
 				{
-					if (footSwap && !previousStepLink.Link.IsStepWithFoot(f))
-						continue;
-					for (var p = 0; p < NumFootPortions; p++)
+					// If this step is a footswap we need to ignore the other foot, which may still be resting on this arrow.
+					var previousStepLink = node.GetPreviousStepLink();
+					var footSwapFoot = InvalidFoot;
+					var footSwapPortion = DefaultFootPortion;
+					var footSwap = previousStepLink?.Link.IsFootSwap(out footSwapFoot, out footSwapPortion) ?? false;
+					if (footSwap && node.GraphNode.State[footSwapFoot, footSwapPortion].Arrow == arrow)
+						return footSwapFoot;
+
+					// No footswap on the given arrow.
+					for (var f = 0; f < NumFeet; f++)
 					{
-						if (node.GraphNode.State[f, p].Arrow == arrow)
-							return f;
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (node.GraphNode.State[f, p].Arrow == arrow)
+							{
+								return f;
+							}
+						}
 					}
 				}
 				node = node.GetNextNode();
@@ -673,18 +685,24 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 			{
 				if (node is PerformedChart.StepPerformanceNode spn)
 				{
-					// If this step is a footswap we need to ignore the other foot, which will still be resting on
-					// this arrow.
 					var previousStepLink = spn.GraphLinkInstance;
-					var footSwap = previousStepLink?.Link.IsFootSwap(out _) ?? false;
-					for (var f = 0; f < NumFeet; f++)
+					if (previousStepLink != null && !previousStepLink.Link.IsRelease())
 					{
-						if (footSwap && !previousStepLink.Link.IsStepWithFoot(f))
-							continue;
-						for (var p = 0; p < NumFootPortions; p++)
+						// If this step is a footswap we need to ignore the other foot, which may still be resting on this arrow.
+						var footSwap = previousStepLink.Link.IsFootSwap(out var footSwapFoot, out var footSwapPortion);
+						if (footSwap && spn.GraphNodeInstance.Node.State[footSwapFoot, footSwapPortion].Arrow == arrow)
+							return footSwapFoot;
+
+						// No footswap on the given arrow.
+						for (var f = 0; f < NumFeet; f++)
 						{
-							if (spn.GraphNodeInstance.Node.State[f, p].Arrow == arrow)
-								return f;
+							for (var p = 0; p < NumFootPortions; p++)
+							{
+								if (spn.GraphNodeInstance.Node.State[f, p].Arrow == arrow)
+								{
+									return f;
+								}
+							}
 						}
 					}
 				}

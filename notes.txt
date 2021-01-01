@@ -1,9 +1,26 @@
-Additions:
-	Need
-		BracketToeSwapHeelSame
-		BracketToeSwapHeelNew
-		BracketHeelSwapHeelSame
-		BracketHeelSwapToeNew
+Immediates:
+	X Missing some bracket links:
+		For example (L) going from LD to LU
+			technically this is heel new toe new
+			we wont fill this because of the IsFree check.
+				this check could maybe be changed to IsOtherFootNotOnThisArrow since we know:
+					we will always choose 2 different arrows for a bracket fill
+					we know that all of the 'current' state arrows for this foot will be updated
+			problem: ignore if your foot is on this arrow means that you might fill heel new toe same with a combo that is actually same same
+				might need to check: if there is only one portion on an arrow (default), then it really does need to be new,
+				if there are two portions on arrows then it is okay if it is occupied by the other portion
+	X If you foot swap and replace a foot, should that foot actually go invalid on other arrows?
+		if it is resting on another arrow it might make sense to keep that
+			and possibly go invalid on the arrow it was swapped on?
+
+	X Write test for the new test chart for Giga Violate
+	X Put in real cost
+		X 14: Bracket and Swap works
+		X 46: Swaps when should not
+		X 68: Still not swapping when should. Hold determination wrong? (stepgraph was wrong due to typo)
+		X 44: Should this be a bracket or a jump? I think a jump since it would be a double step on a bracket.
+
+	Rename bracket StepTypes to use consistent naming
 
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
@@ -31,7 +48,6 @@ Bugs:
 				same in 11, 13, 21
 			61: mine indicated foot swaps - questionable
 
-
 Misc:
 	SSC file parsing / saving
 	Write some code to export lines of code that can be used to unit test the expression.
@@ -39,14 +55,18 @@ Misc:
 	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 PerformedChart improvements:
-	Do something to address that the patterns stay on one side of the pads too much.
-	Prefer swaps that don't make you move so much.
-		e.g. got a swap that is P1D, P2L, P2L, P2R (OOF)
-	Going into a nebulous jump when the original chart did not.
-	On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
-		e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
-	Preference for closer steps?
-		e.g. RLR as 523 is less preferable than RLR as 524
+	Preference:
+		Swaps that don't make you move so much (e.g. got a swap that is P1D, P2L, P2L, P2R (OOF))
+		Preference for closer steps (e.g. RLR as 523 is less preferable than RLR as 524)
+		Move to other side more
+			maybe parse a bunch of good charts, find what a good distribution looks like and try to match that.
+	Choosing bad patterns:
+		Going into a nebulous jump when the original chart did not.
+		On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
+			e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
+		Maybe:
+			Don't choose patterns that wouldn't be expressed the same way.
+				This gets pretty difficult (need to be able to parse a DP pattern)
 
 Perf:
 	StepGraph generation:

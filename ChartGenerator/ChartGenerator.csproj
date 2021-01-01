@@ -53,6 +53,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Renderer.cs" />
+    <Compile Include="StepData.cs" />
     <Compile Include="StepGraph.cs" />
   </ItemGroup>
   <ItemGroup>

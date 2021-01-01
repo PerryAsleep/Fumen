@@ -566,7 +566,7 @@ namespace ChartGenerator
 						continue;
 
 					// What was the step into
-					if (link.Links[f, p].Valid && node.State[f, p].State == StateAfterAction(link.Links[f, p].Action))
+					if (link.Links[f, p].Valid && node.State[f, p].State == StepData.StateAfterAction[(int)link.Links[f, p].Action])
 					{
 						switch (node.State[f, p].State)
 						{
@@ -1029,7 +1029,7 @@ namespace ChartGenerator
 										return CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
 
 									// If previous was swap
-									if (previousStepLink?.IsFootSwap(out _) ?? false)
+									if (previousStepLink?.IsFootSwap(out _, out _) ?? false)
 										return CostNewArrow_FootSwap_SubsequentSwap;
 
 									// No indication and bracketable.
@@ -1043,7 +1043,7 @@ namespace ChartGenerator
 							case StepType.InvertBehind:
 							{
 								// Inversion from a foot swap
-								if (previousStepLink?.IsFootSwap(out _) ?? false)
+								if (previousStepLink?.IsFootSwap(out _, out _) ?? false)
 									return CostNewArrow_Invert_FromSwap;
 
 								if (otherAnyHeld)
@@ -1077,11 +1077,13 @@ namespace ChartGenerator
 						for (var f = 0; f < NumFeet; f++)
 						{
 							GetTwoArrowStepInfo(
+								position,
 								parentSearchNode,
 								childNode,
 								state,
 								f,
 								arrowData,
+								lastReleases,
 								out couldBeBracketed[f],
 								out holdingAny[f],
 								out holdingAll[f],
@@ -1124,27 +1126,38 @@ namespace ChartGenerator
 											 && !holdingAny[otherFoot]
 											 && step != StepType.BracketBothSame;
 							if (doubleStep)
+							{
+								// We may want to differentiate here between a double step that involves the same
+								// arrow and one that does not involve any of the same arrows or is a swap.
 								return CostTwoArrows_Bracket_DoubleStep;
+							}
+
+							var swap = StepData.Steps[(int) step].IsFootSwapWithAnyPortion;
 
 							if (preferBracketDueToAmountOfMovement[foot])
+							{
+								if (swap)
+									return CostTwoArrows_Bracket_PreferredDueToMovement_Swap;
 								return CostTwoArrows_Bracket_PreferredDueToMovement;
-
+							}
+							if (swap)
+								return CostTwoArrows_Bracket_Swap;
 							return CostTwoArrows_Bracket;
 						}
 
 						// Evaluate Jump
 						if (link.IsJump())
 						{
-							var onlyFootHoldingOne = -1;
+							var onlyFootHoldingOne = InvalidFoot;
 							for (var f = 0; f < NumFeet; f++)
 							{
 								if (holdingAny[f] && !holdingAll[f])
 								{
-									if (onlyFootHoldingOne == -1)
+									if (onlyFootHoldingOne == InvalidFoot)
 										onlyFootHoldingOne = f;
 									else
 									{
-										onlyFootHoldingOne = -1;
+										onlyFootHoldingOne = InvalidFoot;
 										break;
 									}
 								}
@@ -1152,11 +1165,11 @@ namespace ChartGenerator
 
 							// If only one foot is holding one, we should prefer a bracket if the two arrows
 							// are bracketable by the other foot.
-							if (onlyFootHoldingOne != -1 && couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
+							if (onlyFootHoldingOne != InvalidFoot && couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
 								return CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket;
 							// If only one foot is holding one and the two new arrows are not bracketable
 							// by the other foot, we should prefer the jump.
-							if (onlyFootHoldingOne != -1 && !couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
+							if (onlyFootHoldingOne != InvalidFoot && !couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
 								return CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable;
 
 							// No hold or both feet holding
@@ -1187,6 +1200,7 @@ namespace ChartGenerator
 									return CostTwoArrows_Jump_BothNewAndNeitherBracketable;
 								if (!bracketableDistanceIfThisFootSteps[L] || !bracketableDistanceIfThisFootSteps[R])
 									return CostTwoArrows_Jump_BothNewAndOneBracketable;
+
 								return CostTwoArrows_Jump_BothNew;
 							}
 
@@ -1329,11 +1343,7 @@ namespace ChartGenerator
 			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
 			{
-				if (link.Links[f, 0].Valid
-				    && (link.Links[f, 0].Step == StepType.BracketBothNew
-					|| link.Links[f, 0].Step == StepType.BracketHeelNew
-					|| link.Links[f, 0].Step == StepType.BracketToeNew
-					|| link.Links[f, 0].Step == StepType.BracketBothSame))
+				if (link.Links[f, 0].Valid && StepData.Steps[(int)link.Links[f, 0].Step].IsBracket)
 				{
 					step = link.Links[f, 0].Step;
 					foot = f;
@@ -1344,11 +1354,13 @@ namespace ChartGenerator
 		}
 
 		private static void GetTwoArrowStepInfo(
+			MetricPosition position,
 			ChartSearchNode parentSearchNode,
 			GraphNode childNode,
 			SearchState[] state,
 			int foot,
 			ArrowData[] arrowData,
+			MetricPosition[] lastReleases,
 			out bool couldBeBracketed,
 			out bool holdingAny,
 			out bool holdingAll,
@@ -1364,13 +1376,34 @@ namespace ChartGenerator
 			// Determine if any are held by this foot
 			if (parentSearchNode != null)
 			{
+				// Get the last release position so that we can consider an arrow still held if it released at the same
+				// position.
+				var releasePositionOfPreviousStep = new MetricPosition();
+				var previousState = parentSearchNode.GraphNode.State;
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (previousState[foot, p].Arrow != InvalidArrowIndex && previousState[foot, p].State == GraphArrowState.Resting)
+					{
+						// A foot could be coming from a bracket with multiple releases. In this case we want to
+						// choose the latest.
+						if (releasePositionOfPreviousStep < lastReleases[previousState[foot, p].Arrow])
+							releasePositionOfPreviousStep = lastReleases[previousState[foot, p].Arrow];
+					}
+				}
+
 				holdingAll = true;
 				for (var p = 0; p < NumFootPortions; p++)
 				{
 					var previousArrow = parentSearchNode.GraphNode.State[foot, p].Arrow;
 					if (previousArrow != InvalidArrowIndex)
 					{
-						if (parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Held)
+						var held = parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Held;
+						if (!held)
+						{
+							held = position == releasePositionOfPreviousStep;
+						}
+
+						if (held)
 						{
 							holdingAny = true;
 						}
@@ -1559,7 +1592,7 @@ namespace ChartGenerator
 			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents, numArrows);
 
 			var stepIndex = 0;
-			var releaseIndex = -1;
+			var releaseIndex = InvalidArrowIndex;
 			foreach (var smMineEvent in smMines)
 			{
 				// Advance the step and release indices to follow and precede the event respectively.

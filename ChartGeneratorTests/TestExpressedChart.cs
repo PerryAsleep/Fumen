@@ -1942,6 +1942,87 @@ namespace ChartGeneratorTests
 			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
 		}
 
+		/// <summary>
+		/// Test a pattern from Giga Violate in the Technical Showcase 4 pack.
+		/// This pattern involves a bracket where the heel is held and the other foot then brackets
+		/// with a foot swap such that the other foot toe swaps with the original foot toe.
+		/// </summary>
+		[TestMethod]
+		public void TestBracketSwapGigaViolate()
+		{
+			var ec = Load(GetTestChartFullPath("TestBracketSwapGigaViolate"));
+			Assert.AreEqual(35, ec.StepEvents.Count);
+			var i = 0;
+
+			// Original pattern.
+			// L bracket on LU, U is swapped with a R bracket on UR.
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketToeNew, FootAction.Hold, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketToeSwapHeelSame, FootAction.Tap, StepType.BracketToeSwapHeelSame, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+
+			// Variation.
+			// R bracket on UR, U is swapped with a L bracket on LU.
+			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketToeNew, FootAction.Hold, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketToeSwapHeelSame, FootAction.Tap, StepType.BracketToeSwapHeelSame, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+
+			// Variation.
+			// L bracket on LD, D is swapped with a R bracket on DR.
+			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketToeNew, FootAction.Tap, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+
+			// Variation.
+			// R bracket on DR, D is swapped with a L bracket on LD.
+			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link,L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketToeNew, FootAction.Tap, StepType.BracketToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+		}
+
+		/// <summary>
+		/// Test a pattern from Giga Violate in the Technical Showcase 4 pack.
+		/// This pattern involves a bracket into a jump that could technically be performed as
+		/// another bracket involving a swap, but we should prefer the jump
+		/// </summary>
+		[TestMethod]
+		public void TestBracketIntoJumpsGigaViolate()
+		{
+			var ec = Load(GetTestChartFullPath("TestBracketIntoJumpsGigaViolate"));
+			Assert.AreEqual(8, ec.StepEvents.Count);
+			var i = 0;
+
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNew, FootAction.Tap, StepType.BracketHeelNew, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+		}
 		#endregion Miscellaneous
 	}
 }

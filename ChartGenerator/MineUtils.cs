@@ -5,6 +5,32 @@ using static ChartGenerator.Constants;
 namespace ChartGenerator
 {
 	/// <summary>
+	/// Enumeration of ways to express a MineEvent.
+	/// </summary>
+	public enum MineType
+	{
+		/// <summary>
+		/// Expressing a mine as occurring after a specific arrow is most preferable as
+		/// this is typically done to inform future footing like a double step or a foot
+		/// swap.
+		/// </summary>
+		AfterArrow,
+
+		/// <summary>
+		/// If a mine can't be expressed as occurring after an arrow because no arrow
+		/// precedes it, then the next best way to express it is as occurring before a
+		/// specific arrow.
+		/// </summary>
+		BeforeArrow,
+
+		/// <summary>
+		/// In the rare case that a mine is in a lane with no arrows then it is expressed
+		/// as occurring with no arrow.
+		/// </summary>
+		NoArrow
+	}
+
+	/// <summary>
 	/// Utilities to help with creating mine events in ExpressedCharts and PerformedCharts.
 	/// This class isn't strictly necessary but it is helpful for a few reasons:
 	///  1) Mines are associated with neighboring steps or releases. ExpressedCharts and
