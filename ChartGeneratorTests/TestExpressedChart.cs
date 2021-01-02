@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ChartGenerator;
+using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
 
@@ -8,6 +10,7 @@ namespace ChartGeneratorTests
 {
 	/// <summary>
 	/// Tests for ExpressedChart.
+	/// See also ExpressedChartTestGenerator, which generates code that references this class.
 	/// </summary>
 	[TestClass]
 	public class TestExpressedChart
@@ -25,20 +28,55 @@ namespace ChartGeneratorTests
 			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
 		}
 
-		private string GetTestChartFullPath(string songFolder)
+		/// <summary>
+		/// Gets the path with extension to a test sm file in the given folder.
+		/// </summary>
+		/// <param name="songFolder">Name of the folder containing the test sm file.</param>
+		/// <param name="smFile">
+		/// Optional sm file name without extension.
+		/// Defaults to "test".
+		/// </param>
+		/// <returns>String representation of path to sm file with extension.</returns>
+		public static string GetTestChartPath(string songFolder, string smFile = "test")
 		{
-			return $"{AppDomain.CurrentDomain.BaseDirectory}\\..\\..\\TestData\\{songFolder}\\test.sm";
+			return $@"{AppDomain.CurrentDomain.BaseDirectory}\..\..\..\ChartGeneratorTests\TestData\{songFolder}\{smFile}.sm";
 		}
 
-		private ExpressedChart Load(string smFile)
+		/// <summary>
+		/// Load an sm file and return the ExpressedChart representation.
+		/// </summary>
+		/// <param name="smFile">SM file with path and extension.</param>
+		/// <param name="chartDifficultyType">
+		/// Optional difficulty type string of chart in SM file to load.
+		/// If omitted, the first chart found will be used.
+		/// </param>
+		/// <returns></returns>
+		public static ExpressedChart Load(string smFile, string chartDifficultyType = null)
 		{
 			var song = SMReader.Load(smFile);
-			var (expressedChart, _) = ExpressedChart.CreateFromSMEvents(song.Charts[0].Layers[0].Events, SPGraph);
+
+			// Default to the first chart.
+			List<Event> events = song.Charts[0].Layers[0].Events;
+			
+			// Use the specified chart, if present.
+			if (chartDifficultyType != null)
+			{
+				foreach (var chart in song.Charts)
+				{
+					if (chart.DifficultyType == chartDifficultyType)
+					{
+						events = chart.Layers[0].Events;
+						break;
+					}
+				}
+			}
+
+			// Create the expressed chart.
+			var (expressedChart, _) = ExpressedChart.CreateFromSMEvents(events, SPGraph);
 			return expressedChart;
 		}
 
 		#region Helpers
-
 		/// <summary>
 		/// Helper method to assert that a GraphLinkInstance matches the expected
 		/// single step information.
@@ -48,14 +86,14 @@ namespace ChartGeneratorTests
 		/// <param name="step">The StepType that the foot is expected to perform.</param>
 		/// <param name="action">The FootAction that fhe foot is expected to perform.</param>
 		/// <param name="roll">Whether or not the action is additionally a roll.</param>
-		private void AssertLinkMatchesStep(
+		public static void AssertLinkMatchesStep(
 			GraphLinkInstance link,
 			int foot,
 			StepType step,
 			FootAction action,
 			bool roll = false)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 			for (var p = 0; p < NumFootPortions; p++)
 			{
 				if (p == DefaultFootPortion)
@@ -85,7 +123,7 @@ namespace ChartGeneratorTests
 		/// <param name="rightAction">The right foot expected FootAction.</param>
 		/// <param name="leftRoll">Whether or not the left foot action is additionally a roll.</param>
 		/// <param name="rightRoll">Whether or not the right foot action is additionally a roll.</param>
-		private void AssertLinkMatchesJump(
+		public static void AssertLinkMatchesJump(
 			GraphLinkInstance link,
 			StepType leftStep,
 			FootAction leftAction,
@@ -94,7 +132,7 @@ namespace ChartGeneratorTests
 			bool leftRoll = false,
 			bool rightRoll = false)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 
 			for (var p = 0; p < NumFootPortions; p++)
 			{
@@ -129,7 +167,7 @@ namespace ChartGeneratorTests
 		/// <param name="toeAction">Expected FootAction for the Toe.</param>
 		/// <param name="heelRoll">Whether or not the Heel foot action is additionally a roll.</param>
 		/// <param name="toeRoll">Whether or not the Toe foot action is additionally a roll.</param>
-		private void AssertLinkMatchesBracket(
+		public static void AssertLinkMatchesBracket(
 			GraphLinkInstance link,
 			int foot,
 			StepType heelStep,
@@ -139,7 +177,7 @@ namespace ChartGeneratorTests
 			bool heelRoll = false,
 			bool toeRoll = false)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 
 			for (var p = 0; p < NumFootPortions; p++)
 			{
@@ -172,7 +210,7 @@ namespace ChartGeneratorTests
 		/// <param name="leftToeRoll">Whether or not the Left Toe foot action is additionally a roll.</param>
 		/// <param name="rightHeelRoll">Whether or not the Right Heel foot action is additionally a roll.</param>
 		/// <param name="rightToeRoll">Whether or not the Right Toe foot action is additionally a roll.</param>
-		private void AssertLinkMatchesQuad(
+		public static void AssertLinkMatchesQuad(
 			GraphLinkInstance link,
 			StepType leftHeelStep,
 			FootAction leftHeelAction,
@@ -187,7 +225,7 @@ namespace ChartGeneratorTests
 			bool rightHeelRoll = false,
 			bool rightToeRoll = false)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 
 			Assert.IsTrue(links[L, Heel].Valid);
 			Assert.IsTrue(links[L, Toe].Valid);
@@ -219,7 +257,7 @@ namespace ChartGeneratorTests
 		/// <param name="step">The StepType that the foot is expected to perform.</param>
 		/// <param name="action">The FootAction that fhe foot is expected to perform.</param>
 		/// <param name="roll">Whether or not the action is additionally a roll.</param>
-		private void AssertLinkMatchesOneStep(
+		public static void AssertLinkMatchesOneStep(
 			GraphLinkInstance link,
 			int foot,
 			int footPortion,
@@ -227,7 +265,7 @@ namespace ChartGeneratorTests
 			FootAction action,
 			bool roll)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 
 			for (var f = 0; f < NumFeet; f++)
 			{
@@ -263,7 +301,7 @@ namespace ChartGeneratorTests
 		/// <param name="step2">Step 2. The StepType that the foot is expected to perform.</param>
 		/// <param name="action2">Step 2. The FootAction that fhe foot is expected to perform.</param>
 		/// <param name="roll2">Step 2. Whether or not the action is additionally a roll.</param>
-		private void AssertLinkMatchesTwoSteps(
+		public static void AssertLinkMatchesTwoSteps(
 			GraphLinkInstance link,
 			int foot1,
 			int footPortion1,
@@ -276,7 +314,7 @@ namespace ChartGeneratorTests
 			FootAction action2,
 			bool roll2)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 
 			for (var f = 0; f < NumFeet; f++)
 			{
@@ -305,13 +343,60 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
+		/// Assert that every foot and every portion from a GraphLinkInstance
+		/// match expectations.
+		/// Used by automatically generated tests.
+		/// </summary>
+		public static void AssertLinkMatchesFullInformation(
+			GraphLinkInstance link,
+			bool validLH,
+			StepType stepLH,
+			FootAction actionLH,
+			bool rollLH,
+			bool validLT,
+			StepType stepLT,
+			FootAction actionLT,
+			bool rollLT,
+			bool validRH,
+			StepType stepRH,
+			FootAction actionRH,
+			bool rollRH,
+			bool validRT,
+			StepType stepRT,
+			FootAction actionRT,
+			bool rollRT)
+		{
+			var links = link.GraphLink.Links;
+
+			Assert.AreEqual(validLH, links[L, Heel].Valid);
+			Assert.AreEqual(stepLH, links[L, Heel].Step);
+			Assert.AreEqual(actionLH, links[L, Heel].Action);
+			Assert.AreEqual(rollLH, link.Rolls[L, Heel]);
+
+			Assert.AreEqual(validLT, links[L, Toe].Valid);
+			Assert.AreEqual(stepLT, links[L, Toe].Step);
+			Assert.AreEqual(actionLT, links[L, Toe].Action);
+			Assert.AreEqual(rollLT, link.Rolls[L, Toe]);
+
+			Assert.AreEqual(validRH, links[R, Heel].Valid);
+			Assert.AreEqual(stepRH, links[R, Heel].Step);
+			Assert.AreEqual(actionRH, links[R, Heel].Action);
+			Assert.AreEqual(rollRH, link.Rolls[R, Heel]);
+
+			Assert.AreEqual(validRT, links[R, Toe].Valid);
+			Assert.AreEqual(stepRT, links[R, Toe].Step);
+			Assert.AreEqual(actionRT, links[R, Toe].Action);
+			Assert.AreEqual(rollRT, link.Rolls[R, Toe]);
+		}
+
+		/// <summary>
 		/// Helper method to assert that the given MineEvent matches the expected configuration.
 		/// </summary>
 		/// <param name="mineEvent">MineEvent to check.</param>
 		/// <param name="type">Expected MineType.</param>
 		/// <param name="n">Expected value for the MineEvent's ArrowIsNthClosest value.</param>
 		/// <param name="f">Expected value for the MineEvent's FootAssociatedWithPairedNote.</param>
-		private void AssertMineEventMatches(ExpressedChart.MineEvent mineEvent, MineType type, int n, int f)
+		public static void AssertMineEventMatches(ExpressedChart.MineEvent mineEvent, MineType type, int n, int f)
 		{
 			Assert.AreEqual(mineEvent.Type, type);
 			Assert.AreEqual(mineEvent.ArrowIsNthClosest, n);
@@ -329,14 +414,14 @@ namespace ChartGeneratorTests
 		/// <returns>
 		/// Whether or not this set of FootArrowStates represent a single step with the given foot
 		/// </returns>
-		private bool IsSingleStepWithFoot(
+		public static bool IsSingleStepWithFoot(
 			GraphLinkInstance link,
 			int foot,
 			StepType step,
 			FootAction action,
 			bool roll = false)
 		{
-			var links = link.Link.Links;
+			var links = link.GraphLink.Links;
 
 			for (var p = 0; p < NumFootPortions; p++)
 			{
@@ -357,7 +442,6 @@ namespace ChartGeneratorTests
 
 			return true;
 		}
-
 		#endregion Helpers
 
 		/// <summary>
@@ -366,7 +450,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestEmpty()
 		{
-			var ec = Load(GetTestChartFullPath("TestEmpty"));
+			var ec = Load(GetTestChartPath("TestEmpty"));
 			Assert.AreEqual(0, ec.StepEvents.Count);
 			Assert.AreEqual(0, ec.MineEvents.Count);
 		}
@@ -381,7 +465,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestMinesPreferAfterArrow()
 		{
-			var ec = Load(GetTestChartFullPath("TestMinesPreferAfterArrow"));
+			var ec = Load(GetTestChartPath("TestMinesPreferAfterArrow"));
 			Assert.AreEqual(8, ec.StepEvents.Count);
 			Assert.AreEqual(12, ec.MineEvents.Count);
 			var i = 0;
@@ -412,7 +496,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestMinesNoArrow()
 		{
-			var ec = Load(GetTestChartFullPath("TestMinesNoArrow"));
+			var ec = Load(GetTestChartPath("TestMinesNoArrow"));
 			Assert.AreEqual(0, ec.StepEvents.Count);
 			Assert.AreEqual(4, ec.MineEvents.Count);
 			var i = 0;
@@ -431,7 +515,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestMinesNTies()
 		{
-			var ec = Load(GetTestChartFullPath("TestMinesNTies"));
+			var ec = Load(GetTestChartPath("TestMinesNTies"));
 			Assert.AreEqual(3, ec.StepEvents.Count);
 			Assert.AreEqual(4, ec.MineEvents.Count);
 			var i = 0;
@@ -453,19 +537,19 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestSameArrowAlternating()
 		{
-			var ec = Load(GetTestChartFullPath("TestSameArrowAlternating"));
+			var ec = Load(GetTestChartPath("TestSameArrowAlternating"));
 			Assert.AreEqual(8, ec.StepEvents.Count);
 			var i = 0;
 
 			// Simple alternating pattern
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -474,23 +558,23 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestSameArrowJacks()
 		{
-			var ec = Load(GetTestChartFullPath("TestSameArrowJacks"));
+			var ec = Load(GetTestChartPath("TestSameArrowJacks"));
 			Assert.AreEqual(12, ec.StepEvents.Count);
 			var i = 0;
 
 			// Simple jack patterns
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -499,20 +583,20 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestNewArrowStream()
 		{
-			var ec = Load(GetTestChartFullPath("TestNewArrowStream"));
+			var ec = Load(GetTestChartPath("TestNewArrowStream"));
 			Assert.AreEqual(9, ec.StepEvents.Count);
 			var i = 0;
 
 			// Simple stream pattern
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		#endregion Simple Patterns
@@ -525,33 +609,33 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestCrossoverLBehind()
 		{
-			var ec = Load(GetTestChartFullPath("TestCrossoverLBehind"));
+			var ec = Load(GetTestChartPath("TestCrossoverLBehind"));
 			Assert.AreEqual(18, ec.StepEvents.Count);
 			var i = 0;
 
 			// Standard crossover
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with jack
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with alternating pattern in crossover position
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -560,33 +644,33 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestCrossoverLFront()
 		{
-			var ec = Load(GetTestChartFullPath("TestCrossoverLFront"));
+			var ec = Load(GetTestChartPath("TestCrossoverLFront"));
 			Assert.AreEqual(18, ec.StepEvents.Count);
 			var i = 0;
 
 			// Standard crossover
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with jack
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with alternating pattern in crossover position
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -595,33 +679,33 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestCrossoverRBehind()
 		{
-			var ec = Load(GetTestChartFullPath("TestCrossoverRBehind"));
+			var ec = Load(GetTestChartPath("TestCrossoverRBehind"));
 			Assert.AreEqual(18, ec.StepEvents.Count);
 			var i = 0;
 
 			// Standard crossover
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with jack
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with alternating pattern in crossover position
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -630,33 +714,33 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestCrossoverRFront()
 		{
-			var ec = Load(GetTestChartFullPath("TestCrossoverRFront"));
+			var ec = Load(GetTestChartPath("TestCrossoverRFront"));
 			Assert.AreEqual(18, ec.StepEvents.Count);
 			var i = 0;
 
 			// Standard crossover
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with jack
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Crossover with alternating pattern in crossover position
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		#endregion Crossovers
@@ -669,45 +753,45 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestInversion()
 		{
-			var ec = Load(GetTestChartFullPath("TestInversion"));
+			var ec = Load(GetTestChartPath("TestInversion"));
 			Assert.AreEqual(28, ec.StepEvents.Count);
 			var i = 0;
 
 			// Afronova walk, R over L, R leads
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.InvertBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.InvertBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Afronova walk, L over R, L leads
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.InvertBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.InvertBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Afronova walk, L over R, R leads
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.InvertFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.InvertFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Afronova walk, R over L, L leads
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.InvertFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.InvertFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		#endregion Inverted Steps
@@ -729,7 +813,7 @@ namespace ChartGeneratorTests
 			};
 			foreach (var file in testFiles)
 			{
-				var ec = Load(GetTestChartFullPath(file));
+				var ec = Load(GetTestChartPath(file));
 				Assert.AreEqual(9, ec.StepEvents.Count);
 
 				// There are many equally valid ways to double step. It does not matter which foot is
@@ -741,18 +825,18 @@ namespace ChartGeneratorTests
 				{
 					for (var f = 0; f < NumFeet; f++)
 					{
-						if ((IsSingleStepWithFoot(ec.StepEvents[i - 1].Link, f, StepType.NewArrow, FootAction.Tap)
-						     || IsSingleStepWithFoot(ec.StepEvents[i - 1].Link, f, StepType.SameArrow, FootAction.Tap))
-						    && IsSingleStepWithFoot(ec.StepEvents[i].Link, f, StepType.NewArrow, FootAction.Tap))
+						if ((IsSingleStepWithFoot(ec.StepEvents[i - 1].LinkInstance, f, StepType.NewArrow, FootAction.Tap)
+						     || IsSingleStepWithFoot(ec.StepEvents[i - 1].LinkInstance, f, StepType.SameArrow, FootAction.Tap))
+						    && IsSingleStepWithFoot(ec.StepEvents[i].LinkInstance, f, StepType.NewArrow, FootAction.Tap))
 						{
 							numDoubleSteps++;
 						}
 
 						if (i >= 2
-						    && (IsSingleStepWithFoot(ec.StepEvents[i - 2].Link, f, StepType.NewArrow, FootAction.Tap)
-						        || IsSingleStepWithFoot(ec.StepEvents[i - 2].Link, f, StepType.SameArrow, FootAction.Tap))
-						    && IsSingleStepWithFoot(ec.StepEvents[i - 1].Link, f, StepType.NewArrow, FootAction.Tap)
-						    && IsSingleStepWithFoot(ec.StepEvents[i].Link, f, StepType.NewArrow, FootAction.Tap))
+						    && (IsSingleStepWithFoot(ec.StepEvents[i - 2].LinkInstance, f, StepType.NewArrow, FootAction.Tap)
+						        || IsSingleStepWithFoot(ec.StepEvents[i - 2].LinkInstance, f, StepType.SameArrow, FootAction.Tap))
+						    && IsSingleStepWithFoot(ec.StepEvents[i - 1].LinkInstance, f, StepType.NewArrow, FootAction.Tap)
+						    && IsSingleStepWithFoot(ec.StepEvents[i].LinkInstance, f, StepType.NewArrow, FootAction.Tap))
 						{
 							numTripleSteps++;
 						}
@@ -771,17 +855,17 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestDoubleStepHoldAlternateSameArrow()
 		{
-			var ec = Load(GetTestChartFullPath("TestDoubleStepHoldAlternateSameArrow"));
+			var ec = Load(GetTestChartPath("TestDoubleStepHoldAlternateSameArrow"));
 			Assert.AreEqual(7, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -791,53 +875,53 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestDoubleStepLHold()
 		{
-			var ec = Load(GetTestChartFullPath("TestDoubleStepLHold"));
+			var ec = Load(GetTestChartPath("TestDoubleStepLHold"));
 			Assert.AreEqual(34, ec.StepEvents.Count);
 			var i = 0;
 
 			// Double step with no crossovers
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Double step after jump
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Double step while holding even if that results in a crossover.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Reorient
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Hold);
 
 			// Double step while holding even if that results in a crossover.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -847,30 +931,30 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestDoubleStepLHoldRepeatingPattern()
 		{
-			var ec = Load(GetTestChartFullPath("TestDoubleStepLHoldRepeatingPattern"));
+			var ec = Load(GetTestChartPath("TestDoubleStepLHoldRepeatingPattern"));
 			Assert.AreEqual(18, ec.StepEvents.Count);
 			var i = 0;
 
 			// Hold and do a simple back and forth with the other foot. Could be bracketed but
 			// prefer the double step.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -880,53 +964,53 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestDoubleStepRHold()
 		{
-			var ec = Load(GetTestChartFullPath("TestDoubleStepRHold"));
+			var ec = Load(GetTestChartPath("TestDoubleStepRHold"));
 			Assert.AreEqual(34, ec.StepEvents.Count);
 			var i = 0;
 
 			// Double step with no crossovers
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Double step after jump
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Double step while holding even if that results in a crossover.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Reorient
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Hold);
 
 			// Double step while holding even if that results in a crossover.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -936,30 +1020,30 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestDoubleStepRHoldRepeatingPattern()
 		{
-			var ec = Load(GetTestChartFullPath("TestDoubleStepRHoldRepeatingPattern"));
+			var ec = Load(GetTestChartPath("TestDoubleStepRHoldRepeatingPattern"));
 			Assert.AreEqual(18, ec.StepEvents.Count);
 			var i = 0;
 
 			// Hold and do a simple back and forth with the other foot. Could be bracketed but
 			// prefer the double step.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		#endregion DoubleStep
@@ -973,115 +1057,115 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestFootSwapPreferJack()
 		{
-			var ec = Load(GetTestChartFullPath("TestFootSwapPreferJack"));
+			var ec = Load(GetTestChartPath("TestFootSwapPreferJack"));
 			Assert.AreEqual(83, ec.StepEvents.Count);
 			var i = 0;
 
 			// Jack with R on up with a crossover. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Jack with L on up with a crossover. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Jack with R on down with a crossover. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Jack with L on down with a crossover. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// L Jack into jump. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
 				FootAction.Tap);
 
 			// R Jack into jump. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
 				FootAction.Tap);
 
 			// Triple jack. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
 
 			// Pattern of triple jacks. Could be swapped, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
 
 			// Long pattern with a jack which could be a swap in the middle. Ambiguous, but prefer jack.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
 				FootAction.Tap);
 
 			// Same pattern but mirrored.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow,
 				FootAction.Tap);
 		}
 
@@ -1091,106 +1175,106 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestFootSwap()
 		{
-			var ec = Load(GetTestChartFullPath("TestFootSwap"));
+			var ec = Load(GetTestChartPath("TestFootSwap"));
 			Assert.AreEqual(75, ec.StepEvents.Count);
 			var i = 0;
 
 			// Swap on up and down starting on L. Jacks would results in inverted orientation.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Swap on up and down starting on R. Jacks would results in inverted orientation.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Swap on up and down starting on L. Jacks would results in double step.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Swap on up and down starting on R. Jacks would results in double step.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow,
 				FootAction.Tap);
 
 			// Swap from a right foot crossover position.
 			// This also checks for favoring a swap on bracketable arrows rather than further away arrows.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow,
 				FootAction.Tap);
 
 			// Swap from a left foot crossover position.
 			// This also checks for favoring a swap on bracketable arrows rather than further away arrows.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow,
 				FootAction.Tap);
 
 			// Swap on a non-bracketable arrow with left foot.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverBehind, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow,
 				FootAction.Tap);
 
 			// Swap on a non-bracketable arrow with right foot.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverFront, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow,
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow,
 				FootAction.Tap);
 		}
 
@@ -1205,72 +1289,72 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepBothBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepBothBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepBothBracketable"));
 			Assert.AreEqual(31, ec.StepEvents.Count);
 			var i = 0;
 
 			// Normal Jump into ambiguous step with holds to help indicate footing.
 
 			// Jump into ambiguous step with one foot held until the next note should prefer the foot not held (R).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step with one foot held until the next note should prefer the foot not held (L).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step with one foot released later should prefer the foot released sooner (R).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step with one foot released later should prefer the foot released sooner (L).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Normal Jump into ambiguous step with mines to help indicate footing.
 
 			// Jump into ambiguous step with a mine following one foot at the time of the next step. Prefer that foot (R).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step with a mine following one foot at the time of the next step. Prefer that foot (L).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step with a mine following one foot before the next step. Prefer that foot (R).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step with a mine following one foot before the next step. Prefer that foot (L).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step mines after both. Prefer foot with closer mine (R).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Jump into ambiguous step mines after both. Prefer foot with closer mine (L).
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Jump with both mine and hold indication. Mine is more important.
 
 			// Left foot hold but mine indicated.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Right foot hold but mine indicated.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Reorient
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1281,14 +1365,14 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalL()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalL"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalL"));
 			Assert.AreEqual(4, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1299,15 +1383,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalLHoldBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalLHoldBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalLHoldBracketable"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1318,15 +1402,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalLHoldNormal()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalLHoldNormal"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalLHoldNormal"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1338,15 +1422,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalLHoldAndMineBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalLHoldAndMineBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalLHoldAndMineBracketable"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1358,15 +1442,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalLHoldAndMineNormal()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalLHoldAndMineNormal"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalLHoldAndMineNormal"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1378,14 +1462,14 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalLMineBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalLMineBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalLMineBracketable"));
 			Assert.AreEqual(4, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1397,14 +1481,14 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalLMineNormal()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalLMineNormal"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalLMineNormal"));
 			Assert.AreEqual(4, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1415,14 +1499,14 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalR()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalR"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalR"));
 			Assert.AreEqual(4, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1433,15 +1517,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalRHoldBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalRHoldBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalRHoldBracketable"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1452,15 +1536,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalRHoldNormal()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalRHoldNormal"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalRHoldNormal"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1472,15 +1556,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalRHoldAndMineBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalRHoldAndMineBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalRHoldAndMineBracketable"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1492,15 +1576,15 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalRHoldAndMineNormal()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalRHoldAndMineNormal"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalRHoldAndMineNormal"));
 			Assert.AreEqual(5, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1512,14 +1596,14 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalRMineBracketable()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalRMineBracketable"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalRMineBracketable"));
 			Assert.AreEqual(4, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1531,14 +1615,14 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneNormalRMineNormal()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneNormalRMineNormal"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneNormalRMineNormal"));
 			Assert.AreEqual(4, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -1549,82 +1633,82 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpStepOneBracketableOneCrossover()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpStepOneBracketableOneCrossover"));
+			var ec = Load(GetTestChartPath("TestJumpStepOneBracketableOneCrossover"));
 			Assert.AreEqual(45, ec.StepEvents.Count);
 			var i = 0;
 
 			// If holding until the step, prefer the crossover.
 
 			// L step.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// L crossover.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.CrossoverBehind, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehind, FootAction.Tap);
 			// R crossover.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.CrossoverFront, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.CrossoverFront, FootAction.Tap);
 			// R step.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// If holding but released before the step, prefer the step.
 
 			// L step after R hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// R step after R hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 			// L step after L hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// R step after L hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// For mines, it is more natural to ignore the mine to avoid the crossover.
 			// This is subjective.
 
 			// Mine at position of next step. L alternate normally.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// Mine at position of next step. R alternate instead of L behind crossover.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 			// Mine at position of next step. L alternate instead of R in front crossover.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// Mine at position of next step. R alternate normally.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 
 			// Holds and mines on the same foot. In all cases, avoid the crossover
 
 			// L step after L hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Hold, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// R step after L hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 			// L step after R hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 			// R step after R hold.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 
 		#endregion Step After Jump
@@ -1638,30 +1722,30 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestJumpFootSwap()
 		{
-			var ec = Load(GetTestChartFullPath("TestJumpFootSwap"));
+			var ec = Load(GetTestChartPath("TestJumpFootSwap"));
 			Assert.AreEqual(17, ec.StepEvents.Count);
 			var i = 0;
 
 			// Circular jump pattern around all arrows
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
 
 			// Back and forth pattern
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
 		}
 
 		#endregion Jumps
@@ -1675,17 +1759,17 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump()
 		{
-			var ec = Load(GetTestChartFullPath("TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump"));
+			var ec = Load(GetTestChartPath("TestFootSwapToAvoidCrossoverAndNewArrowNewArrowJump"));
 			Assert.AreEqual(7, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.FootSwap, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNewToeNew, FootAction.Hold, StepType.BracketHeelNewToeNew, FootAction.Hold);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeSame, FootAction.Release, StepType.BracketHeelSameToeSame, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.FootSwap, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelNewToeNew, FootAction.Hold, StepType.BracketHeelNewToeNew, FootAction.Hold);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelSameToeSame, FootAction.Release, StepType.BracketHeelSameToeSame, FootAction.Release);
 		}
 
 		/// <summary>
@@ -1696,109 +1780,109 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestBracketHoldRoll()
 		{
-			var ec = Load(GetTestChartFullPath("TestBracketHoldRoll"));
+			var ec = Load(GetTestChartPath("TestBracketHoldRoll"));
 			Assert.AreEqual(28, ec.StepEvents.Count);
 			var i = 0;
 
 			// Orient to force a consistent quad choice (LLRR instead of LRLR)
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
 
 			// Quad with long holds on toes and short rolls on heels.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Hold,
 				StepType.BracketHeelNewToeSame, FootAction.Hold, StepType.BracketHeelNewToeSame, FootAction.Hold,
 				true, false, true, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
 
 			// Quad with long holds on heels and short rolls on toes.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, true, false, true);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
 
 			// Quad with long holds on the outer arrows and short rolls on the inner arrows.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				true, false, false, true);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
 
 			// Quad with long holds on the inner arrows and short rolls on the outer arrows.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, true, true, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
 
 			// Quad with long holds on the inner arrows and short holds on the outer arrows.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, false, false, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
 
 			// Quad with long holds on the outer arrows and short holds on the inner arrows.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				false, false, false, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
 
 			// Quad with long rolls on the inner arrows and short rolls on the outer arrows.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				true, true, true, true);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
 
 			// Quad with long rolls on the outer arrows and short rolls on the inner arrows.
-			AssertLinkMatchesQuad(ec.StepEvents[i++].Link,
+			AssertLinkMatchesQuad(ec.StepEvents[i++].LinkInstance,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				StepType.BracketHeelSameToeSame, FootAction.Hold, StepType.BracketHeelSameToeSame, FootAction.Hold,
 				true, true, true, true);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false,
 				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].Link,
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
 				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false,
 				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
 		}
@@ -1812,134 +1896,134 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestBracketOneArrowUpdatesFootPortion()
 		{
-			var ec = Load(GetTestChartFullPath("TestBracketOneArrowUpdatesFootPortion"));
+			var ec = Load(GetTestChartPath("TestBracketOneArrowUpdatesFootPortion"));
 			Assert.AreEqual(93, ec.StepEvents.Count);
 			var i = 0;
 
 			// Right foot DR bracket one heel hold, release toe first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot DR bracket one heel tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot DR bracket one toe hold, release heel first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot DR bracket one toe tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot UR bracket one toe hold, release heel first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot UR bracket one toe tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot UR bracket one heel hold, release toe first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Right foot UR bracket one heel tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LD bracket one heel hold, release toe first
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LD bracket one heel tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LD bracket one toe hold, release heel first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LD bracket one toe tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LU bracket one toe hold, release heel first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LU bracket one toe tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LU bracket one heel hold, release toe first.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Hold, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 
 			// Left foot LU bracket one heel tap.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Hold);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Hold);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelNew, FootAction.Tap, false);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
 		}
 
 		/// <summary>
@@ -1950,56 +2034,56 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestBracketSwapGigaViolate()
 		{
-			var ec = Load(GetTestChartFullPath("TestBracketSwapGigaViolate"));
+			var ec = Load(GetTestChartPath("TestBracketSwapGigaViolate"));
 			Assert.AreEqual(35, ec.StepEvents.Count);
 			var i = 0;
 
 			// Original pattern.
 			// L bracket on LU, U is swapped with a R bracket on UR.
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeSwap, FootAction.Tap, StepType.BracketHeelSameToeSwap, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelSameToeSwap, FootAction.Tap, StepType.BracketHeelSameToeSwap, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
 
 			// Variation.
 			// R bracket on UR, U is swapped with a L bracket on LU.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSameToeSwap, FootAction.Tap, StepType.BracketHeelSameToeSwap, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelSameToeNew, FootAction.Hold, StepType.BracketHeelSameToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelSameToeSwap, FootAction.Tap, StepType.BracketHeelSameToeSwap, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
 
 			// Variation.
 			// L bracket on LD, D is swapped with a R bracket on DR.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSameToeNew, FootAction.Tap, StepType.BracketHeelSameToeNew, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelSameToeNew, FootAction.Tap, StepType.BracketHeelSameToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
 
 			// Variation.
 			// R bracket on DR, D is swapped with a L bracket on LD.
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Hold);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link,L, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesOneStep(ec.StepEvents[i++].Link, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, R, StepType.BracketHeelSameToeNew, FootAction.Tap, StepType.BracketHeelSameToeNew, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance,L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesOneStep(ec.StepEvents[i++].LinkInstance, R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, false);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelSwapToeSame, FootAction.Tap, StepType.BracketHeelSwapToeSame, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, R, StepType.BracketHeelSameToeNew, FootAction.Tap, StepType.BracketHeelSameToeNew, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
 		}
 
 		/// <summary>
@@ -2010,18 +2094,18 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestBracketIntoJumpsGigaViolate()
 		{
-			var ec = Load(GetTestChartFullPath("TestBracketIntoJumpsGigaViolate"));
+			var ec = Load(GetTestChartPath("TestBracketIntoJumpsGigaViolate"));
 			Assert.AreEqual(8, ec.StepEvents.Count);
 			var i = 0;
 
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesBracket(ec.StepEvents[i++].Link, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
-			AssertLinkMatchesJump(ec.StepEvents[i++].Link, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, L, StepType.SameArrow, FootAction.Release);
-			AssertLinkMatchesStep(ec.StepEvents[i++].Link, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesBracket(ec.StepEvents[i++].LinkInstance, L, StepType.BracketHeelNewToeSame, FootAction.Tap, StepType.BracketHeelNewToeSame, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.SameArrow, FootAction.Tap, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Hold, StepType.SameArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 		#endregion Miscellaneous
 	}

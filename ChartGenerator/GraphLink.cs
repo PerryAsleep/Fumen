@@ -204,7 +204,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// Underlying GraphLink.
 		/// </summary>
-		public GraphLink Link;
+		public GraphLink GraphLink;
 
 		/// <summary>
 		/// Per foot and portion, whether or not the step type should be treated as

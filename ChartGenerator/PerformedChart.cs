@@ -79,7 +79,7 @@ namespace ChartGenerator
 
 			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNodeInstance?.Node; }
-			public GraphLink GetGraphLinkToNode() { return GraphLinkInstance?.Link; }
+			public GraphLink GetGraphLinkToNode() { return GraphLinkInstance?.GraphLink; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
 		}
@@ -126,9 +126,9 @@ namespace ChartGenerator
 
 				// Dead end
 				while (DoesNodeStepOnReleaseAtSamePosition(currentSearchNode, expressedChart, stepGraph.NumArrows)
-				       || !currentSearchNode.GraphNodeInstance.Node.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].Link.Link)
+				       || !currentSearchNode.GraphNodeInstance.Node.Links.ContainsKey(expressedChart.StepEvents[currentSearchNode.Depth].LinkInstance.GraphLink)
 				       || currentSearchNode.CurrentIndex >
-				       currentSearchNode.GraphNodeInstance.Node.Links[expressedChart.StepEvents[currentSearchNode.Depth].Link.Link].Count - 1)
+				       currentSearchNode.GraphNodeInstance.Node.Links[expressedChart.StepEvents[currentSearchNode.Depth].LinkInstance.GraphLink].Count - 1)
 				{
 					// Back up
 					var prevNode = currentSearchNode.PreviousNode;
@@ -144,8 +144,8 @@ namespace ChartGenerator
 					}
 				}
 
-				var linkInstance = expressedChart.StepEvents[currentSearchNode.Depth].Link;
-				var links = currentSearchNode.GraphNodeInstance.Node.Links[linkInstance.Link];
+				var linkInstance = expressedChart.StepEvents[currentSearchNode.Depth].LinkInstance;
+				var links = currentSearchNode.GraphNodeInstance.Node.Links[linkInstance.GraphLink];
 
 				// If this node's indices have not been set up, set them up
 				if (currentSearchNode.CurrentIndex == 0)
@@ -198,7 +198,7 @@ namespace ChartGenerator
 				var newNode = new StepPerformanceNode
 				{
 					Position = expressedChart.StepEvents[currentSearchNode.Depth - 1].Position,
-					GraphLinkInstance = expressedChart.StepEvents[currentSearchNode.Depth - 1].Link,
+					GraphLinkInstance = expressedChart.StepEvents[currentSearchNode.Depth - 1].LinkInstance,
 					GraphNodeInstance = currentSearchNode.GraphNodeInstance,
 					Prev = currentPerformanceNode
 				};
@@ -246,15 +246,15 @@ namespace ChartGenerator
 			// Determine what actions are performed for both the current and previous node.
 			var currentActions = GetActionsForNode(
 				previousNode.GraphNodeInstance,
-				expressedChart.StepEvents[previousNode.Depth - 1].Link,
+				expressedChart.StepEvents[previousNode.Depth - 1].LinkInstance,
 				node.GraphNodeInstance,
-				expressedChart.StepEvents[node.Depth - 1].Link,
+				expressedChart.StepEvents[node.Depth - 1].LinkInstance,
 				numArrows);
 			var previousActions = GetActionsForNode(
 				previousPreviousNode.GraphNodeInstance,
-				expressedChart.StepEvents[previousPreviousNode.Depth - 1].Link,
+				expressedChart.StepEvents[previousPreviousNode.Depth - 1].LinkInstance,
 				previousNode.GraphNodeInstance,
-				expressedChart.StepEvents[previousNode.Depth - 1].Link,
+				expressedChart.StepEvents[previousNode.Depth - 1].LinkInstance,
 				numArrows);
 
 			// Check if the previous node released on the same arrow tha the current node is stepping on.
@@ -443,11 +443,11 @@ namespace ChartGenerator
 				actions[a] = PerformanceFootAction.None;
 
 			// Get foot swap status
-			var currentIsFootSwap = currentLink.Link.IsFootSwap(out var currentFootSwapFoot, out _);
+			var currentIsFootSwap = currentLink.GraphLink.IsFootSwap(out var currentFootSwapFoot, out _);
 			var previousIsFootSwap = false;
 			var previousFootSwapFoot = InvalidFoot;
 			if (previousLink != null)
-				previousIsFootSwap = previousLink.Link.IsFootSwap(out previousFootSwapFoot, out _);
+				previousIsFootSwap = previousLink.GraphLink.IsFootSwap(out previousFootSwapFoot, out _);
 
 			// Check each arrow.
 			for (var arrow = 0; arrow < numArrows; arrow++)
@@ -511,31 +511,31 @@ namespace ChartGenerator
 								// Check link to see if we tapped the same arrow
 								for (var p = 0; p < NumFootPortions; p++)
 								{
-									if (!currentLink.Link.Links[currentArrowFoot, p].Valid
-									    || currentLink.Link.Links[currentArrowFoot, p].Action != FootAction.Tap)
+									if (!currentLink.GraphLink.Links[currentArrowFoot, p].Valid
+									    || currentLink.GraphLink.Links[currentArrowFoot, p].Action != FootAction.Tap)
 										continue;
 
 									// TODO: Move this logic into StepData.
 									if (p == DefaultFootPortion
-									    && currentLink.Link.Links[currentArrowFoot, p].Step == StepType.SameArrow)
+									    && currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.SameArrow)
 									{
 										addNormalStep = true;
 										break;
 									}
 									if (p == Heel
-									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowHeelSame
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSame
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeNew
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSwap))
+									    && (currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowHeelSame
+									        || currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSame
+									        || currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeNew
+									        || currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSwap))
 									{
 										addNormalStep = true;
 										break;
 									}
 									if (p == Toe
-									    && (currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowToeSame
-									        || currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSame
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelNewToeSame
-											|| currentLink.Link.Links[currentArrowFoot, p].Step == StepType.BracketHeelSwapToeSame))
+									    && (currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketOneArrowToeSame
+									        || currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketHeelSameToeSame
+											|| currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketHeelNewToeSame
+											|| currentLink.GraphLink.Links[currentArrowFoot, p].Step == StepType.BracketHeelSwapToeSame))
 									{
 										addNormalStep = true;
 										break;

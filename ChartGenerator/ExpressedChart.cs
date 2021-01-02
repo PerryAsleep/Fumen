@@ -40,11 +40,11 @@ namespace ChartGenerator
 		public class StepEvent : ChartEvent
 		{
 			/// <summary>
-			/// GraphLink representing the all steps occurring at a single Metric position.
+			/// GraphLinkInstance representing the all steps occurring at a single Metric position.
 			/// This GraphLink is the Link to this Event as opposed to the link from this Event.
 			/// This represents how the player got to this position.
 			/// </summary>
-			public GraphLinkInstance Link;
+			public GraphLinkInstance LinkInstance;
 		}
 
 		/// <summary>
@@ -182,7 +182,7 @@ namespace ChartGenerator
 					{
 						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (link.Link.Links[f, p].Valid && link.Link.Links[f, p].Action != FootAction.Release)
+							if (link.GraphLink.Links[f, p].Valid && link.GraphLink.Links[f, p].Action != FootAction.Release)
 							{
 								nthPrevious--;
 								if (nthPrevious <= 0)
@@ -222,7 +222,7 @@ namespace ChartGenerator
 
 			#region MineUtils.IChartNode Implementation
 			public GraphNode GetGraphNode() { return GraphNode; }
-			public GraphLink GetGraphLinkToNode() { return PreviousLink?.Link; }
+			public GraphLink GetGraphLinkToNode() { return PreviousLink?.GraphLink; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
 		}
@@ -608,7 +608,7 @@ namespace ChartGenerator
 				return null;
 			}
 
-			var instance = new GraphLinkInstance{ Link = link };
+			var instance = new GraphLinkInstance{ GraphLink = link };
 			for (var s = 0; s < searchState.Length; s++)
 			{
 				if (searchState[s] == SearchState.Roll)
@@ -699,9 +699,9 @@ namespace ChartGenerator
 			// Prune the node up until parent that has other children.
 			while (node.PreviousNode != null)
 			{
-				node.PreviousNode.NextNodes[node.PreviousLink.Link].Remove(node);
-				if (node.PreviousNode.NextNodes[node.PreviousLink.Link].Count == 0)
-					node.PreviousNode.NextNodes.Remove(node.PreviousLink.Link);
+				node.PreviousNode.NextNodes[node.PreviousLink.GraphLink].Remove(node);
+				if (node.PreviousNode.NextNodes[node.PreviousLink.GraphLink].Count == 0)
+					node.PreviousNode.NextNodes.Remove(node.PreviousLink.GraphLink);
 				if (node.PreviousNode.NextNodes.Count != 0)
 					break;
 				node = node.PreviousNode;
@@ -751,8 +751,8 @@ namespace ChartGenerator
 				}
 			}
 
-			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink()?.Link ?? null;
-			GraphLink previousPreviousStepLink = parentSearchNode.GetPreviousStepLink(2)?.Link ?? null;
+			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink()?.GraphLink ?? null;
+			GraphLink previousPreviousStepLink = parentSearchNode.GetPreviousStepLink(2)?.GraphLink ?? null;
 
 			switch (numSteps)
 			{
@@ -1552,7 +1552,7 @@ namespace ChartGenerator
 				var stepEvent = new StepEvent
 				{
 					Position = searchNode.Position,
-					Link = searchNode.PreviousLink,
+					LinkInstance = searchNode.PreviousLink,
 				};
 
 				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.

@@ -590,17 +590,17 @@ $@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width
 			var position = node.Position;
 			while (node != null && node.Position == position)
 			{
-				if (node.PreviousLink != null && !node.PreviousLink.Link.IsRelease())
+				if (node.PreviousLink != null && !node.PreviousLink.GraphLink.IsRelease())
 				{
 					var writeCost = false;
 					for (var p = 0; p < NumFootPortions; p++)
 					{
 						// Left Foot
-						if (LastExpressionPosition[L] < y && node.PreviousLink.Link.Links[L, p].Valid)
+						if (LastExpressionPosition[L] < y && node.PreviousLink.GraphLink.Links[L, p].Valid)
 						{
 							var leftX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.LeftFoot].X;
-							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[L, p].Step];
-							if (node.PreviousLink.Link.IsJump())
+							var stepStr = StepTypeStrings[(int)node.PreviousLink.GraphLink.Links[L, p].Step];
+							if (node.PreviousLink.GraphLink.IsJump())
 								stepStr = "[Jump] " + stepStr;
 							StringBuilder.Append(
 $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{leftX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
@@ -610,11 +610,11 @@ $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{le
 						}
 
 						// Right Foot
-						if (LastExpressionPosition[R] < y && node.PreviousLink.Link.Links[R, p].Valid)
+						if (LastExpressionPosition[R] < y && node.PreviousLink.GraphLink.Links[R, p].Valid)
 						{
 							var rightX = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.RightFoot].X;
-							var stepStr = StepTypeStrings[(int)node.PreviousLink.Link.Links[R, p].Step];
-							if (node.PreviousLink.Link.IsJump())
+							var stepStr = StepTypeStrings[(int)node.PreviousLink.GraphLink.Links[R, p].Step];
+							if (node.PreviousLink.GraphLink.IsJump())
 								stepStr = "[Jump] " + stepStr;
 							StringBuilder.Append(
 $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{rightX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
@@ -652,13 +652,13 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 		{
 			while (node != null && node.Position == position)
 			{
-				if (node.PreviousLink != null && !node.PreviousLink.Link.IsRelease())
+				if (node.PreviousLink != null && !node.PreviousLink.GraphLink.IsRelease())
 				{
 					// If this step is a footswap we need to ignore the other foot, which may still be resting on this arrow.
 					var previousStepLink = node.GetPreviousStepLink();
 					var footSwapFoot = InvalidFoot;
 					var footSwapPortion = DefaultFootPortion;
-					var footSwap = previousStepLink?.Link.IsFootSwap(out footSwapFoot, out footSwapPortion) ?? false;
+					var footSwap = previousStepLink?.GraphLink.IsFootSwap(out footSwapFoot, out footSwapPortion) ?? false;
 					if (footSwap && node.GraphNode.State[footSwapFoot, footSwapPortion].Arrow == arrow)
 						return footSwapFoot;
 
@@ -686,10 +686,10 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 				if (node is PerformedChart.StepPerformanceNode spn)
 				{
 					var previousStepLink = spn.GraphLinkInstance;
-					if (previousStepLink != null && !previousStepLink.Link.IsRelease())
+					if (previousStepLink != null && !previousStepLink.GraphLink.IsRelease())
 					{
 						// If this step is a footswap we need to ignore the other foot, which may still be resting on this arrow.
-						var footSwap = previousStepLink.Link.IsFootSwap(out var footSwapFoot, out var footSwapPortion);
+						var footSwap = previousStepLink.GraphLink.IsFootSwap(out var footSwapFoot, out var footSwapPortion);
 						if (footSwap && spn.GraphNodeInstance.Node.State[footSwapFoot, footSwapPortion].Arrow == arrow)
 							return footSwapFoot;
 

@@ -5,8 +5,13 @@ using static ChartGenerator.Constants;
 
 namespace ChartGenerator
 {
+	/// <summary>
+	/// Types of steps which can be performed with one foot.
+	/// Jumps are combinations of StepTypes for each foot.
+	/// </summary>
 	public enum StepType
 	{
+		// Simple step types.
 		SameArrow,
 		NewArrow,
 		CrossoverFront,
@@ -15,6 +20,7 @@ namespace ChartGenerator
 		InvertBehind,
 		FootSwap,
 
+		// Bracket two arrows with one foot.
 		BracketHeelNewToeNew,
 		BracketHeelNewToeSame,
 		BracketHeelSameToeNew,
@@ -24,12 +30,18 @@ namespace ChartGenerator
 		BracketHeelSwapToeSame,
 		BracketHeelSwapToeNew,
 
-		BracketOneArrowHeelSame, // (for release and tap)
+		// Bracket one arrow (e.g. due to holding on one arrow).
+		BracketOneArrowHeelSame,
 		BracketOneArrowHeelNew,
-		BracketOneArrowToeSame, // (for release and tap)
+		BracketOneArrowToeSame,
 		BracketOneArrowToeNew
 	}
 
+	/// <summary>
+	/// Actions that can be performed when stepping with a foot.
+	/// Releases can only occur on StepTypes that keep the foot on the same arrow.
+	/// Not considering rolls as a unique action.
+	/// </summary>
 	public enum FootAction
 	{
 		Tap,
@@ -37,6 +49,10 @@ namespace ChartGenerator
 		Release
 	}
 
+	/// <summary>
+	/// The orientation the body can be in based on certain steps.
+	/// InvertFront and InvertBack will result in inverted orientations.
+	/// </summary>
 	public enum BodyOrientation
 	{
 		Normal,
@@ -96,6 +112,9 @@ namespace ChartGenerator
 		/// </summary>
 		public readonly bool[] IsFootSwap;
 
+		/// <summary>
+		/// Cached value for if any portion of the foot involves a crossover.
+		/// </summary>
 		public readonly bool IsFootSwapWithAnyPortion;
 
 		/// <summary>

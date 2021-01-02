@@ -1,3 +1,6 @@
+Immediates:
+	remove .ogg files (need to do this to not push copyrighted work)
+
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
 	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
@@ -24,8 +27,6 @@ Bugs:
 
 Misc:
 	SSC file parsing / saving
-	Write some code to export lines of code that can be used to unit test the expression.
-		This way you can easily make tests for entire charts.
 	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 PerformedChart improvements:

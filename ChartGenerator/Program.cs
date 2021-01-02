@@ -40,12 +40,12 @@ namespace ChartGenerator
 		static void Main(string[] args)
 		{
 			var t1 = new Thread(() => { SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
-			var t2 = new Thread(() => { DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
+			//var t2 = new Thread(() => { DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
 			t1.Start();
-			t2.Start();
+			//t2.Start();
 			t1.Join();
-			t2.Join();
-			return;
+			//t2.Join();
+			//return;
 
 			var song = SMReader.Load(HackChart);
 			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
