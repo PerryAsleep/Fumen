@@ -1,6 +1,3 @@
-Immediates:
-	remove .ogg files (need to do this to not push copyrighted work)
-
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
 	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
