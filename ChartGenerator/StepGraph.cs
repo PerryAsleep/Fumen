@@ -160,7 +160,7 @@ namespace ChartGenerator
 
 		private void Fill()
 		{
-			Logger.Info($"Generating {ArrowData.Length}-panel StepGraph.");
+			Log($"Generating StepGraph...");
 
 			VisitedNodes = new HashSet<GraphNode>();
 			var completeNodes = new HashSet<GraphNode>();
@@ -173,7 +173,7 @@ namespace ChartGenerator
 
 			while (currentNodes.Count > 0)
 			{
-				Logger.Info($"Level {level + 1}: Searching {currentNodes.Count} nodes...");
+				Log($"Level {level + 1}: Searching {currentNodes.Count} nodes...");
 
 				var allChildren = new HashSet<GraphNode>();
 				foreach (var currentNode in currentNodes)
@@ -199,14 +199,14 @@ namespace ChartGenerator
 				var previousCount = allChildren.Count;
 				allChildren.RemoveWhere(n => completeNodes.Contains(n));
 
-				Logger.Info($"Level {level + 1}: Found {allChildren.Count} children (pruned from {previousCount}).");
+				Log($"Level {level + 1}: Found {allChildren.Count} children (pruned from {previousCount}).");
 
 				// Search one level deeper
 				currentNodes = allChildren.ToList();
 				level++;
 			}
 
-			Logger.Info($"{ArrowData.Length}-panel StepGraph generation complete. {completeNodes.Count} Nodes.");
+			Log($"StepGraph generation complete. {completeNodes.Count} Nodes.");
 		}
 
 		private void AddNode(GraphNode currentNode, GraphNode newNode, GraphLink link)
@@ -1894,5 +1894,10 @@ namespace ChartGenerator
 			return false;
 		}
 		#endregion Fill Helpers
+
+		private void Log(string message)
+		{
+			Logger.Info($"[StepGraph ({NumArrows})] {message}");
+		}
 	}
 }

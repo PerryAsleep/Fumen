@@ -327,6 +327,10 @@ namespace ChartGenerator
 			
 			while (true)
 			{
+				// Failed to find a path through the chart
+				if (currentSearchNodes.Count == 0)
+					return (null, null);
+
 				// Reached the end.
 				if (eventIndex >= numEvents)
 				{

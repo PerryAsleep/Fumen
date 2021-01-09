@@ -54,7 +54,7 @@ namespace Fumen.Converters
 				var first = true;
 				while (null != line)
 				{
-					var endMarkerIndex = GetFirstUnEscapedPropertyEndMarker(line, ';');
+					var propertyEndsOnThisLine = GetFirstUnescapedUncommentedSubString(line, ";") >= 0;
 
 					// Clean the line.
 					line = TrimComments(line);
@@ -63,13 +63,13 @@ namespace Fumen.Converters
 					// Append this value as a string.
 					if (!first)
 						parsedValue += "\n";
-					if (endMarkerIndex < 0)
+					if (!propertyEndsOnThisLine)
 						parsedValue += line;
-					else if (endMarkerIndex > 0)
-						parsedValue += line.Substring(0, endMarkerIndex);
+					else
+						parsedValue += line.Substring(0, line.LastIndexOf(';'));
 
 					// This line contains the end of this property. Stop reading.
-					if (endMarkerIndex >= 0)
+					if (propertyEndsOnThisLine)
 						break;
 
 					// Advance to the next line.
@@ -165,7 +165,7 @@ namespace Fumen.Converters
 				// Loop over lines until the end marker is found.
 				while (null != line)
 				{
-					var endMarkerIndex = GetFirstUnEscapedPropertyEndMarker(line, ';');
+					var endMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ";");
 
 					// Parse the line into a list of key value paris
 					line = CleanLine(line);
@@ -179,8 +179,10 @@ namespace Fumen.Converters
 							continue;
 
 						var valueStr = kvp[1];
-						if (endMarkerIndex > 0)
+						if (valueStr.IndexOf(';') >= 0)
+						{
 							valueStr = valueStr.Substring(0, valueStr.IndexOf(';'));
+						}
 
 						T value;
 						try
@@ -219,7 +221,7 @@ namespace Fumen.Converters
 				var parsedValue = "";
 				while (null != line)
 				{
-					var endMarkerIndex = GetFirstUnEscapedPropertyEndMarker(line, ':');
+					var endMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ":");
 					if (endMarkerIndex >= 0)
 						line = line.Substring(0, endMarkerIndex);
 					line = CleanLine(line);
@@ -293,9 +295,9 @@ namespace Fumen.Converters
 				var currentMeasureEvents = new List<Event>();
 				while (null != line)
 				{
-					var endMarkerIndex = GetFirstUnEscapedPropertyEndMarker(line, ';');
-					var measureMarkerIndex = GetFirstUnEscapedPropertyEndMarker(line, ',');
-					var playerMarkerIndex = GetFirstUnEscapedPropertyEndMarker(line, '&');
+					var endMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ";");
+					var measureMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ",");
+					var playerMarkerIndex = GetFirstUnescapedUncommentedSubString(line, "&");
 					line = CleanLine(line);
 
 					// Complete the current measure
@@ -384,17 +386,17 @@ namespace Fumen.Converters
 
 		public static string TrimComments(string input)
 		{
-			var index = input.IndexOf("//");
+			var index = GetFirstUnescapedUncommentedSubString(input, @"//");
 			return index < 0 ? input : input.Substring(0, index);
 		}
 
 		public static string UnEscape(string input)
 		{
 			return input
-				.Replace("\\;", ";")
-				.Replace("\\:", ":")
-				.Replace("\\\\", "\\")
-				.Replace("\\/\\/", "//");
+				.Replace(@"\;", @";")
+				.Replace(@"\:", @":")
+				.Replace(@"\\", @"\")
+				.Replace(@"\/", @"/");
 		}
 
 		public static string CleanLine(string input)
@@ -405,21 +407,27 @@ namespace Fumen.Converters
 			return input;
 		}
 
-		public static int GetFirstUnEscapedPropertyEndMarker(string input, char endMarker)
+		public static int GetFirstUnescapedUncommentedSubString(string input, string subString)
 		{
+			if (string.IsNullOrEmpty(subString))
+				return -1;
+
 			var numberOfPrecedingSlashes = 0;
 			var inputLen = input.Length;
 			for (var i = 0; i < inputLen; i++)
 			{
 				var currentCharIsEscaped = numberOfPrecedingSlashes % 2 == 1;
 
+				// Check
+				if (input[i] == subString[0]
+					&& !currentCharIsEscaped
+					&& i + subString.Length <= input.Length
+					&& input.Substring(i, subString.Length) == subString)
+					return i;
+
 				// Check if a comment block was reached and if so, return
 				if (i < inputLen - 1 && input[i] == '/' && input[i + 1] == '/' && !currentCharIsEscaped)
 					return -1;
-
-				// Checked if the endMarker was 
-				if (input[i] == endMarker && !currentCharIsEscaped)
-					return i;
 
 				if (input[i] == '\\')
 					numberOfPrecedingSlashes++;

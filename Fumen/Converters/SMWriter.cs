@@ -26,10 +26,10 @@ namespace Fumen.Converters
 		private static string Escape(string input)
 		{
 			return input
-				.Replace(";", "\\;")
-				.Replace(":", "\\:")
-				.Replace("\\", "\\\\")
-				.Replace("//", "\\/\\/");
+				.Replace(@";", @"\;")
+				.Replace(@":", @"\:")
+				.Replace(@"\", @"\\")
+				.Replace(@"/", @"\/");
 		}
 
 		private static bool TryGetSongExtra(string sKey, Song song, out object value)
@@ -50,7 +50,10 @@ namespace Fumen.Converters
 
 		private static void WriteProperty(string smPropertyName, string value, StreamWriter streamWriter)
 		{
-			streamWriter.WriteLine($"#{smPropertyName}:{Escape(value)};");
+			if (string.IsNullOrEmpty(value))
+				streamWriter.WriteLine($"#{smPropertyName}:;");
+			else
+				streamWriter.WriteLine($"#{smPropertyName}:{Escape(value)};");
 		}
 
 		private static void WritePropertyMusic(Song song, StreamWriter streamWriter)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
@@ -28,8 +27,7 @@ namespace ChartGenerator
 		private const int BeatMarkerH = 6;
 		private const int ChartTextH = 20;
 
-		// TODO: Remove hardcode
-		private const string SrcDir = @"C:/Users/perry/Projects/Fumen/Renderer/src/";
+		private static string SrcDir;
 
 		private enum ChartColumns
 		{
@@ -90,6 +88,7 @@ namespace ChartGenerator
 		private Chart GeneratedChart;
 		private PerformedChart GeneratedPerformedChart;
 		private string SongPath;
+		private string SaveFile;
 
 		private readonly int OriginalChartX = 0;
 		private readonly int ExpressedChartX;
@@ -99,6 +98,10 @@ namespace ChartGenerator
 
 		static Renderer()
 		{
+			SrcDir = AppDomain.CurrentDomain.BaseDirectory;
+			SrcDir = SrcDir.Replace('\\', '/');
+			SrcDir += "/html/src/";
+
 			var x = 0;
 			ChartColumnInfo = new ColumnInfo[Enum.GetNames(typeof(ChartColumns)).Length];
 			ChartColumnInfo[(int)ChartColumns.TimeSignature] = new ColumnInfo {Name = "Time", Width = ChartColW, X = x };
@@ -123,6 +126,7 @@ namespace ChartGenerator
 		private Renderer() { }
 		public Renderer(
 			string songPath,
+			string saveFile,
 			Song song,
 			Chart originalChart,
 			ExpressedChart expressedChart,
@@ -131,6 +135,7 @@ namespace ChartGenerator
 			Chart generatedChart)
 		{
 			SongPath = songPath;
+			SaveFile = saveFile;
 			Song = song;
 			OriginalChart = originalChart;
 			ExpressedChart = expressedChart;
@@ -167,7 +172,7 @@ namespace ChartGenerator
 
 			// Write to file
 			// TODO: Async
-			System.IO.File.WriteAllText(@"C:\Users\perry\Projects\Fumen\Renderer\exports\GIGA VIOLATE.html", StringBuilder.ToString());
+			File.WriteAllText(SaveFile, StringBuilder.ToString());
 		}
 
 		private void WriteHead()

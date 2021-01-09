@@ -4,6 +4,9 @@ Possible Bugs:
 		Not true. This jump will fail to be made since each foot's other foot is resting on the arrow. 
 
 Tests:
+	SM Reader unit Tests
+		some real crusty logic parsing comments and escapes
+
 	Foot swap mine indication on wrong mine.
 	Jump v Bracket
 		JumpBothSame
@@ -13,6 +16,9 @@ Tests:
 
 Bugs:
 	Misc Bugs:
+		PerformedChart needs to try alternate starting positions if it can't find a path
+			vivid landscape landscape_revised is an example which fails to find a path.
+			Perhaps just do some new arrow steps from the root?
 		sm reader strips spaces out of some text like "Chief Skittles"
 	Chart Bugs:
 		Don't You Want Me:
@@ -42,11 +48,6 @@ PerformedChart improvements:
 
 Perf:
 	StepGraph generation:
-		X Remove the loops over currentIndex and newIndex. This is a holdover from when the state representation was
-			every arrow instead of the two arrows for each foot. We don't need to loop and can instead just check the current state's current arrows.
-		X Store some bit of data per StepType that specifies its valid FootActions to remove the early out on Release types for so many methods.
-		X Perhaps, same type of thing but the data specifies whether the step needs to be on a new arrow or on the same arrow
-		X Remove Rolls
 		Multithreaded StepGraph internals?
 		Save/Load?
 

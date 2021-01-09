@@ -1,0 +1,43 @@
+{
+	"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
+	"InputNameRegex": ".*\\.sm",
+	"InputChartType": "dance-single",
+	"DifficultyRegex": ".",
+
+	"OutputChartType": "dance-double",
+	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports",
+	"OverwriteBehavior": "IfFumenGenerated",
+	"OutputVisualizations": true,
+	"VisualizationsDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Visualizations",
+
+	"StepTypeReplacements" :
+	{
+		"SameArrow": [ "SameArrow" ],
+		"NewArrow": [ "NewArrow" ],
+		"CrossoverFront": [ "CrossoverFront" ],
+		"CrossoverBehind": [ "CrossoverBehind" ],
+		"InvertFront": [ "InvertFront" ],
+		"InvertBehind": [ "InvertBehind" ],
+		"FootSwap": [ "FootSwap" ],
+
+		"BracketHeelNewToeNew":[ "BracketHeelNewToeNew" ],
+		// Allow Toes to be performed as Heels and vice versa with brackets involving one new portion and one same portion.
+		"BracketHeelNewToeSame":[ "BracketHeelNewToeSame", "BracketHeelSameToeNew" ],
+		// Allow Toes to be performed as Heels and vice versa with brackets involving one new portion and one same portion.
+		"BracketHeelSameToeNew":[ "BracketHeelSameToeNew", "BracketHeelNewToeSame" ],
+		"BracketHeelSameToeSame":[ "BracketHeelSameToeSame" ],
+
+		// Allow Toes to be performed as Heels and vice versa with swap brackets.
+		"BracketHeelSameToeSwap":[ "BracketHeelSameToeSwap", "BracketHeelSwapToeSame" ],
+		"BracketHeelNewToeSwap":[ "BracketHeelNewToeSwap", "BracketHeelSwapToeNew" ],
+		"BracketHeelSwapToeSame":[ "BracketHeelSwapToeSame", "BracketHeelSameToeSwap" ],
+		"BracketHeelSwapToeNew":[ "BracketHeelSwapToeNew", "BracketHeelNewToeSwap" ],
+		
+		"BracketOneArrowHeelSame":[ "BracketOneArrowHeelSame" ],
+		// Allow Toes to be performed has Heels and vice versa with new bracket steps.
+		"BracketOneArrowHeelNew":[ "BracketOneArrowHeelNew", "BracketOneArrowToeNew" ],
+		"BracketOneArrowToeSame":[ "BracketOneArrowToeSame" ],
+		// Allow Toes to be performed has Heels and vice versa with new bracket steps.
+		"BracketOneArrowToeNew":[ "BracketOneArrowToeNew", "BracketOneArrowHeelNew" ],
+	}
+}

@@ -5,15 +5,20 @@ using static ChartGenerator.Constants;
 using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace ChartGenerator
 {
 	// WIP
 	class Program
 	{
-		private static StepGraph SPGraph;
-		private static StepGraph DPGraph;
+		private static StepGraph InputStepGraph;
+		private static StepGraph OutputStepGraph;
+
+		private static List<string> SupportedInputTypes = new List<string> { ChartTypeString(ChartType.dance_single) };
+		private static List<string> SupportedOutputTypes = new List<string> { ChartTypeString(ChartType.dance_single), ChartTypeString(ChartType.dance_double) };
 
 		private const double Version = 0.1;
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
@@ -22,61 +27,265 @@ namespace ChartGenerator
 		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketIntoJumpsGigaViolate\test.sm";
 		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketIntoJumpsGigaViolate\";
 		//private const string HackDifficulty = @"Beginner";
-		private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
-		private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
-		private const string HackDifficulty = @"Challenge";
+		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
+		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
+		//private const string HackDifficulty = @"Challenge";
 		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\hey.sm";
 		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\";
 		//private const string HackDifficulty = @"Challenge";
 
-		enum OverwriteBehavior
+		private static DateTime ExportTime;
+		private static string VisualizationSubDir;
+		private static string VisualizationDir;
+
+		static async Task Main(string[] args)
 		{
-			DoNotOverwrite,
-			IfFumenGenerated,
-			IfFumenGeneratedAndNewerVersion,
-			Always
+			ExportTime = DateTime.Now;
+			VisualizationSubDir = ExportTime.ToString("yyyy-MM-dd HH-mm-ss");
+
+			// Load Config.
+			var config = await Config.Load();
+			if (config == null)
+				return;
+
+			// Validate ChartTypes.
+			if (string.IsNullOrEmpty(config.InputChartType))
+			{
+				Logger.Error($"No InputChartType found in {Config.FileName}.");
+				return;
+			}
+			if (!SupportedInputTypes.Contains(config.InputChartType))
+			{
+				Logger.Error($"Unsupported InputChartType \"{config.InputChartType}\" found in {Config.FileName}. Expected value in [{string.Join(", ", SupportedInputTypes)}].");
+				return;
+			}
+			if (string.IsNullOrEmpty(config.OutputChartType))
+			{
+				Logger.Error($"No OutputChartType found in {Config.FileName}.");
+				return;
+			}
+			if (!SupportedOutputTypes.Contains(config.OutputChartType))
+			{
+				Logger.Error($"Unsupported OutputChartType \"{config.OutputChartType}\" found in {Config.FileName}. Expected value in [{string.Join(", ", SupportedOutputTypes)}].");
+				return;
+			}
+
+			// Create StepGraphs.
+			if (config.InputChartType == config.OutputChartType)
+			{
+				Logger.Info("Creating StepGraph.");
+				InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
+				OutputStepGraph = InputStepGraph;
+				Logger.Info("Finished creating StepGraph.");
+			}
+			else
+			{
+				Logger.Info("Creating StepGraphs.");
+				var t1 = new Thread(() => { InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
+				var t2 = new Thread(() => { OutputStepGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
+				t1.Start();
+				t2.Start();
+				t1.Join();
+				t2.Join();
+				Logger.Info("Finished creating StepGraphs.");
+			}
+
+			// Create a directory for outputting visualizations.
+			if (Config.Instance.OutputVisualizations)
+			{
+				if (string.IsNullOrEmpty(Config.Instance.VisualizationsDirectory))
+				{
+					Logger.Error($"No VisualizationsDirectory provided in {Config.FileName}.");
+					return;
+				}
+
+				try
+				{
+					var pathSep = Path.DirectorySeparatorChar.ToString();
+					VisualizationDir = Config.Instance.VisualizationsDirectory;
+					if (!VisualizationDir.EndsWith(pathSep))
+						VisualizationDir += pathSep;
+					VisualizationDir += VisualizationSubDir;
+					Logger.Info($"Creating directory for outputting visualizations: {VisualizationDir}.");
+					Directory.CreateDirectory(VisualizationDir);
+				}
+				catch (Exception e)
+				{
+					Logger.Error("Failed to find or create directory for outputting visualizations.");
+					Logger.Error(e.ToString());
+					return;
+				}
+			}
+
+			FindCharts();
+
+			// Hack. Wait for input.
+			Logger.Info("Done.");
+			Console.ReadLine();
 		}
 
-		static void Main(string[] args)
+		static void FindCharts()
 		{
-			var t1 = new Thread(() => { SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
-			//var t2 = new Thread(() => { DPGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
-			t1.Start();
-			//t2.Start();
-			t1.Join();
-			//t2.Join();
-			//return;
+			if (!Directory.Exists(Config.Instance.InputDirectory))
+			{
+				Logger.Error($"Could not find InputDirectory '{Config.Instance.InputDirectory}'.");
+				return;
+			}
 
-			var song = SMReader.Load(HackChart);
-			AddDoublesCharts(song, OverwriteBehavior.IfFumenGenerated);
+			var pathSep = Path.DirectorySeparatorChar.ToString();
+			var dirs = new Stack<string>();
+			dirs.Push(Config.Instance.InputDirectory);
 
-			// HACK
-			//SMWriter.Save(song,
-			//	@"C:\Games\StepMania 5\Songs\Customs\GIGA VIOLATE\GIGA VIOLATE.sm");
+			while (dirs.Count > 0)
+			{
+				var currentDir = dirs.Pop();
+
+				// Get sub directories.
+				try
+				{
+					var subDirs = Directory.GetDirectories(currentDir);
+					foreach (var str in subDirs)
+						dirs.Push(str);
+				}
+				catch (Exception e)
+				{
+					Logger.Warn($"Could not get directories in '{currentDir}'.");
+					Logger.Warn(e.ToString());
+					continue;
+				}
+
+				var relativePath = currentDir.Substring(
+					Config.Instance.InputDirectory.Length,
+					currentDir.Length - Config.Instance.InputDirectory.Length);
+				if (relativePath.StartsWith(pathSep))
+					relativePath = relativePath.Substring(1, relativePath.Length - 1);
+				if (!relativePath.EndsWith(pathSep))
+					relativePath += pathSep;
+
+				// Get files.
+				string[] files;
+				try
+				{
+					files = Directory.GetFiles(currentDir);
+				}
+				catch (Exception e)
+				{
+					Logger.Warn($"Could not get files in '{currentDir}'.");
+					Logger.Warn(e.ToString());
+					continue;
+				}
+
+				// Check each file.
+				foreach (var file in files)
+				{
+					// Get the FileInfo for this file so we can check its name.
+					FileInfo fi = null;
+					try
+					{
+						fi = new FileInfo(file);
+					}
+					catch (Exception e)
+					{
+						Logger.Warn($"Could not get file info for '{file}'.");
+						Logger.Warn(e.ToString());
+						continue;
+					}
+
+					// Check if the matches the expression for files to convert.
+					if (!Config.Instance.InputNameMatches(fi.Name))
+						continue;
+
+					var songArgs = new SongArgs
+					{
+						FileInfo = fi,
+						CurrentDir = currentDir,
+						RelativePath = relativePath
+					};
+					if (!ThreadPool.QueueUserWorkItem(ProcessSong, songArgs))
+					{
+						Logger.Error($"Failed to queue work thread for '{fi.Name}'.");
+						continue;
+					}
+
+					// HACK
+					//ProcessSong(songArgs);
+				}
+			}
 		}
 
-		static void AddDoublesCharts(Song song, OverwriteBehavior overwriteBehavior)
+		public class SongArgs
 		{
+			public FileInfo FileInfo;
+			public string CurrentDir;
+			public string RelativePath;
+		}
+
+
+		static void ProcessSong(object args)
+		{
+			if (!(args is SongArgs songArgs))
+				return;
+
+			var fileNameNoExtension = songArgs.FileInfo.Name;
+			if (!string.IsNullOrEmpty(songArgs.FileInfo.Extension))
+			{
+				fileNameNoExtension = fileNameNoExtension.Substring(0, songArgs.FileInfo.Name.Length - songArgs.FileInfo.Extension.Length);
+			}
+
+			// Load the song.
+			Song song;
+			try
+			{
+				song = SMReader.Load(songArgs.FileInfo.FullName);
+			}
+			catch (Exception e)
+			{
+				Logger.Error($"[{fileNameNoExtension}] Failed to load '{songArgs.FileInfo.Name}'.");
+				Logger.Error(e.ToString());
+				return;
+			}
+
+			// Add new charts.
+			AddCharts(song, songArgs.CurrentDir, songArgs.RelativePath, songArgs.FileInfo.Name, fileNameNoExtension);
+
+			// Save
+			var pathSep = Path.DirectorySeparatorChar.ToString();
+			var saveDir = Config.Instance.OutputDirectory;
+			if (!saveDir.EndsWith(pathSep))
+				saveDir += pathSep;
+			saveDir += songArgs.RelativePath;
+			Directory.CreateDirectory(saveDir);
+			SMWriter.Save(song, saveDir + songArgs.FileInfo.Name);
+		}
+
+		static void AddCharts(Song song, string songDir, string relativePath, string fileName, string fileNameNoExtension)
+		{
+			Logger.Info($"[{fileNameNoExtension}] Processing '{relativePath}{fileName}'.");
+
+			var pathSep = Path.DirectorySeparatorChar.ToString();
 			var newCharts = new List<Chart>();
 			var chartsIndicesToRemove = new List<int>();
 			var chartIndex = 0;
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
-				    && chart.Type == ChartTypeString(ChartType.dance_single)
+				    && chart.Type == Config.Instance.InputChartType
 				    && chart.NumPlayers == 1
-				    && chart.NumInputs == NumSPArrows
-				    //HACK
-				    && chart.DifficultyType == HackDifficulty)
+				    && chart.NumInputs == InputStepGraph.NumArrows
+				    && Config.Instance.DifficultyMatches(chart.DifficultyType))
 				{
-					// Check if there is an existing doubles chart corresponding to this singles chart.
-					var (currentDoublesChart, dpChartIndex) = FindDoublesChart(song, chart.DifficultyType);
-					if (currentDoublesChart != null)
+					// Check if there is an existing chart.
+					var (currentChart, currentChartIndex) = FindChart(
+						song,
+						Config.Instance.OutputChartType,
+						chart.DifficultyType,
+						OutputStepGraph.NumArrows);
+					if (currentChart != null)
 					{
 						var fumenGenerated = GetFumenGeneratedVersion(chart, out var version);
 
 						// Check if we should skip or overwrite the chart.
-						switch (overwriteBehavior)
+						switch (Config.Instance.OverwriteBehavior)
 						{
 							case OverwriteBehavior.DoNotOverwrite:
 								continue;
@@ -92,14 +301,29 @@ namespace ChartGenerator
 							default:
 								break;
 						}
-
-						chartsIndicesToRemove.Add(dpChartIndex);
 					}
 
-					// Generate a new series of Events for this Chart from the singles Chart.
-					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, SPGraph);
-					// HACK
-					var performedChart = PerformedChart.CreateFromExpressedChart(SPGraph, expressedChart);
+					// Create an ExpressedChart.
+					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, InputStepGraph);
+					if (expressedChart == null)
+					{
+						Logger.Error($"[{fileNameNoExtension}] Failed to create ExpressedChart for {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
+						continue;
+					}
+
+					// Create a PerformedChart.
+					var performedChart = PerformedChart.CreateFromExpressedChart(OutputStepGraph, expressedChart);
+					if (performedChart == null)
+					{
+						Logger.Error($"[{fileNameNoExtension}] Failed to create PerformedChart for {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
+						continue;
+					}
+
+					// At this point we have succeeded, so add the chart index to remove if appropriate.
+					if (currentChart != null)
+						chartsIndicesToRemove.Add(currentChartIndex);
+
+					// Create Events for the new Chart.
 					var events = performedChart.CreateSMChartEvents();
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMEventComparer());
@@ -120,38 +344,47 @@ namespace ChartGenerator
 						DifficultyRating = chart.DifficultyRating,
 						DifficultyType = chart.DifficultyType,
 						SourceExtras = chart.SourceExtras,
-						Type = ChartTypeString(ChartType.dance_double),
+						Type = Config.Instance.OutputChartType,
 						NumPlayers = 1,
-						NumInputs = 8
+						NumInputs = OutputStepGraph.NumArrows
 					};
-
-					// HACK
-					newChart.NumInputs = 4;
-					newChart.Type = ChartTypeString(ChartType.dance_single);
-
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);
 
-					var renderer = new Renderer(
-						HackChartDir,
-						song,
-						chart,
-						expressedChart,
-						rootSearchNode,
-						performedChart,
-						newChart
-					);
-					renderer.Write();
-					return;
-				}
+					Logger.Info($"[{fileNameNoExtension}] Generated {Config.Instance.OutputChartType} {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
 
+					// Write a visualization.
+					if (Config.Instance.OutputVisualizations)
+					{
+						var visualizationDirectory = VisualizationDir + Path.DirectorySeparatorChar.ToString() + relativePath;
+						if (!visualizationDirectory.EndsWith(pathSep))
+							visualizationDirectory += pathSep;
+						Directory.CreateDirectory(visualizationDirectory);
+						var saveFile = visualizationDirectory + $"{fileNameNoExtension}-{chart.DifficultyType}.html";
+
+						var renderer = new Renderer(
+							songDir,
+							saveFile,
+							song,
+							chart,
+							expressedChart,
+							rootSearchNode,
+							performedChart,
+							newChart
+						);
+						renderer.Write();
+					}
+				}
 				chartIndex++;
 			}
 
-			// Remove overwritten doubles charts.
+			Logger.Info($"[{fileNameNoExtension}] Generated {newCharts.Count} new charts (replaced {chartsIndicesToRemove.Count}) for '{relativePath}{fileName}'.");
+
+			// Remove overwritten charts.
 			foreach (var i in chartsIndicesToRemove)
 				song.Charts.RemoveAt(i);
-			// Add new doubles charts.
+
+			// Add new charts.
 			song.Charts.AddRange(newCharts);
 		}
 
@@ -170,15 +403,15 @@ namespace ChartGenerator
 			return false;
 		}
 
-		private static (Chart, int) FindDoublesChart(Song song, string difficultyType)
+		private static (Chart, int) FindChart(Song song, string chartType, string difficultyType, int numArrows)
 		{
 			int index = 0;
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
-				    && chart.Type == ChartTypeString(ChartType.dance_double)
-				    && chart.NumPlayers == 1
-				    && chart.NumInputs == NumDPArrows
+				    && chart.Type == chartType
+					&& chart.NumPlayers == 1
+				    && chart.NumInputs == numArrows
 					&& chart.DifficultyType == difficultyType)
 				{
 					return (chart, index);
