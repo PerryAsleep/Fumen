@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
 namespace Fumen.Converters
 {
@@ -87,6 +86,21 @@ namespace Fumen.Converters
 
 		public const int NumBeatsPerMeasure = 4;
 
+		public static readonly int[] ValidDenominators = new int[]
+		{
+			1,	// Quarter note
+			2,	// Eighth note
+			3,	// Eighth note triplet (Twelfth note)
+			4,	// Sixteenth note
+			6,	// Sixteenth note triplet (Twenty-fourth note)
+			8,	// Thirty-second note
+			12,	// Thirty-second note triplet (Forty-eighth note)
+			16,	// Sixty-fourth note
+			48  // One-hundred-ninety-second note
+		};
+
+		public static readonly char[] SMAllWhiteSpace = new[] { '\r', '\n', ' ', '\t' };
+
 		public static readonly List<Fraction> SSubDivisions = new List<Fraction>();
 		public static readonly List<double> SSubDivisionLengths = new List<double>();
 		public static readonly ChartProperties[] SChartProperties;
@@ -106,21 +120,36 @@ namespace Fumen.Converters
 		public const string TagCDTitle = "CDTITLE";
 		public const string TagMusic = "MUSIC";
 		public const string TagOffset = "OFFSET";
-		public const string TagSampleStart = "SAMPLESTART";
-		public const string TagSampleLength = "SAMPLELENGTH";
-		public const string TagSelectable = "SELECTABLE";
-		public const string TagDisplayBPM = "DISPLAYBPM";
 		// ReSharper disable once InconsistentNaming
 		public const string TagBPMs = "BPMS";
 		public const string TagStops = "STOPS";
+		public const string TagFreezes = "FREEZES";
+		public const string TagDelays = "DELAYS";
 		public const string TagTimeSignatures = "TIMESIGNATURES";
+		public const string TickCounts = "TICKCOUNTS";
+		public const string InstrumentTrack = "INSTRUMENTTRACK";
+		public const string TagSampleStart = "SAMPLESTART";
+		public const string TagSampleLength = "SAMPLELENGTH";
+		public const string TagDisplayBPM = "DISPLAYBPM";
+		public const string TagSelectable = "SELECTABLE";
+		public const string TagAnimations = "ANIMATIONS";
 		public const string TagBGChanges = "BGCHANGES";
+		public const string TagBGChanges1 = "BGCHANGES1";
+		public const string TagBGChanges2 = "BGCHANGES2";
 		public const string TagFGChanges = "FGCHANGES";
 		public const string TagKeySounds = "KEYSOUNDS";
 		public const string TagAttacks = "ATTACKS";
-		public const string TagMenuColor = "MENUCOLOR";
 		public const string TagNotes = "NOTES";
+		public const string TagNotes2 = "NOTES2";
 		public const string TagRadarValues = "RADARVALUES";
+		public const string TagLastBeatHint = "LASTBEATHINT";
+
+		public const string TagFumenKeySoundIndex = "FumenKSI";
+		public const string TagFumenDoublePosition = "FumenDoublePos";
+		public const string TagFumenDoubleValue = "FumenDoubleVal";
+		public const string TagFumenNotesType = "FumenNotesType";
+		public const string TagFumenRawStopsStr = "FumenRawStopsStr";
+		public const string TagFumenRawBpmsStr = "FumenRawBpmsStr";
 
 		public const string SMDoubleFormat = "N6";
 
@@ -130,18 +159,11 @@ namespace Fumen.Converters
 		static SMCommon()
 		{
 			// Initialize valid SM SubDivisions.
-			var validDenominators = new[] {
-				2,	// Eighth note
-				3,	// Eighth note triplet (Twelfth note)
-				4,	// Sixteenth note
-				6,	// Sixteenth note triplet (Twenty-fourth note)
-				8,	// Thirty-second note
-				12,	// Thirty-second note triplet (Forty-eighth note)
-				16,	// Sixty-fourth note
-				48};// One-hundred-ninety-second note
 			SSubDivisions.Add(new Fraction(0, 0));
-			foreach (var denominator in validDenominators)
+			foreach (var denominator in ValidDenominators)
 			{
+				if (denominator <= 1)
+					continue;
 				for (var numerator = 0; numerator < denominator; numerator++)
 				{
 					var fraction = new Fraction(numerator, denominator);
@@ -209,6 +231,110 @@ namespace Fumen.Converters
 			Logger.Error($"[SM] {message}");
 		}
 
+		/// <summary>
+		/// Given a double representation of an arbitrary fraction return the closest
+		/// matching Fraction that stepmania supports as a beat subdivision.
+		/// </summary>
+		/// <param name="fractionAsDouble">Fraction as a double.</param>
+		/// <returns>
+		/// Closest matching Fraction supported by stepmania as a beat subdivision.
+		/// </returns>
+		public static Fraction FindClosestSMSubDivision(double fractionAsDouble)
+		{
+			var length = SSubDivisionLengths.Count;
+
+			// Edge cases
+			if (fractionAsDouble <= SSubDivisionLengths[0])
+				return SSubDivisions[0];
+			if (fractionAsDouble >= SSubDivisionLengths[length - 1])
+				return SSubDivisions[length - 1];
+
+			// Search
+			int leftIndex = 0, rightIndex = length, midIndex = 0;
+			while (leftIndex < rightIndex)
+			{
+				midIndex = (leftIndex + rightIndex) >> 1;
+
+				// Value is less than midpoint, search to the left.
+				if (fractionAsDouble < SSubDivisionLengths[midIndex])
+				{
+					// Value is between midpoint and adjacent.
+					if (midIndex > 0 && fractionAsDouble > SSubDivisionLengths[midIndex - 1])
+						return fractionAsDouble - SSubDivisionLengths[midIndex - 1] <
+							   SSubDivisionLengths[midIndex] - fractionAsDouble
+							? SSubDivisions[midIndex - 1]
+							: SSubDivisions[midIndex];
+
+					// Advance search
+					rightIndex = midIndex;
+				}
+
+				// Value is greater than midpoint, search to the right.
+				else if (fractionAsDouble > SMCommon.SSubDivisionLengths[midIndex])
+				{
+					// Value is between midpoint and adjacent.
+					if (midIndex < length - 1 && fractionAsDouble < SSubDivisionLengths[midIndex + 1])
+						return fractionAsDouble - SSubDivisionLengths[midIndex] <
+							   SSubDivisionLengths[midIndex + 1] - fractionAsDouble
+							? SSubDivisions[midIndex]
+							: SSubDivisions[midIndex + 1];
+
+					// Advance search
+					leftIndex = midIndex + 1;
+				}
+
+				// Value equals midpoint.
+				else
+				{
+					return SSubDivisions[midIndex];
+				}
+			}
+			return SSubDivisions[midIndex];
+		}
+
+		/// <summary>
+		/// Given a desired sub-division for a position within a beat, return the lowest possible
+		/// sub-division that should be used. This is necessary to convert some valid sub-divisions
+		/// which are not supported like 64th note triplets (sub-division 24) into a higher
+		/// sub-division which is supported, like 192nd notes (sub-division 48).
+		/// If no possible valid sub-division exists, return false.
+		/// </summary>
+		/// <param name="desiredSubDivision">
+		/// The desired sub-division to use. In practice, the least common multiple of the reduced
+		/// sub-divisions for all notes in a particular measure.
+		/// </param>
+		/// <param name="lowestValidSMSubDivison">
+		/// Out parameter to hold the lowest valid sub-division which stepmania supports.
+		/// </param>
+		/// <returns>
+		/// True if a valid sub-division was found and false otherwise.
+		/// </returns>
+		public static bool GetLowestValidSMSubDivision(int desiredSubDivision, out int lowestValidSMSubDivison)
+		{
+			lowestValidSMSubDivison = desiredSubDivision;
+			var highestDenominator = ValidDenominators[ValidDenominators.Length - 1];
+			do
+			{
+				var found = false;
+				foreach (var validDenominator in ValidDenominators)
+				{
+					if (desiredSubDivision == validDenominator)
+					{
+						lowestValidSMSubDivison = desiredSubDivision;
+						return true;
+					}
+				}
+				if (found)
+					break;
+				desiredSubDivision <<= 1;
+			}
+			while (desiredSubDivision <= highestDenominator);
+			return false;
+		}
+
+		/// <summary>
+		/// Custom Comparer for Events in an SM Chart.
+		/// </summary>
 		public class SMEventComparer : IComparer<Event>
 		{
 			private static readonly List<Type> SMEventOrder = new List<Type>

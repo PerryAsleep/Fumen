@@ -5,6 +5,7 @@ using ChartGenerator;
 using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
+using System.Threading.Tasks;
 
 namespace ChartGeneratorTests
 {
@@ -53,7 +54,8 @@ namespace ChartGeneratorTests
 		/// <returns></returns>
 		public static ExpressedChart Load(string smFile, string chartDifficultyType = null)
 		{
-			var song = SMReader.Load(smFile);
+			Song song = null;
+			Task.Run(async () => { song = await new SMReader(smFile).Load(); }).Wait();
 
 			// Default to the first chart.
 			List<Event> events = song.Charts[0].Layers[0].Events;

@@ -63,24 +63,10 @@ namespace Fumen
 
 		public Fraction Reduce()
 		{
-			var gcd = GreatestCommonDenominator();
+			var gcd = GreatestCommonDenominator(Numerator, Denominator);
 			if (gcd < 2)
 				return new Fraction(this);
 			return new Fraction(Numerator / gcd, Denominator / gcd);
-		}
-
-		public int GreatestCommonDenominator()
-		{
-			var a = Numerator;
-			var b = Denominator;
-			int r;
-			while (b > 0)
-			{
-				r = a % b;
-				a = b;
-				b = r;
-			}
-			return a;
 		}
 
 		/// <summary>
@@ -99,6 +85,23 @@ namespace Fumen
 			var wrapped = number >> (32 - positions);
 			// Shift and wrap the discarded bits.
 			return BitConverter.ToInt32(BitConverter.GetBytes((number << positions) | wrapped), 0);
+		}
+
+		public static int GreatestCommonDenominator(int a, int b)
+		{
+			int r;
+			while (b > 0)
+			{
+				r = a % b;
+				a = b;
+				b = r;
+			}
+			return a;
+		}
+
+		public static int LeastCommonMultiple(int a, int b)
+		{
+			return (a / GreatestCommonDenominator(a, b)) * b;
 		}
 	}
 }

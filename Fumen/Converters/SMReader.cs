@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Fumen.Converters
 {
@@ -20,18 +16,13 @@ namespace Fumen.Converters
 				PropertyName = smPropertyName;
 			}
 
-			public abstract bool Parse(StreamReader reader, string line, Song song);
+			public abstract bool Parse(MSDFile.Value value, Song song);
 
-			protected bool DoesLineMatchProperty(string line, out string trimmedLine)
+			protected bool DoesValueMatchProperty(MSDFile.Value value)
 			{
-				trimmedLine = line;
-
-				var key = $"#{PropertyName}:";
-				if (!line.StartsWith(key))
-					return false;
-
-				trimmedLine = line.Substring(key.Length);
-				return true;
+				return value.Params.Count > 0
+					&& !string.IsNullOrEmpty(value.Params[0])
+					&& value.Params[0].ToUpper() == PropertyName;
 			}
 		}
 
@@ -42,40 +33,16 @@ namespace Fumen.Converters
 			{
 			}
 
-			protected bool ParseAsString(StreamReader streamReader, string line, out string parsedValue)
+			protected bool ParseAsString(MSDFile.Value value, out string parsedValue)
 			{
 				parsedValue = "";
 
 				// Only consider this line if it matches this property name.
-				if (!DoesLineMatchProperty(line, out line))
+				if (!DoesValueMatchProperty(value))
 					return false;
 
-				// Loop over lines until the end marker is found.
-				var first = true;
-				while (null != line)
-				{
-					var propertyEndsOnThisLine = GetFirstUnescapedUncommentedSubString(line, ";") >= 0;
-
-					// Clean the line.
-					line = TrimComments(line);
-					line = UnEscape(line);
-
-					// Append this value as a string.
-					if (!first)
-						parsedValue += "\n";
-					if (!propertyEndsOnThisLine)
-						parsedValue += line;
-					else
-						parsedValue += line.Substring(0, line.LastIndexOf(';'));
-
-					// This line contains the end of this property. Stop reading.
-					if (propertyEndsOnThisLine)
-						break;
-
-					// Advance to the next line.
-					line = streamReader.ReadLine();
-					first = false;
-				}
+				if (value.Params.Count > 1 && !string.IsNullOrEmpty(value.Params[1]))
+					parsedValue = value.Params[1];
 
 				return true;
 			}
@@ -83,22 +50,22 @@ namespace Fumen.Converters
 
 		protected class StringPropertyToSongPropertyParser : StringPropertyParser
 		{
-			private readonly string _songPropertyName;
+			private readonly string SongPropertyName;
 
 			public StringPropertyToSongPropertyParser(string smPropertyName, string songPropertyName)
 				: base(smPropertyName)
 			{
-				_songPropertyName = songPropertyName;
+				SongPropertyName = songPropertyName;
 			}
 
-			public override bool Parse(StreamReader streamReader, string line, Song song)
+			public override bool Parse(MSDFile.Value value, Song song)
 			{
 				// Only consider this line if it matches this property name.
-				if (!ParseAsString(streamReader, line, out var songValueStr))
+				if (!ParseAsString(value, out var songValueStr))
 					return false;
 
 				// Only consider this line if the property is valid.
-				var prop = song.GetType().GetProperty(_songPropertyName, BindingFlags.Public | BindingFlags.Instance);
+				var prop = song.GetType().GetProperty(SongPropertyName, BindingFlags.Public | BindingFlags.Instance);
 				if (null == prop || !prop.CanWrite)
 					return true;
 
@@ -125,84 +92,105 @@ namespace Fumen.Converters
 			{
 			}
 
-			public override bool Parse(StreamReader streamReader, string line, Song song)
+			public override bool Parse(MSDFile.Value value, Song song)
 			{
 				// Only consider this line if it matches this property name.
-				if (!ParseAsString(streamReader, line, out var songValueStr))
+				if (!ParseAsString(value, out var songValueStr))
 					return false;
 
-				T value;
+				T tValue;
 				try
 				{
-					value = (T) Convert.ChangeType(songValueStr, typeof(T));
+					tValue = (T) Convert.ChangeType(songValueStr, typeof(T));
 				}
 				catch (Exception)
 				{
 					return true;
 				}
 
-				song.SourceExtras[PropertyName] = value;
+				song.SourceExtras[PropertyName] = tValue;
+				return true;
+			}
+		}
+
+		protected class StringListPropertyToExtrasParser : StringPropertyParser
+		{
+			public StringListPropertyToExtrasParser(string smPropertyName)
+				: base(smPropertyName)
+			{
+			}
+
+			public override bool Parse(MSDFile.Value value, Song song)
+			{
+				// Only consider this line if it matches this property name.
+				if (!ParseAsString(value, out var _))
+					return false;
+
+				List<string> parsedList = new List<string>();
+				for (var paramIndex = 1; paramIndex < value.Params.Count; paramIndex++)
+				{
+					if (!string.IsNullOrEmpty(value.Params[paramIndex]))
+						parsedList.Add(value.Params[paramIndex]);
+				}
+
+				song.SourceExtras[PropertyName] = parsedList;
 				return true;
 			}
 		}
 
 		protected class ListAtTimePropertyParser<T> : PropertyParser where T : IConvertible
 		{
-			private readonly Dictionary<double, T> _values;
+			private readonly Dictionary<double, T> Values;
+			private readonly string RawStringPropertyName;
 
-			public ListAtTimePropertyParser(string smPropertyName, Dictionary<double, T> values)
+			public ListAtTimePropertyParser(string smPropertyName, Dictionary<double, T> values, string rawStringPropertyName = null)
 				: base(smPropertyName)
 			{
-				_values = values;
+				Values = values;
+				RawStringPropertyName = rawStringPropertyName;
 			}
 
-			public override bool Parse(StreamReader streamReader, string line, Song song)
+			public override bool Parse(MSDFile.Value value, Song song)
 			{
 				// Only consider this line if it matches this property name.
-				if (!DoesLineMatchProperty(line, out line))
+				if (!DoesValueMatchProperty(value))
 					return false;
 
-				// Loop over lines until the end marker is found.
-				while (null != line)
+				if (value.Params.Count < 2 || string.IsNullOrEmpty(value.Params[1]))
+					return true;
+
+				// Record the raw string to preserve formatting when writing.
+				if (!string.IsNullOrEmpty(RawStringPropertyName))
 				{
-					var endMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ";");
+					song.SourceExtras.Add(RawStringPropertyName, value.Params[1]);
+				}
 
-					// Parse the line into a list of key value paris
-					line = CleanLine(line);
-					var pairs = line.Split(',');
-					foreach (var pair in pairs)
+				var pairs = value.Params[1].Split(',');
+				foreach (var pair in pairs)
+				{
+					var kvp = pair.Split('=');
+					if (kvp.Length != 2)
+						continue;
+					if (!double.TryParse(kvp[0], out var time))
+						continue;
+
+					var valueStr = kvp[1];
+					if (valueStr.IndexOf(';') >= 0)
 					{
-						var kvp = pair.Split('=');
-						if (kvp.Length != 2)
-							continue;
-						if (!double.TryParse(kvp[0], out var time))
-							continue;
-
-						var valueStr = kvp[1];
-						if (valueStr.IndexOf(';') >= 0)
-						{
-							valueStr = valueStr.Substring(0, valueStr.IndexOf(';'));
-						}
-
-						T value;
-						try
-						{
-							value = (T) Convert.ChangeType(valueStr, typeof(T));
-						}
-						catch (Exception)
-						{
-							continue;
-						}
-
-						_values[time] = value;
+						valueStr = valueStr.Substring(0, valueStr.IndexOf(';'));
 					}
 
-					// This line contains the end of this property. Stop reading.
-					if (endMarkerIndex >= 0)
-						break;
+					T tValue;
+					try
+					{
+						tValue = (T)Convert.ChangeType(valueStr, typeof(T));
+					}
+					catch (Exception)
+					{
+						continue;
+					}
 
-					// Advance to the next line.
-					line = streamReader.ReadLine();
+					Values[time] = tValue;
 				}
 
 				return true;
@@ -216,44 +204,29 @@ namespace Fumen.Converters
 			{
 			}
 
-			private static string ParseNextNoteData(StreamReader streamReader, ref string line)
-			{
-				var parsedValue = "";
-				while (null != line)
-				{
-					var endMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ":");
-					if (endMarkerIndex >= 0)
-						line = line.Substring(0, endMarkerIndex);
-					line = CleanLine(line);
-
-					parsedValue += line;
-
-					line = streamReader.ReadLine();
-
-					if (endMarkerIndex >= 0)
-						break;
-				}
-
-				return parsedValue;
-			}
-
-			public override bool Parse(StreamReader reader, string line, Song song)
+			public override bool Parse(MSDFile.Value value, Song song)
 			{
 				// Only consider this line if it matches this property name.
-				if (!DoesLineMatchProperty(line, out line))
+				if (!DoesValueMatchProperty(value))
 					return false;
+
+				if (value.Params.Count < 7)
+					return true;
 
 				var chart = new Chart
 				{
-					Type = ParseNextNoteData(reader, ref line),
-					Description = ParseNextNoteData(reader, ref line),
-					DifficultyType = ParseNextNoteData(reader, ref line)
+					Type = value.Params[1]?.Trim(SMCommon.SMAllWhiteSpace) ?? "",
+					Description = value.Params[2]?.Trim(SMCommon.SMAllWhiteSpace) ?? "",
+					DifficultyType = value.Params[3]?.Trim(SMCommon.SMAllWhiteSpace) ?? ""
 				};
 				chart.Layers.Add(new Layer());
 
+				// Record whether this chart was written under NOTES or NOTES2.
+				chart.SourceExtras.Add(SMCommon.TagFumenNotesType, PropertyName);
+
 				// Parse the chart information before measure data.
-				var chartDifficultyRatingStr = ParseNextNoteData(reader, ref line);
-				var chartRadarValuesStr = ParseNextNoteData(reader, ref line);
+				var chartDifficultyRatingStr = value.Params[4]?.Trim(SMCommon.SMAllWhiteSpace) ?? "";
+				var chartRadarValuesStr = value.Params[5]?.Trim(SMCommon.SMAllWhiteSpace) ?? "";
 
 				// Parse the difficulty rating as a number.
 				if (int.TryParse(chartDifficultyRatingStr, out var difficultyRatingInt))
@@ -291,91 +264,91 @@ namespace Fumen.Converters
 				// Parse measure data.
 				var player = 0;
 				var measure = 0;
-				var lineInMeasure = 0;
 				var currentMeasureEvents = new List<Event>();
-				while (null != line)
+				var notesStr = value.Params[6] ?? "";
+				notesStr = notesStr.Trim(SMCommon.SMAllWhiteSpace);
+				var notesStrsPerPlayer = notesStr.Split('&');
+				foreach (var notesStrForPlayer in notesStrsPerPlayer)
 				{
-					var endMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ";");
-					var measureMarkerIndex = GetFirstUnescapedUncommentedSubString(line, ",");
-					var playerMarkerIndex = GetFirstUnescapedUncommentedSubString(line, "&");
-					line = CleanLine(line);
-
-					// Complete the current measure
-					if (endMarkerIndex >= 0 || measureMarkerIndex >= 0 || playerMarkerIndex >= 0)
+					// RemoveEmptyEntries seems wrong, but matches Stepmania parsing logic.
+					var measures = notesStrForPlayer.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+					foreach (var measureStr in measures)
 					{
-						// Now that the number of lines in the measure is known,
-						// correct the position of each event.
-						foreach (var measureEvent in currentMeasureEvents)
+						var lines = measureStr.Trim(SMCommon.SMAllWhiteSpace).Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+						var linesInMeasure = lines.Length;
+						var lineInMeasure = 0;
+						var linesPerBeat = linesInMeasure / SMCommon.NumBeatsPerMeasure;
+						foreach (var line in lines)
 						{
-							// Time signatures are not supported in sm files. Every measure (even if empty)
-							// has a multiple of four notes. If for some reason there is not a multiple of
-							// four, then just keep the beat as the position.
-							if (lineInMeasure % SMCommon.NumBeatsPerMeasure == 0)
+							var trimmedLine = line.Trim(SMCommon.SMAllWhiteSpace);
+
+							// Parse this line as note data
+							for (int charIndex = 0, laneIndex = 0;
+								charIndex < trimmedLine.Length && laneIndex < chart.NumInputs;
+								charIndex++, laneIndex++)
 							{
-								var measureIndex = measureEvent.Position.Beat;
-								var linesPerBeat = lineInMeasure / SMCommon.NumBeatsPerMeasure;
-								measureEvent.Position.Beat /= linesPerBeat;
-								measureEvent.Position.SubDivision = new Fraction(
-									measureIndex - measureEvent.Position.Beat * linesPerBeat,
-									linesPerBeat);
+								// Check the character at this index to see if it corresponds to a note.
+								var c = trimmedLine[charIndex];
+								LaneNote note = null;
+								if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap])
+									note = new LaneTapNote { SourceType = c.ToString() };
+								else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Mine]
+											|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Lift]
+											|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Fake]
+											|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.KeySound])
+									note = new LaneNote { SourceType = c.ToString() };
+								else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldStart]
+											|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.RollStart])
+									note = new LaneHoldStartNote { SourceType = c.ToString() };
+								else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldEnd])
+									note = new LaneHoldEndNote { SourceType = c.ToString() };
+
+								// Keysound parsing.
+								// TODO: Parse keysounds properly. For now, putting them in SourceExtras.
+								if (charIndex + 1 < trimmedLine.Length && trimmedLine[charIndex + 1] == '[')
+								{
+									var startIndex = charIndex + 1;
+									while (charIndex < trimmedLine.Length)
+										if (trimmedLine[charIndex] == ']')
+											break;
+									var endIndex = charIndex - 1;
+									if (endIndex > startIndex)
+									{
+										if (int.TryParse(trimmedLine.Substring(startIndex, endIndex - startIndex), out var keySoundIndex))
+										{
+											note.SourceExtras.Add(SMCommon.TagFumenKeySoundIndex, keySoundIndex);
+										}
+									}
+								}
+
+								// No note at this position, continue.
+								if (null == note)
+									continue;
+
+								// Configure common parameters on the note and add it.
+								var beat = lineInMeasure / linesPerBeat;
+								note.Lane = laneIndex;
+								note.Player = player;
+								note.Position = new MetricPosition
+								{
+									Measure = measure,
+									Beat = beat,
+									SubDivision = new Fraction(lineInMeasure - beat * linesPerBeat, linesPerBeat)
+								};
+
+								currentMeasureEvents.Add(note);
 							}
+
+							// Advance line marker
+							lineInMeasure++;
 						}
 
 						chart.Layers[0].Events.AddRange(currentMeasureEvents);
 						currentMeasureEvents.Clear();
 						measure++;
-						lineInMeasure = 0;
-						if (playerMarkerIndex >= 0)
-							player++;
 					}
 
-					// Parse this line as note data
-					else if (line.Length > 0)
-					{
-						for (var lineIndex = 0; lineIndex < line.Length; lineIndex++)
-						{
-							// Check the character at this index to see if it corresponds to a note.
-							var c = line[lineIndex];
-							LaneNote note = null;
-							if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap])
-								note = new LaneTapNote { SourceType = c.ToString() };
-							else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Mine]
-							         || c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Lift]
-							         || c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Fake]
-							         || c == SMCommon.SNoteChars[(int)SMCommon.NoteType.KeySound])
-								note = new LaneNote { SourceType = c.ToString() };
-							else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldStart]
-							         || c == SMCommon.SNoteChars[(int)SMCommon.NoteType.RollStart])
-								note = new LaneHoldStartNote { SourceType = c.ToString() };
-							else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldEnd])
-								note = new LaneHoldEndNote { SourceType = c.ToString() };
-
-							// No note at this position, continue.
-							if (null == note)
-								continue;
-
-							// Configure common parameters on the note and add it.
-							note.Lane = lineIndex;
-							note.Player = player;
-							note.Position = new MetricPosition
-							{
-								Measure = measure,
-								Beat = lineInMeasure
-							};
-
-							currentMeasureEvents.Add(note);
-						}
-
-						// Advance line marker
-						lineInMeasure++;
-					}
-
-					// Stop
-					if (endMarkerIndex >= 0)
-						break;
-
-					// Advance
-					line = reader.ReadLine();
+					player++;
 				}
 
 				song.Charts.Add(chart);
@@ -384,171 +357,90 @@ namespace Fumen.Converters
 			}
 		}
 
-		public static string TrimComments(string input)
+		/// <summary>
+		/// Path to the sm file to load.
+		/// </summary>
+		private string FilePath;
+
+		/// <summary>
+		/// Constructor.
+		/// </summary>
+		/// <param name="filePath">Path to the sm file to load.</param>
+		public SMReader(string filePath)
 		{
-			var index = GetFirstUnescapedUncommentedSubString(input, @"//");
-			return index < 0 ? input : input.Substring(0, index);
+			FilePath = filePath;
 		}
 
-		public static string UnEscape(string input)
+		/// <summary>
+		/// Load the sm file specified by the provided file path.
+		/// </summary>
+		public async Task<Song> Load()
 		{
-			return input
-				.Replace(@"\;", @";")
-				.Replace(@"\:", @":")
-				.Replace(@"\\", @"\")
-				.Replace(@"\/", @"/");
-		}
+			// Load the file as an MSDFile.
+			var msdFile = new MSDFile();
+			var result = await msdFile.Load(FilePath);
+			if (!result)
+				return null;
 
-		public static string CleanLine(string input)
-		{
-			input = TrimComments(input);
-			input = UnEscape(input);
-			input = Regex.Replace(input, @"\s+", "");
-			return input;
-		}
-
-		public static int GetFirstUnescapedUncommentedSubString(string input, string subString)
-		{
-			if (string.IsNullOrEmpty(subString))
-				return -1;
-
-			var numberOfPrecedingSlashes = 0;
-			var inputLen = input.Length;
-			for (var i = 0; i < inputLen; i++)
-			{
-				var currentCharIsEscaped = numberOfPrecedingSlashes % 2 == 1;
-
-				// Check
-				if (input[i] == subString[0]
-					&& !currentCharIsEscaped
-					&& i + subString.Length <= input.Length
-					&& input.Substring(i, subString.Length) == subString)
-					return i;
-
-				// Check if a comment block was reached and if so, return
-				if (i < inputLen - 1 && input[i] == '/' && input[i + 1] == '/' && !currentCharIsEscaped)
-					return -1;
-
-				if (input[i] == '\\')
-					numberOfPrecedingSlashes++;
-				else
-					numberOfPrecedingSlashes = 0;
-			}
-
-			// No end marker was found
-			return -1;
-		}
-
-		private static Fraction FindClosestSMSubDivision(double fractionAsDouble)
-		{
-			var length = SMCommon.SSubDivisionLengths.Count;
-
-			// Edge cases
-			if (fractionAsDouble <= SMCommon.SSubDivisionLengths[0])
-				return SMCommon.SSubDivisions[0];
-			if (fractionAsDouble >= SMCommon.SSubDivisionLengths[length - 1])
-				return SMCommon.SSubDivisions[length - 1];
-
-			// Search
-			int leftIndex = 0, rightIndex = length, midIndex = 0;
-			while (leftIndex < rightIndex)
-			{
-				midIndex = (leftIndex + rightIndex) >> 1;
-
-				// Value is less than midpoint, search to the left.
-				if (fractionAsDouble < SMCommon.SSubDivisionLengths[midIndex])
-				{
-					// Value is between midpoint and adjacent.
-					if (midIndex > 0 && fractionAsDouble > SMCommon.SSubDivisionLengths[midIndex - 1])
-						return fractionAsDouble - SMCommon.SSubDivisionLengths[midIndex - 1] <
-						       SMCommon.SSubDivisionLengths[midIndex] - fractionAsDouble
-							? SMCommon.SSubDivisions[midIndex - 1]
-							: SMCommon.SSubDivisions[midIndex];
-
-					// Advance search
-					rightIndex = midIndex;
-				}
-
-				// Value is greater than midpoint, search to the right.
-				else if (fractionAsDouble > SMCommon.SSubDivisionLengths[midIndex])
-				{
-					// Value is between midpoint and adjacent.
-					if (midIndex < length - 1 && fractionAsDouble < SMCommon.SSubDivisionLengths[midIndex + 1])
-						return fractionAsDouble - SMCommon.SSubDivisionLengths[midIndex] <
-						       SMCommon.SSubDivisionLengths[midIndex + 1] - fractionAsDouble
-							? SMCommon.SSubDivisions[midIndex]
-							: SMCommon.SSubDivisions[midIndex + 1];
-					
-					// Advance search
-					leftIndex = midIndex + 1;
-				}
-
-				// Value equals midpoint.
-				else
-				{
-					return SMCommon.SSubDivisions[midIndex];
-				}
-			}
-			return SMCommon.SSubDivisions[midIndex];
-		}
-
-		//public static async Task<Song> Load(string filePath)
-		public static Song Load(string filePath)
-		{
 			var tempos = new Dictionary<double, double>();
 			var stops = new Dictionary<double, double>();
 
-			var propertyParsers = new List<PropertyParser>()
+			var propertyParsers = new Dictionary<string, PropertyParser>()
 			{
-				new StringPropertyToSongPropertyParser(SMCommon.TagTitle, nameof(Song.Title)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagSubtitle, nameof(Song.SubTitle)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagArtist, nameof(Song.Artist)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagTitleTranslit, nameof(Song.TitleTransliteration)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagSubtitleTranslit, nameof(Song.SubTitleTransliteration)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagArtistTranslit, nameof(Song.ArtistTransliteration)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagGenre, nameof(Song.Genre)),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagCredit),
-				new StringPropertyToSongPropertyParser(SMCommon.TagBanner, nameof(Song.SongSelectImage)),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagBackground),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagLyricsPath),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagCDTitle),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagMusic),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagOffset),
-				new StringPropertyToSongPropertyParser(SMCommon.TagSampleStart, nameof(Song.PreviewSampleStart)),
-				new StringPropertyToSongPropertyParser(SMCommon.TagSampleLength, nameof(Song.PreviewSampleLength)),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagSelectable),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagDisplayBPM),
-				new ListAtTimePropertyParser<double>(SMCommon.TagBPMs, tempos),
-				new ListAtTimePropertyParser<double>(SMCommon.TagStops, stops),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagTimeSignatures), // Removed, see https://github.com/stepmania/stepmania/issues/9
-				new StringPropertyToExtrasParser<string>(SMCommon.TagBGChanges),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagFGChanges),
+				[SMCommon.TagTitle] = new StringPropertyToSongPropertyParser(SMCommon.TagTitle, nameof(Song.Title)),
+				[SMCommon.TagSubtitle] = new StringPropertyToSongPropertyParser(SMCommon.TagSubtitle, nameof(Song.SubTitle)),
+				[SMCommon.TagArtist] = new StringPropertyToSongPropertyParser(SMCommon.TagArtist, nameof(Song.Artist)),
+				[SMCommon.TagTitleTranslit] = new StringPropertyToSongPropertyParser(SMCommon.TagTitleTranslit, nameof(Song.TitleTransliteration)),
+				[SMCommon.TagSubtitleTranslit] = new StringPropertyToSongPropertyParser(SMCommon.TagSubtitleTranslit, nameof(Song.SubTitleTransliteration)),
+				[SMCommon.TagArtistTranslit] = new StringPropertyToSongPropertyParser(SMCommon.TagArtistTranslit, nameof(Song.ArtistTransliteration)),
+				[SMCommon.TagGenre] = new StringPropertyToSongPropertyParser(SMCommon.TagGenre, nameof(Song.Genre)),
+				[SMCommon.TagCredit] = new StringPropertyToExtrasParser<string>(SMCommon.TagCredit),
+				[SMCommon.TagBanner] = new StringPropertyToSongPropertyParser(SMCommon.TagBanner, nameof(Song.SongSelectImage)),
+				[SMCommon.TagBackground] = new StringPropertyToExtrasParser<string>(SMCommon.TagBackground),
+				[SMCommon.TagLyricsPath] = new StringPropertyToExtrasParser<string>(SMCommon.TagLyricsPath),
+				[SMCommon.TagCDTitle] = new StringPropertyToExtrasParser<string>(SMCommon.TagCDTitle),
+				[SMCommon.TagMusic] = new StringPropertyToExtrasParser<string>(SMCommon.TagMusic),
+				[SMCommon.TagOffset] = new StringPropertyToExtrasParser<string>(SMCommon.TagOffset),
+				[SMCommon.TagBPMs] = new ListAtTimePropertyParser<double>(SMCommon.TagBPMs, tempos, SMCommon.TagFumenRawBpmsStr),
+				[SMCommon.TagStops] = new ListAtTimePropertyParser<double>(SMCommon.TagStops, stops, SMCommon.TagFumenRawStopsStr),
+				[SMCommon.TagFreezes] = new ListAtTimePropertyParser<double>(SMCommon.TagFreezes, stops),
+				[SMCommon.TagDelays] = new StringListPropertyToExtrasParser(SMCommon.TagDelays),
+				[SMCommon.TagTimeSignatures] = new StringListPropertyToExtrasParser(SMCommon.TagTimeSignatures), // Removed, see https://github.com/stepmania/stepmania/issues/9
+				[SMCommon.TickCounts] = new StringListPropertyToExtrasParser(SMCommon.TickCounts),
+				[SMCommon.InstrumentTrack] = new StringPropertyToExtrasParser<string>(SMCommon.InstrumentTrack),
+				[SMCommon.TagSampleStart] = new StringPropertyToSongPropertyParser(SMCommon.TagSampleStart, nameof(Song.PreviewSampleStart)),
+				[SMCommon.TagSampleLength] = new StringPropertyToSongPropertyParser(SMCommon.TagSampleLength, nameof(Song.PreviewSampleLength)),
+				[SMCommon.TagDisplayBPM] = new StringListPropertyToExtrasParser(SMCommon.TagDisplayBPM),
+				[SMCommon.TagSelectable] = new StringPropertyToExtrasParser<string>(SMCommon.TagSelectable),
+				[SMCommon.TagAnimations] = new StringListPropertyToExtrasParser(SMCommon.TagAnimations),
+				[SMCommon.TagBGChanges] = new StringListPropertyToExtrasParser(SMCommon.TagBGChanges),
+				[SMCommon.TagBGChanges1] = new StringListPropertyToExtrasParser(SMCommon.TagBGChanges1),
+				[SMCommon.TagBGChanges2] = new StringListPropertyToExtrasParser(SMCommon.TagBGChanges2),
+				[SMCommon.TagFGChanges] = new StringListPropertyToExtrasParser(SMCommon.TagFGChanges),
 				// TODO: Parse Keysounds properly.
 				// Comma separated list where index is tap note index and value is keysound for that note?
-				new StringPropertyToExtrasParser<string>(SMCommon.TagKeySounds),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagAttacks),
-				new StringPropertyToExtrasParser<string>(SMCommon.TagMenuColor),
-				new NotesPropertyParser(SMCommon.TagNotes)
+				[SMCommon.TagKeySounds] = new StringListPropertyToExtrasParser(SMCommon.TagKeySounds),
+				[SMCommon.TagAttacks] = new StringListPropertyToExtrasParser(SMCommon.TagAttacks),
+				[SMCommon.TagNotes] = new NotesPropertyParser(SMCommon.TagNotes),
+				[SMCommon.TagNotes2] = new NotesPropertyParser(SMCommon.TagNotes2),
+
+				// Stepmania does not read LASTBEATHINT, but it writes it if present.
+				// In order to not modify charts unintentionally by reading and writing them, read the value
+				// in so we can write it back out.
+				[SMCommon.TagLastBeatHint] = new StringPropertyToExtrasParser<string>(SMCommon.TagLastBeatHint),
 			};
 
 			var song = new Song();
 			song.SourceType = FileFormatType.SM;
 
-			using (var streamReader = new System.IO.StreamReader(filePath))
+			// Parse all Values from the MSDFile.
+			foreach(var value in msdFile.Values)
 			{
-				string line;
-				//while ((line = await streamReader.ReadLineAsync()) != null)
-				while ((line = streamReader.ReadLine()) != null)
-				{
-					foreach (var propertyParser in propertyParsers)
-					{
-						if (propertyParser.Parse(streamReader, line, song))
-							break;
-					}
-				}
+				if (propertyParsers.TryGetValue(value.Params[0]?.ToUpper() ?? "", out var propertyParser))
+					propertyParser.Parse(value, song);
 			}
 
-			// Insert stop events
+			// Insert stop events.
 			foreach (var stop in stops)
 			{
 				var stopEvent = new Stop()
@@ -557,16 +449,20 @@ namespace Fumen.Converters
 					{
 						Measure = (int)stop.Key / SMCommon.NumBeatsPerMeasure,
 						Beat = (int)stop.Key % SMCommon.NumBeatsPerMeasure,
-						SubDivision = FindClosestSMSubDivision(stop.Key - (int)stop.Key)
+						SubDivision = SMCommon.FindClosestSMSubDivision(stop.Key - (int)stop.Key)
 					},
 					LengthMicros = (long)(stop.Value * 1000000.0)
 				};
+
+				// Record the actual doubles.
+				stopEvent.SourceExtras.Add(SMCommon.TagFumenDoublePosition, stop.Key);
+				stopEvent.SourceExtras.Add(SMCommon.TagFumenDoubleValue, stop.Value);
 
 				foreach (var chart in song.Charts)
 					chart.Layers[0].Events.Add(stopEvent);
 			}
 
-			// Insert tempo change events
+			// Insert tempo change events.
 			foreach (var tempo in tempos)
 			{
 				var tempoChangeEvent = new TempoChange()
@@ -575,16 +471,19 @@ namespace Fumen.Converters
 					{
 						Measure = (int)tempo.Key / SMCommon.NumBeatsPerMeasure,
 						Beat = (int)tempo.Key % SMCommon.NumBeatsPerMeasure,
-						SubDivision = FindClosestSMSubDivision(tempo.Key - (int)tempo.Key)
+						SubDivision = SMCommon.FindClosestSMSubDivision(tempo.Key - (int)tempo.Key)
 					},
 					TempoBPM = tempo.Value
 				};
+
+				// Record the actual doubles.
+				tempoChangeEvent.SourceExtras.Add(SMCommon.TagFumenDoublePosition, tempo.Key);
 
 				foreach (var chart in song.Charts)
 					chart.Layers[0].Events.Add(tempoChangeEvent);
 			}
 
-			// Sort events
+			// Sort events.
 			foreach (var chart in song.Charts)
 				chart.Layers[0].Events.Sort(new SMCommon.SMEventComparer());
 
@@ -600,7 +499,22 @@ namespace Fumen.Converters
 
 			var chartDisplayTempo = "";
 			if (song.SourceExtras.TryGetValue(SMCommon.TagDisplayBPM, out var chartDisplayTempoObj))
-				chartDisplayTempo = (string)chartDisplayTempoObj;
+			{
+				if (chartDisplayTempoObj is List<string> tempoList)
+				{
+					var first = true;
+					foreach(var tempo in tempoList)
+					{
+						if (!first)
+							chartDisplayTempo += MSDFile.ParamMarker;
+						chartDisplayTempo += tempo;
+					}
+				}
+				else
+				{
+					chartDisplayTempo = chartDisplayTempoObj.ToString();
+				}
+			}
 			else if (tempos.ContainsKey(0.0))
 				chartDisplayTempo = tempos[0.0].ToString("N3");
 
@@ -614,8 +528,6 @@ namespace Fumen.Converters
 				chart.Genre = song.Genre;
 				chart.GenreTransliteration = song.GenreTransliteration;
 			}
-
-			// TODO: Cleanup async / task
 
 			return song;
 		}

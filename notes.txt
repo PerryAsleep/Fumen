@@ -1,3 +1,5 @@
+SSC file parsing / saving
+
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
 	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
@@ -5,7 +7,6 @@ Possible Bugs:
 
 Tests:
 	SM Reader unit Tests
-		some real crusty logic parsing comments and escapes
 
 	Foot swap mine indication on wrong mine.
 	Jump v Bracket
@@ -19,7 +20,6 @@ Bugs:
 		PerformedChart needs to try alternate starting positions if it can't find a path
 			vivid landscape landscape_revised is an example which fails to find a path.
 			Perhaps just do some new arrow steps from the root?
-		sm reader strips spaces out of some text like "Chief Skittles"
 	Chart Bugs:
 		Don't You Want Me:
 			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
@@ -29,7 +29,6 @@ Bugs:
 			61: mine indicated foot swaps - questionable
 
 Misc:
-	SSC file parsing / saving
 	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 PerformedChart improvements:
@@ -59,10 +58,5 @@ how do patterns? like 123412341234...
 	Separate structure in Expressed charts that map a range of stepevents to another range.
 		ranges that are longer (e.g. a repeated 16 note pattern) are more important to repeat
 
-look at Hella Deep in Technical Showcase 4 - crazy bpm stuff
-	scc file
-	B - background change
-	#SCROLLS
-	#SPEEDS
 NewAlone has roll chord
 Primitive Vides - LR hold, alternate jacks on down 

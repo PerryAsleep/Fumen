@@ -24,16 +24,6 @@ namespace ChartGenerator
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
 
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketIntoJumpsGigaViolate\test.sm";
-		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Fumen\TestBracketIntoJumpsGigaViolate\";
-		//private const string HackDifficulty = @"Beginner";
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE\GIGA VIOLATE.sm";
-		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Technical Showcase 4\GIGA VIOLATE";
-		//private const string HackDifficulty = @"Challenge";
-		//private const string HackChart = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\hey.sm";
-		//private const string HackChartDir = @"C:\Games\StepMania 5\Songs\Customs\Hey Sexy Lady (Skrillex Remix)\";
-		//private const string HackDifficulty = @"Challenge";
-
 		private static DateTime ExportTime;
 		private static string VisualizationSubDir;
 		private static string VisualizationDir;
@@ -120,6 +110,7 @@ namespace ChartGenerator
 			FindCharts();
 
 			// Hack. Wait for input.
+			// TODO: Wait for all threads to complete.
 			Logger.Info("Done.");
 			Console.ReadLine();
 		}
@@ -206,9 +197,6 @@ namespace ChartGenerator
 						Logger.Error($"Failed to queue work thread for '{fi.Name}'.");
 						continue;
 					}
-
-					// HACK
-					//ProcessSong(songArgs);
 				}
 			}
 		}
@@ -221,7 +209,7 @@ namespace ChartGenerator
 		}
 
 
-		static void ProcessSong(object args)
+		static async void ProcessSong(object args)
 		{
 			if (!(args is SongArgs songArgs))
 				return;
@@ -236,7 +224,7 @@ namespace ChartGenerator
 			Song song;
 			try
 			{
-				song = SMReader.Load(songArgs.FileInfo.FullName);
+				song = await new SMReader(songArgs.FileInfo.FullName).Load();
 			}
 			catch (Exception e)
 			{
@@ -255,7 +243,13 @@ namespace ChartGenerator
 				saveDir += pathSep;
 			saveDir += songArgs.RelativePath;
 			Directory.CreateDirectory(saveDir);
-			SMWriter.Save(song, saveDir + songArgs.FileInfo.Name);
+			var smWriter = new SMWriter(new SMWriter.SMWriterConfig
+			{
+				FilePath = saveDir + songArgs.FileInfo.Name,
+				Song = song,
+				MeasureSpacingBehavior = SMWriter.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions
+			});
+			smWriter.Save();
 		}
 
 		static void AddCharts(Song song, string songDir, string relativePath, string fileName, string fileNameNoExtension)
