@@ -1,5 +1,8 @@
 SSC file parsing / saving
 
+maybe, just put any unknown property into the extras dict and write them all out
+	how define order?
+
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
 	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.

@@ -126,8 +126,8 @@ namespace Fumen.Converters
 		public const string TagFreezes = "FREEZES";
 		public const string TagDelays = "DELAYS";
 		public const string TagTimeSignatures = "TIMESIGNATURES";
-		public const string TickCounts = "TICKCOUNTS";
-		public const string InstrumentTrack = "INSTRUMENTTRACK";
+		public const string TagTickCounts = "TICKCOUNTS";
+		public const string TagInstrumentTrack = "INSTRUMENTTRACK";
 		public const string TagSampleStart = "SAMPLESTART";
 		public const string TagSampleLength = "SAMPLELENGTH";
 		public const string TagDisplayBPM = "DISPLAYBPM";
@@ -144,12 +144,43 @@ namespace Fumen.Converters
 		public const string TagRadarValues = "RADARVALUES";
 		public const string TagLastBeatHint = "LASTBEATHINT";
 
+		public const string TagVersion = "VERSION";
+		public const string TagOrigin = "ORIGIN";
+		public const string TagPreviewVid = "PREVIEWVID";
+		public const string TagJacket = "JACKET";
+		public const string TagCDImage = "CDIMAGE";
+		public const string TagDiscImage = "DISCIMAGE";
+		public const string TagPreview = "PREVIEW";
+		public const string TagMusicLength = "MUSICLENGTH";
+		public const string TagLastSecondHint = "LASTSECONDHINT";
+		public const string TagWarps = "WARPS";
+		public const string TagLabels = "LABELS";
+		public const string TagCombos = "COMBOS";
+		public const string TagSpeeds = "SPEEDS";
+		public const string TagScrolls = "SCROLLS";
+		public const string TagFakes = "FAKES";
+
+		public const string TagFirstSecond = "FIRSTSECOND";
+		public const string TagLastSecond = "LASTSECOND";
+		public const string TagSongFileName = "SONGFILENAME";
+		public const string TagHasMusic = "HASMUSIC";
+		public const string TagHasBanner = "HASBANNER";
+
+		public const string TagNoteData = "NOTEDATA";
+		public const string TagChartName = "CHARTNAME";
+		public const string TagStepsType = "STEPSTYPE";
+		public const string TagChartStyle = "CHARTSTYLE";
+		public const string TagDescription = "DESCRIPTION";
+		public const string TagDifficulty = "DIFFICULTY";
+		public const string TagMeter = "METER";
+
 		public const string TagFumenKeySoundIndex = "FumenKSI";
 		public const string TagFumenDoublePosition = "FumenDoublePos";
 		public const string TagFumenDoubleValue = "FumenDoubleVal";
 		public const string TagFumenNotesType = "FumenNotesType";
 		public const string TagFumenRawStopsStr = "FumenRawStopsStr";
 		public const string TagFumenRawBpmsStr = "FumenRawBpmsStr";
+		public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
 
 		public const string SMDoubleFormat = "N6";
 
@@ -218,19 +249,6 @@ namespace Fumen.Converters
 			SChartProperties[(int)ChartType.kickbox_arachnid] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
 		}
 
-		public static void LogInfo(string message)
-		{
-			Logger.Info($"[SM] {message}");
-		}
-		public static void LogWarn(string message)
-		{
-			Logger.Warn($"[SM] {message}");
-		}
-		public static void LogError(string message)
-		{
-			Logger.Error($"[SM] {message}");
-		}
-
 		/// <summary>
 		/// Given a double representation of an arbitrary fraction return the closest
 		/// matching Fraction that stepmania supports as a beat subdivision.
@@ -270,7 +288,7 @@ namespace Fumen.Converters
 				}
 
 				// Value is greater than midpoint, search to the right.
-				else if (fractionAsDouble > SMCommon.SSubDivisionLengths[midIndex])
+				else if (fractionAsDouble > SSubDivisionLengths[midIndex])
 				{
 					// Value is between midpoint and adjacent.
 					if (midIndex < length - 1 && fractionAsDouble < SSubDivisionLengths[midIndex + 1])
@@ -330,6 +348,108 @@ namespace Fumen.Converters
 			}
 			while (desiredSubDivision <= highestDenominator);
 			return false;
+		}
+
+		/// <summary>
+		/// Adds TempoChange Events to the given Chart from the given Dictionary of
+		/// position to tempo values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="tempos">
+		/// Dictionary of time to value of tempos parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add TempoChange Events to.</param>
+		public static void AddTempos(Dictionary<double, double> tempos, Chart chart)
+		{
+			// Insert tempo change events.
+			foreach (var tempo in tempos)
+			{
+				var tempoChangeEvent = new TempoChange()
+				{
+					Position = new MetricPosition()
+					{
+						Measure = (int)tempo.Key / NumBeatsPerMeasure,
+						Beat = (int)tempo.Key % NumBeatsPerMeasure,
+						SubDivision = FindClosestSMSubDivision(tempo.Key - (int)tempo.Key)
+					},
+					TempoBPM = tempo.Value
+				};
+
+				// Record the actual doubles.
+				tempoChangeEvent.SourceExtras.Add(TagFumenDoublePosition, tempo.Key);
+				chart.Layers[0].Events.Add(tempoChangeEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds Stop Events to the given Chart from the given Dictionary of
+		/// position to stop values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="stops">
+		/// Dictionary of time to value of stop lengths parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add Stop Events to.</param>
+		public static void AddStops(Dictionary<double, double> stops, Chart chart)
+		{
+			foreach (var stop in stops)
+			{
+				var stopEvent = new Stop()
+				{
+					Position = new MetricPosition()
+					{
+						Measure = (int)stop.Key / NumBeatsPerMeasure,
+						Beat = (int)stop.Key % NumBeatsPerMeasure,
+						SubDivision = FindClosestSMSubDivision(stop.Key - (int)stop.Key)
+					},
+					LengthMicros = (long)(stop.Value * 1000000.0)
+				};
+
+				// Record the actual doubles.
+				stopEvent.SourceExtras.Add(TagFumenDoublePosition, stop.Key);
+				stopEvent.SourceExtras.Add(TagFumenDoubleValue, stop.Value);
+
+				chart.Layers[0].Events.Add(stopEvent);
+			}
+		}
+
+		/// <summary>
+		/// Tries to get a string representing the BPM to set as the Tempo on
+		/// a Chart for display purposes. First tries to get the DisplayBPM
+		/// from the source extras, and convert that list to a string. Failing that
+		/// it tries to look through the provided tempo events from the Song or Chart
+		/// and use the one at position 0.0.
+		/// </summary>
+		/// <param name="sourceExtras">
+		/// SourceExtras from Song or Chart to check the TagDisplayBPM value.
+		/// </param>
+		/// <param name="tempos">
+		/// Dictionary of time to value of tempos parsed from the Song or Chart.
+		/// </param>
+		/// <returns>String representation of display tempo to use.</returns>
+		public static string GetDisplayBPMStringFromSourceExtrasList(
+			Dictionary<string, object> sourceExtras,
+			Dictionary<double, double> tempos)
+		{
+			var displayTempo = "";
+			if (sourceExtras.TryGetValue(TagDisplayBPM, out var chartDisplayTempoObj))
+			{
+				if (chartDisplayTempoObj is List<string> tempoList)
+				{
+					var first = true;
+					foreach (var tempo in tempoList)
+					{
+						if (!first)
+							displayTempo += MSDFile.ParamMarker;
+						displayTempo += tempo;
+					}
+				}
+				else
+				{
+					displayTempo = chartDisplayTempoObj.ToString();
+				}
+			}
+			else if (tempos.ContainsKey(0.0))
+				displayTempo = tempos[0.0].ToString("N3");
+			return displayTempo;
 		}
 
 		/// <summary>

@@ -1,6 +1,6 @@
 {
 	"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
-	"InputNameRegex": ".*\\.sm",
+	"InputNameRegex": ".*\\.sm$",
 	"InputChartType": "dance-single",
 	"DifficultyRegex": ".",
 

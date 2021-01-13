@@ -69,8 +69,8 @@ namespace Fumen.Converters
 			}
 			catch (Exception e)
 			{
-				Logger.Error($"Failed to open {filePath}.");
-				Logger.Error(e.ToString());
+				Logger.Error($"[MSD] Failed to open {filePath}.");
+				Logger.Error($"[MSD] {e.ToString()}");
 				return false;
 			}
 

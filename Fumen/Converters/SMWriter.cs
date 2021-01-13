@@ -104,6 +104,10 @@ namespace Fumen.Converters
 		/// StreamWriter for writing the Song.
 		/// </summary>
 		private StreamWriter StreamWriter;
+		/// <summary>
+		/// Logger to help identify the Song in the logs.
+		/// </summary>
+		private readonly SMWriterLogger Logger;
 
 		/// <summary>
 		/// Constructor.
@@ -112,6 +116,7 @@ namespace Fumen.Converters
 		public SMWriter(SMWriterConfig config)
 		{
 			Config = config;
+			Logger = new SMWriterLogger(Config.FilePath);
 		}
 
 		/// <summary>
@@ -130,13 +135,13 @@ namespace Fumen.Converters
 			{
 				if (chart.Layers.Count > 1)
 				{
-					SMCommon.LogWarn($"Chart [{chartIndex}]. Chart has {chart.Layers.Count} Layers."
+					Logger.Warn($"Chart [{chartIndex}]. Chart has {chart.Layers.Count} Layers."
 						+ " Only the first Layer will be used.");
 				}
 
 				if (!GetChartType(chart, out var smChartType))
 				{
-					SMCommon.LogError($"Chart [{chartIndex}]. Could not parse type."
+					Logger.Error($"Chart [{chartIndex}]. Could not parse type."
 						+ " Type should match value from SMCommon.ChartType, or the Chart should have 1"
 						+ " Player and 3, 4, 6, or 8 Inputs, or the Chart should have 2 Players and 8"
 						+ $" Inputs. This chart has a Type of '{chart.Type}', {chart.NumPlayers} Players"
@@ -286,6 +291,10 @@ namespace Fumen.Converters
 					first = false;
 				}
 				StreamWriter.WriteLine(MSDFile.ValueEndMarker);
+			}
+			else if (value is double d)
+			{
+				WriteProperty(smPropertyName, d.ToString(SMCommon.SMDoubleFormat));
 			}
 			else
 			{
@@ -605,7 +614,7 @@ namespace Fumen.Converters
 					if (!SMCommon.GetLowestValidSMSubDivision(measureData.LCM, out linesPerBeat))
 					{
 						// TODO: Better error logging.
-						SMCommon.LogError($"Unsupported subdivisions {measureData.LCM}.");
+						Logger.Error($"Unsupported subdivisions {measureData.LCM}.");
 					}
 					break;
 				}
@@ -647,6 +656,44 @@ namespace Fumen.Converters
 				}
 				StreamWriter.Write("\r\n");
 			}
+		}
+	}
+
+	/// <summary>
+	/// Logger to help identify the Song in the logs.
+	/// </summary>
+	public class SMWriterLogger : ILogger
+	{
+		private readonly string FilePath;
+		private const string Tag = "[SM Writer]";
+
+		public SMWriterLogger(string filePath)
+		{
+			FilePath = filePath;
+		}
+
+		public void Info(string message)
+		{
+			if (!string.IsNullOrEmpty(FilePath))
+				Logger.Info($"{Tag} [{FilePath}] {message}");
+			else
+				Logger.Info($"{Tag} {message}");
+		}
+
+		public void Warn(string message)
+		{
+			if (!string.IsNullOrEmpty(FilePath))
+				Logger.Warn($"{Tag} [{FilePath}] {message}");
+			else
+				Logger.Warn($"{Tag} {message}");
+		}
+
+		public void Error(string message)
+		{
+			if (!string.IsNullOrEmpty(FilePath))
+				Logger.Error($"{Tag} [{FilePath}] {message}");
+			else
+				Logger.Error($"{Tag} {message}");
 		}
 	}
 }

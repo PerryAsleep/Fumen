@@ -224,7 +224,14 @@ namespace ChartGenerator
 			Song song;
 			try
 			{
-				song = await new SMReader(songArgs.FileInfo.FullName).Load();
+				var reader = Reader.CreateReader(songArgs.FileInfo);
+				if (reader == null)
+				{
+					Logger.Error($"[{fileNameNoExtension}] No Reader for file. Cannot parse.");
+					return;
+				}
+				song = await reader.Load();
+				
 			}
 			catch (Exception e)
 			{
@@ -250,6 +257,8 @@ namespace ChartGenerator
 				MeasureSpacingBehavior = SMWriter.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions
 			});
 			smWriter.Save();
+
+			// TODO: Copy all files in the song dir.
 		}
 
 		static void AddCharts(Song song, string songDir, string relativePath, string fileName, string fileNameNoExtension)
