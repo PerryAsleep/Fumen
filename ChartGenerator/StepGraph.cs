@@ -664,7 +664,7 @@ namespace ChartGenerator
 			// a swap with the other foot a high cost. I can't think of any scenario where it would
 			// actually be beneficial to do some kind of paradiddle pattern on one arrow so for now I am
 			// going to prevent it always by not including it in the StepGraph.
-			if (!release && IsResting(currentState, newArrow, otherFoot))
+			if (!release && IsOn(currentState, newArrow, otherFoot))
 				return null;
 
 			// Set up the state for a new node.
@@ -1520,7 +1520,7 @@ namespace ChartGenerator
 			// If this follows a footswap then you cannot perform this action.
 			// See FillSameArrowInternal.
 			var otherFoot = OtherFoot(foot);
-			if (IsResting(currentState, firstNewArrow, otherFoot))
+			if (IsOn(currentState, firstNewArrow, otherFoot))
 				return false;
 
 			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
@@ -1573,7 +1573,7 @@ namespace ChartGenerator
 				// If this follows a footswap then you cannot perform this action.
 				// See FillSameArrowInternal.
 				var otherFoot = OtherFoot(foot);
-				if (IsResting(currentState, secondNewArrow, otherFoot))
+				if (IsOn(currentState, secondNewArrow, otherFoot))
 					return null;
 
 				// Set up the state for a new node.
