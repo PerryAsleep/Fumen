@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
@@ -144,7 +145,7 @@ namespace ChartGenerator
 				GraphLinkInstance previousLink,
 				bool[] rolls)
 			{
-				Id = IdCounter++;
+				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
 				Position = position;
 				Cost = cost;
@@ -305,7 +306,10 @@ namespace ChartGenerator
 		/// <param name="events">List of Events from an SM Chart.</param>
 		/// <param name="stepGraph">StepGraph to use for searching the Events.</param>
 		/// <returns></returns>
-		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(List<Event> events, StepGraph stepGraph)
+		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(
+			List<Event> events,
+			StepGraph stepGraph,
+			string logIndentifier = null)
 		{
 			var root = new ChartSearchNode(stepGraph.Root, new MetricPosition(), 0, 0, null, null, new bool[stepGraph.NumArrows]);
 
@@ -367,7 +371,7 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
-						releases[0].Position, stepGraph, lastMines, lastReleases);
+						releases[0].Position, stepGraph, lastMines, lastReleases, logIndentifier);
 				}
 
 				// Get mines and record them for processing after the search is complete.
@@ -388,7 +392,7 @@ namespace ChartGenerator
 							currentState[stepEvent.Lane] = SearchState.Tap;
 						else if (stepEvent is LaneHoldStartNote lhsn)
 						{
-							if (lhsn.SourceType == SMCommon.SNoteChars[(int)SMCommon.NoteType.RollStart].ToString())
+							if (lhsn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.RollStart].ToString())
 								currentState[stepEvent.Lane] = SearchState.Roll;
 							else
 								currentState[stepEvent.Lane] = SearchState.Hold;
@@ -397,7 +401,7 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
-						steps[0].Position, stepGraph, lastMines, lastReleases);
+						steps[0].Position, stepGraph, lastMines, lastReleases, logIndentifier);
 				}
 
 				// Update the current state now that the events at this position have been processed.
@@ -456,7 +460,7 @@ namespace ChartGenerator
 				if (events[eventIndex] is LaneHoldEndNote lhen)
 					releases.Add(lhen);
 				else if (events[eventIndex] is LaneNote ln
-				         && ln.SourceType == SMCommon.SNoteChars[(int)SMCommon.NoteType.Mine].ToString())
+				         && ln.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Mine].ToString())
 					mines.Add(ln);
 				else if (events[eventIndex] is LaneHoldStartNote lhsn)
 					steps.Add(lhsn);
@@ -483,7 +487,8 @@ namespace ChartGenerator
 			MetricPosition position,
 			StepGraph stepGraph,
 			MetricPosition[] lastMines,
-			MetricPosition[] lastReleases)
+			MetricPosition[] lastReleases,
+			string logIndentifier)
 		{
 			var childSearchNodes = new HashSet<ChartSearchNode>();
 
@@ -535,10 +540,9 @@ namespace ChartGenerator
 				}
 			}
 
-			// TODO: Log if childSearchNodes is Empty
 			if (childSearchNodes.Count == 0)
 			{
-				int a = 1;
+				LogError($"Failed to find node at {position}.", logIndentifier);
 			}
 
 			// Prune the children and return the results.
@@ -1138,6 +1142,8 @@ namespace ChartGenerator
 
 							var swap = StepData.Steps[(int) step].IsFootSwapWithAnyPortion;
 
+							if (step == StepType.BracketHeelSameToeSame)
+								return CostTwoArrows_Bracket_BothSame;
 							if (preferBracketDueToAmountOfMovement[foot])
 							{
 								if (swap)
@@ -1612,6 +1618,14 @@ namespace ChartGenerator
 			}
 
 			expressedChart.MineEvents.Sort(new MineEventComparer());
+		}
+
+		static void LogError(string message, string logIndentifier)
+		{
+			if (!string.IsNullOrEmpty(logIndentifier))
+				Logger.Error($"[Expressed Chart] [{logIndentifier}] {message}");
+			else
+				Logger.Error($"[Expressed Chart] {message}");
 		}
 	}
 }

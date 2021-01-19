@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Fumen
 {
@@ -13,6 +11,26 @@ namespace Fumen
 		{
 		}
 
+		public MetricPosition(int measure, int beat)
+		{
+			Measure = measure;
+			Beat = beat;
+		}
+
+		public MetricPosition(int measure, int beat, int numerator, int denominator)
+		{
+			Measure = measure;
+			Beat = beat;
+			SubDivision = new Fraction(numerator, denominator);
+		}
+
+		public MetricPosition(int measure, int beat, Fraction subdivision)
+		{
+			Measure = measure;
+			Beat = beat;
+			SubDivision = subdivision;
+		}
+
 		public MetricPosition(MetricPosition other)
 		{
 			Measure = other.Measure;
@@ -20,9 +38,9 @@ namespace Fumen
 			SubDivision = new Fraction(other.SubDivision);
 		}
 
-		public int Measure { get; set; }
-		public int Beat { get; set; }
-		public Fraction SubDivision { get; set; } = new Fraction(0, 0);
+		public readonly int Measure;
+		public readonly int Beat;
+		public readonly Fraction SubDivision = new Fraction(0, 0);
 
 		public static bool operator >(MetricPosition a, MetricPosition b)
 		{
@@ -57,6 +75,20 @@ namespace Fumen
 			return a.CompareTo(b) <= 0;
 		}
 
+		public override bool Equals(object o)
+		{
+			return o is MetricPosition p && this == p;
+		}
+
+		public override int GetHashCode()
+		{
+			var hash = 17;
+			hash = unchecked(hash * 31 + Measure);
+			hash = unchecked(hash * 31 + Beat);
+			hash = unchecked(hash * 31 + SubDivision.GetHashCode());
+			return hash;
+		}
+
 		public int CompareTo(object obj)
 		{
 			var other = (MetricPosition)obj;
@@ -65,6 +97,11 @@ namespace Fumen
 			if (Beat != other.Beat)
 				return Beat.CompareTo(other.Beat);
 			return SubDivision.CompareTo(other.SubDivision);
+		}
+
+		public override string ToString()
+		{
+			return $"Measure {Measure} Beat {Beat} SubDivison {SubDivision}";
 		}
 	}
 }

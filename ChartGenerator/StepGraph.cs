@@ -160,7 +160,7 @@ namespace ChartGenerator
 
 		private void Fill()
 		{
-			Log($"Generating StepGraph...");
+			Log("Generating StepGraph...");
 
 			VisitedNodes = new HashSet<GraphNode>();
 			var completeNodes = new HashSet<GraphNode>();
@@ -303,13 +303,17 @@ namespace ChartGenerator
 				var footPortionsF2 = StepData.Steps[(int)stepTypes[f2]].FootPortionsForStep;
 
 				// Find all the states from moving the first foot.
-				var actionsToNodesF1 = FillJumpStep(currentNode, stepTypes[f1], f1);
+				var actionsToNodesF1 = FillJumpStep(currentNode, stepTypes[f1], f1, null);
 				foreach (var actionNodeF1 in actionsToNodesF1)
 				{
 					foreach (var newNodeF1 in actionNodeF1.Value)
 					{
+						// Optimization - do not need to check every element in the action set since if one is
+						// a release they are all releases.
+						var firstFootIsReleasing = actionNodeF1.Key[0] == FootAction.Release;
+
 						// Using the state from the first foot, find all the states from moving the second foot.
-						var actionsToNodesF2 = FillJumpStep(newNodeF1, stepTypes[f2], f2);
+						var actionsToNodesF2 = FillJumpStep(newNodeF1, stepTypes[f2], f2, firstFootIsReleasing);
 						foreach (var actionNodeF2 in actionsToNodesF2)
 						{
 							foreach (var newNodeF2 in actionNodeF2.Value)
@@ -344,7 +348,8 @@ namespace ChartGenerator
 		private Dictionary<FootAction[], List<GraphNode>> FillJumpStep(
 			GraphNode currentNode,
 			StepType stepType,
-			int foot)
+			int foot,
+			bool? otherFootReleasing)
 		{
 			var result = new Dictionary<FootAction[], List<GraphNode>>();
 
@@ -366,6 +371,13 @@ namespace ChartGenerator
 				for (var setIndex = 0; setIndex < actionSets.Length; setIndex++)
 				{
 					var actions = actionSets[setIndex];
+
+					// Make sure the jump is either all releases or all steps.
+					// Optimization - do not need to check every element in the action set since if one is
+					// a release they are all releases.
+					if (otherFootReleasing != null && otherFootReleasing != (actions[0] == FootAction.Release))
+						continue;
+
 					if (onlyConsiderCurrent)
 						arrows[0] = currentNode.State[foot, startingFootPortion].Arrow;
 					foreach (var newArrow in arrows)

@@ -103,6 +103,7 @@ namespace ChartGenerator
 		public const int CostTwoArrows_Bracket_PreferredDueToMovement = 5;
 		public const int CostTwoArrows_Bracket_PreferredDueToMovement_Swap = 8;
 		public const int CostTwoArrows_Bracket = 10;
+		public const int CostTwoArrows_Bracket_BothSame = 2;
 		public const int CostTwoArrows_Bracket_Swap = 11;
 
 		public const int CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket = 20;

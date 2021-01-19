@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Fumen
 {
 	public class Chart
 	{
-
 		public string Artist { get; set; }
 		public string ArtistTransliteration { get; set; }
 		public string Genre { get; set; }

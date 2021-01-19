@@ -89,14 +89,12 @@ namespace Fumen.Converters
 	{
 		private readonly string SongPropertyName;
 		private readonly Song Song;
-		private readonly bool AddToSourceExtras = false;
 
-		public PropertyToSongPropertyParser(string smPropertyName, string songPropertyName, Song song, bool addToSourceExtras = false)
+		public PropertyToSongPropertyParser(string smPropertyName, string songPropertyName, Song song)
 			: base(smPropertyName)
 		{
 			SongPropertyName = songPropertyName;
 			Song = song;
-			AddToSourceExtras = addToSourceExtras;
 		}
 
 		public override bool Parse(MSDFile.Value value)
@@ -105,8 +103,8 @@ namespace Fumen.Converters
 			if (!ParseFirstParameter(value, out var songValueStr))
 				return false;
 
-			if (AddToSourceExtras)
-				Song.SourceExtras.Add(PropertyName, songValueStr);
+			// Record the string value in the extras.
+			Song.SourceExtras.Add(PropertyName, songValueStr);
 
 			// Only consider this line if the property is valid.
 			var prop = Song.GetType().GetProperty(SongPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -128,8 +126,9 @@ namespace Fumen.Converters
 				return true;
 			}
 			prop.SetValue(Song, o, null);
-			if (AddToSourceExtras)
-				Song.SourceExtras[PropertyName] = o;
+
+			// Overwrite the extras value with the correct type.
+			Song.SourceExtras[PropertyName] = o;
 
 			return true;
 		}
@@ -144,14 +143,12 @@ namespace Fumen.Converters
 	{
 		private readonly string ChartPropertyName;
 		private readonly Chart Chart;
-		private readonly bool AddToSourceExtras = false;
 
-		public PropertyToChartPropertyParser(string smPropertyName, string chartPropertyName, Chart chart, bool addToSourceExtras = false)
+		public PropertyToChartPropertyParser(string smPropertyName, string chartPropertyName, Chart chart)
 			: base(smPropertyName)
 		{
 			ChartPropertyName = chartPropertyName;
 			Chart = chart;
-			AddToSourceExtras = addToSourceExtras;
 		}
 
 		public override bool Parse(MSDFile.Value value)
@@ -160,8 +157,8 @@ namespace Fumen.Converters
 			if (!ParseFirstParameter(value, out var chartValueStr))
 				return false;
 
-			if (AddToSourceExtras)
-				Chart.SourceExtras.Add(PropertyName, chartValueStr);
+			// Record the string value in the extras.
+			Chart.SourceExtras.Add(PropertyName, chartValueStr);
 
 			// Only consider this line if the property is valid.
 			var prop = Chart.GetType().GetProperty(ChartPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -183,8 +180,9 @@ namespace Fumen.Converters
 				return true;
 			}
 			prop.SetValue(Chart, o, null);
-			if (AddToSourceExtras)
-				Chart.SourceExtras[PropertyName] = o;
+
+			// Overwrite the extras value with the correct type.
+			Chart.SourceExtras[PropertyName] = o;
 
 			return true;
 		}
@@ -308,52 +306,53 @@ namespace Fumen.Converters
 		public override bool Parse(MSDFile.Value value)
 		{
 			// Only consider this line if it matches this property name.
-			if (!DoesValueMatchProperty(value))
+			if (!ParseFirstParameter(value, out var rawStr))
 				return false;
 
-			if (value.Params.Count < 2 || string.IsNullOrEmpty(value.Params[1]))
-				return true;
-
 			// Record the raw string to preserve formatting when writing.
-			if (!string.IsNullOrEmpty(RawStringPropertyName) && SourceExtras != null)
+			if (!string.IsNullOrEmpty(RawStringPropertyName))
+				SourceExtras?.Add(RawStringPropertyName, rawStr);
+
+			if (!string.IsNullOrEmpty(rawStr))
 			{
-				SourceExtras.Add(RawStringPropertyName, value.Params[1]);
+				var pairs = value.Params[1].Trim().Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var pair in pairs)
+				{
+					var kvp = pair.Split('=');
+					if (kvp.Length != 2)
+					{
+						Logger?.Warn($"{PropertyName}: Malformed pair '{pair}'. This value will be ignored.");
+						continue;
+					}
+
+					if (!double.TryParse(kvp[0], out var time))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[0]}'. Expected double. This value will be ignored.");
+						continue;
+					}
+
+					var valueStr = kvp[1];
+					if (valueStr.IndexOf(';') >= 0)
+					{
+						valueStr = valueStr.Substring(0, valueStr.IndexOf(';'));
+					}
+
+					T tValue;
+					try
+					{
+						tValue = (T) Convert.ChangeType(valueStr, typeof(T));
+					}
+					catch (Exception)
+					{
+						Logger?.Warn($"{PropertyName}: Failed to Convert '{valueStr}' to type '{typeof(T)}'.");
+						continue;
+					}
+
+					Values[time] = tValue;
+				}
 			}
 
-			var pairs = value.Params[1].Trim().Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-			foreach (var pair in pairs)
-			{
-				var kvp = pair.Split('=');
-				if (kvp.Length != 2)
-				{
-					Logger?.Warn($"{PropertyName}: Malformed pair '{pair}'. This value will be ignored.");
-					continue;
-				}
-				if (!double.TryParse(kvp[0], out var time))
-				{
-					Logger?.Warn($"{PropertyName}: Malformed value '{kvp[0]}'. Expected double. This value will be ignored.");
-					continue;
-				}
-
-				var valueStr = kvp[1];
-				if (valueStr.IndexOf(';') >= 0)
-				{
-					valueStr = valueStr.Substring(0, valueStr.IndexOf(';'));
-				}
-
-				T tValue;
-				try
-				{
-					tValue = (T)Convert.ChangeType(valueStr, typeof(T));
-				}
-				catch (Exception)
-				{
-					Logger?.Warn($"{PropertyName}: Failed to Convert '{valueStr}' to type '{typeof(T)}'.");
-					continue;
-				}
-
-				Values[time] = tValue;
-			}
+			SourceExtras?.Add(PropertyName, Values);
 
 			return true;
 		}
@@ -373,9 +372,17 @@ namespace Fumen.Converters
 		/// </summary>
 		/// <param name="chart">Chart to parse notes into.</param>
 		/// <param name="notesStr">String representation of notes from an sm or ssc chart.</param>
-		protected static void ParseNotes(Chart chart, string notesStr)
+		/// <returns>Whether the notes represent a valid chart or not.</returns>
+		protected bool ParseNotes(Chart chart, string notesStr)
 		{
-			// Parse measure data.
+			if (chart.NumInputs < 1)
+			{
+				Logger?.Warn(
+					$"Cannot parse notes for {chart.Type} {chart.DifficultyType} Chart. Unknown number of inputs. This Chart will be ignored.");
+				return false;
+			}
+
+			var validChart = true;
 			var player = 0;
 			var measure = 0;
 			var currentMeasureEvents = new List<Event>();
@@ -383,11 +390,15 @@ namespace Fumen.Converters
 			var notesStrsPerPlayer = notesStr.Split('&');
 			foreach (var notesStrForPlayer in notesStrsPerPlayer)
 			{
+				var holding = new bool[chart.NumInputs];
+				var rolling = new bool[chart.NumInputs];
+
 				// RemoveEmptyEntries seems wrong, but matches Stepmania parsing logic.
-				var measures = notesStrForPlayer.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				var measures = notesStrForPlayer.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
 				foreach (var measureStr in measures)
 				{
-					var lines = measureStr.Trim(SMCommon.SMAllWhiteSpace).Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+					var lines = measureStr.Trim(SMCommon.SMAllWhiteSpace)
+						.Split(new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
 					var linesInMeasure = lines.Length;
 					var lineInMeasure = 0;
 					var linesPerBeat = linesInMeasure / SMCommon.NumBeatsPerMeasure;
@@ -400,21 +411,84 @@ namespace Fumen.Converters
 							charIndex < trimmedLine.Length && laneIndex < chart.NumInputs;
 							charIndex++, laneIndex++)
 						{
-							// Check the character at this index to see if it corresponds to a note.
+							// Get the note type.
 							var c = trimmedLine[charIndex];
+							var noteType = SMCommon.NoteType.None;
+							var noteString = SMCommon.NoteStrings[(int) noteType];
+							for (var i = 0; i < SMCommon.NoteChars.Length; i++)
+							{
+								if (c == SMCommon.NoteChars[i])
+								{
+									noteType = (SMCommon.NoteType) i;
+									noteString = SMCommon.NoteStrings[i];
+									break;
+								}
+							}
+
+							// Validation.
+							if (noteType == SMCommon.NoteType.Tap
+							    || noteType == SMCommon.NoteType.Mine
+							    || noteType == SMCommon.NoteType.Lift
+								|| noteType == SMCommon.NoteType.Fake
+								|| noteType == SMCommon.NoteType.KeySound
+								|| noteType == SMCommon.NoteType.HoldStart
+								|| noteType == SMCommon.NoteType.RollStart)
+							{
+								if(holding[laneIndex])
+								{
+									Logger?.Error(
+										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during hold on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+									validChart = false;
+								}
+
+								if (rolling[laneIndex])
+								{
+									Logger?.Error(
+										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during roll on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+									validChart = false;
+								}
+							}
+							else if (noteType == SMCommon.NoteType.HoldEnd)
+							{
+								if (!holding[laneIndex] && !rolling[laneIndex])
+								{
+									Logger?.Error(
+										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} while neither holding nor rolling on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+									validChart = false;
+								}
+							}
+							if (!validChart)
+								break;
+
+							// Create a LaneNote based on the note type.
 							LaneNote note = null;
-							if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Tap])
-								note = new LaneTapNote { SourceType = c.ToString() };
-							else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Mine]
-										|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Lift]
-										|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.Fake]
-										|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.KeySound])
+							if (noteType == SMCommon.NoteType.Tap)
+							{
+								note = new LaneTapNote {SourceType = c.ToString()};
+							}
+							else if (noteType == SMCommon.NoteType.Mine
+							         || noteType == SMCommon.NoteType.Lift
+							         || noteType == SMCommon.NoteType.Fake
+							         || noteType == SMCommon.NoteType.KeySound)
+							{
 								note = new LaneNote { SourceType = c.ToString() };
-							else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldStart]
-										|| c == SMCommon.SNoteChars[(int)SMCommon.NoteType.RollStart])
+							}
+							else if (noteType == SMCommon.NoteType.HoldStart)
+							{
+								holding[laneIndex] = true;
 								note = new LaneHoldStartNote { SourceType = c.ToString() };
-							else if (c == SMCommon.SNoteChars[(int)SMCommon.NoteType.HoldEnd])
-								note = new LaneHoldEndNote { SourceType = c.ToString() };
+							}
+							else if (noteType == SMCommon.NoteType.RollStart)
+							{
+								rolling[laneIndex] = true;
+								note = new LaneHoldStartNote { SourceType = c.ToString() };
+							}
+							else if (noteType == SMCommon.NoteType.HoldEnd)
+							{
+								note = new LaneHoldEndNote {SourceType = c.ToString()};
+								holding[laneIndex] = false;
+								rolling[laneIndex] = false;
+							}
 
 							// Keysound parsing.
 							// TODO: Parse keysounds properly. For now, putting them in SourceExtras.
@@ -427,10 +501,12 @@ namespace Fumen.Converters
 										break;
 									charIndex++;
 								}
+
 								var endIndex = charIndex - 1;
 								if (endIndex > startIndex && note != null)
 								{
-									if (int.TryParse(trimmedLine.Substring(startIndex, endIndex - startIndex), out var keySoundIndex))
+									if (int.TryParse(trimmedLine.Substring(startIndex, endIndex - startIndex),
+										out var keySoundIndex))
 									{
 										note.SourceExtras.Add(SMCommon.TagFumenKeySoundIndex, keySoundIndex);
 									}
@@ -438,7 +514,7 @@ namespace Fumen.Converters
 							}
 
 							// Deprecated Attack parsing
-							if(charIndex + 1 < trimmedLine.Length && trimmedLine[charIndex + 1] == '{')
+							if (charIndex + 1 < trimmedLine.Length && trimmedLine[charIndex + 1] == '{')
 							{
 								while (charIndex < trimmedLine.Length)
 								{
@@ -467,27 +543,50 @@ namespace Fumen.Converters
 							var beat = lineInMeasure / linesPerBeat;
 							note.Lane = laneIndex;
 							note.Player = player;
-							note.Position = new MetricPosition
-							{
-								Measure = measure,
-								Beat = beat,
-								SubDivision = new Fraction(lineInMeasure - beat * linesPerBeat, linesPerBeat)
-							};
+							note.Position = new MetricPosition(measure, beat, lineInMeasure - beat * linesPerBeat, linesPerBeat);
 
 							currentMeasureEvents.Add(note);
 						}
 
+						if (!validChart)
+							break;
+
 						// Advance line marker
 						lineInMeasure++;
 					}
+
+					if (!validChart)
+						break;
 
 					chart.Layers[0].Events.AddRange(currentMeasureEvents);
 					currentMeasureEvents.Clear();
 					measure++;
 				}
 
+				// Validation.
+				for (var i = 0; i < chart.NumInputs; i++)
+				{
+					if (holding[i])
+					{
+						Logger?.Error(
+							$"Invalid {chart.Type} {chart.DifficultyType} Chart. Incomplete hold on lane {i}. This Chart will be ignored.");
+						validChart = false;
+					}
+					if (rolling[i])
+					{
+						Logger?.Error(
+							$"Invalid {chart.Type} {chart.DifficultyType} Chart. Incomplete roll on lane {i}. This Chart will be ignored.");
+						validChart = false;
+					}
+				}
+
+				if (!validChart)
+					break;
+
 				player++;
 			}
+
+			return validChart;
 		}
 	}
 
@@ -551,25 +650,22 @@ namespace Fumen.Converters
 			// Parse chart type and set number of players and inputs.
 			if (!Enum.TryParse(chart.Type.Replace("-", "_"), out SMCommon.ChartType smChartType))
 			{
-				Logger?.Warn($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
+				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
 				return true;
 			}
-			chart.NumPlayers = SMCommon.SChartProperties[(int)smChartType].NumPlayers;
-			chart.NumInputs = SMCommon.SChartProperties[(int)smChartType].NumInputs;
+			chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
+			chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
 
 			// Add a 4/4 time signature
 			chart.Layers[0].Events.Add(new TimeSignature()
 			{
-				Position = new MetricPosition
-				{
-					Measure = 0,
-					Beat = 0
-				},
+				Position = new MetricPosition(),
 				Signature = new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure)
 			});
 
 			// Parse the notes.
-			ParseNotes(chart, value.Params[6] ?? "");
+			if (!ParseNotes(chart, value.Params[6] ?? ""))
+				return true;
 
 			Song.Charts.Add(chart);
 
@@ -601,8 +697,45 @@ namespace Fumen.Converters
 			Chart.SourceExtras.Add(SMCommon.TagFumenNotesType, PropertyName);
 
 			// Parse the notes.
-			ParseNotes(Chart, notesStr);
+			if (!ParseNotes(Chart, notesStr))
+				Chart.Type = null;
+
 			return true;
 		}
 	}
+
+	public class ChartTypePropertyParser : PropertyParser
+	{
+		private readonly Chart Chart;
+
+		public ChartTypePropertyParser(Chart chart)
+			: base(SMCommon.TagStepsType)
+		{
+			Chart = chart;
+		}
+
+		public override bool Parse(MSDFile.Value value)
+		{
+			// Only consider this line if it matches this property name.
+			if (!ParseFirstParameter(value, out var type))
+				return false;
+
+			Chart.Type = type;
+
+			// Parse chart type and set number of players and inputs.
+			if (!Enum.TryParse(Chart.Type.Replace("-", "_"), out SMCommon.ChartType smChartType))
+			{
+				Chart.Type = null;
+				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
+				return true;
+			}
+			Chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
+			Chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
+
+			Chart.SourceExtras.Add(SMCommon.TagStepsType, Chart.Type);
+
+			return true;
+		}
+	}
+
 }

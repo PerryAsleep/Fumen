@@ -192,6 +192,7 @@ namespace ChartGenerator
 						CurrentDir = currentDir,
 						RelativePath = relativePath
 					};
+
 					if (!ThreadPool.QueueUserWorkItem(ProcessSong, songArgs))
 					{
 						Logger.Error($"Failed to queue work thread for '{fi.Name}'.");
@@ -208,7 +209,6 @@ namespace ChartGenerator
 			public string RelativePath;
 		}
 
-
 		static async void ProcessSong(object args)
 		{
 			if (!(args is SongArgs songArgs))
@@ -219,6 +219,10 @@ namespace ChartGenerator
 			{
 				fileNameNoExtension = fileNameNoExtension.Substring(0, songArgs.FileInfo.Name.Length - songArgs.FileInfo.Extension.Length);
 			}
+
+			var extension = songArgs.FileInfo.Extension.ToLower();
+			if (extension.StartsWith("."))
+				extension = extension.Substring(1);
 
 			// Load the song.
 			Song song;
@@ -241,7 +245,7 @@ namespace ChartGenerator
 			}
 
 			// Add new charts.
-			AddCharts(song, songArgs.CurrentDir, songArgs.RelativePath, songArgs.FileInfo.Name, fileNameNoExtension);
+			AddCharts(song, songArgs.CurrentDir, songArgs.RelativePath, songArgs.FileInfo.Name, fileNameNoExtension, extension);
 
 			// Save
 			var pathSep = Path.DirectorySeparatorChar.ToString();
@@ -250,18 +254,27 @@ namespace ChartGenerator
 				saveDir += pathSep;
 			saveDir += songArgs.RelativePath;
 			Directory.CreateDirectory(saveDir);
-			var smWriter = new SMWriter(new SMWriter.SMWriterConfig
+			var config = new SMWriterBase.SMWriterBaseConfig
 			{
 				FilePath = saveDir + songArgs.FileInfo.Name,
 				Song = song,
-				MeasureSpacingBehavior = SMWriter.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions
-			});
-			smWriter.Save();
+				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions,
+				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
+			};
+			switch (extension)
+			{
+				case "sm":
+					new SMWriter(config).Save();
+					break;
+				case "ssc":
+					new SSCWriter(config).Save();
+					break;
+			}
 
 			// TODO: Copy all files in the song dir.
 		}
 
-		static void AddCharts(Song song, string songDir, string relativePath, string fileName, string fileNameNoExtension)
+		static void AddCharts(Song song, string songDir, string relativePath, string fileName, string fileNameNoExtension, string extension)
 		{
 			Logger.Info($"[{fileNameNoExtension}] Processing '{relativePath}{fileName}'.");
 
@@ -307,7 +320,7 @@ namespace ChartGenerator
 					}
 
 					// Create an ExpressedChart.
-					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, InputStepGraph);
+					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, InputStepGraph, fileNameNoExtension);
 					if (expressedChart == null)
 					{
 						Logger.Error($"[{fileNameNoExtension}] Failed to create ExpressedChart for {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
@@ -331,6 +344,44 @@ namespace ChartGenerator
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMEventComparer());
 
+					// Sanity check
+					if (events.Count != chart.Layers[0].Events.Count)
+					{
+						var mineString = NoteChars[(int)NoteType.Mine].ToString();
+						// Disregard discrepancies in mine counts
+						var newChartNonMineEventCount = 0;
+						foreach (var newEvent in events)
+						{
+							if (newEvent.SourceType != mineString)
+								newChartNonMineEventCount++;
+						}
+
+						var oldChartNonMineEventCount = 0;
+						foreach (var oldEvent in chart.Layers[0].Events)
+						{
+							if (oldEvent.SourceType != mineString)
+								oldChartNonMineEventCount++;
+						}
+
+						if (newChartNonMineEventCount != oldChartNonMineEventCount)
+						{
+							MetricPosition firstDiscrepancyPosition = null;
+							var i = 0;
+							while (i < events.Count && i < chart.Layers[0].Events.Count)
+							{
+								if (events[i].SourceType != chart.Layers[0].Events[i].SourceType
+								    || events[i].Position != chart.Layers[0].Events[i].Position)
+								{
+									firstDiscrepancyPosition = chart.Layers[0].Events[i].Position;
+									break;
+								}
+								i++;
+							}
+							Logger.Error($"[{fileNameNoExtension}] Programmer error. Discrepancy in non-mine Event counts for {Config.Instance.OutputChartType} {chart.DifficultyType} chart. Old: {oldChartNonMineEventCount}, New: {newChartNonMineEventCount}. First discrepancy position: {firstDiscrepancyPosition}");
+							//continue;
+						}
+					}
+
 					// Create a new Chart for these Events.
 					var formattedVersion = GetFormattedVersionStringForChart();
 					var newChart = new Chart
@@ -347,6 +398,7 @@ namespace ChartGenerator
 						DifficultyRating = chart.DifficultyRating,
 						DifficultyType = chart.DifficultyType,
 						SourceExtras = chart.SourceExtras,
+						DestExtras = chart.DestExtras,
 						Type = Config.Instance.OutputChartType,
 						NumPlayers = 1,
 						NumInputs = OutputStepGraph.NumArrows
@@ -359,11 +411,11 @@ namespace ChartGenerator
 					// Write a visualization.
 					if (Config.Instance.OutputVisualizations)
 					{
-						var visualizationDirectory = VisualizationDir + Path.DirectorySeparatorChar.ToString() + relativePath;
+						var visualizationDirectory = VisualizationDir + Path.DirectorySeparatorChar + relativePath;
 						if (!visualizationDirectory.EndsWith(pathSep))
 							visualizationDirectory += pathSep;
 						Directory.CreateDirectory(visualizationDirectory);
-						var saveFile = visualizationDirectory + $"{fileNameNoExtension}-{chart.DifficultyType}.html";
+						var saveFile = visualizationDirectory + $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html";
 
 						var renderer = new Renderer(
 							songDir,

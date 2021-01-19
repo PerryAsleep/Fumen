@@ -469,7 +469,7 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 					WriteArrow(lhsn.Lane, foot, firstLaneX, eventY, lhsn.Position);
 
 					lastHoldStarts[lhsn.Lane] = (int)eventY;
-					lastHoldWasRoll[lhsn.Lane] = lhsn.SourceType == SMCommon.SNoteChars[(int)SMCommon.NoteType.RollStart].ToString();
+					lastHoldWasRoll[lhsn.Lane] = lhsn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.RollStart].ToString();
 				}
 				else if (chartEvent is LaneHoldEndNote lhen)
 				{
@@ -480,7 +480,7 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 				}
 				else if (chartEvent is LaneNote ln)
 				{
-					if (ln.SourceType == SMCommon.SNoteChars[(int) SMCommon.NoteType.Mine].ToString())
+					if (ln.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Mine].ToString())
 					{
 						// Write any expressed mine events for mines at this position.
 						if (originalChart)

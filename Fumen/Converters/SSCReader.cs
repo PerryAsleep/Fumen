@@ -104,17 +104,13 @@ namespace Fumen.Converters
 					// Add a 4/4 Time Signature.
 					activeChart.Layers[0].Events.Add(new TimeSignature()
 					{
-						Position = new MetricPosition
-						{
-							Measure = 0,
-							Beat = 0
-						},
+						Position = new MetricPosition(),
 						Signature = new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure)
 					});
 
 					activeChartTempos = new Dictionary<double, double>();
 					activeChartStops = new Dictionary<double, double>();
-					chartPropertyParsers = chartPropertyParsers = GetChartPropertyParsers(activeChart, activeChartTempos, activeChartStops);
+					chartPropertyParsers = GetChartPropertyParsers(activeChart, activeChartTempos, activeChartStops);
 					continue;
 				}
 
@@ -124,7 +120,7 @@ namespace Fumen.Converters
 					// Matches Stepmania logic. If any timing value is present, assume all timing values must be from the
 					// Chart and not the Song.
 					if (ChartTimingDataTags.Contains(valueStr))
-						activeChart.SourceExtras.Add(SMCommon.TagFumenChartUsesOwnTimingData, true);
+						activeChart.SourceExtras[SMCommon.TagFumenChartUsesOwnTimingData] = true;
 
 					if (chartPropertyParsers.TryGetValue(valueStr, out var propertyParser))
 						propertyParser.Parse(value);
@@ -161,14 +157,11 @@ namespace Fumen.Converters
 			Dictionary<double, double> songTempos,
 			Dictionary<double, double> songStops)
 		{
-			// Parse chart type and set number of players and inputs.
-			if (!Enum.TryParse(chart.Type.Replace("-", "_"), out SMCommon.ChartType smChartType))
+			// Do not add this Chart if we failed to parse the type.
+			if (string.IsNullOrEmpty(chart.Type))
 			{
-				Logger.Warn($"Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
 				return;
 			}
-			chart.NumPlayers = SMCommon.SChartProperties[(int)smChartType].NumPlayers;
-			chart.NumInputs = SMCommon.SChartProperties[(int)smChartType].NumInputs;
 
 			var useChartTimingData = false;
 			if (chart.SourceExtras.TryGetValue(SMCommon.TagFumenChartUsesOwnTimingData, out var useTimingDataObject))
@@ -262,6 +255,9 @@ namespace Fumen.Converters
 				[SMCommon.TagDisplayBPM] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagDisplayBPM, song.SourceExtras),
 				[SMCommon.TagSelectable] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSelectable, song.SourceExtras),
 				[SMCommon.TagAnimations] = new PropertyToSourceExtrasParser<string>(SMCommon.TagAnimations, song.SourceExtras),
+				[SMCommon.TagBGChanges] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges, song.SourceExtras),
+				[SMCommon.TagBGChanges1] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges1, song.SourceExtras),
+				[SMCommon.TagBGChanges2] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges2, song.SourceExtras),
 				[SMCommon.TagFGChanges] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFGChanges, song.SourceExtras),
 				// TODO: Parse Keysounds properly.
 				[SMCommon.TagKeySounds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagKeySounds, song.SourceExtras),
@@ -301,14 +297,14 @@ namespace Fumen.Converters
 			{
 				[SMCommon.TagVersion] = new PropertyToSourceExtrasParser<double>(SMCommon.TagVersion, chart.SourceExtras),
 				[SMCommon.TagChartName] = new PropertyToSourceExtrasParser<string>(SMCommon.TagChartName, chart.SourceExtras),
-				[SMCommon.TagStepsType] = new PropertyToChartPropertyParser(SMCommon.TagStepsType, nameof(Chart.Type), chart, true),
+				[SMCommon.TagStepsType] = new ChartTypePropertyParser(chart),
 				[SMCommon.TagChartStyle] = new PropertyToSourceExtrasParser<string>(SMCommon.TagChartStyle, chart.SourceExtras),
-				[SMCommon.TagDescription] = new PropertyToChartPropertyParser(SMCommon.TagDescription, nameof(Chart.Description), chart, true),
-				[SMCommon.TagDifficulty] = new PropertyToChartPropertyParser(SMCommon.TagDifficulty, nameof(Chart.DifficultyType), chart, true),
+				[SMCommon.TagDescription] = new PropertyToChartPropertyParser(SMCommon.TagDescription, nameof(Chart.Description), chart),
+				[SMCommon.TagDifficulty] = new PropertyToChartPropertyParser(SMCommon.TagDifficulty, nameof(Chart.DifficultyType), chart),
 				[SMCommon.TagMeter] = new PropertyToChartPropertyParser(SMCommon.TagMeter, nameof(Chart.DifficultyRating), chart),
 				[SMCommon.TagRadarValues] = new PropertyToSourceExtrasParser<string>(SMCommon.TagRadarValues, chart.SourceExtras),
-				[SMCommon.TagCredit] = new PropertyToChartPropertyParser(SMCommon.TagCredit, nameof(Chart.Author), chart, true),
-				[SMCommon.TagMusic] = new PropertyToChartPropertyParser(SMCommon.TagMusic, nameof(Chart.MusicFile), chart, true),
+				[SMCommon.TagCredit] = new PropertyToChartPropertyParser(SMCommon.TagCredit, nameof(Chart.Author), chart),
+				[SMCommon.TagMusic] = new PropertyToChartPropertyParser(SMCommon.TagMusic, nameof(Chart.MusicFile), chart),
 				[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, chartTempos, chart.SourceExtras, SMCommon.TagFumenRawBpmsStr),
 				[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, chartStops, chart.SourceExtras, SMCommon.TagFumenRawStopsStr),
 				[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, chart.SourceExtras),
@@ -322,8 +318,11 @@ namespace Fumen.Converters
 				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, chart.SourceExtras),
 				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, chart.SourceExtras),
 				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, chart.SourceExtras),
-				[SMCommon.TagOffset] = new PropertyToChartPropertyParser(SMCommon.TagOffset, nameof(Chart.ChartOffsetFromMusic), chart, true),
-				[SMCommon.TagDisplayBPM] = new PropertyToChartPropertyParser(SMCommon.TagDisplayBPM, nameof(Chart.Tempo), chart, true),
+				[SMCommon.TagOffset] = new PropertyToChartPropertyParser(SMCommon.TagOffset, nameof(Chart.ChartOffsetFromMusic), chart),
+				[SMCommon.TagSampleStart] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleStart, chart.SourceExtras),
+				[SMCommon.TagSampleLength] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleLength, chart.SourceExtras),
+				[SMCommon.TagSelectable] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSelectable, chart.SourceExtras),
+				[SMCommon.TagDisplayBPM] = new PropertyToChartPropertyParser(SMCommon.TagDisplayBPM, nameof(Chart.Tempo), chart),
 				[SMCommon.TagNotes] = new ChartNotesPropertyParser(SMCommon.TagNotes, chart),
 				[SMCommon.TagNotes2] = new ChartNotesPropertyParser(SMCommon.TagNotes2, chart),
 			};

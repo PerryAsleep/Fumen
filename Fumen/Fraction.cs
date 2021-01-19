@@ -2,8 +2,14 @@
 
 namespace Fumen
 {
+	/// <summary>
+	/// Fraction.
+	/// </summary>
 	public class Fraction : IComparable, IEquatable<Fraction>
 	{
+		public readonly int Numerator;
+		public readonly int Denominator;
+
 		public Fraction()
 		{
 		}
@@ -13,9 +19,6 @@ namespace Fumen
 			Numerator = other.Numerator;
 			Denominator = other.Denominator;
 		}
-
-		public int Numerator { get; }
-		public int Denominator { get; }
 
 		public Fraction(int numerator, int denominator)
 		{
@@ -61,6 +64,11 @@ namespace Fumen
 			return ShiftAndWrap(Numerator.GetHashCode(), 2) ^ Denominator.GetHashCode();
 		}
 
+		public override string ToString()
+		{
+			return $"{Numerator}/{Denominator}";
+		}
+
 		public Fraction Reduce()
 		{
 			var gcd = GreatestCommonDenominator(Numerator, Denominator);
@@ -70,8 +78,11 @@ namespace Fumen
 		}
 
 		/// <summary>
-		/// Algorithm from https://docs.microsoft.com/en-us/dotnet/api/system.object.gethashcode?view=netframework-4.8#System_Object_GetHashCode
+		/// Shift and Wrap method for HashCode determination.
 		/// </summary>
+		/// <remarks>
+		/// Algorithm from https://docs.microsoft.com/en-us/dotnet/api/system.object.gethashcode?view=netframework-4.8#System_Object_GetHashCode
+		/// </remarks>
 		/// <param name="value"></param>
 		/// <param name="positions"></param>
 		/// <returns></returns>

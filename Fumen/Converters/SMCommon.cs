@@ -86,7 +86,7 @@ namespace Fumen.Converters
 
 		public const int NumBeatsPerMeasure = 4;
 
-		public static readonly int[] ValidDenominators = new int[]
+		public static readonly int[] ValidDenominators =
 		{
 			1,	// Quarter note
 			2,	// Eighth note
@@ -99,12 +99,16 @@ namespace Fumen.Converters
 			48  // One-hundred-ninety-second note
 		};
 
-		public static readonly char[] SMAllWhiteSpace = new[] { '\r', '\n', ' ', '\t' };
+		public static readonly char[] SMAllWhiteSpace = { '\r', '\n', ' ', '\t' };
 
-		public static readonly List<Fraction> SSubDivisions = new List<Fraction>();
-		public static readonly List<double> SSubDivisionLengths = new List<double>();
-		public static readonly ChartProperties[] SChartProperties;
-		public static readonly char[] SNoteChars = { '0', '1', '2', '3', '4', 'M', 'L', 'F', 'K' };
+		public static readonly List<Fraction> SubDivisions = new List<Fraction>();
+		public static readonly List<double> SubDivisionLengths = new List<double>();
+		public static readonly ChartProperties[] Properties;
+		public static readonly char[] NoteChars = { '0', '1', '2', '3', '4', 'M', 'L', 'F', 'K' };
+		public static readonly string[] NoteStrings =
+		{
+			"None", "Tap", "Hold Start", "Hold or Roll End", "Roll Start", "Mine", "Lift", "Fake", "KeySound"
+		};
 
 		public const string TagTitle = "TITLE";
 		public const string TagSubtitle = "SUBTITLE";
@@ -190,7 +194,7 @@ namespace Fumen.Converters
 		static SMCommon()
 		{
 			// Initialize valid SM SubDivisions.
-			SSubDivisions.Add(new Fraction(0, 0));
+			SubDivisions.Add(new Fraction(0, 0));
 			foreach (var denominator in ValidDenominators)
 			{
 				if (denominator <= 1)
@@ -198,55 +202,55 @@ namespace Fumen.Converters
 				for (var numerator = 0; numerator < denominator; numerator++)
 				{
 					var fraction = new Fraction(numerator, denominator);
-					if (!SSubDivisions.Contains(fraction))
-						SSubDivisions.Add(fraction);
+					if (!SubDivisions.Contains(fraction))
+						SubDivisions.Add(fraction);
 				}
 			}
 
-			SSubDivisions.Sort();
-			foreach (var subDivision in SSubDivisions)
-				SSubDivisionLengths.Add(subDivision.ToDouble());
+			SubDivisions.Sort();
+			foreach (var subDivision in SubDivisions)
+				SubDivisionLengths.Add(subDivision.ToDouble());
 
 			// Initialize ChartProperties.
-			SChartProperties = new ChartProperties[Enum.GetNames(typeof(ChartType)).Length];
-			SChartProperties[(int)ChartType.dance_single] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.dance_double] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.dance_couple] = new ChartProperties { NumInputs = 8, NumPlayers = 2 };
-			SChartProperties[(int)ChartType.dance_solo] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.dance_threepanel] = new ChartProperties { NumInputs = 3, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.dance_routine] = new ChartProperties { NumInputs = 8, NumPlayers = 2 };
-			SChartProperties[(int)ChartType.pump_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.pump_halfdouble] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.pump_double] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.pump_couple] = new ChartProperties { NumInputs = 10, NumPlayers = 2 };
-			SChartProperties[(int)ChartType.pump_routine] = new ChartProperties { NumInputs = 10, NumPlayers = 2 };
-			SChartProperties[(int)ChartType.kb7_single] = new ChartProperties { NumInputs = 7, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.ez2_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.ez2_double] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.ez2_real] = new ChartProperties { NumInputs = 7, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.para_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.ds3ddx_single] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.bm_single5] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.bm_versus5] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.bm_double5] = new ChartProperties { NumInputs = 12, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.bm_single7] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.bm_versus7] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.bm_double7] = new ChartProperties { NumInputs = 16, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.maniax_single] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.maniax_double] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.techno_single4] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.techno_single5] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.techno_single8] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.techno_double4] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.techno_double5] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.techno_double8] = new ChartProperties { NumInputs = 16, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.pnm_five] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.pnm_nine] = new ChartProperties { NumInputs = 9, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.lights_cabinet] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.kickbox_human] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.kickbox_quadarm] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.kickbox_insect] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
-			SChartProperties[(int)ChartType.kickbox_arachnid] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties = new ChartProperties[Enum.GetNames(typeof(ChartType)).Length];
+			Properties[(int)ChartType.dance_single] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
+			Properties[(int)ChartType.dance_double] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.dance_couple] = new ChartProperties { NumInputs = 8, NumPlayers = 2 };
+			Properties[(int)ChartType.dance_solo] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.dance_threepanel] = new ChartProperties { NumInputs = 3, NumPlayers = 1 };
+			Properties[(int)ChartType.dance_routine] = new ChartProperties { NumInputs = 8, NumPlayers = 2 };
+			Properties[(int)ChartType.pump_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
+			Properties[(int)ChartType.pump_halfdouble] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.pump_double] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
+			Properties[(int)ChartType.pump_couple] = new ChartProperties { NumInputs = 10, NumPlayers = 2 };
+			Properties[(int)ChartType.pump_routine] = new ChartProperties { NumInputs = 10, NumPlayers = 2 };
+			Properties[(int)ChartType.kb7_single] = new ChartProperties { NumInputs = 7, NumPlayers = 1 };
+			Properties[(int)ChartType.ez2_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
+			Properties[(int)ChartType.ez2_double] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
+			Properties[(int)ChartType.ez2_real] = new ChartProperties { NumInputs = 7, NumPlayers = 1 };
+			Properties[(int)ChartType.para_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
+			Properties[(int)ChartType.ds3ddx_single] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.bm_single5] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.bm_versus5] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.bm_double5] = new ChartProperties { NumInputs = 12, NumPlayers = 1 };
+			Properties[(int)ChartType.bm_single7] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.bm_versus7] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.bm_double7] = new ChartProperties { NumInputs = 16, NumPlayers = 1 };
+			Properties[(int)ChartType.maniax_single] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
+			Properties[(int)ChartType.maniax_double] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.techno_single4] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
+			Properties[(int)ChartType.techno_single5] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
+			Properties[(int)ChartType.techno_single8] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.techno_double4] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.techno_double5] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
+			Properties[(int)ChartType.techno_double8] = new ChartProperties { NumInputs = 16, NumPlayers = 1 };
+			Properties[(int)ChartType.pnm_five] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
+			Properties[(int)ChartType.pnm_nine] = new ChartProperties { NumInputs = 9, NumPlayers = 1 };
+			Properties[(int)ChartType.lights_cabinet] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.kickbox_human] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
+			Properties[(int)ChartType.kickbox_quadarm] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
+			Properties[(int)ChartType.kickbox_insect] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.kickbox_arachnid] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
 		}
 
 		/// <summary>
@@ -259,13 +263,13 @@ namespace Fumen.Converters
 		/// </returns>
 		public static Fraction FindClosestSMSubDivision(double fractionAsDouble)
 		{
-			var length = SSubDivisionLengths.Count;
+			var length = SubDivisionLengths.Count;
 
 			// Edge cases
-			if (fractionAsDouble <= SSubDivisionLengths[0])
-				return SSubDivisions[0];
-			if (fractionAsDouble >= SSubDivisionLengths[length - 1])
-				return SSubDivisions[length - 1];
+			if (fractionAsDouble <= SubDivisionLengths[0])
+				return SubDivisions[0];
+			if (fractionAsDouble >= SubDivisionLengths[length - 1])
+				return SubDivisions[length - 1];
 
 			// Search
 			int leftIndex = 0, rightIndex = length, midIndex = 0;
@@ -274,28 +278,28 @@ namespace Fumen.Converters
 				midIndex = (leftIndex + rightIndex) >> 1;
 
 				// Value is less than midpoint, search to the left.
-				if (fractionAsDouble < SSubDivisionLengths[midIndex])
+				if (fractionAsDouble < SubDivisionLengths[midIndex])
 				{
 					// Value is between midpoint and adjacent.
-					if (midIndex > 0 && fractionAsDouble > SSubDivisionLengths[midIndex - 1])
-						return fractionAsDouble - SSubDivisionLengths[midIndex - 1] <
-							   SSubDivisionLengths[midIndex] - fractionAsDouble
-							? SSubDivisions[midIndex - 1]
-							: SSubDivisions[midIndex];
+					if (midIndex > 0 && fractionAsDouble > SubDivisionLengths[midIndex - 1])
+						return fractionAsDouble - SubDivisionLengths[midIndex - 1] <
+							   SubDivisionLengths[midIndex] - fractionAsDouble
+							? SubDivisions[midIndex - 1]
+							: SubDivisions[midIndex];
 
 					// Advance search
 					rightIndex = midIndex;
 				}
 
 				// Value is greater than midpoint, search to the right.
-				else if (fractionAsDouble > SSubDivisionLengths[midIndex])
+				else if (fractionAsDouble > SubDivisionLengths[midIndex])
 				{
 					// Value is between midpoint and adjacent.
-					if (midIndex < length - 1 && fractionAsDouble < SSubDivisionLengths[midIndex + 1])
-						return fractionAsDouble - SSubDivisionLengths[midIndex] <
-							   SSubDivisionLengths[midIndex + 1] - fractionAsDouble
-							? SSubDivisions[midIndex]
-							: SSubDivisions[midIndex + 1];
+					if (midIndex < length - 1 && fractionAsDouble < SubDivisionLengths[midIndex + 1])
+						return fractionAsDouble - SubDivisionLengths[midIndex] <
+							   SubDivisionLengths[midIndex + 1] - fractionAsDouble
+							? SubDivisions[midIndex]
+							: SubDivisions[midIndex + 1];
 
 					// Advance search
 					leftIndex = midIndex + 1;
@@ -304,10 +308,10 @@ namespace Fumen.Converters
 				// Value equals midpoint.
 				else
 				{
-					return SSubDivisions[midIndex];
+					return SubDivisions[midIndex];
 				}
 			}
-			return SSubDivisions[midIndex];
+			return SubDivisions[midIndex];
 		}
 
 		/// <summary>
@@ -365,12 +369,10 @@ namespace Fumen.Converters
 			{
 				var tempoChangeEvent = new TempoChange()
 				{
-					Position = new MetricPosition()
-					{
-						Measure = (int)tempo.Key / NumBeatsPerMeasure,
-						Beat = (int)tempo.Key % NumBeatsPerMeasure,
-						SubDivision = FindClosestSMSubDivision(tempo.Key - (int)tempo.Key)
-					},
+					Position = new MetricPosition(
+						(int)tempo.Key / NumBeatsPerMeasure,
+						(int)tempo.Key % NumBeatsPerMeasure,
+						FindClosestSMSubDivision(tempo.Key - (int)tempo.Key)),
 					TempoBPM = tempo.Value
 				};
 
@@ -394,12 +396,10 @@ namespace Fumen.Converters
 			{
 				var stopEvent = new Stop()
 				{
-					Position = new MetricPosition()
-					{
-						Measure = (int)stop.Key / NumBeatsPerMeasure,
-						Beat = (int)stop.Key % NumBeatsPerMeasure,
-						SubDivision = FindClosestSMSubDivision(stop.Key - (int)stop.Key)
-					},
+					Position = new MetricPosition(
+						(int)stop.Key / NumBeatsPerMeasure,
+						(int)stop.Key % NumBeatsPerMeasure,
+						FindClosestSMSubDivision(stop.Key - (int)stop.Key)),
 					LengthMicros = (long)(stop.Value * 1000000.0)
 				};
 
@@ -477,21 +477,23 @@ namespace Fumen.Converters
 					return 1;
 
 				// Order by time / position
-				var timeComparison = e1.CompareTo(e2);
-				if (timeComparison != 0)
-					return timeComparison;
+				var comparison = e1.CompareTo(e2);
+				if (comparison != 0)
+					return comparison;
+
+				// Order by lane
+				if (e1 is LaneNote note1 && e2 is LaneNote note2)
+					comparison = note1.Lane.CompareTo(note2.Lane);
 
 				// Order by type
 				var e1Index = SMEventOrder.IndexOf(e1.GetType());
 				var e2Index = SMEventOrder.IndexOf(e2.GetType());
 				if (e1Index >= 0 && e2Index >= 0)
-					return e1Index.CompareTo(e2Index);
+					comparison = e1Index.CompareTo(e2Index);
+				if (comparison != 0)
+					return comparison;
 
-				// Order by lane
-				if (e1 is LaneNote note1 && e2 is LaneNote note2)
-					return note1.Lane.CompareTo(note2.Lane);
-
-				return 0;
+				return comparison;
 			}
 		}
 	}

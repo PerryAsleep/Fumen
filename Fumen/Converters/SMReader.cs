@@ -84,10 +84,6 @@ namespace Fumen.Converters
 				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, song.SourceExtras),
 				[SMCommon.TagNotes] = new SongNotesPropertyParser(SMCommon.TagNotes, song),
 				[SMCommon.TagNotes2] = new SongNotesPropertyParser(SMCommon.TagNotes2, song),
-
-				// Stepmania does not read LASTBEATHINT, but it writes it if present.
-				// In order to not modify charts unintentionally by reading and writing them, read the value
-				// in so we can write it back out.
 				[SMCommon.TagLastBeatHint] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLastBeatHint, song.SourceExtras),
 			};
 			foreach (var kvp in propertyParsers)
