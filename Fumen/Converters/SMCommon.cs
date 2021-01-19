@@ -440,6 +440,7 @@ namespace Fumen.Converters
 						if (!first)
 							displayTempo += MSDFile.ParamMarker;
 						displayTempo += tempo;
+						first = false;
 					}
 				}
 				else
