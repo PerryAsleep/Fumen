@@ -1,39 +1,6 @@
-Log level to config
-
-Possible Bugs:
-	Will a Jump with NewArrow NewArrow include UD to DU?
-	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
-		Not true. This jump will fail to be made since each foot's other foot is resting on the arrow. 
-
-Tests:
-	SM/SSC Reader unit Tests
-
-	Foot swap mine indication on wrong mine.
-	Jump v Bracket
-		JumpBothSame
-		JumpBothNew
-		Jump
-	Chords / Quad
-
-Bugs:
-	Misc Bugs:
-		PerformedChart needs to try alternate starting positions if it can't find a path
-			vivid landscape landscape_revised is an example which fails to find a path.
-			Perhaps just do some new arrow steps from the root?
-	Chart Bugs:
-
-		Don't You Want Me:
-			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
-		Echidna:
-			7: Supposed to be swap instead of 3 jack?
-				same in 11, 13, 21
-			61: mine indicated foot swaps - questionable
-
-Misc:
-	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
-	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
-
 PerformedChart improvements:
+	Implement StepTypeReplacements.
+	Try alternating start positions to fix failures to find performed charts.
 	Preference:
 		Swaps that don't make you move so much (e.g. got a swap that is P1D, P2L, P2L, P2R (OOF))
 		Preference for closer steps (e.g. RLR as 523 is less preferable than RLR as 524)
@@ -46,6 +13,33 @@ PerformedChart improvements:
 		Maybe:
 			Don't choose patterns that wouldn't be expressed the same way.
 				This gets pretty difficult (need to be able to parse a DP pattern)
+
+Possible Bugs:
+	Will a Jump with NewArrow NewArrow include UD to DU?
+	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
+		Not true. This jump will fail to be made since each foot's other foot is resting on the arrow. 
+
+Tests:
+	SM/SSC Reader unit Tests
+	Foot swap mine indication on wrong mine.
+	Jump v Bracket
+		JumpBothSame
+		JumpBothNew
+		Jump
+	Chords / Quad
+
+Bugs:
+	Chart Bugs:
+		Don't You Want Me:
+			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
+		Echidna:
+			7: Supposed to be swap instead of 3 jack?
+				same in 11, 13, 21
+			61: mine indicated foot swaps - questionable
+
+Misc:
+	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
+	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 Renderer Improvements:
 	Render Fakes and Lifts differently.

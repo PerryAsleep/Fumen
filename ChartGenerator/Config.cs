@@ -30,11 +30,13 @@ namespace ChartGenerator
 
 		[JsonInclude] public string OutputChartType;
 		[JsonInclude] public string OutputDirectory;
-		[JsonInclude] public OverwriteBehavior OverwriteBehavior;
-		[JsonInclude] public bool OutputVisualizations;
+		[JsonInclude] public OverwriteBehavior OverwriteBehavior = OverwriteBehavior.DoNotOverwrite;
+		[JsonInclude] public bool OutputVisualizations = true;
 		[JsonInclude] public string VisualizationsDirectory;
 
 		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
+
+		[JsonInclude] public LogLevel LogLevel = LogLevel.Info;
 
 		public static async Task<Config> Load()
 		{

@@ -38,6 +38,8 @@ namespace ChartGenerator
 			if (config == null)
 				return;
 
+			Logger.LogLevel = config.LogLevel;
+
 			// Validate ChartTypes.
 			if (string.IsNullOrEmpty(config.InputChartType))
 			{

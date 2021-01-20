@@ -1,4 +1,6 @@
 {
+	"LogLevel": "Info",
+
 	"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
 	"InputNameRegex": ".*\\.(sm|ssc)$",
 	//"InputNameRegex": ".*Time Travel\\.ssc$",
