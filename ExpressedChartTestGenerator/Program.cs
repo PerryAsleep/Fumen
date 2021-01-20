@@ -87,7 +87,7 @@ namespace ExpressedChartTestGenerator
 							sb.Append(se.LinkInstance.GraphLink.Links[f, p].Valid ? ", true" : ", false");
 							sb.Append(", StepType." + se.LinkInstance.GraphLink.Links[f, p].Step.ToString("G"));
 							sb.Append(", FootAction." + se.LinkInstance.GraphLink.Links[f, p].Action.ToString("G"));
-							sb.Append(se.LinkInstance.Rolls[f, p] ? ", true" : ", false");
+							sb.Append(", InstanceStepType." + se.LinkInstance.InstanceTypes[f, p].ToString("G"));
 						}
 					}
 

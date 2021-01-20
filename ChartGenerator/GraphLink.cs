@@ -4,6 +4,23 @@ using static ChartGenerator.Constants;
 namespace ChartGenerator
 {
 	/// <summary>
+	/// Step types that can be applied to a GraphLinkInstance or a GraphNodeInstance
+	/// to capture specific types of steps in a chart that aren't relevant in the
+	/// StepGraph.
+	/// </summary>
+	public enum InstanceStepType
+	{
+		/// <summary>
+		/// No special instance step type.
+		/// </summary>
+		Default,
+
+		Roll,
+		Fake,
+		Lift
+	}
+
+	/// <summary>
 	/// Link between nodes in a StepGraph.
 	/// Represents what each foot does to move from one GraphNode to a set of other GraphNodes.
 	/// </summary>
@@ -12,7 +29,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// The state of a foot and an arrow within a GraphLink.
 		/// </summary>
-		public struct FootArrowState
+		public readonly struct FootArrowState
 		{
 			public readonly StepType Step;
 			public readonly FootAction Action;
@@ -207,9 +224,8 @@ namespace ChartGenerator
 		public GraphLink GraphLink;
 
 		/// <summary>
-		/// Per foot and portion, whether or not the step type should be treated as
-		/// a roll in the underlying GraphLink.
+		/// Per foot and portion, any special instance types for the GraphLink.
 		/// </summary>
-		public bool[,] Rolls = new bool[NumFeet, NumFootPortions];
+		public InstanceStepType[,] InstanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
 	}
 }

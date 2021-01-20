@@ -13,6 +13,8 @@ namespace ChartGenerator
 		{
 			None,
 			Tap,
+			Fake,
+			Lift,
 			Hold,
 			Roll,
 			Release
@@ -163,15 +165,13 @@ namespace ChartGenerator
 					Depth = currentSearchNode.Depth + 1,
 					GraphNodeInstance = new GraphNodeInstance {Node = nextGraphNode}
 				};
-				// Set up rolls
+
+				// Set up InstanceStepTypes.
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var p = 0; p < NumFootPortions; p++)
 					{
-						if (linkInstance.Rolls[f, p])
-						{
-							newNode.GraphNodeInstance.Rolls[f, p] = true;
-						}
+						newNode.GraphNodeInstance.InstanceTypes[f, p] = linkInstance.InstanceTypes[f, p];
 					}
 				}
 
@@ -233,6 +233,9 @@ namespace ChartGenerator
 		{
 			var previousNode = node.PreviousNode;
 			if (previousNode == null)
+				return false;
+			var previousPreviousNode = previousNode.PreviousNode;
+			if (previousPreviousNode == null)
 				return false;
 
 			// This node and the previous node must occur at the same time for the problem to arise.
@@ -443,10 +446,18 @@ namespace ChartGenerator
 								actions[arrow] = PerformanceFootAction.Release;
 								break;
 							case FootAction.Hold:
-								actions[arrow] = currentNode.Rolls[f, p] ? PerformanceFootAction.Roll : PerformanceFootAction.Hold;
+								if (currentNode.InstanceTypes[f, p] == InstanceStepType.Roll)
+									actions[arrow] = PerformanceFootAction.Roll;
+								else
+									actions[arrow] = PerformanceFootAction.Hold;
 								break;
 							case FootAction.Tap:
-								actions[arrow] = PerformanceFootAction.Tap;
+								if (currentNode.InstanceTypes[f, p] == InstanceStepType.Fake)
+									actions[arrow] = PerformanceFootAction.Fake;
+								else if (currentNode.InstanceTypes[f, p] == InstanceStepType.Lift)
+									actions[arrow] = PerformanceFootAction.Lift;
+								else
+									actions[arrow] = PerformanceFootAction.Tap;
 								break;
 						}
 					}
@@ -492,13 +503,20 @@ namespace ChartGenerator
 								});
 								break;
 							case PerformanceFootAction.Tap:
+							case PerformanceFootAction.Fake:
+							case PerformanceFootAction.Lift:
 							{
+								var instanceAction = SMCommon.NoteType.Tap;
+								if (action == PerformanceFootAction.Fake)
+									instanceAction = SMCommon.NoteType.Fake;
+								else if (action == PerformanceFootAction.Lift)
+									instanceAction = SMCommon.NoteType.Lift;
 								events.Add(new LaneTapNote
 								{
 									Position = stepNode.Position,
 									Lane = arrow,
 									Player = 0,
-									SourceType = SMCommon.NoteChars[(int)SMCommon.NoteType.Tap].ToString()
+									SourceType = SMCommon.NoteChars[(int)instanceAction].ToString()
 								});
 								break;
 							}

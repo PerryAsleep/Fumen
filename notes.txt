@@ -1,3 +1,4 @@
+Log level to config
 
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
@@ -30,10 +31,6 @@ Bugs:
 
 Misc:
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
-	Fakes and Lifts.
-		For You has fakes.
-		Fakes are probably just a normal note with an extra piece of data on them so we can write them back out as an F.
-		Actually, maybe the same for lifts?
 	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 PerformedChart improvements:
@@ -49,6 +46,11 @@ PerformedChart improvements:
 		Maybe:
 			Don't choose patterns that wouldn't be expressed the same way.
 				This gets pretty difficult (need to be able to parse a DP pattern)
+
+Renderer Improvements:
+	Render Fakes and Lifts differently.
+	Render negative Stops (fakes) differently.
+	Fix the terrible orange and pink circle graphics.
 
 Perf:
 	StepGraph generation:

@@ -20,7 +20,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// The state of a foot and an arrow within a GraphNode.
 		/// </summary>
-		public struct FootArrowState
+		public readonly struct FootArrowState
 		{
 			public readonly int Arrow;
 			public readonly GraphArrowState State;
@@ -142,9 +142,8 @@ namespace ChartGenerator
 		public GraphNode Node;
 
 		/// <summary>
-		/// Per foot and portion, whether or not the state should be treated as
-		/// a roll in the underlying GraphNode.
+		/// Per foot and portion, any special instance types for the GraphNode.
 		/// </summary>
-		public bool[,] Rolls = new bool[NumFeet, NumFootPortions];
+		public InstanceStepType[,] InstanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
 	}
 }

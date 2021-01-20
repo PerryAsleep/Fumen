@@ -106,9 +106,9 @@ namespace ChartGenerator
 			/// </summary>
 			public readonly GraphNode GraphNode;
 			/// <summary>
-			/// 
+			/// InstanceStepTypes for each arrow at this node.
 			/// </summary>
-			public readonly bool[] Rolls;
+			public readonly InstanceStepType[] InstanceTypes;
 			/// <summary>
 			/// Position in the SM Chart of this ChartSearchNode.
 			/// </summary>
@@ -143,7 +143,7 @@ namespace ChartGenerator
 				int totalCost,
 				ChartSearchNode previousNode,
 				GraphLinkInstance previousLink,
-				bool[] rolls)
+				InstanceStepType[] instanceTypes)
 			{
 				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
@@ -152,7 +152,7 @@ namespace ChartGenerator
 				TotalCost = totalCost;
 				PreviousNode = previousNode;
 				PreviousLink = previousLink;
-				Rolls = rolls;
+				InstanceTypes = instanceTypes;
 			}
 
 			/// <summary>
@@ -239,6 +239,8 @@ namespace ChartGenerator
 		{
 			Empty,
 			Tap,
+			Fake,
+			Lift,
 			Hold,
 			Holding,
 			Roll,
@@ -309,9 +311,34 @@ namespace ChartGenerator
 		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(
 			List<Event> events,
 			StepGraph stepGraph,
-			string logIndentifier = null)
+			string logIdentifier = null)
 		{
-			var root = new ChartSearchNode(stepGraph.Root, new MetricPosition(), 0, 0, null, null, new bool[stepGraph.NumArrows]);
+			// Log if this chart has fakes or lifts.
+			var hasLifts = false;
+			var hasFakes = false;
+			foreach (var smEvent in events)
+			{
+				if (smEvent is LaneTapNote ltn)
+				{
+					if (ltn.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Lift].ToString())
+						hasLifts = true;
+					else if (ltn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Fake].ToString())
+						hasFakes = true;
+				}
+			}
+			if (hasLifts)
+				LogWarn("Chart has lifts. These will be treated as taps for ExpressedChart generation.", logIdentifier);
+			if (hasFakes)
+				LogInfo("Chart has fakes. These will be treated as taps for ExpressedChart generation.", logIdentifier);
+
+			var root = new ChartSearchNode(
+				stepGraph.Root,
+				new MetricPosition(),
+				0,
+				0,
+				null,
+				null,
+				new InstanceStepType[stepGraph.NumArrows]);
 
 			var numArrows = stepGraph.NumArrows;
 			var currentState = new SearchState[numArrows];
@@ -371,7 +398,7 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
-						releases[0].Position, stepGraph, lastMines, lastReleases, logIndentifier);
+						releases[0].Position, stepGraph, lastMines, lastReleases, logIdentifier);
 				}
 
 				// Get mines and record them for processing after the search is complete.
@@ -389,7 +416,14 @@ namespace ChartGenerator
 					foreach (var stepEvent in steps)
 					{
 						if (stepEvent is LaneTapNote)
-							currentState[stepEvent.Lane] = SearchState.Tap;
+						{
+							if (stepEvent.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Fake].ToString())
+								currentState[stepEvent.Lane] = SearchState.Fake;
+							else if (stepEvent.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Lift].ToString())
+								currentState[stepEvent.Lane] = SearchState.Lift;
+							else
+								currentState[stepEvent.Lane] = SearchState.Tap;
+						}
 						else if (stepEvent is LaneHoldStartNote lhsn)
 						{
 							if (lhsn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.RollStart].ToString())
@@ -401,13 +435,15 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
-						steps[0].Position, stepGraph, lastMines, lastReleases, logIndentifier);
+						steps[0].Position, stepGraph, lastMines, lastReleases, logIdentifier);
 				}
 
 				// Update the current state now that the events at this position have been processed.
 				for (var a = 0; a < numArrows; a++)
 				{
-					if (currentState[a] == SearchState.Tap)
+					if (currentState[a] == SearchState.Tap
+					    || currentState[a] == SearchState.Fake
+					    || currentState[a] == SearchState.Lift)
 					{
 						currentState[a] = SearchState.Empty;
 						lastReleases[a] = steps[0].Position;
@@ -488,13 +524,20 @@ namespace ChartGenerator
 			StepGraph stepGraph,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
-			string logIndentifier)
+			string logIdentifier)
 		{
 			var childSearchNodes = new HashSet<ChartSearchNode>();
 
-			var rolls = new bool[stepGraph.NumArrows];
+			var instanceTypes = new InstanceStepType[stepGraph.NumArrows];
 			for (var a = 0; a < stepGraph.NumArrows; a++)
-				rolls[a] = (currentState[a] == SearchState.Roll || currentState[a] == SearchState.Rolling);
+			{
+				if (currentState[a] == SearchState.Roll || currentState[a] == SearchState.Rolling)
+					instanceTypes[a] = InstanceStepType.Roll;
+				else if (currentState[a] == SearchState.Fake)
+					instanceTypes[a] = InstanceStepType.Fake;
+				else if (currentState[a] == SearchState.Lift)
+					instanceTypes[a] = InstanceStepType.Lift;
+			}
 
 			// Check every current ChartSearchNode.
 			foreach (var searchNode in currentSearchNodes)
@@ -515,7 +558,7 @@ namespace ChartGenerator
 						// This GraphLink and child GraphNode result in a matching state.
 						// Determine the cost to go from this GraphLink to this GraphNode.
 						var cost = GetCost(l.Key, searchNode, childNode, currentState, position, lastMines, lastReleases,
-							stepGraph.ArrowData);
+							stepGraph.ArrowData, logIdentifier);
 
 						// Record the result as a new ChartSearchNode to be checked for pruning once
 						// all children have been determined.
@@ -526,7 +569,7 @@ namespace ChartGenerator
 							searchNode.TotalCost + cost,
 							searchNode,
 							linkInstance,
-							rolls);
+							instanceTypes);
 						AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
 
 						deadEnd = false;
@@ -542,7 +585,7 @@ namespace ChartGenerator
 
 			if (childSearchNodes.Count == 0)
 			{
-				LogError($"Failed to find node at {position}.", logIndentifier);
+				LogError($"Failed to find node at {position}.", logIdentifier);
 			}
 
 			// Prune the children and return the results.
@@ -611,15 +654,48 @@ namespace ChartGenerator
 					continue;
 				if (generatedState[s] == SearchState.Hold && searchState[s] == SearchState.Roll)
 					continue;
+				if (generatedState[s] == SearchState.Tap && searchState[s] == SearchState.Fake && searchState[s] == SearchState.Lift)
+					continue;
 				if (generatedState[s] == SearchState.Holding && searchState[s] == SearchState.Rolling)
 					continue;
 				return null;
 			}
 
+			// Apply InstanceStepTypes.
 			var instance = new GraphLinkInstance{ GraphLink = link };
 			for (var s = 0; s < searchState.Length; s++)
 			{
-				if (searchState[s] == SearchState.Roll)
+				if (searchState[s] == SearchState.Fake)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (node.State[f, p].Arrow == s
+							    && link.Links[f, p].Valid
+							    && link.Links[f, p].Action == FootAction.Tap)
+							{
+								instance.InstanceTypes[f, p] = InstanceStepType.Fake;
+							}
+						}
+					}
+				}
+				else if (searchState[s] == SearchState.Lift)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (node.State[f, p].Arrow == s
+							    && link.Links[f, p].Valid
+							    && link.Links[f, p].Action == FootAction.Tap)
+							{
+								instance.InstanceTypes[f, p] = InstanceStepType.Lift;
+							}
+						}
+					}
+				}
+				else if (searchState[s] == SearchState.Roll)
 				{
 					for (var f = 0; f < NumFeet; f++)
 					{
@@ -629,7 +705,7 @@ namespace ChartGenerator
 							    && link.Links[f, p].Valid
 							    && link.Links[f, p].Action == FootAction.Hold)
 							{
-								instance.Rolls[f, p] = true;
+								instance.InstanceTypes[f, p] = InstanceStepType.Roll;
 							}
 						}
 					}
@@ -739,7 +815,8 @@ namespace ChartGenerator
 			MetricPosition position,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
-			ArrowData[] arrowData)
+			ArrowData[] arrowData,
+			string logIdentifier)
 		{
 			// Releases have a 0 cost.
 			for (var f = 0; f < NumFeet; f++)
@@ -752,7 +829,11 @@ namespace ChartGenerator
 			var lastArrowStep = 0;
 			for (var a = 0; a < state.Length; a++)
 			{
-				if (state[a] == SearchState.Tap || state[a] == SearchState.Hold || state[a] == SearchState.Roll)
+				if (state[a] == SearchState.Tap
+				    || state[a] == SearchState.Fake
+				    || state[a] == SearchState.Lift
+					|| state[a] == SearchState.Hold
+				    || state[a] == SearchState.Roll)
 				{
 					numSteps++;
 					lastArrowStep = a;
@@ -1070,13 +1151,15 @@ namespace ChartGenerator
 								return CostNewArrow_Invert;
 							}
 							default:
+							{
+								LogError($"[Cost Determination] Unexpected StepType {step:G} for {numSteps} step at {position}.", logIdentifier);
 								return CostUnknown;
+							}
 						}
 					}
 
 				case 2:
 					{
-
 						var couldBeBracketed = new bool[NumFeet];
 						var holdingAny = new bool[NumFeet];
 						var holdingAll = new bool[NumFeet];
@@ -1217,6 +1300,7 @@ namespace ChartGenerator
 							return CostTwoArrows_Jump_OneNew;
 						}
 
+						LogError($"[Cost Determination] Unexpected behavior for {numSteps} steps at {position}.", logIdentifier);
 						return CostUnknown;
 					}
 
@@ -1231,7 +1315,10 @@ namespace ChartGenerator
 					// TODO: That's not true. There are two quads, LLRR and LRLR
 					return CostFourArrows;
 				default:
+				{
+					LogError($"[Cost Determination] Unexpected number of steps ({numSteps}) at {position}.", logIdentifier);
 					return CostUnknown;
+				}
 			}
 		}
 
@@ -1458,7 +1545,11 @@ namespace ChartGenerator
 				var steppedArrow = InvalidArrowIndex;
 				for (var a = 0; a < state.Length; a++)
 				{
-					if (state[a] == SearchState.Tap || state[a] == SearchState.Hold || state[a] == SearchState.Roll)
+					if (state[a] == SearchState.Tap
+						|| state[a] == SearchState.Fake
+						|| state[a] == SearchState.Lift
+						|| state[a] == SearchState.Hold
+						|| state[a] == SearchState.Roll)
 					{
 						numSteps++;
 						if (steppedArrow != InvalidArrowIndex)
@@ -1626,6 +1717,22 @@ namespace ChartGenerator
 				Logger.Error($"[Expressed Chart] [{logIndentifier}] {message}");
 			else
 				Logger.Error($"[Expressed Chart] {message}");
+		}
+
+		static void LogWarn(string message, string logIndentifier)
+		{
+			if (!string.IsNullOrEmpty(logIndentifier))
+				Logger.Warn($"[Expressed Chart] [{logIndentifier}] {message}");
+			else
+				Logger.Warn($"[Expressed Chart] {message}");
+		}
+
+		static void LogInfo(string message, string logIndentifier)
+		{
+			if (!string.IsNullOrEmpty(logIndentifier))
+				Logger.Info($"[Expressed Chart] [{logIndentifier}] {message}");
+			else
+				Logger.Info($"[Expressed Chart] {message}");
 		}
 	}
 }

@@ -462,13 +462,13 @@ namespace Fumen.Converters
 
 							// Create a LaneNote based on the note type.
 							LaneNote note = null;
-							if (noteType == SMCommon.NoteType.Tap)
+							if (noteType == SMCommon.NoteType.Tap
+							    || noteType == SMCommon.NoteType.Fake
+							    || noteType == SMCommon.NoteType.Lift)
 							{
-								note = new LaneTapNote {SourceType = c.ToString()};
+								note = new LaneTapNote { SourceType = c.ToString() };
 							}
 							else if (noteType == SMCommon.NoteType.Mine
-							         || noteType == SMCommon.NoteType.Lift
-							         || noteType == SMCommon.NoteType.Fake
 							         || noteType == SMCommon.NoteType.KeySound)
 							{
 								note = new LaneNote { SourceType = c.ToString() };
