@@ -7,6 +7,10 @@ namespace Fumen
 	/// </summary>
 	public class MetricPosition : IComparable
 	{
+		public readonly int Measure;
+		public readonly int Beat;
+		public readonly Fraction SubDivision = new Fraction(0, 0);
+
 		public MetricPosition()
 		{
 		}
@@ -37,10 +41,6 @@ namespace Fumen
 			Beat = other.Beat;
 			SubDivision = new Fraction(other.SubDivision);
 		}
-
-		public readonly int Measure;
-		public readonly int Beat;
-		public readonly Fraction SubDivision = new Fraction(0, 0);
 
 		public static bool operator >(MetricPosition a, MetricPosition b)
 		{
@@ -101,7 +101,7 @@ namespace Fumen
 
 		public override string ToString()
 		{
-			return $"Measure {Measure} Beat {Beat} SubDivison {SubDivision}";
+			return $"Measure {Measure} Beat {Beat} SubDivision {SubDivision}";
 		}
 	}
 }

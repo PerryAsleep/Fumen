@@ -6,16 +6,17 @@ using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace ChartGenerator
 {
-	// WIP
 	class Program
 	{
 		private static StepGraph InputStepGraph;
 		private static StepGraph OutputStepGraph;
+		private static List<List<GraphNode>> OutputStartNodes = new List<List<GraphNode>>();
 
 		private static List<string> SupportedInputTypes = new List<string> { ChartTypeString(ChartType.dance_single) };
 		private static List<string> SupportedOutputTypes = new List<string> { ChartTypeString(ChartType.dance_single), ChartTypeString(ChartType.dance_double) };
@@ -23,6 +24,7 @@ namespace ChartGenerator
 		private const double Version = 0.1;
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
+		private const string LogTag = "Main";
 
 		private static DateTime ExportTime;
 		private static string VisualizationSubDir;
@@ -38,59 +40,66 @@ namespace ChartGenerator
 			if (config == null)
 				return;
 
+			// Set the Log Level before validating Config.
 			Logger.LogLevel = config.LogLevel;
 
-			// Validate ChartTypes.
-			if (string.IsNullOrEmpty(config.InputChartType))
-			{
-				Logger.Error($"No InputChartType found in {Config.FileName}.");
+			// Validate Config.
+			if (!config.Validate(SupportedInputTypes, SupportedOutputTypes))
 				return;
-			}
-			if (!SupportedInputTypes.Contains(config.InputChartType))
-			{
-				Logger.Error($"Unsupported InputChartType \"{config.InputChartType}\" found in {Config.FileName}. Expected value in [{string.Join(", ", SupportedInputTypes)}].");
-				return;
-			}
-			if (string.IsNullOrEmpty(config.OutputChartType))
-			{
-				Logger.Error($"No OutputChartType found in {Config.FileName}.");
-				return;
-			}
-			if (!SupportedOutputTypes.Contains(config.OutputChartType))
-			{
-				Logger.Error($"Unsupported OutputChartType \"{config.OutputChartType}\" found in {Config.FileName}. Expected value in [{string.Join(", ", SupportedOutputTypes)}].");
-				return;
-			}
 
 			// Create StepGraphs.
 			if (config.InputChartType == config.OutputChartType)
 			{
-				Logger.Info("Creating StepGraph.");
+				LogInfo("Creating StepGraph.");
 				InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
 				OutputStepGraph = InputStepGraph;
-				Logger.Info("Finished creating StepGraph.");
+				OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
+				LogInfo("Finished creating StepGraph.");
 			}
 			else
 			{
-				Logger.Info("Creating StepGraphs.");
+				LogInfo("Creating StepGraphs.");
 				var t1 = new Thread(() => { InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
 				var t2 = new Thread(() => { OutputStepGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
 				t1.Start();
 				t2.Start();
 				t1.Join();
 				t2.Join();
-				Logger.Info("Finished creating StepGraphs.");
+
+				// The first start node we should try is the root, centered on the middles.
+				OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
+
+				// Failing that, try nodes with one foot moved outward.
+				OutputStartNodes.Add(new List<GraphNode>
+				{
+					OutputStepGraph.FindGraphNode(P1U, GraphArrowState.Resting, P2L, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P1D, GraphArrowState.Resting, P2L, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P1R, GraphArrowState.Resting, P2U, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P1R, GraphArrowState.Resting, P2D, GraphArrowState.Resting)
+				});
+
+				// Failing that, try nodes close to the middle.
+				OutputStartNodes.Add(new List<GraphNode>
+				{
+					OutputStepGraph.FindGraphNode(P1U, GraphArrowState.Resting, P1R, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P1D, GraphArrowState.Resting, P1R, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P2L, GraphArrowState.Resting, P2U, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P2L, GraphArrowState.Resting, P2D, GraphArrowState.Resting)
+				});
+
+				// Last resort, try the SP start nodes. This is guaranteed to catch any SP chart start.
+				OutputStartNodes.Add(new List<GraphNode>
+				{
+					OutputStepGraph.FindGraphNode(P1L, GraphArrowState.Resting, P1R, GraphArrowState.Resting),
+					OutputStepGraph.FindGraphNode(P2L, GraphArrowState.Resting, P2R, GraphArrowState.Resting),
+				});
+
+				LogInfo("Finished creating StepGraphs.");
 			}
 
 			// Create a directory for outputting visualizations.
 			if (Config.Instance.OutputVisualizations)
 			{
-				if (string.IsNullOrEmpty(Config.Instance.VisualizationsDirectory))
-				{
-					Logger.Error($"No VisualizationsDirectory provided in {Config.FileName}.");
-					return;
-				}
-
 				try
 				{
 					var pathSep = Path.DirectorySeparatorChar.ToString();
@@ -98,13 +107,12 @@ namespace ChartGenerator
 					if (!VisualizationDir.EndsWith(pathSep))
 						VisualizationDir += pathSep;
 					VisualizationDir += VisualizationSubDir;
-					Logger.Info($"Creating directory for outputting visualizations: {VisualizationDir}.");
+					LogInfo($"Creating directory for outputting visualizations: {VisualizationDir}.");
 					Directory.CreateDirectory(VisualizationDir);
 				}
 				catch (Exception e)
 				{
-					Logger.Error("Failed to find or create directory for outputting visualizations.");
-					Logger.Error(e.ToString());
+					LogError($"Failed to find or create directory for outputting visualizations. {e}");
 					return;
 				}
 			}
@@ -113,7 +121,7 @@ namespace ChartGenerator
 
 			// Hack. Wait for input.
 			// TODO: Wait for all threads to complete.
-			Logger.Info("Done.");
+			LogInfo("Done.");
 			Console.ReadLine();
 		}
 
@@ -121,7 +129,7 @@ namespace ChartGenerator
 		{
 			if (!Directory.Exists(Config.Instance.InputDirectory))
 			{
-				Logger.Error($"Could not find InputDirectory '{Config.Instance.InputDirectory}'.");
+				LogError($"Could not find InputDirectory \"{Config.Instance.InputDirectory}\".");
 				return;
 			}
 
@@ -142,8 +150,7 @@ namespace ChartGenerator
 				}
 				catch (Exception e)
 				{
-					Logger.Warn($"Could not get directories in '{currentDir}'.");
-					Logger.Warn(e.ToString());
+					LogWarn($"Could not get directories in \"{currentDir}\". {e}");
 					continue;
 				}
 
@@ -163,8 +170,7 @@ namespace ChartGenerator
 				}
 				catch (Exception e)
 				{
-					Logger.Warn($"Could not get files in '{currentDir}'.");
-					Logger.Warn(e.ToString());
+					LogWarn($"Could not get files in \"{currentDir}\". {e}");
 					continue;
 				}
 
@@ -179,8 +185,7 @@ namespace ChartGenerator
 					}
 					catch (Exception e)
 					{
-						Logger.Warn($"Could not get file info for '{file}'.");
-						Logger.Warn(e.ToString());
+						LogWarn($"Could not get file info for \"{file}\". {e}");
 						continue;
 					}
 
@@ -197,7 +202,7 @@ namespace ChartGenerator
 
 					if (!ThreadPool.QueueUserWorkItem(ProcessSong, songArgs))
 					{
-						Logger.Error($"Failed to queue work thread for '{fi.Name}'.");
+						LogError("Failed to queue work thread.", fi, relativePath);
 						continue;
 					}
 				}
@@ -216,16 +221,6 @@ namespace ChartGenerator
 			if (!(args is SongArgs songArgs))
 				return;
 
-			var fileNameNoExtension = songArgs.FileInfo.Name;
-			if (!string.IsNullOrEmpty(songArgs.FileInfo.Extension))
-			{
-				fileNameNoExtension = fileNameNoExtension.Substring(0, songArgs.FileInfo.Name.Length - songArgs.FileInfo.Extension.Length);
-			}
-
-			var extension = songArgs.FileInfo.Extension.ToLower();
-			if (extension.StartsWith("."))
-				extension = extension.Substring(1);
-
 			// Load the song.
 			Song song;
 			try
@@ -233,7 +228,7 @@ namespace ChartGenerator
 				var reader = Reader.CreateReader(songArgs.FileInfo);
 				if (reader == null)
 				{
-					Logger.Error($"[{fileNameNoExtension}] No Reader for file. Cannot parse.");
+					LogError("No Reader for file. Cannot parse.", songArgs.FileInfo, songArgs.RelativePath);
 					return;
 				}
 				song = await reader.Load();
@@ -241,13 +236,12 @@ namespace ChartGenerator
 			}
 			catch (Exception e)
 			{
-				Logger.Error($"[{fileNameNoExtension}] Failed to load '{songArgs.FileInfo.Name}'.");
-				Logger.Error(e.ToString());
+				LogError($"Failed to load file. {e}", songArgs.FileInfo, songArgs.RelativePath);
 				return;
 			}
 
 			// Add new charts.
-			AddCharts(song, songArgs.CurrentDir, songArgs.RelativePath, songArgs.FileInfo.Name, fileNameNoExtension, extension);
+			AddCharts(song, songArgs);
 
 			// Save
 			var pathSep = Path.DirectorySeparatorChar.ToString();
@@ -263,6 +257,10 @@ namespace ChartGenerator
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
 			};
+
+			var extension = songArgs.FileInfo.Extension.ToLower();
+			if (extension.StartsWith("."))
+				extension = extension.Substring(1);
 			switch (extension)
 			{
 				case "sm":
@@ -276,14 +274,23 @@ namespace ChartGenerator
 			// TODO: Copy all files in the song dir.
 		}
 
-		static void AddCharts(Song song, string songDir, string relativePath, string fileName, string fileNameNoExtension, string extension)
+		static void AddCharts(Song song, SongArgs songArgs)
 		{
-			Logger.Info($"[{fileNameNoExtension}] Processing '{relativePath}{fileName}'.");
+			LogInfo("Processing Song.", songArgs.FileInfo, songArgs.RelativePath, song);
+
+			var fileNameNoExtension = songArgs.FileInfo.Name;
+			if (!string.IsNullOrEmpty(songArgs.FileInfo.Extension))
+			{
+				fileNameNoExtension = fileNameNoExtension.Substring(0, songArgs.FileInfo.Name.Length - songArgs.FileInfo.Extension.Length);
+			}
+
+			var extension = songArgs.FileInfo.Extension.ToLower();
+			if (extension.StartsWith("."))
+				extension = extension.Substring(1);
 
 			var pathSep = Path.DirectorySeparatorChar.ToString();
 			var newCharts = new List<Chart>();
 			var chartsIndicesToRemove = new List<int>();
-			var chartIndex = 0;
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
@@ -322,18 +329,25 @@ namespace ChartGenerator
 					}
 
 					// Create an ExpressedChart.
-					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(chart.Layers[0].Events, InputStepGraph, fileNameNoExtension);
+					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(
+						chart.Layers[0].Events,
+						InputStepGraph,
+						GetLogIdentifier(songArgs.FileInfo, songArgs.RelativePath, song, chart));
 					if (expressedChart == null)
 					{
-						Logger.Error($"[{fileNameNoExtension}] Failed to create ExpressedChart for {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
+						LogError("Failed to create ExpressedChart.", songArgs.FileInfo, songArgs.RelativePath, song, chart);
 						continue;
 					}
 
 					// Create a PerformedChart.
-					var performedChart = PerformedChart.CreateFromExpressedChart(OutputStepGraph, expressedChart);
+					var performedChart = PerformedChart.CreateFromExpressedChart(
+						OutputStepGraph,
+						OutputStartNodes,
+						expressedChart,
+						GetLogIdentifier(songArgs.FileInfo, songArgs.RelativePath, song, chart));
 					if (performedChart == null)
 					{
-						Logger.Error($"[{fileNameNoExtension}] Failed to create PerformedChart for {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
+						LogError("Failed to create PerformedChart.", songArgs.FileInfo, songArgs.RelativePath, song, chart);
 						continue;
 					}
 
@@ -379,8 +393,12 @@ namespace ChartGenerator
 								}
 								i++;
 							}
-							Logger.Error($"[{fileNameNoExtension}] Programmer error. Discrepancy in non-mine Event counts for {Config.Instance.OutputChartType} {chart.DifficultyType} chart. Old: {oldChartNonMineEventCount}, New: {newChartNonMineEventCount}. First discrepancy position: {firstDiscrepancyPosition}");
-							//continue;
+							LogError(
+								"Programmer error. Discrepancy in non-mine Event counts." 
+								+ $" Old: {oldChartNonMineEventCount}, New: {newChartNonMineEventCount}."
+								+ $" First discrepancy position: {firstDiscrepancyPosition}.",
+								songArgs.FileInfo, songArgs.RelativePath, song, chart);
+							continue;
 						}
 					}
 
@@ -408,19 +426,20 @@ namespace ChartGenerator
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);
 
-					Logger.Info($"[{fileNameNoExtension}] Generated {Config.Instance.OutputChartType} {chart.DifficultyType} chart for '{relativePath}{fileName}'.");
+					LogInfo($"Generated new Chart from {chart.Type} {chart.DifficultyType} Chart.",
+						songArgs.FileInfo, songArgs.RelativePath, song, newChart);
 
 					// Write a visualization.
 					if (Config.Instance.OutputVisualizations)
 					{
-						var visualizationDirectory = VisualizationDir + Path.DirectorySeparatorChar + relativePath;
+						var visualizationDirectory = VisualizationDir + Path.DirectorySeparatorChar + songArgs.RelativePath;
 						if (!visualizationDirectory.EndsWith(pathSep))
 							visualizationDirectory += pathSep;
 						Directory.CreateDirectory(visualizationDirectory);
 						var saveFile = visualizationDirectory + $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html";
 
 						var renderer = new Renderer(
-							songDir,
+							songArgs.CurrentDir,
 							saveFile,
 							song,
 							chart,
@@ -432,10 +451,10 @@ namespace ChartGenerator
 						renderer.Write();
 					}
 				}
-				chartIndex++;
 			}
 
-			Logger.Info($"[{fileNameNoExtension}] Generated {newCharts.Count} new charts (replaced {chartsIndicesToRemove.Count}) for '{relativePath}{fileName}'.");
+			LogInfo($"Generated {newCharts.Count} new Charts (replaced {chartsIndicesToRemove.Count}).",
+				songArgs.FileInfo, songArgs.RelativePath, song);
 
 			// Remove overwritten charts.
 			foreach (var i in chartsIndicesToRemove)
@@ -447,7 +466,6 @@ namespace ChartGenerator
 
 		private static string GetFormattedVersionStringForChart()
 		{
-			// TODO: Check that this works.
 			return string.Format(FumenGeneratedFormattedVersion, Version);
 		}
 
@@ -462,7 +480,7 @@ namespace ChartGenerator
 
 		private static (Chart, int) FindChart(Song song, string chartType, string difficultyType, int numArrows)
 		{
-			int index = 0;
+			var index = 0;
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1
@@ -487,5 +505,49 @@ namespace ChartGenerator
 					dest.Add(e);
 			}
 		}
+
+		#region Logging
+		private static string GetLogIdentifier(FileInfo fi, string relativePath, Song song = null, Chart chart = null)
+		{
+			var sb = new StringBuilder();
+			sb.Append($"[{relativePath}{fi.Name}");
+			if (song != null)
+				sb.Append($" \"{song.Title}\"");
+			if (chart != null)
+				sb.Append($" {chart.Type} {chart.DifficultyType}");
+			sb.Append("]");
+			return sb.ToString();
+		}
+		
+		private static void LogError(string message)
+		{
+			Logger.Error($"[{LogTag}] {message}");
+		}
+
+		private static void LogWarn(string message)
+		{
+			Logger.Warn($"[{LogTag}] {message}");
+		}
+
+		private static void LogInfo(string message)
+		{
+			Logger.Info($"[{LogTag}] {message}");
+		}
+
+		private static void LogError(string message, FileInfo fi, string relativePath, Song song = null, Chart chart = null)
+		{
+			LogError($"{GetLogIdentifier(fi, relativePath, song, chart)} {message}");
+		}
+
+		private static void LogWarn(string message, FileInfo fi, string relativePath, Song song = null, Chart chart = null)
+		{
+			LogWarn($"{GetLogIdentifier(fi, relativePath, song, chart)} {message}");
+		}
+
+		private static void LogInfo(string message, FileInfo fi, string relativePath, Song song = null, Chart chart = null)
+		{
+			LogInfo($"{GetLogIdentifier(fi, relativePath, song, chart)} {message}");
+		}
+		#endregion Logging
 	}
 }

@@ -27,6 +27,8 @@ namespace ChartGenerator
 	/// </summary>
 	public class ExpressedChart
 	{
+		private const string LogTag = "Expressed Chart";
+
 		/// <summary>
 		/// Common data to the events which make up an ExpressedChart.
 		/// </summary>
@@ -1711,28 +1713,30 @@ namespace ChartGenerator
 			expressedChart.MineEvents.Sort(new MineEventComparer());
 		}
 
-		static void LogError(string message, string logIndentifier)
+		#region Logging
+		static void LogError(string message, string logIdentifier)
 		{
-			if (!string.IsNullOrEmpty(logIndentifier))
-				Logger.Error($"[Expressed Chart] [{logIndentifier}] {message}");
+			if (!string.IsNullOrEmpty(logIdentifier))
+				Logger.Error($"[{LogTag}] {logIdentifier} {message}");
 			else
-				Logger.Error($"[Expressed Chart] {message}");
+				Logger.Error($"[{LogTag}] {message}");
 		}
 
-		static void LogWarn(string message, string logIndentifier)
+		static void LogWarn(string message, string logIdentifier)
 		{
-			if (!string.IsNullOrEmpty(logIndentifier))
-				Logger.Warn($"[Expressed Chart] [{logIndentifier}] {message}");
+			if (!string.IsNullOrEmpty(logIdentifier))
+				Logger.Warn($"[{LogTag}] {logIdentifier} {message}");
 			else
-				Logger.Warn($"[Expressed Chart] {message}");
+				Logger.Warn($"[{LogTag}] {message}");
 		}
 
-		static void LogInfo(string message, string logIndentifier)
+		static void LogInfo(string message, string logIdentifier)
 		{
-			if (!string.IsNullOrEmpty(logIndentifier))
-				Logger.Info($"[Expressed Chart] [{logIndentifier}] {message}");
+			if (!string.IsNullOrEmpty(logIdentifier))
+				Logger.Info($"[{LogTag}] {logIdentifier} {message}");
 			else
-				Logger.Info($"[Expressed Chart] {message}");
+				Logger.Info($"[{LogTag}] {message}");
 		}
+		#endregion Logging
 	}
 }

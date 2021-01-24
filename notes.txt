@@ -1,11 +1,18 @@
 PerformedChart improvements:
-	Implement StepTypeReplacements.
-	Try alternating start positions to fix failures to find performed charts.
+	Move to other side more
+		maybe parse a bunch of good charts, find what a good distribution looks like and try to match that.
+		Every N (~20-50?) steps, look at the last N
+			choose the chunk with the best distribution 
+
+		Local min problem
+
+		Need charts that are balanced (they look like the bell curve)
+			and also move side to side often
+
 	Preference:
 		Swaps that don't make you move so much (e.g. got a swap that is P1D, P2L, P2L, P2R (OOF))
 		Preference for closer steps (e.g. RLR as 523 is less preferable than RLR as 524)
-		Move to other side more
-			maybe parse a bunch of good charts, find what a good distribution looks like and try to match that.
+
 	Choosing bad patterns:
 		Going into a nebulous jump when the original chart did not.
 		On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
@@ -16,8 +23,6 @@ PerformedChart improvements:
 
 Possible Bugs:
 	Will a Jump with NewArrow NewArrow include UD to DU?
-	Currently, JumpBothSame after a FootSwap will cause both feet to jump on the same arrow.
-		Not true. This jump will fail to be made since each foot's other foot is resting on the arrow. 
 
 Tests:
 	SM/SSC Reader unit Tests
@@ -39,12 +44,13 @@ Bugs:
 
 Misc:
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
-	Options so the user can specify which types of steps are okay to replace with which other types (brackets)
 
 Renderer Improvements:
 	Render Fakes and Lifts differently.
 	Render negative Stops (fakes) differently.
 	Fix the terrible orange and pink circle graphics.
+	Render performed chart starting position.
+	Render when the performed chart uses different StepTypes.
 
 Perf:
 	StepGraph generation:
@@ -59,5 +65,4 @@ how do patterns? like 123412341234...
 	Separate structure in Expressed charts that map a range of stepevents to another range.
 		ranges that are longer (e.g. a repeated 16 note pattern) are more important to repeat
 
-NewAlone has roll chord
 Primitive Vides - LR hold, alternate jacks on down 

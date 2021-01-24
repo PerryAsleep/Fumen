@@ -158,6 +158,79 @@ namespace ChartGenerator
 			return stepGraph;
 		}
 
+		/// <summary>
+		/// Searches the StepGraph for a GraphNode matching the given left and right
+		/// foot states using DefaultFootPortions.
+		/// </summary>
+		/// <param name="leftArrow">Arrow the left foot should be on.</param>
+		/// <param name="leftState">GraphArrowState for the left foot.</param>
+		/// <param name="rightArrow">Arrow the right foot should be on.</param>
+		/// <param name="rightState">GraphArrowState for the right foot.</param>
+		/// <returns>GraphNode matching parameters or null if none was found.</returns>
+		public GraphNode FindGraphNode(
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			var trackedNodes = new HashSet<GraphNode>();
+			var nodes = new HashSet<GraphNode> {Root};
+			trackedNodes.Add(Root);
+			while (true)
+			{
+				var newNodes = new HashSet<GraphNode>();
+
+				foreach (var node in nodes)
+				{
+					if (StateMatches(node, leftArrow, leftState, rightArrow, rightState))
+						return node;
+
+					foreach (var l in node.Links)
+					{
+						foreach (var g in l.Value)
+						{
+							if (!trackedNodes.Contains(g))
+							{
+								trackedNodes.Add(g);
+								newNodes.Add(g);
+							}
+						}
+					}
+				}
+
+				nodes = newNodes;
+				if (nodes.Count == 0)
+					break;
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Checks if the given GraphNode matches the state represented by the given
+		/// arrows and GraphArrowStates for DefaultFootPortions for the left and right foot.
+		/// Helper for FindGraphNode.
+		/// </summary>
+		/// <param name="node">GraphNode to check.</param>
+		/// <param name="leftArrow">Arrow the left foot should be on.</param>
+		/// <param name="leftState">GraphArrowState for the left foot.</param>
+		/// <param name="rightArrow">Arrow the right foot should be on.</param>
+		/// <param name="rightState">GraphArrowState for the right foot.</param>
+		/// <returns>True if the state matches and false otherwise.</returns>
+		private static bool StateMatches(GraphNode node,
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			var state = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
+			for (var f = 0; f < NumFeet; f++)
+				for (var p = 0; p < NumFootPortions; p++)
+					state[f, p] = new GraphNode.FootArrowState(InvalidArrowIndex, GraphArrowState.Resting);
+
+			state[L, DefaultFootPortion] = new GraphNode.FootArrowState(leftArrow, leftState);
+			state[R, DefaultFootPortion] = new GraphNode.FootArrowState(rightArrow, rightState);
+			var newNode = new GraphNode(state, BodyOrientation.Normal);
+			return node.Equals(newNode);
+		}
+
+		#region Fill
 		private void Fill()
 		{
 			Log("Generating StepGraph...");
@@ -1906,6 +1979,7 @@ namespace ChartGenerator
 			return false;
 		}
 		#endregion Fill Helpers
+		#endregion Fill
 
 		private void Log(string message)
 		{
