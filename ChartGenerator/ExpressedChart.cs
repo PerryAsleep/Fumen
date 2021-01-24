@@ -654,7 +654,7 @@ namespace ChartGenerator
 					continue;
 				if (generatedState[s] == SearchState.Hold && searchState[s] == SearchState.Roll)
 					continue;
-				if (generatedState[s] == SearchState.Tap && searchState[s] == SearchState.Fake && searchState[s] == SearchState.Lift)
+				if (generatedState[s] == SearchState.Tap && (searchState[s] == SearchState.Fake || searchState[s] == SearchState.Lift))
 					continue;
 				if (generatedState[s] == SearchState.Holding && searchState[s] == SearchState.Rolling)
 					continue;
