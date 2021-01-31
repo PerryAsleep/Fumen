@@ -133,6 +133,7 @@ namespace Fumen.Converters
 				chart.Genre = song.Genre;
 				chart.GenreTransliteration = song.GenreTransliteration;
 				chart.Author = chartAuthor;
+				SMCommon.SetEventTimeMicros(chart);
 			}
 
 			return song;

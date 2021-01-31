@@ -1,3 +1,14 @@
+What makes a chart good:
+	Moving to the left or the right 'frequently'
+	left and right don't mean 1 and 7, but both feet on 1-4 and both feet on 5-8
+		when to move l and r seems to be a function not only of number of notes, but also the speed of the notes
+			typical to move more when the notes are slower (eighths)
+
+		we can look ahead and know, how many arrows should we spend on the current side.
+			then, perhaps it is a search for routes which put you there?
+
+	distribution
+
 PerformedChart improvements:
 	Move to other side more
 		maybe parse a bunch of good charts, find what a good distribution looks like and try to match that.

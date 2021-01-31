@@ -454,6 +454,63 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
+		/// Sets the TimeMicros on the given Chart Events based on the
+		/// Tempo, TimeSignatures, and MetricPositions of Events in the Chart.
+		/// </summary>
+		/// <param name="chart">Chart to set TimeMicros on the Events.</param>
+		public static void SetEventTimeMicros(Chart chart)
+		{
+			var bpm = 0.0;
+			var timeSignature = new Fraction(4, 4);
+			double beatTime = 0.0;
+			double currentTime = 0.0;
+
+			var previousPosition = new MetricPosition();
+			foreach (var chartEvent in chart.Layers[0].Events)
+			{
+				if (chartEvent.Position > previousPosition)
+				{
+					var currentBeats =
+						chartEvent.Position.Measure * timeSignature.Numerator
+						+ chartEvent.Position.Beat
+						+ (chartEvent.Position.SubDivision.Denominator == 0 ? 0 : chartEvent.Position.SubDivision.ToDouble());
+					var previousBeats =
+						previousPosition.Measure * timeSignature.Numerator
+						+ previousPosition.Beat
+						+ (previousPosition.SubDivision.Denominator == 0 ? 0 : previousPosition.SubDivision.ToDouble());
+					currentTime += (currentBeats - previousBeats) * beatTime;
+				}
+
+				chartEvent.TimeMicros = (long)(currentTime * 1000000);
+
+				var beatTimeDirty = false;
+				if (chartEvent is Stop stop)
+					currentTime += (double)stop.LengthMicros / 1000000;
+				else if (chartEvent is TimeSignature ts)
+				{
+					timeSignature = ts.Signature;
+					beatTimeDirty = true;
+				}
+				else if (chartEvent is TempoChange tc)
+				{
+					bpm = tc.TempoBPM;
+					beatTimeDirty = true;
+				}
+
+				if (beatTimeDirty)
+				{
+					if (bpm == 0.0 || timeSignature.Denominator == 0.0)
+						beatTime = 0.0;
+					else
+						beatTime = (60 / bpm) * (4.0 / timeSignature.Denominator);
+				}
+
+				previousPosition = chartEvent.Position;
+			}
+
+		}
+
+		/// <summary>
 		/// Custom Comparer for Events in an SM Chart.
 		/// </summary>
 		public class SMEventComparer : IComparer<Event>

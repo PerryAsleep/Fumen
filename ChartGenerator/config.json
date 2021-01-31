@@ -14,6 +14,10 @@
 	"OutputVisualizations": true,
 	"VisualizationsDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Visualizations",
 
+	"DesiredArrowWeights": {
+		"dance-double": [6, 12, 10, 22, 22, 12, 10, 6]
+	},
+
 	"StepTypeReplacements" :
 	{
 		"SameArrow": [ "SameArrow" ],

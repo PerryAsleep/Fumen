@@ -1,0 +1,14 @@
+{
+	"LogLevel": "Info",
+	"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
+	"InputNameRegex": ".*\\.(sm|ssc)$",
+	"InputBlacklist": [
+		"C:\\Games\\StepMania 5\\Songs\\In The Groove 3\\Heel and Toe",
+		"C:\\Games\\StepMania 5\\Songs\\Couples",
+		"C:\\Games\\StepMania 5\\Songs\\Customs"
+	],
+	"InputChartType": "dance-double",
+	"DifficultyRegex": ".",
+	"OutputFileStats": "C:\\Users\\perry\\Projects\\Fumen\\DoublesSongStats.csv",
+	"OutputFileStepsPerSide": "C:\\Users\\perry\\Projects\\Fumen\\DoublesStepsPerSide.csv",
+}

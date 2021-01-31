@@ -215,6 +215,8 @@ namespace Fumen.Converters
 					song.SourceExtras,
 					useChartTimingData ? chartTempos : songTempos);
 
+			SMCommon.SetEventTimeMicros(chart);
+
 			// Add the Chart.
 			song.Charts.Add(chart);
 		}
