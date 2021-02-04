@@ -24,15 +24,36 @@ namespace ChartGenerator
 	/// would be different.
 	/// Given a graph of StepNodes for set of arrows and an ExpressedChart, a PerformedChart
 	/// can be generated.
+	/// TODO: Consider consolidating search logic with PerformedChart?
 	/// </summary>
 	public class ExpressedChart
 	{
 		private const string LogTag = "Expressed Chart";
 
 		/// <summary>
-		/// Common data to the events which make up an ExpressedChart.
+		/// Enumeration of states that each arrow can be in at each position.
+		/// Differentiates states that last only for the duration of one position
+		/// (Tap, Hold, and Roll) and states which last for a duration of time
+		/// (Empty, Holding, Rolling). Useful to track the current state when searching
+		/// and making decisions about weights.
 		/// </summary>
-		public class ChartEvent
+		private enum SearchState
+		{
+			Empty,
+			Tap,
+			Fake,
+			Lift,
+			Hold,
+			Holding,
+			Roll,
+			Rolling
+		}
+
+		/// <summary>
+		/// Common data to the events which make up an ExpressedChart.
+		/// Abstract base class.
+		/// </summary>
+		public abstract class ChartEvent
 		{
 			public MetricPosition Position;
 		}
@@ -228,25 +249,6 @@ namespace ChartGenerator
 			public GraphLink GetGraphLinkToNode() { return PreviousLink?.GraphLink; }
 			public MetricPosition GetPosition() { return Position; }
 			#endregion
-		}
-
-		/// <summary>
-		/// Enumeration of states that each arrow can be in at each position.
-		/// Differentiates states that last only for the duration of one position
-		/// (Tap, Hold, and Roll) and states which last for a duration of time
-		/// (Empty, Holding, Rolling). Useful to track the current state when searching
-		/// and making decisions about weights.
-		/// </summary>
-		private enum SearchState
-		{
-			Empty,
-			Tap,
-			Fake,
-			Lift,
-			Hold,
-			Holding,
-			Roll,
-			Rolling
 		}
 
 		/// <summary>

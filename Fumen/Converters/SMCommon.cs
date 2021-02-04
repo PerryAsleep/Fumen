@@ -55,6 +55,11 @@ namespace Fumen.Converters
 			return type.ToString().Replace("_", "-");
 		}
 
+		public static bool TryGetChartType(string chartTypeString, out ChartType smChartType)
+		{
+			return Enum.TryParse(chartTypeString.Replace("-", "_"), out smChartType);
+		}
+
 		public enum ChartDifficultyType
 		{
 			Beginner,

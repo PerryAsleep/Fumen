@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Fumen;
 using System.Text.RegularExpressions;
+using Fumen.Converters;
 
 namespace ChartGenerator
 {
@@ -48,14 +49,17 @@ namespace ChartGenerator
 		[JsonInclude] public string InputDirectory;
 		[JsonInclude] public string InputNameRegex;
 		[JsonInclude] public string InputChartType;
+		[JsonInclude] public string OutputDirectory;
 		[JsonInclude] public string DifficultyRegex;
 		[JsonInclude] public string OutputChartType;
-		[JsonInclude] public string OutputDirectory;
 		[JsonInclude] public OverwriteBehavior OverwriteBehavior = OverwriteBehavior.DoNotOverwrite;
 		[JsonInclude] public bool OutputVisualizations = true;
 		[JsonInclude] public string VisualizationsDirectory;
+		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
 		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
 		[JsonInclude] public LogLevel LogLevel = LogLevel.Info;
+
+		private Dictionary<string, List<double>> DesiredArrowWeightsNormalized;
 
 		/// <summary>
 		/// Loads the Config from the config json file.
@@ -82,6 +86,7 @@ namespace ChartGenerator
 				using (FileStream openStream = File.OpenRead($@"{AppDomain.CurrentDomain.BaseDirectory}\{FileName}"))
 				{
 					Instance = await JsonSerializer.DeserializeAsync<Config>(openStream, options);
+					Instance?.Init();
 				}
 			}
 			catch (Exception e)
@@ -90,6 +95,27 @@ namespace ChartGenerator
 				Instance = null;
 			}
 			return Instance;
+		}
+
+		/// <summary>
+		/// Post Load initialization.
+		/// </summary>
+		private void Init()
+		{
+			// Initialize normalized weights.
+			if (DesiredArrowWeights != null)
+			{
+				DesiredArrowWeightsNormalized = new Dictionary<string, List<double>>();
+				foreach (var entry in DesiredArrowWeights)
+				{
+					DesiredArrowWeightsNormalized[entry.Key] = new List<double>();
+					var sum = 0;
+					foreach (var weight in entry.Value)
+						sum += weight;
+					foreach (var weight in entry.Value)
+						DesiredArrowWeightsNormalized[entry.Key].Add((double) weight / sum);
+				}
+			}
 		}
 
 		/// <summary>
@@ -107,6 +133,16 @@ namespace ChartGenerator
 		{
 			var errors = false;
 
+			if (string.IsNullOrEmpty(InputDirectory))
+			{
+				LogError("No InputDirectory specified.");
+				errors = true;
+			}
+			if (string.IsNullOrEmpty(InputNameRegex))
+			{
+				LogError("No InputNameRegex specified.");
+				errors = true;
+			}
 			if (string.IsNullOrEmpty(InputChartType))
 			{
 				LogError("No InputChartType specified.");
@@ -117,20 +153,68 @@ namespace ChartGenerator
 				LogError($"Unsupported InputChartType \"{InputChartType}\" found. Expected value in [{string.Join(", ", supportedInputTypes)}].");
 				errors = true;
 			}
+
+			if (OutputVisualizations && string.IsNullOrEmpty(VisualizationsDirectory))
+			{
+				LogError("OutputVisualizations is true, but no VisualizationsDirectory specified.");
+				errors = true;
+			}
+
+			if (string.IsNullOrEmpty(OutputDirectory))
+			{
+				LogError("No OutputDirectory specified.");
+				errors = true;
+			}
+			if (string.IsNullOrEmpty(DifficultyRegex))
+			{
+				LogError("No DifficultyRegex specified.");
+				errors = true;
+			}
 			if (string.IsNullOrEmpty(OutputChartType))
 			{
 				LogError("No OutputChartType specified.");
 				errors = true;
 			}
-			if (!supportedOutputTypes.Contains(OutputChartType))
+			if (OutputChartType != null)
 			{
-				LogError($"Unsupported OutputChartType \"{OutputChartType}\" found. Expected value in [{string.Join(", ", supportedOutputTypes)}].");
-				errors = true;
-			}
-			if (OutputVisualizations && string.IsNullOrEmpty(VisualizationsDirectory))
-			{
-				LogError("OutputVisualizations is true, but no VisualizationsDirectory specified.");
-				errors = true;
+				if (!supportedOutputTypes.Contains(OutputChartType))
+				{
+					LogError($"Unsupported OutputChartType \"{OutputChartType}\" found. Expected value in [{string.Join(", ", supportedOutputTypes)}].");
+					errors = true;
+				}
+
+				var smChartTypeValid = SMCommon.TryGetChartType(OutputChartType, out var smChartType);
+				if (!smChartTypeValid)
+				{
+					LogError($"OutputChartType \"{OutputChartType}\" is not a valid stepmania chart type.");
+					errors = true;
+				}
+
+				var desiredWeightsValid = DesiredArrowWeights != null && DesiredArrowWeights.ContainsKey(OutputChartType);
+				if (!desiredWeightsValid)
+				{
+					LogError($"No DesiredArrowWeights specified for \"{OutputChartType}\".");
+					errors = true;
+				}
+				
+				if (smChartTypeValid && desiredWeightsValid)
+				{
+					var expectedNumArrows = SMCommon.Properties[(int) smChartType].NumInputs;
+					if (DesiredArrowWeights[OutputChartType].Count != expectedNumArrows)
+					{
+						LogError($"DesiredArrowWeights[\"{OutputChartType}\"] has {DesiredArrowWeights[OutputChartType].Count} entries. Expected {expectedNumArrows}.");
+						errors = true;
+					}
+
+					foreach (var weight in DesiredArrowWeights[OutputChartType])
+					{
+						if (weight < 0)
+						{
+							LogError($"Negative weight \"{weight}\" in DesiredArrowWeights[\"{OutputChartType}\"].");
+							errors = true;
+						}
+					}
+				}
 			}
 
 			// Warn on any missing StepTypeReplacements.
@@ -146,6 +230,17 @@ namespace ChartGenerator
 			}
 
 			return !errors;
+		}
+
+		/// <summary>
+		/// Gets the desired arrow weights for the output chart type.
+		/// Values normalized to sum to 1.0.
+		/// </summary>
+		/// <returns>List of normalized weights.</returns>
+		public List<double> GetOutputDesiredArrowWeightsNormalized()
+		{
+			// Validation already ensures this key is present.
+			return DesiredArrowWeightsNormalized[OutputChartType];
 		}
 
 		/// <summary>

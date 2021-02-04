@@ -648,7 +648,7 @@ namespace Fumen.Converters
 			chart.SourceExtras[SMCommon.TagRadarValues] = radarValues;
 
 			// Parse chart type and set number of players and inputs.
-			if (!Enum.TryParse(chart.Type.Replace("-", "_"), out SMCommon.ChartType smChartType))
+			if (!SMCommon.TryGetChartType(chart.Type, out var smChartType))
 			{
 				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
 				return true;
@@ -723,7 +723,7 @@ namespace Fumen.Converters
 			Chart.Type = type;
 
 			// Parse chart type and set number of players and inputs.
-			if (!Enum.TryParse(Chart.Type.Replace("-", "_"), out SMCommon.ChartType smChartType))
+			if (!SMCommon.TryGetChartType(Chart.Type, out var smChartType))
 			{
 				Chart.Type = null;
 				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");

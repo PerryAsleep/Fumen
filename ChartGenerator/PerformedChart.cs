@@ -1,16 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
 
 namespace ChartGenerator
 {
+	/// <summary>
+	/// A PerformedChart is a series of events which describe how a Chart is played.
+	/// This includes specifics about which feet hit which arrows in what ways.
+	/// An ExpressedChart can be turned into a PerformedChart for a StepGraph.
+	/// A PerformedChart can be used to generate an SM Chart.
+	/// A PerformedChart's representation comes from GraphLinkInstances and
+	/// GraphNodeInstances.
+	/// TODO: Consider consolidating search logic with ExpressedChart?
+	/// </summary>
 	public class PerformedChart
 	{
 		private const string LogTag = "Performed Chart";
 
+		/// <summary>
+		/// Enumeration of states each arrow can be in at each position.
+		/// Used to assist with translating a PerformedChart into an SM Chart.
+		/// </summary>
 		private enum PerformanceFootAction
 		{
 			None,
@@ -23,132 +37,207 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
-		/// Search node for performing a search through an ExpressedChart.
+		/// A PerformedChart contains a series of PerformanceNodes.
+		/// Abstract base class for the various types of PerformanceNodes in a PerformedChart.
 		/// </summary>
-		private class SearchNode
+		public abstract class PerformanceNode
 		{
 			/// <summary>
-			/// The GraphNodeInstance at this SearchNode.
+			/// Position of this node in the Chart.
 			/// </summary>
-			public readonly GraphNodeInstance GraphNodeInstance;
+			public MetricPosition Position;
+			/// <summary>
+			/// Next PerformanceNode in the series.
+			/// </summary>
+			public PerformanceNode Next;
+			/// <summary>
+			/// Previous PerformanceNode in the series.
+			/// </summary>
+			public PerformanceNode Prev;
+		}
 
-			private readonly GraphLinkInstance OriginalGraphLinkInstanceToNextNode;
+		/// <summary>
+		/// PerformanceNode representing a normal step or release.
+		/// </summary>
+		public class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
+		{
+			/// <summary>
+			/// GraphNodeInstance representing the state at this PerformanceNode.
+			/// </summary>
+			public GraphNodeInstance GraphNodeInstance;
+			/// <summary>
+			/// GraphLinkInstance to the GraphNodeInstance at this PerformanceNode.
+			/// </summary>
+			public GraphLinkInstance GraphLinkInstance;
 
+			#region MineUtils.IChartNode Implementation
+			public GraphNode GetGraphNode() { return GraphNodeInstance?.Node; }
+			public GraphLink GetGraphLinkToNode() { return GraphLinkInstance?.GraphLink; }
+			public MetricPosition GetPosition() { return Position; }
+			#endregion
+		}
+
+		/// <summary>
+		/// PerformanceNode representing a mine.
+		/// </summary>
+		public class MinePerformanceNode : PerformanceNode
+		{
+			/// <summary>
+			/// The lane or arrow this Mine occurs on.
+			/// </summary>
+			public int Arrow;
+		}
+
+		/// <summary>
+		/// Search node for performing a search through an ExpressedChart to find the best PerformedChart.
+		/// When searching each SearchNode has at most one previous SearchNode and potentially
+		/// many next SearchNode, one for each valid GraphNode reachable from each valid
+		/// GraphLink out of this node.
+		/// When the search is complete each SearchNode will have at most one previous
+		/// SearchNode and at most one next SearchNode.
+		/// Each SearchNode has a unique Id even if it represents the same GraphNode
+		/// and the position, so that all nodes can be stored and compared without
+		/// conflicting.
+		/// </summary>
+		private class SearchNode : IEquatable<SearchNode>
+		{
+			private static long IdCounter;
+
+			/// <summary>
+			/// Unique identifier for preventing conflicts when storing SearchNodes in
+			/// HashSets or other data structures that rely on the IEquatable interface.
+			/// </summary>
+			private readonly long Id;
+			/// <summary>
+			/// The GraphNode at this SearchNode.
+			/// </summary>
+			public readonly GraphNode GraphNode;
+			/// <summary>
+			/// The GraphLink from the Previous SearchNode that links to this SearchNode.
+			/// </summary>
+			public readonly GraphLink GraphLinkFromPreviousNode;
 			/// <summary>
 			/// The depth of this SearchNode.
 			/// This depth can also index the ExpressedChart StepEvents for accessing the StepType.
+			/// Depth is the index of this SearchNode in the sequence of nodes that make up the chart.
+			/// Note that while there are N SearchNodes in a complete chart, there are N-1 StepEvents in
+			/// the corresponding ExpressedChart since the StepEvents represent actions between nodes.
+			/// The GraphLink out of SearchNode N is StepEvent N's LinkInstance.
+			/// The GraphLink into SearchNode N is StepEvent N-1's LinkInstance.
 			/// </summary>
 			public readonly int Depth;
-
-			/// <summary>
-			/// Randomly ordered indices into the GraphNode's Links for the current GraphLinkInstance for the StepEvent in the ExpressedChart at this Depth.
-			/// </summary>
-			private List<int> LinkIndices = new List<int>();
-			/// <summary>
-			/// CurrentIndex into Indices, beginning at 0 and increasing by one as new paths are searched.
-			/// </summary>
-			private int CurrentLinkIndex;
-
-			private readonly List<GraphLink> AcceptableGraphLinks;
-			private int CurrentAcceptableGraphLinkIndex;
-
 			/// <summary>
 			/// The previous SearchNode.
 			/// Used for backing up when hitting a dead end in a search.
 			/// </summary>
 			public readonly SearchNode PreviousNode;
 			/// <summary>
-			/// The next SearchNode.
+			/// All the GraphLinks which are valid for linking out of this SearchNode and into the next SearchNodes.
+			/// This is a List and not just one GraphLink due to configurable StepType replacements.
+			/// See Config.StepTypeReplacements.
 			/// </summary>
-			public SearchNode NextNode;
-
-			private readonly Random Random;
+			public readonly List<GraphLink> GraphLinks;
+			/// <summary>
+			/// All the valid NextNodes out of this SearchNode.
+			/// These are added during the search and pruned so at the end there is at most one next SearchNode.
+			/// </summary>
+			public readonly Dictionary<GraphLink, HashSet<SearchNode>> NextNodes = new Dictionary<GraphLink, HashSet<SearchNode>>();
+			/// <summary>
+			/// The Cost of this SearchNode for comparing to other SearchNodes in order to determine the best path.
+			/// Higher values are worse.
+			/// </summary>
+			public readonly double Cost;
+			/// <summary>
+			/// The number of steps on each arrow up to and including this SearchNode.
+			/// Used to determine Cost.
+			/// </summary>
+			private readonly int[] StepCounts;
 
 			public SearchNode(
-				GraphNodeInstance graphNodeInstance,
-				GraphLinkInstance originalGraphLinkInstanceToNextNode,
+				GraphNode graphNode,
+				GraphLink originalGraphLinkToNextNode,
+				GraphLink graphLinkFromPreviousNode,
 				int depth,
 				SearchNode previousNode,
-				Random r)
+				bool[] steps)
 			{
-				GraphNodeInstance = graphNodeInstance;
-				OriginalGraphLinkInstanceToNextNode = originalGraphLinkInstanceToNextNode;
+				Id = Interlocked.Increment(ref IdCounter);
+				GraphNode = graphNode;
+				GraphLinkFromPreviousNode = graphLinkFromPreviousNode;
 				Depth = depth;
 				PreviousNode = previousNode;
-				Random = r;
 
-				AcceptableGraphLinks = GetAllAcceptableLinks();
-				CurrentAcceptableGraphLinkIndex = -1;
-				CurrentLinkIndex = -1;
+				StepCounts = new int[steps.Length];
+				for (var a = 0; a < steps.Length; a++)
+					StepCounts[a] = (steps[a] ? 1 : 0) + (previousNode?.StepCounts[a] ?? 0);
+
+				GraphLinks = FindAllAcceptableLinks(originalGraphLinkToNextNode);
+				Cost = DetermineCost(steps);
 			}
 
-			public GraphLinkInstance GetGraphLinkInstanceToNextNode()
+			/// <summary>
+			/// Gets the next ChartSearchNode.
+			/// Assumes that the search is complete and there is at most one next SearchNode.
+			/// </summary>
+			/// <returns>The next SearchNode or null if none exists.</returns>
+			public SearchNode GetNextNode()
 			{
-				var currentGraphLink = AcceptableGraphLinks[CurrentAcceptableGraphLinkIndex];
-				var graphLinkInstance = new GraphLinkInstance { GraphLink = currentGraphLink };
-				for (var f = 0; f < NumFeet; f++)
-					for (var p = 0; p < NumFootPortions; p++)
-						graphLinkInstance.InstanceTypes[f, p] = OriginalGraphLinkInstanceToNextNode.InstanceTypes[f, p];
-				return graphLinkInstance;
+				if (NextNodes.Count == 0 || NextNodes.First().Value.Count == 0)
+					return null;
+				return NextNodes.First().Value.First();
 			}
 
-			public bool AdvanceNode(out GraphNode nextGraphNode)
+			/// <summary>
+			/// Determines the Cost of this SearchNode.
+			/// Higher values are worse.
+			/// </summary>
+			/// <param name="steps">
+			/// Whether each arrow was stepped on in order to move from the previous SearchNode to this SearchNode.
+			/// </param>
+			/// <returns>Cost to use for this SearchNode.</returns>
+			private double DetermineCost(bool[] steps)
 			{
-				nextGraphNode = null;
-				if (!AdvanceLinkIndices())
-					return false;
+				// Determine how far off the chart up to this point is from the desired distribution of arrows.
+				var weights = Config.Instance.GetOutputDesiredArrowWeightsNormalized();
+				var totalSteps = 0;
+				for (var a = 0; a < StepCounts.Length; a++)
+					totalSteps += StepCounts[a];
+				var totalDifferenceFromDesiredLanePercentage = 0.0;
+				for (var a = 0; a < StepCounts.Length; a++)
+					totalDifferenceFromDesiredLanePercentage += Math.Abs((double)StepCounts[a] / totalSteps - weights[a]);
+				var deviationFromDesiredDistribution = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
 
-				var currentGraphLink = AcceptableGraphLinks[CurrentAcceptableGraphLinkIndex];
-				var linksToNextNodes = GraphNodeInstance.Node.Links[currentGraphLink];
-				var linkIndex = LinkIndices[CurrentLinkIndex];
-				nextGraphNode = linksToNextNodes[linkIndex];
-				return true;
+				// TODO: Scale the deviation from the desired distribution so that we don't consider it too heavily
+				// at the start of the chart where there aren't enough arrows for it to be meaningful.
+
+				// TODO: Consider this step.
+
+				return deviationFromDesiredDistribution;
 			}
 
-			private bool AdvanceLinkIndices()
-			{
-				while (true)
-				{
-					if (CurrentLinkIndex + 1 < LinkIndices.Count)
-					{
-						CurrentLinkIndex++;
-						return true;
-					}
-
-					CurrentLinkIndex = -1;
-					LinkIndices.Clear();
-
-					CurrentAcceptableGraphLinkIndex++;
-					if (CurrentAcceptableGraphLinkIndex >= AcceptableGraphLinks.Count)
-						return false;
-					var link = AcceptableGraphLinks[CurrentAcceptableGraphLinkIndex];
-					if (GraphNodeInstance.Node.Links.ContainsKey(link))
-					{
-						CurrentLinkIndex = 0;
-						LinkIndices.Clear();
-						for (var i = 0; i < GraphNodeInstance.Node.Links[link].Count; i++)
-							LinkIndices.Add(i);
-						LinkIndices = LinkIndices.OrderBy(a => Random.Next()).ToList();
-						return true;
-					}
-				}
-			}
-
-			private List<GraphLink> GetAllAcceptableLinks()
+			/// <summary>
+			/// Given a GraphLink from an ExpressedChart, return all acceptable GraphLinks that can be used
+			/// in its place in the PerformedChart.
+			/// Replacements are specified in Config.StepTypeReplacements.
+			/// </summary>
+			/// <param name="originalGraphLinkToNextNode">Original GraphLink.</param>
+			/// <returns>List of all valid GraphLink replacements.</returns>
+			private static List<GraphLink> FindAllAcceptableLinks(GraphLink originalGraphLinkToNextNode)
 			{
 				var acceptableLinks = new List<GraphLink>();
-				if (OriginalGraphLinkInstanceToNextNode == null)
+				if (originalGraphLinkToNextNode == null)
 					return acceptableLinks;
 
-				var originalLinks = OriginalGraphLinkInstanceToNextNode.GraphLink.Links;
+				var originalLinks = originalGraphLinkToNextNode.Links;
 
-				// Accumulate states.
+				// Accumulate states to turn into GraphLinks.
+				// Loop over each foot and portion, updating tempStates with valid replacements.
 				var tempStates = new List<GraphLink.FootArrowState[,]>();
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var p = 0; p < NumFootPortions; p++)
 					{
-						// Get the acceptable steps for the step at this Foot and FootPortion
+						// Get the acceptable steps for the step at this Foot and FootPortion.
 						if (!originalLinks[f, p].Valid)
 							continue;
 						if (!Config.Instance.StepTypeReplacements.TryGetValue(originalLinks[f, p].Step, out var acceptableSteps))
@@ -212,66 +301,55 @@ namespace ChartGenerator
 					acceptableLinks.Add(g);
 				}
 
-				// Order the GraphLinks randomly.
-				acceptableLinks = acceptableLinks.OrderBy(a => Random.Next()).ToList();
-
-				// If the acceptable links contains the original link, it should be first.
-				for (var l = 1; l < acceptableLinks.Count; l++)
-				{
-					if (acceptableLinks[l].Equals(OriginalGraphLinkInstanceToNextNode.GraphLink))
-					{
-						var temp = acceptableLinks[0];
-						acceptableLinks[0] = OriginalGraphLinkInstanceToNextNode.GraphLink;
-						acceptableLinks[l] = temp;
-						break;
-					}
-				}
-
 				return acceptableLinks;
 			}
-		}
 
-		public class PerformanceNode
-		{
-			public MetricPosition Position;
-			public PerformanceNode Next;
-			public PerformanceNode Prev;
-
-			public StepPerformanceNode GetPreviousStepNode()
+			#region IEquatable Implementation
+			public override bool Equals(object obj)
 			{
-				var node = Prev;
-				while (true)
-				{
-					if (node == null)
-						return null;
-					if (node is StepPerformanceNode stepNode)
-						return stepNode;
-					node = node.Prev;
-				}
+				if (obj == null)
+					return false;
+				if (obj is SearchNode n)
+					return Equals(n);
+				return false;
 			}
-		}
 
-		public class StepPerformanceNode : PerformanceNode, MineUtils.IChartNode
-		{
-			public GraphNodeInstance GraphNodeInstance;
-			public GraphLinkInstance GraphLinkInstance;
+			public bool Equals(SearchNode other)
+			{
+				if (other == null)
+					return false;
+				return Id == other.Id;
+			}
 
-			#region MineUtils.IChartNode Implementation
-			public GraphNode GetGraphNode() { return GraphNodeInstance?.Node; }
-			public GraphLink GetGraphLinkToNode() { return GraphLinkInstance?.GraphLink; }
-			public MetricPosition GetPosition() { return Position; }
+			public override int GetHashCode()
+			{
+				return (int)Id;
+			}
 			#endregion
 		}
 
-		public class MinePerformanceNode : PerformanceNode
-		{
-			public int Arrow;
-		}
-
+		/// <summary>
+		/// Root PerformanceNode of the PerformedChart.
+		/// </summary>
 		public readonly PerformanceNode Root;
+		/// <summary>
+		/// Number of arrows in the Chart.
+		/// </summary>
 		public readonly int NumArrows;
+		/// <summary>
+		/// Identifier to use when logging messages about this PerformedChart.
+		/// </summary>
 		private readonly string LogIdentifier;
 
+		/// <summary>
+		/// Private constructor.
+		/// PerformedCharts are created publicly though CreateFromExpressedChart.
+		/// </summary>
+		/// <param name="numArrows">Number of arrows in the Chart.</param>
+		/// <param name="root">Root PerformanceNode of the PerformedChart.</param>
+		/// <param name="logIdentifier">
+		/// Identifier to use when logging messages about this PerformedChart.
+		/// </param>
 		private PerformedChart(int numArrows, PerformanceNode root, string logIdentifier)
 		{
 			NumArrows = numArrows;
@@ -293,6 +371,9 @@ namespace ChartGenerator
 		/// desirable GraphNodes. Inner Lists expected to contain GraphNodes of equal preference.
 		/// </param>
 		/// <param name="expressedChart">ExpressedChart to search.</param>
+		/// <param name="logIdentifier">
+		/// Identifier to use when logging messages about this PerformedChart.
+		/// </param>
 		/// <returns>
 		/// PerformedChart satisfying the given ExpressedChart for the given StepGraph.
 		/// </returns>
@@ -306,95 +387,152 @@ namespace ChartGenerator
 				return null;
 
 			SearchNode rootSearchNode = null;
-			SearchNode currentSearchNode;
 			GraphNode rootGraphNodeToUse = null;
 
 			// HACK consistent seed
 			var random = new Random(1);
 
-			// Find a path of SearchNodes through the ExpressedChart
+			// Find a path of SearchNodes through the ExpressedChart.
 			if (expressedChart.StepEvents.Count > 0)
 			{
+				// Try each tier of root nodes in order until we find a chart.
 				var tier = -1;
 				foreach (var currentTierOfRootNodes in rootNodes)
 				{
 					tier++;
 
+					// Order the root nodes at this tier randomly since they are weighted evenly.
 					var roots = currentTierOfRootNodes.OrderBy(a => random.Next()).ToList();
+
+					// Try each root node.
 					foreach (var rootGraphNode in roots)
 					{
+						var depth = 0;
+
+						// Set up a root search node at the root GraphNode.
 						rootSearchNode = new SearchNode(
-							new GraphNodeInstance { Node = rootGraphNode },
-							expressedChart.StepEvents[0].LinkInstance,
-							0,
+							rootGraphNode,
+							expressedChart.StepEvents[0].LinkInstance.GraphLink,
 							null,
-							random);
-						currentSearchNode = rootSearchNode;
+							depth,
+							null,
+							new bool[stepGraph.NumArrows]);
+						var currentSearchNodes = new HashSet<SearchNode>();
+						currentSearchNodes.Add(rootSearchNode);
+						
 						while (true)
 						{
 							// Finished
-							if (currentSearchNode.Depth >= expressedChart.StepEvents.Count)
+							if (depth >= expressedChart.StepEvents.Count)
 							{
+								// Choose path with lowest cost.
+								SearchNode bestNode = null;
+								foreach (var node in currentSearchNodes)
+									if (bestNode == null || node.Cost < bestNode.Cost)
+										bestNode = node;
+
+								// Remove any nodes that are not chosen so there is only one path through the chart.
+								foreach (var node in currentSearchNodes)
+								{
+									if (node.Equals(bestNode))
+										continue;
+									Prune(node);
+								}
+
 								rootGraphNodeToUse = rootGraphNode;
 								break;
 							}
 
-							// Dead end
-							GraphNode nextGraphNode = null;
-							var failedToBackUpOrAdvance = false;
-							while (DoesNodeStepOnReleaseAtSamePosition(currentSearchNode, expressedChart, stepGraph.NumArrows)
-							       || !currentSearchNode.AdvanceNode(out nextGraphNode))
-							{
-								// Back up
-								var prevNode = currentSearchNode.PreviousNode;
-								if (prevNode != null)
-								{
-									prevNode.NextNode = null;
-									currentSearchNode = prevNode;
-								}
-								else
-								{
-									// Failed to find a path
-									failedToBackUpOrAdvance = true;
-									break;
-								}
-							}
-							if (failedToBackUpOrAdvance)
+							// Failed to find a path. Break out and try the next root.
+							if (currentSearchNodes.Count == 0)
 								break;
 
-							// We can search further, pick a new index and advance
-							var nextGraphNodeInstance = new GraphNodeInstance { Node = nextGraphNode };
-							for (var f = 0; f < NumFeet; f++)
-								for (var p = 0; p < NumFootPortions; p++)
-									nextGraphNodeInstance.InstanceTypes[f, p] = expressedChart.StepEvents[currentSearchNode.Depth].LinkInstance.InstanceTypes[f, p];
-							GraphLinkInstance nextNodeLinkToNextInstance = null;
-							if (currentSearchNode.Depth + 1 < expressedChart.StepEvents.Count)
-								nextNodeLinkToNextInstance = expressedChart.StepEvents[currentSearchNode.Depth + 1].LinkInstance;
+							// Accumulate the next level of SearchNodes by looping over each SearchNode
+							// in the current set.
+							var nextDepth = depth + 1;
+							var nextSearchNodes = new HashSet<SearchNode>();
+							foreach (var searchNode in currentSearchNodes)
+							{
+								// Check every GraphLink out of the SearchNode.
+								var deadEnd = true;
+								foreach (var graphLink in searchNode.GraphLinks)
+								{
+									// The GraphNode may not actually have this GraphLink due to
+									// the StepTypeReplacements.
+									if (!searchNode.GraphNode.Links.ContainsKey(graphLink))
+										continue;
+									
+									// Check every GraphNode linked to by this GraphLink.
+									foreach (var nextGraphNode in searchNode.GraphNode.Links[graphLink])
+									{
+										// Determine new step information.
+										var actions = GetActionsForNode(nextGraphNode, graphLink, stepGraph.NumArrows);
+										var steps = new bool[stepGraph.NumArrows];
+										for (var a = 0; a < stepGraph.NumArrows; a++)
+										{
+											if (actions[a] == PerformanceFootAction.Tap
+											    || actions[a] == PerformanceFootAction.Hold)
+												steps[a] = true;
+										}
 
-							var nextSearchNode = new SearchNode(
-								nextGraphNodeInstance,
-								nextNodeLinkToNextInstance,
-								currentSearchNode.Depth + 1,
-								currentSearchNode,
-								random);
+										GraphLink graphLinkToNextNode = null;
+										if (nextDepth < expressedChart.StepEvents.Count)
+											graphLinkToNextNode = expressedChart.StepEvents[nextDepth].LinkInstance.GraphLink;
 
-							currentSearchNode.NextNode = nextSearchNode;
-							currentSearchNode = nextSearchNode;
+										// Set up a new SearchNode.
+										var nextSearchNode = new SearchNode(
+											nextGraphNode,
+											graphLinkToNextNode,
+											graphLink,
+											nextDepth,
+											searchNode,
+											steps
+										);
+
+										// Do not consider this next SearchNode if it results in an invalid state.
+										if (DoesNodeStepOnReleaseAtSamePosition(nextSearchNode, expressedChart, stepGraph.NumArrows))
+											continue;
+
+										// Update the previous SearchNode's NextNodes to include the new SearchNode.
+										if (!searchNode.NextNodes.ContainsKey(graphLink))
+											searchNode.NextNodes[graphLink] = new HashSet<SearchNode>();
+										searchNode.NextNodes[graphLink].Add(nextSearchNode);
+
+										// Add this node to the set of next SearchNodes to be pruned after they are all found.
+										nextSearchNodes.Add(nextSearchNode);
+										deadEnd = false;
+									}
+								}
+
+								// This SearchNode has no valid children. Prune it.
+								if (deadEnd)
+									Prune(searchNode);
+							}
+
+							// Prune all the next SearchNodes, store them in currentSearchNodes, and advance.
+							currentSearchNodes = Prune(nextSearchNodes);
+							depth = nextDepth;
 						}
 
+						// If we found a path from a root GraphNode, then the search is complete.
 						if (rootGraphNodeToUse != null)
 							break;
 					}
 
+					// If we found a path from a root GraphNode, then the search is complete.
 					if (rootGraphNodeToUse != null)
 						break;
 				}
 
+				// If we exhausted all valid root GraphNodes and did not find a path, log an error
+				// and return a null PerformedChart.
 				if (rootGraphNodeToUse == null)
 				{
 					LogError("Unable to find performance.", logIdentifier);
 					return null;
 				}
+
+				// Log a warning if we had to fall back to a worse tier of root GraphNodes.
 				if (tier > 0)
 				{
 					LogWarn($"Using fallback root at tier {tier}.", logIdentifier);
@@ -413,22 +551,40 @@ namespace ChartGenerator
 
 			// Add the StepPerformanceNodes to the PerformedChart
 			var currentPerformanceNode = performedChart.Root;
-			currentSearchNode = rootSearchNode;
-			currentSearchNode = currentSearchNode?.NextNode;
+			var currentSearchNode = rootSearchNode;
+			currentSearchNode = currentSearchNode?.GetNextNode();
 			while (currentSearchNode != null)
 			{
-				// Add new StepPerformanceNode and advance
+				// Create GraphNodeInstance.
+				var stepEventIndex = currentSearchNode.Depth - 1;
+				var graphNodeInstance = new GraphNodeInstance { Node = currentSearchNode.GraphNode };
+				for (var f = 0; f < NumFeet; f++)
+					for (var p = 0; p < NumFootPortions; p++)
+						graphNodeInstance.InstanceTypes[f, p] = expressedChart.StepEvents[stepEventIndex].LinkInstance.InstanceTypes[f, p];
+
+				// Create GraphLinkInstance.
+				var graphLink = currentSearchNode.GraphLinkFromPreviousNode;
+				GraphLinkInstance graphLinkInstance = new GraphLinkInstance { GraphLink = graphLink };
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						graphLinkInstance.InstanceTypes[f, p] =
+							expressedChart.StepEvents[stepEventIndex].LinkInstance.InstanceTypes[f, p];
+					}
+				}
+
+				// Add new StepPerformanceNode and advance.
 				var newNode = new StepPerformanceNode
 				{
-					Position = expressedChart.StepEvents[currentSearchNode.Depth - 1].Position,
-					GraphLinkInstance = currentSearchNode.PreviousNode?.GetGraphLinkInstanceToNextNode(),
-					GraphNodeInstance = currentSearchNode.GraphNodeInstance,
+					Position = expressedChart.StepEvents[stepEventIndex].Position,
+					GraphLinkInstance = graphLinkInstance,
+					GraphNodeInstance = graphNodeInstance,
 					Prev = currentPerformanceNode
 				};
-
 				currentPerformanceNode.Next = newNode;
 				currentPerformanceNode = newNode;
-				currentSearchNode = currentSearchNode.NextNode;
+				currentSearchNode = currentSearchNode.GetNextNode();
 			}
 			var lastPerformanceNode = currentPerformanceNode;
 
@@ -436,6 +592,53 @@ namespace ChartGenerator
 			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, lastPerformanceNode);
 
 			return performedChart;
+		}
+
+		private static HashSet<SearchNode> Prune(HashSet<SearchNode> nodes)
+		{
+			// Set up a Dictionary to track the best ChartSearchNode per GraphNode.
+			var bestNodes = new Dictionary<GraphNode, SearchNode>();
+			foreach (var node in nodes)
+			{
+				// There is already a best node for this GraphNode, compare them.
+				if (bestNodes.TryGetValue(node.GraphNode, out var currentNode))
+				{
+					// This node is better.
+					if (node.Cost < currentNode.Cost)
+					{
+						Prune(currentNode);
+
+						// Set the currentNode to this new best node so we record it below.
+						currentNode = node;
+					}
+					else
+					{
+						Prune(node);
+					}
+				}
+				// There is not yet a best node recorded for this GraphNode. Record this node
+				// as the current best.
+				else
+				{
+					currentNode = node;
+				}
+				bestNodes[currentNode.GraphNode] = currentNode;
+			}
+			return bestNodes.Values.ToHashSet();
+		}
+
+		private static void Prune(SearchNode node)
+		{
+			// Prune the node up until parent that has other children.
+			while (node.PreviousNode != null)
+			{
+				node.PreviousNode.NextNodes[node.GraphLinkFromPreviousNode].Remove(node);
+				if (node.PreviousNode.NextNodes[node.GraphLinkFromPreviousNode].Count == 0)
+					node.PreviousNode.NextNodes.Remove(node.GraphLinkFromPreviousNode);
+				if (node.PreviousNode.NextNodes.Count != 0)
+					break;
+				node = node.PreviousNode;
+			}
 		}
 
 		/// <summary>
@@ -467,12 +670,12 @@ namespace ChartGenerator
 
 			// Determine what actions are performed for both the current and previous node.
 			var currentActions = GetActionsForNode(
-				node.GraphNodeInstance,
-				previousNode.GetGraphLinkInstanceToNextNode(),
+				node.GraphNode,
+				node.GraphLinkFromPreviousNode,
 				numArrows);
 			var previousActions = GetActionsForNode(
-				previousNode.GraphNodeInstance,
-				previousPreviousNode.GetGraphLinkInstanceToNextNode(),
+				previousNode.GraphNode,
+				previousNode.GraphLinkFromPreviousNode,
 				numArrows);
 
 			// Check if the previous node released on the same arrow tha the current node is stepping on.
@@ -642,20 +845,18 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
-		/// Given a node and the previous node, returns a representation of what actions should be performed on what arrows
+		/// Given a GraphNodeInstance and the GraphLinkInstance to that node, returns a
+		/// representation of what actions should be performed on what arrows
 		/// to arrive at the node. The actions are returned in an array indexed by arrow.
-		/// This is a helper method used when generating an SM Chart and when determining if steps and releases occur
-		/// at the same time on the same arrows when generating the PerformedChart.
-		/// This method is static and takes the number of arrows as a parameter because it can be used prior to instantiating
-		/// the PerformedChart.
+		/// This is a helper method used when generating an SM Chart.
 		/// </summary>
-		/// <param name="currentNode">Current GraphNode.</param>
-		/// <param name="currentLink">GraphLink to current GraphNode.</param>
+		/// <param name="graphNode">GraphNode.</param>
+		/// <param name="graphLinkToNode">GraphLink to GraphNode.</param>
 		/// <param name="numArrows">Number of arrows in the Chart.</param>
 		/// <returns>Array of actions.</returns>
 		private static PerformanceFootAction[] GetActionsForNode(
-			GraphNodeInstance currentNode,
-			GraphLinkInstance currentLink,
+			GraphNodeInstance graphNode,
+			GraphLinkInstance graphLinkToNode,
 			int numArrows)
 		{
 			// Initialize actions.
@@ -667,27 +868,78 @@ namespace ChartGenerator
 			{
 				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (currentLink.GraphLink.Links[f, p].Valid)
+					if (graphLinkToNode.GraphLink.Links[f, p].Valid)
 					{
-						var arrow = currentNode.Node.State[f, p].Arrow;
-						switch(currentLink.GraphLink.Links[f, p].Action)
+						var arrow = graphNode.Node.State[f, p].Arrow;
+						switch(graphLinkToNode.GraphLink.Links[f, p].Action)
 						{
 							case FootAction.Release:
 								actions[arrow] = PerformanceFootAction.Release;
 								break;
 							case FootAction.Hold:
-								if (currentNode.InstanceTypes[f, p] == InstanceStepType.Roll)
+								if (graphNode.InstanceTypes[f, p] == InstanceStepType.Roll)
 									actions[arrow] = PerformanceFootAction.Roll;
 								else
 									actions[arrow] = PerformanceFootAction.Hold;
 								break;
 							case FootAction.Tap:
-								if (currentNode.InstanceTypes[f, p] == InstanceStepType.Fake)
+								if (graphNode.InstanceTypes[f, p] == InstanceStepType.Fake)
 									actions[arrow] = PerformanceFootAction.Fake;
-								else if (currentNode.InstanceTypes[f, p] == InstanceStepType.Lift)
+								else if (graphNode.InstanceTypes[f, p] == InstanceStepType.Lift)
 									actions[arrow] = PerformanceFootAction.Lift;
 								else
 									actions[arrow] = PerformanceFootAction.Tap;
+								break;
+						}
+					}
+				}
+			}
+
+			return actions;
+		}
+
+		/// <summary>
+		/// Given a GraphNode and the GraphLink to that node, returns a
+		/// representation of what actions should be performed on what arrows
+		/// to arrive at the node. The actions are returned in an array indexed by arrow.
+		/// This is a helper method used when searching to determine which arrows were stepped on,
+		/// and for determining if steps and releases occur at the same time on the same arrows.
+		/// This method will not return PerformanceFootActions based on InstanceStepTypes.
+		/// Specifically, it will only set None, Release, Hold, or Tap.
+		/// This method is static and takes the number of arrows as a parameter because it can be used prior to
+		/// instantiating the PerformedChart.
+		/// </summary>
+		/// <param name="graphNode">GraphNode.</param>
+		/// <param name="graphLinkToNode">GraphLink to GraphNode.</param>
+		/// <param name="numArrows">Number of arrows in the Chart.</param>
+		/// <returns>Array of actions.</returns>
+		private static PerformanceFootAction[] GetActionsForNode(
+			GraphNode graphNode,
+			GraphLink graphLinkToNode,
+			int numArrows)
+		{
+			// Initialize actions.
+			var actions = new PerformanceFootAction[numArrows];
+			for (var a = 0; a < numArrows; a++)
+				actions[a] = PerformanceFootAction.None;
+
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (graphLinkToNode.Links[f, p].Valid)
+					{
+						var arrow = graphNode.State[f, p].Arrow;
+						switch (graphLinkToNode.Links[f, p].Action)
+						{
+							case FootAction.Release:
+								actions[arrow] = PerformanceFootAction.Release;
+								break;
+							case FootAction.Hold:
+								actions[arrow] = PerformanceFootAction.Hold;
+								break;
+							case FootAction.Tap:
+								actions[arrow] = PerformanceFootAction.Tap;
 								break;
 						}
 					}

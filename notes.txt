@@ -1,24 +1,11 @@
-What makes a chart good:
-	Moving to the left or the right 'frequently'
-	left and right don't mean 1 and 7, but both feet on 1-4 and both feet on 5-8
-		when to move l and r seems to be a function not only of number of notes, but also the speed of the notes
-			typical to move more when the notes are slower (eighths)
-
-		we can look ahead and know, how many arrows should we spend on the current side.
-			then, perhaps it is a search for routes which put you there?
-
-	distribution
+BUG:
+	Mute Sims X inverted walk done as a double step with 11 weight, what!
+		measure 28
 
 PerformedChart improvements:
-	Move to other side more
-		maybe parse a bunch of good charts, find what a good distribution looks like and try to match that.
-		Every N (~20-50?) steps, look at the last N
-			choose the chunk with the best distribution 
-
-		Local min problem
-
-		Need charts that are balanced (they look like the bell curve)
-			and also move side to side often
+	Move to other side more frequently
+		Take into account density to swap sides at low density areas?
+		Take into account current step in cost?
 
 	Preference:
 		Swaps that don't make you move so much (e.g. got a swap that is P1D, P2L, P2L, P2R (OOF))
@@ -57,6 +44,7 @@ Misc:
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
 
 Renderer Improvements:
+	Render note count distribution.
 	Render Fakes and Lifts differently.
 	Render negative Stops (fakes) differently.
 	Fix the terrible orange and pink circle graphics.
@@ -67,7 +55,7 @@ Perf:
 	StepGraph generation:
 		Multithreaded StepGraph internals?
 		Save/Load?
-
+	
 
 
 
