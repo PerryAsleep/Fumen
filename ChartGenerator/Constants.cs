@@ -50,7 +50,8 @@ namespace ChartGenerator
 
 		public const int CostNewArrow_OtherHoldingOne = 3;
 
-		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 11;
+		public const int CostNewArrow_OtherHoldingNone_ThisHeld_ThisCannotBracket = 160;
+		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 31;	// worse than crossover / inversion
 		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep_DoubleStep = 10;
 		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep = 9;
 

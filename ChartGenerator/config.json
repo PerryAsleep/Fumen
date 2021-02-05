@@ -1,16 +1,28 @@
 {
 	"LogLevel": "Info",
 
-	"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
-	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Technical Showcase 4",
-	"InputNameRegex": ".*\\.(sm|ssc)$",
-	//"InputNameRegex": ".*GIGA VIOLATE\\.ssc$",
-	"InputChartType": "dance-single",
-	"DifficultyRegex": ".",
+	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Fumen\\TestDoubleStepHoldAlternateSameArrow",
+	//"InputNameRegex": ".*\\.(sm|ssc)$",
+	//"InputChartType": "dance-single",
+	//"DifficultyRegex": ".",
+	//"OutputChartType": "dance-single",
+	//"OverwriteBehavior": "Always",
 
+	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
+	//"InputNameRegex": ".*\\.(sm|ssc)$",
+	//"InputChartType": "dance-single",
+	//"DifficultyRegex": ".",
+	//"OutputChartType": "dance-double",
+	//"OverwriteBehavior": "IfFumenGenerated",
+
+	"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
+	"InputNameRegex": ".*fire\\.ssc$",
+	"InputChartType": "dance-single",
+	"DifficultyRegex": "Challenge",
 	"OutputChartType": "dance-double",
-	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports",
 	"OverwriteBehavior": "IfFumenGenerated",
+	
+	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports",
 	"OutputVisualizations": true,
 	"VisualizationsDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Visualizations",
 

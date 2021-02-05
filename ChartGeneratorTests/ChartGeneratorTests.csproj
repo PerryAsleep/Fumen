@@ -53,6 +53,7 @@
     <Compile Include="TestArrowData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestExpressedChart.cs" />
+    <Compile Include="Testfire.cs" />
     <Compile Include="TestGIGAVIOLATE.cs" />
   </ItemGroup>
   <ItemGroup>

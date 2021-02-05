@@ -981,6 +981,9 @@ namespace ChartGenerator
 									// Bracket step with the other foot not holding
 									if (thisAnyHeld)
 									{
+										if (!thisCanBracketToNewArrow)
+											return CostNewArrow_OtherHoldingNone_ThisHeld_ThisCannotBracket;
+
 										// The other foot could make this step.
 										if (otherCanStepToNewArrow)
 											return CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep;
@@ -1352,6 +1355,8 @@ namespace ChartGenerator
 			canCrossoverToNewArrow = false;
 			releasePositionOfPreviousStep = new MetricPosition();
 			previousArrows = new int[NumFootPortions];
+
+			// TODO: Should this logic include inverted steps too?
 
 			var otherFoot = OtherFoot(foot);
 

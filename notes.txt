@@ -1,7 +1,3 @@
-BUG:
-	Mute Sims X inverted walk done as a double step with 11 weight, what!
-		measure 28
-
 PerformedChart improvements:
 	Move to other side more frequently
 		Take into account density to swap sides at low density areas?
@@ -55,7 +51,7 @@ Perf:
 	StepGraph generation:
 		Multithreaded StepGraph internals?
 		Save/Load?
-	
+
 
 
 
