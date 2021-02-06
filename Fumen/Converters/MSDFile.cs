@@ -50,7 +50,7 @@ namespace Fumen.Converters
 		public List<Value> Values = new List<Value>();
 
 		/// <summary>
-		/// Asynchronously laod and parse the given msd file.
+		/// Asynchronously load and parse the given msd file.
 		/// </summary>
 		/// <param name="filePath">Path to the msd file.</param>
 		/// <returns>Whether the file was loaded and parsed successfully or not.</returns>
@@ -119,7 +119,7 @@ namespace Fumen.Converters
 						continue;
 					}
 
-					// Add the final param for the current value, timming all whitespace that preceded
+					// Add the final param for the current value, trimming all whitespace that preceded
 					// the ValueEndMarker.
 					Values[Values.Count - 1].Params.Add(currentValueSB.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
 					// Finish parsing the value, but continue to start parsing the new value below.

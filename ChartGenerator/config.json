@@ -1,6 +1,7 @@
 {
 	"LogLevel": "Info",
 
+	// Test Chart Settings.
 	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Fumen\\TestDoubleStepHoldAlternateSameArrow",
 	//"InputNameRegex": ".*\\.(sm|ssc)$",
 	//"InputChartType": "dance-single",
@@ -8,22 +9,25 @@
 	//"OutputChartType": "dance-single",
 	//"OverwriteBehavior": "Always",
 
-	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
-	//"InputNameRegex": ".*\\.(sm|ssc)$",
+	// Specific Song Settings.
+	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
+	//"InputNameRegex": ".*fire\\.ssc$",
 	//"InputChartType": "dance-single",
-	//"DifficultyRegex": ".",
+	//"DifficultyRegex": "Challenge",
 	//"OutputChartType": "dance-double",
 	//"OverwriteBehavior": "IfFumenGenerated",
 
-	"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
-	"InputNameRegex": ".*fire\\.ssc$",
+	// Normal Settings.
+	"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\",
+	"InputNameRegex": ".*\\.(sm|ssc)$",
 	"InputChartType": "dance-single",
-	"DifficultyRegex": "Challenge",
+	"DifficultyRegex": ".",
 	"OutputChartType": "dance-double",
 	"OverwriteBehavior": "IfFumenGenerated",
-	
+
 	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports",
 	"OutputVisualizations": true,
+	"NonChartFileCopyBehavior": "IfNewer",
 	"VisualizationsDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Visualizations",
 
 	"DesiredArrowWeights": {

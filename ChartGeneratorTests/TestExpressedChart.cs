@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ChartGenerator;
 using Fumen;
@@ -40,7 +41,9 @@ namespace ChartGeneratorTests
 		/// <returns>String representation of path to sm file with extension.</returns>
 		public static string GetTestChartPath(string songFolder, string smFile = "test")
 		{
-			return $@"{AppDomain.CurrentDomain.BaseDirectory}\..\..\..\ChartGeneratorTests\TestData\{songFolder}\{smFile}.sm";
+			return Path.Combine(
+				AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "ChartGeneratorTests", "TestData", songFolder,
+				$"{smFile}.sm");
 		}
 
 		/// <summary>

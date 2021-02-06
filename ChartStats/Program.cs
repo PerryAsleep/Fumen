@@ -14,6 +14,7 @@ namespace ChartStats
 	/// Quick and dirty.
 	/// Some hardcoded assumptions that doubles charts will be used as the input.
 	/// Some hardcoded assumptions that the time signature will be 4/4.
+	/// Some copy-paste file system parsing from ChartGenerator.
 	/// </summary>
 	class Program
 	{
@@ -70,10 +71,8 @@ namespace ChartStats
 				return;
 			}
 
-			var pathSep = Path.DirectorySeparatorChar.ToString();
 			var dirs = new Stack<string>();
 			dirs.Push(Config.Instance.InputDirectory);
-
 			while (dirs.Count > 0)
 			{
 				var currentDir = dirs.Pop();
@@ -91,14 +90,6 @@ namespace ChartStats
 					continue;
 				}
 
-				var relativePath = currentDir.Substring(
-					Config.Instance.InputDirectory.Length,
-					currentDir.Length - Config.Instance.InputDirectory.Length);
-				if (relativePath.StartsWith(pathSep))
-					relativePath = relativePath.Substring(1, relativePath.Length - 1);
-				if (!relativePath.EndsWith(pathSep))
-					relativePath += pathSep;
-
 				// Get files.
 				string[] files;
 				try
@@ -115,7 +106,7 @@ namespace ChartStats
 				foreach (var file in files)
 				{
 					// Get the FileInfo for this file so we can check its name.
-					FileInfo fi = null;
+					FileInfo fi;
 					try
 					{
 						fi = new FileInfo(file);

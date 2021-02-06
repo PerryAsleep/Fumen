@@ -7,33 +7,117 @@ using Fumen;
 using Fumen.Converters;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace ChartGenerator
 {
+	/// <summary>
+	/// ChartGenerator Program.
+	/// Generates charts for stepmania files based on Config settings.
+	/// See Config for configuring Program behavior.
+	/// </summary>
 	class Program
 	{
-		private static StepGraph InputStepGraph;
-		private static StepGraph OutputStepGraph;
-		private static List<List<GraphNode>> OutputStartNodes = new List<List<GraphNode>>();
-
-		private static List<string> SupportedInputTypes = new List<string> { ChartTypeString(ChartType.dance_single) };
-		private static List<string> SupportedOutputTypes = new List<string> { ChartTypeString(ChartType.dance_single), ChartTypeString(ChartType.dance_double) };
-
+		/// <summary>
+		/// Version number. Recorded into a Chart's Description field using FumenGeneratedFormattedVersion.
+		/// </summary>
 		private const double Version = 0.1;
+		/// <summary>
+		/// Format for recording the Version into a Chart's Description field.
+		/// </summary>
 		private const string FumenGeneratedFormattedVersion = "[FG v{0:0.00}]";
+		/// <summary>
+		/// Regular expression for parsing the Version out of a Chart's Description field.
+		/// </summary>
 		private const string FumenGeneratedFormattedVersionRegexPattern = @"^\[FG v([0-9]+\.[0-9]+)\]";
+
+		/// <summary>
+		/// Tag for logging messages.
+		/// </summary>
 		private const string LogTag = "Main";
 
+		/// <summary>
+		/// StepGraph to use for parsing input Charts.
+		/// </summary>
+		private static StepGraph InputStepGraph;
+		/// <summary>
+		/// StepGraph to use for generating output Charts.
+		/// </summary>
+		private static StepGraph OutputStepGraph;
+		/// <summary>
+		/// GraphNodes to use as roots for trying to write output Charts.
+		/// Outer List is sorted by preference of Nodes at that level. Level 0 contains the most preferable root GraphNodes.
+		/// Inner Lists contain all GraphNodes of equal preference.
+		/// Example for a doubles StepGraph:
+		///  Tier 0 is both middles.
+		///  Tier 1 is one middle and one up/down.
+		///  etc.
+		/// </summary>
+		private static readonly List<List<GraphNode>> OutputStartNodes = new List<List<GraphNode>>();
+
+		/// <summary>
+		/// Supported file formats for reading and writing.
+		/// </summary>
+		private static readonly List<FileFormatType> SupportedFileFormats = new List<FileFormatType> { FileFormatType.SM, FileFormatType.SSC };
+		/// <summary>
+		/// Supported stepmania chart types for input.
+		/// Only singles is supported as input.
+		/// </summary>
+		private static readonly List<string> SupportedInputTypes = new List<string> { ChartTypeString(ChartType.dance_single) };
+		/// <summary>
+		/// Supported stepmania chart types for output.
+		/// Singles and doubles are support as output.
+		/// </summary>
+		private static readonly List<string> SupportedOutputTypes = new List<string> { ChartTypeString(ChartType.dance_single), ChartTypeString(ChartType.dance_double) };
+
+		/// <summary>
+		/// Time of the start of the export.
+		/// </summary>
 		private static DateTime ExportTime;
-		private static string VisualizationSubDir;
+
+		/// <summary>
+		/// Directory to record visualizations for this export.
+		/// Export visualization directories are based on the ExportTime.
+		/// </summary>
 		private static string VisualizationDir;
 
-		static async Task Main(string[] args)
+		/// <summary>
+		/// HashSet for keeping track of which song directories have had their non-chart files copied.
+		/// Songs may have multiple song files (e.g. an sm and an ssc file). We want to only copy
+		/// non-chart files once per song.
+		/// </summary>
+		private static readonly HashSet<string> CopiedDirectories = new HashSet<string>();
+
+		/// <summary>
+		/// Arguments for processing a Song.
+		/// </summary>
+		private class SongArgs
+		{
+			/// <summary>
+			/// FileInfo for the Song file.
+			/// </summary>
+			public FileInfo FileInfo;
+			/// <summary>
+			/// String path of directory containing the Song file.
+			/// </summary>
+			public string CurrentDir;
+			/// <summary>
+			/// String path to the Song file relative to the Config InputDirectory.
+			/// </summary>
+			public string RelativePath;
+			/// <summary>
+			/// String path to the directory to save the Song file to.
+			/// </summary>
+			public string SaveDir;
+		}
+
+		/// <summary>
+		/// Main entry point into the program.
+		/// </summary>
+		/// <remarks>See Config for configuration.</remarks>
+		private static async Task Main()
 		{
 			ExportTime = DateTime.Now;
-			VisualizationSubDir = ExportTime.ToString("yyyy-MM-dd HH-mm-ss");
 
 			// Load Config.
 			var config = await Config.Load();
@@ -47,8 +131,27 @@ namespace ChartGenerator
 			if (!config.Validate(SupportedInputTypes, SupportedOutputTypes))
 				return;
 
+			// Create a directory for outputting visualizations.
+			if (!CreateVisualizationOutputDirectory())
+				return;
+
 			// Create StepGraphs.
-			if (config.InputChartType == config.OutputChartType)
+			await CreateStepGraphs();
+
+			// Find and process all charts.
+			await FindAndProcessCharts();
+			
+			LogInfo("Done.");
+			Console.ReadLine();
+		}
+
+		/// <summary>
+		/// Creates the InputStepGraph and OutputStepGraph.
+		/// </summary>
+		private static async Task CreateStepGraphs()
+		{
+			// If the types are the same, just create one graph.
+			if (Config.Instance.InputChartType == Config.Instance.OutputChartType)
 			{
 				LogInfo("Creating StepGraph.");
 				InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
@@ -56,15 +159,17 @@ namespace ChartGenerator
 				OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
 				LogInfo("Finished creating StepGraph.");
 			}
+
+			// If the types are separate, create two graphs.
 			else
 			{
 				LogInfo("Creating StepGraphs.");
-				var t1 = new Thread(() => { InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
-				var t2 = new Thread(() => { OutputStepGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
-				t1.Start();
-				t2.Start();
-				t1.Join();
-				t2.Join();
+
+				// Create each graph on their own thread as these can take a few seconds.
+				var tasks = new Task[2];
+				tasks[0] = Task.Factory.StartNew(() => { InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
+				tasks[1] = Task.Factory.StartNew(() => { OutputStepGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
+				await Task.WhenAll(tasks);
 
 				// The first start node we should try is the root, centered on the middles.
 				OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
@@ -96,36 +201,40 @@ namespace ChartGenerator
 
 				LogInfo("Finished creating StepGraphs.");
 			}
+		}
 
-			// Create a directory for outputting visualizations.
+		/// <summary>
+		/// Creates the output directory for visualizations if configured to do so.
+		/// </summary>
+		/// <returns>True if no errors and false otherwise.</returns>
+		private static bool CreateVisualizationOutputDirectory()
+		{
 			if (Config.Instance.OutputVisualizations)
 			{
 				try
 				{
-					var pathSep = Path.DirectorySeparatorChar.ToString();
+					var visualizationSubDir = ExportTime.ToString("yyyy-MM-dd HH-mm-ss");
 					VisualizationDir = Config.Instance.VisualizationsDirectory;
-					if (!VisualizationDir.EndsWith(pathSep))
-						VisualizationDir += pathSep;
-					VisualizationDir += VisualizationSubDir;
+					VisualizationDir = Path.Combine(VisualizationDir, visualizationSubDir);
 					LogInfo($"Creating directory for outputting visualizations: {VisualizationDir}.");
 					Directory.CreateDirectory(VisualizationDir);
 				}
 				catch (Exception e)
 				{
 					LogError($"Failed to find or create directory for outputting visualizations. {e}");
-					return;
+					return false;
 				}
 			}
 
-			FindCharts();
-
-			// Hack. Wait for input.
-			// TODO: Wait for all threads to complete.
-			LogInfo("Done.");
-			Console.ReadLine();
+			return true;
 		}
 
-		static void FindCharts()
+		/// <summary>
+		/// Searches for songs matching Config parameters and processes each.
+		/// Will add charts, copy the charts and non-chart files to the output directory,
+		/// and write visualizations for the conversion.
+		/// </summary>
+		private static async Task FindAndProcessCharts()
 		{
 			if (!Directory.Exists(Config.Instance.InputDirectory))
 			{
@@ -133,15 +242,18 @@ namespace ChartGenerator
 				return;
 			}
 
+			var songTasks = new List<Task>();
 			var pathSep = Path.DirectorySeparatorChar.ToString();
+
+			// Search through the configured InputDirectory and all subdirectories.
 			var dirs = new Stack<string>();
 			dirs.Push(Config.Instance.InputDirectory);
-
 			while (dirs.Count > 0)
 			{
+				// Get the directory to process.
 				var currentDir = dirs.Pop();
 
-				// Get sub directories.
+				// Get sub directories for the next loop.
 				try
 				{
 					var subDirs = Directory.GetDirectories(currentDir);
@@ -154,15 +266,7 @@ namespace ChartGenerator
 					continue;
 				}
 
-				var relativePath = currentDir.Substring(
-					Config.Instance.InputDirectory.Length,
-					currentDir.Length - Config.Instance.InputDirectory.Length);
-				if (relativePath.StartsWith(pathSep))
-					relativePath = relativePath.Substring(1, relativePath.Length - 1);
-				if (!relativePath.EndsWith(pathSep))
-					relativePath += pathSep;
-
-				// Get files.
+				// Get all files in this directory.
 				string[] files;
 				try
 				{
@@ -174,11 +278,22 @@ namespace ChartGenerator
 					continue;
 				}
 
+				// Cache some paths needed for processing the charts.
+				var relativePath = currentDir.Substring(
+					Config.Instance.InputDirectory.Length,
+					currentDir.Length - Config.Instance.InputDirectory.Length);
+				if (relativePath.StartsWith(pathSep))
+					relativePath = relativePath.Substring(1, relativePath.Length - 1);
+				if (!relativePath.EndsWith(pathSep))
+					relativePath += pathSep;
+				var saveDir = Path.Combine(Config.Instance.OutputDirectory, relativePath);
+
 				// Check each file.
+				var hasSong = false;
 				foreach (var file in files)
 				{
 					// Get the FileInfo for this file so we can check its name.
-					FileInfo fi = null;
+					FileInfo fi;
 					try
 					{
 						fi = new FileInfo(file);
@@ -189,38 +304,49 @@ namespace ChartGenerator
 						continue;
 					}
 
+					// Check that this is a supported file format.
+					var fileFormat = FileFormat.GetFileFormatByExtension(fi.Extension);
+					if (fileFormat == null || !SupportedFileFormats.Contains(fileFormat.Type))
+						continue;
+
 					// Check if the matches the expression for files to convert.
 					if (!Config.Instance.InputNameMatches(fi.Name))
 						continue;
 
-					var songArgs = new SongArgs
+					// Create the save directory before starting any Tasks which write into it.
+					if (!hasSong)
+					{
+						hasSong = true;
+						Directory.CreateDirectory(saveDir);
+					}
+
+					// Process the song.
+					songTasks.Add(ProcessSong(new SongArgs 
 					{
 						FileInfo = fi,
 						CurrentDir = currentDir,
-						RelativePath = relativePath
-					};
-
-					if (!ThreadPool.QueueUserWorkItem(ProcessSong, songArgs))
-					{
-						LogError("Failed to queue work thread.", fi, relativePath);
-						continue;
-					}
+						RelativePath = relativePath,
+						SaveDir = saveDir
+					}));
 				}
+
+				// TODO: Copy the song's pack assets.
 			}
+
+			// Allow the song tasks to complete.
+			await Task.WhenAll(songTasks.ToArray());
 		}
 
-		public class SongArgs
+		/// <summary>
+		/// Process one song.
+		/// Song in this context is a song file.
+		/// Some songs have multiple song files (an sm and an ssc version).
+		/// Will add charts, copy the charts and non-chart files to the output directory,
+		/// and write visualizations for the conversion.
+		/// </summary>
+		/// <param name="songArgs">SongArgs for the song file.</param>
+		private static async Task ProcessSong(SongArgs songArgs)
 		{
-			public FileInfo FileInfo;
-			public string CurrentDir;
-			public string RelativePath;
-		}
-
-		static async void ProcessSong(object args)
-		{
-			if (!(args is SongArgs songArgs))
-				return;
-
 			// Load the song.
 			Song song;
 			try
@@ -228,7 +354,7 @@ namespace ChartGenerator
 				var reader = Reader.CreateReader(songArgs.FileInfo);
 				if (reader == null)
 				{
-					LogError("No Reader for file. Cannot parse.", songArgs.FileInfo, songArgs.RelativePath);
+					LogError("Unsupported file format. Cannot parse.", songArgs.FileInfo, songArgs.RelativePath);
 					return;
 				}
 				song = await reader.Load();
@@ -244,37 +370,37 @@ namespace ChartGenerator
 			AddCharts(song, songArgs);
 
 			// Save
-			var pathSep = Path.DirectorySeparatorChar.ToString();
-			var saveDir = Config.Instance.OutputDirectory;
-			if (!saveDir.EndsWith(pathSep))
-				saveDir += pathSep;
-			saveDir += songArgs.RelativePath;
-			Directory.CreateDirectory(saveDir);
 			var config = new SMWriterBase.SMWriterBaseConfig
 			{
-				FilePath = saveDir + songArgs.FileInfo.Name,
+				FilePath = Path.Combine(songArgs.SaveDir, songArgs.FileInfo.Name),
 				Song = song,
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
 			};
-
-			var extension = songArgs.FileInfo.Extension.ToLower();
-			if (extension.StartsWith("."))
-				extension = extension.Substring(1);
-			switch (extension)
+			var fileFormat = FileFormat.GetFileFormatByExtension(songArgs.FileInfo.Extension);
+			switch (fileFormat.Type)
 			{
-				case "sm":
+				case FileFormatType.SM:
 					new SMWriter(config).Save();
 					break;
-				case "ssc":
+				case FileFormatType.SSC:
 					new SSCWriter(config).Save();
+					break;
+				default:
+					LogError("Unsupported file format. Cannot save.", songArgs.FileInfo, songArgs.RelativePath);
 					break;
 			}
 
-			// TODO: Copy all files in the song dir.
+			// Copy the non-chart files.
+			CopyNonChartFiles(songArgs.CurrentDir, songArgs.SaveDir);
 		}
 
-		static void AddCharts(Song song, SongArgs songArgs)
+		/// <summary>
+		/// Adds charts to the given song and write a visualization per chart, if configured to do so.
+		/// </summary>
+		/// <param name="song">Song to add charts to.</param>
+		/// <param name="songArgs">SongArgs for the song file.</param>
+		private static void AddCharts(Song song, SongArgs songArgs)
 		{
 			LogInfo("Processing Song.", songArgs.FileInfo, songArgs.RelativePath, song);
 
@@ -287,8 +413,7 @@ namespace ChartGenerator
 			var extension = songArgs.FileInfo.Extension.ToLower();
 			if (extension.StartsWith("."))
 				extension = extension.Substring(1);
-
-			var pathSep = Path.DirectorySeparatorChar.ToString();
+			
 			var newCharts = new List<Chart>();
 			var chartsIndicesToRemove = new List<int>();
 			foreach (var chart in song.Charts)
@@ -360,7 +485,7 @@ namespace ChartGenerator
 					CopyNonPerformanceEvents(chart.Layers[0].Events, events);
 					events.Sort(new SMEventComparer());
 
-					// Sanity check
+					// Sanity check on note counts.
 					if (events.Count != chart.Layers[0].Events.Count)
 					{
 						var mineString = NoteChars[(int)NoteType.Mine].ToString();
@@ -432,11 +557,9 @@ namespace ChartGenerator
 					// Write a visualization.
 					if (Config.Instance.OutputVisualizations)
 					{
-						var visualizationDirectory = VisualizationDir + Path.DirectorySeparatorChar + songArgs.RelativePath;
-						if (!visualizationDirectory.EndsWith(pathSep))
-							visualizationDirectory += pathSep;
+						var visualizationDirectory = Path.Combine(VisualizationDir, songArgs.RelativePath);
 						Directory.CreateDirectory(visualizationDirectory);
-						var saveFile = visualizationDirectory + $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html";
+						var saveFile = Path.Combine(visualizationDirectory,  $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html");
 
 						var renderer = new Renderer(
 							songArgs.CurrentDir,
@@ -464,20 +587,143 @@ namespace ChartGenerator
 			song.Charts.AddRange(newCharts);
 		}
 
+		/// <summary>
+		/// Copies the non-chart files from the given song directory into the given save directory.
+		/// </summary>
+		/// <remarks>
+		/// Idempotent.
+		/// Will not copy if already invoked with the same song directory.
+		/// Will not copy if not appropriate based on Config.NonChartFileCopyBehavior.
+		/// Expects that saveDir exists and is writable.
+		/// Will log errors and warnings on failures.
+		/// </remarks>
+		/// <param name="songDir">
+		/// Directory of the song to copy the non-chart files from.
+		/// </param>
+		/// <param name="saveDir">
+		/// Directory to copy the non-chart files into.
+		/// </param>
+		private static void CopyNonChartFiles(string songDir, string saveDir)
+		{
+			if (Config.Instance.NonChartFileCopyBehavior == CopyBehavior.DoNotCopy
+			    || Config.Instance.IsOutputDirectorySameAsInputDirectory())
+				return;
+
+			// Only copy the non-chart files once per song.
+			lock (CopiedDirectories)
+			{
+				if (CopiedDirectories.Contains(songDir))
+					return;
+				CopiedDirectories.Add(songDir);
+			}
+
+			// Get the files in the song directory.
+			string[] files;
+			try
+			{
+				files = Directory.GetFiles(songDir);
+			}
+			catch (Exception e)
+			{
+				LogWarn($"Could not get files in \"{songDir}\". {e}");
+				return;
+			}
+
+			// Check each file for copying
+			foreach (var file in files)
+			{
+				// Get the FileInfo for this file so we can check its name.
+				FileInfo fi;
+				try
+				{
+					fi = new FileInfo(file);
+				}
+				catch (Exception e)
+				{
+					LogWarn($"Could not get file info for \"{file}\". {e}");
+					continue;
+				}
+
+				// Skip this file if it is a chart.
+				var fileFormat = FileFormat.GetFileFormatByExtension(fi.Extension);
+				if (fileFormat != null && SupportedFileFormats.Contains(fileFormat.Type))
+					continue;
+
+				// Skip this file if it is not newer than the destination file and we
+				// should only copy if newer.
+				var destFilePath = saveDir + fi.Name;
+				if (Config.Instance.NonChartFileCopyBehavior == CopyBehavior.IfNewer)
+				{
+					FileInfo dfi;
+					try
+					{
+						dfi = new FileInfo(destFilePath);
+					}
+					catch (Exception e)
+					{
+						LogWarn($"Could not get file info for \"{destFilePath}\". {e}");
+						continue;
+					}
+
+					if (dfi.Exists && fi.LastWriteTime <= dfi.LastWriteTime)
+					{
+						continue;
+					}
+				}
+
+				// Copy the file.
+				try
+				{
+					File.Copy(fi.FullName, destFilePath, true);
+				}
+				catch (Exception e)
+				{
+					LogWarn($"Failed to copy \"{fi.FullName}\" to \"{destFilePath}\". {e}");
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets the formatted version string for recording onto a Chart.
+		/// </summary>
+		/// <returns>Formatted version string for recording onto a Chart.</returns>
 		private static string GetFormattedVersionStringForChart()
 		{
 			return string.Format(FumenGeneratedFormattedVersion, Version);
 		}
 
+		/// <summary>
+		/// Parses the given Chart's description to see if it was generated by this application.
+		/// Returns the version if present, via the out parameter.
+		/// </summary>
+		/// <param name="chart">Chart to check.</param>
+		/// <param name="version">
+		/// Out parameter to store the version of the application used to generate the chart.
+		/// </param>
+		/// <returns>Whether or not the given Chart was generated by this application.</returns>
 		private static bool GetFumenGeneratedVersion(Chart chart, out double version)
 		{
 			version = 0.0;
+			if (string.IsNullOrEmpty(chart.Description))
+				return false;
+			
 			var match = Regex.Match(chart.Description, FumenGeneratedFormattedVersionRegexPattern, RegexOptions.IgnoreCase);
 			if (match.Success && match.Groups.Count == 1 && match.Groups[0].Captures.Count == 1)
 				return double.TryParse(match.Groups[0].Captures[0].Value, out version);
 			return false;
 		}
 
+		/// <summary>
+		/// Finds the Chart matching the given parameters in the given Song.
+		/// </summary>
+		/// <param name="song">Song to check.</param>
+		/// <param name="chartType">Chart Type sting to match.</param>
+		/// <param name="difficultyType">Chart DifficultyType string to match.</param>
+		/// <param name="numArrows">Number of arrows / lanes to match.</param>
+		/// <returns>
+		/// Chart and the index of this Chart in the Song, if the Chart was found.
+		/// Returns (null, 0) if not found.
+		/// </returns>
 		private static (Chart, int) FindChart(Song song, string chartType, string difficultyType, int numArrows)
 		{
 			var index = 0;
@@ -497,6 +743,12 @@ namespace ChartGenerator
 			return (null, 0);
 		}
 
+		/// <summary>
+		/// Copies the non-performance events from one List of Events to another.
+		/// Non-performance events are: TimeSignature, TempoChange, Stop.
+		/// </summary>
+		/// <param name="source">Event List to copy from.</param>
+		/// <param name="dest">Event List to copy to.</param>
 		private static void CopyNonPerformanceEvents(List<Event> source, List<Event> dest)
 		{
 			foreach (var e in source)

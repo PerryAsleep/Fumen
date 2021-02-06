@@ -117,8 +117,10 @@ namespace ExpressedChartTestGenerator
 			{
 				sb.AppendLine("\t}");
 				sb.AppendLine("}");
-
-				File.WriteAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\..\..\..\ChartGeneratorTests\Test{cleanedFileName}.cs", sb.ToString());
+				
+				File.WriteAllText(
+					Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "ChartGeneratorTests", $"Test{cleanedFileName}.cs")
+					, sb.ToString());
 			}
 			else
 			{

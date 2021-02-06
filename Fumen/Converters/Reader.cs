@@ -12,7 +12,7 @@ namespace Fumen.Converters
 		/// Constructor requiring path to file.
 		/// </summary>
 		/// <param name="filePath">Path to file.</param>
-		public Reader(string filePath) { }
+		protected Reader(string filePath) { }
 
 		/// <summary>
 		/// Load the file and return a Song.
@@ -29,11 +29,14 @@ namespace Fumen.Converters
 		/// </returns>
 		public static Reader CreateReader(FileInfo fileInfo)
 		{
-			switch (fileInfo.Extension.ToLower())
+			var fileFormat = FileFormat.GetFileFormatByExtension(fileInfo.Extension.ToLower());
+			if (fileFormat == null)
+				return null;
+			switch (fileFormat.Type)
 			{
-				case ".sm":
+				case FileFormatType.SM:
 					return new SMReader(fileInfo.FullName);
-				case ".ssc":
+				case FileFormatType.SSC:
 					return new SSCReader(fileInfo.FullName);
 			}
 			return null;

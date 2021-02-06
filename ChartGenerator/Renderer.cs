@@ -9,6 +9,7 @@ using static ChartGenerator.Constants;
 
 namespace ChartGenerator
 {
+	// TODO: Major cleanup. This class is quick and dirty.
 	public class Renderer
 	{
 		private const int BannerW = 418;

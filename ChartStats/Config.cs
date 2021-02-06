@@ -12,6 +12,8 @@ namespace ChartStats
 	/// <summary>
 	/// Configuration for ChartStats.
 	/// Deserialized from json config file.
+	/// Quick and dirty.
+	/// Copy-paste from ChartGenerator.
 	/// </summary>
 	public class Config
 	{
@@ -51,7 +53,7 @@ namespace ChartStats
 
 			try
 			{
-				using (FileStream openStream = File.OpenRead($@"{AppDomain.CurrentDomain.BaseDirectory}\{FileName}"))
+				using (FileStream openStream = File.OpenRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
 				{
 					Instance = await JsonSerializer.DeserializeAsync<Config>(openStream, options);
 				}

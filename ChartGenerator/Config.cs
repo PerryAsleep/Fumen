@@ -36,14 +36,43 @@ namespace ChartGenerator
 	}
 
 	/// <summary>
+	/// Enumeration of methods for copying files.
+	/// </summary>
+	public enum CopyBehavior
+	{
+		/// <summary>
+		/// Do not copy the file.
+		/// </summary>
+		DoNotCopy,
+		/// <summary>
+		/// Copy the file if it is newer than the destination file.
+		/// </summary>
+		IfNewer,
+		/// <summary>
+		/// Always copy the file.
+		/// </summary>
+		Always
+	}
+
+	/// <summary>
 	/// Configuration for ChartGenerator.
 	/// Deserialized from json config file.
+	/// Use Load to load Config.
 	/// </summary>
 	public class Config
 	{
+		/// <summary>
+		/// File to use for deserializing Config.
+		/// </summary>
 		private const string FileName = "config.json";
+		/// <summary>
+		/// Tag for logging messages.
+		/// </summary>
 		private const string LogTag = "Config";
 
+		/// <summary>
+		/// Static Config instance.
+		/// </summary>
 		public static Config Instance { get; private set; }
 
 		[JsonInclude] public string InputDirectory;
@@ -57,9 +86,18 @@ namespace ChartGenerator
 		[JsonInclude] public string VisualizationsDirectory;
 		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
 		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
+		[JsonInclude] public CopyBehavior NonChartFileCopyBehavior = CopyBehavior.DoNotCopy;
 		[JsonInclude] public LogLevel LogLevel = LogLevel.Info;
 
+		/// <summary>
+		/// Normalized DesiredArrowWeights.
+		/// Values sum to 1.0.
+		/// </summary>
 		private Dictionary<string, List<double>> DesiredArrowWeightsNormalized;
+		/// <summary>
+		/// Cached value for whether the output directory is the same as the input directory.
+		/// </summary>
+		private bool OutputDirectoryEqualsDirectory = false;
 
 		/// <summary>
 		/// Loads the Config from the config json file.
@@ -83,7 +121,7 @@ namespace ChartGenerator
 
 			try
 			{
-				using (FileStream openStream = File.OpenRead($@"{AppDomain.CurrentDomain.BaseDirectory}\{FileName}"))
+				using (FileStream openStream = File.OpenRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
 				{
 					Instance = await JsonSerializer.DeserializeAsync<Config>(openStream, options);
 					Instance?.Init();
@@ -116,11 +154,24 @@ namespace ChartGenerator
 						DesiredArrowWeightsNormalized[entry.Key].Add((double) weight / sum);
 				}
 			}
+
+			// Convert paths to absolute paths.
+			if (!string.IsNullOrEmpty(OutputDirectory))
+				OutputDirectory = Path.GetFullPath(OutputDirectory);
+			if (!string.IsNullOrEmpty(InputDirectory))
+				InputDirectory = Path.GetFullPath(InputDirectory);
+
+			// Cache whether the output and input directories are the same.
+			OutputDirectoryEqualsDirectory =
+				InputDirectory != null
+				&& OutputDirectory != null
+				&& InputDirectory.Equals(OutputDirectory);
 		}
 
 		/// <summary>
 		/// Performs validation of Config options.
-		/// Will log errors and warnings and return true if no errors were found.
+		/// Will log errors and warnings.
+		/// Returns true if no errors were found.
 		/// </summary>
 		/// <param name="supportedInputTypes">
 		/// ChartTypes that are supported as valid input types.
@@ -230,6 +281,15 @@ namespace ChartGenerator
 			}
 
 			return !errors;
+		}
+
+		/// <summary>
+		/// Returns whether the output directory is the same as the input directory.
+		/// </summary>
+		/// <returns>Whether the output directory is the same as the input directory</returns>
+		public bool IsOutputDirectorySameAsInputDirectory()
+		{
+			return OutputDirectoryEqualsDirectory;
 		}
 
 		/// <summary>
