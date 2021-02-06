@@ -25,14 +25,13 @@
 	"OutputChartType": "dance-double",
 	"OverwriteBehavior": "IfFumenGenerated",
 
-	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports",
+	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports\\",
 	"OutputVisualizations": true,
-	"NonChartFileCopyBehavior": "IfNewer",
+	"NonChartFileCopyBehavior": "DoNotCopy",
 	"VisualizationsDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Visualizations",
 
 	"DesiredArrowWeights": {
-		// TODO: compute actual singles distribution. This is a complete guess.
-		"dance-single": [16, 34, 33, 16],
+		"dance-single": [25, 25, 25, 25],
 		// This distribution was determined by parsing doubles charts from many packs.
 		"dance-double": [6, 12, 10, 22, 22, 12, 10, 6]
 	},

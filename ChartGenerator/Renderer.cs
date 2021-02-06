@@ -123,8 +123,7 @@ namespace ChartGenerator
 			x += ExpressionColumnInfo[(int)ExpressionColumns.LeftFoot].Width;
 			ExpressionColumnInfo[(int)ExpressionColumns.RightFoot] = new ColumnInfo { Name = "Right Foot", Width = ExpressionColW, X = x };
 		}
-
-		private Renderer() { }
+		
 		public Renderer(
 			string songPath,
 			string saveFile,
@@ -284,6 +283,38 @@ $@"		<div style=""height: 164px; margin-block-start: 0.0em; margin-block-end: 0.
 			generatedChartWidth += (GeneratedChart.NumInputs * ArrowW);
 			generatedChartCols += GeneratedChart.NumInputs;
 
+			var originalChartNotePercentages = new int[OriginalChart.NumInputs];
+			var originalChartTotalSteps = 0;
+			foreach (var chartEvent in OriginalChart.Layers[0].Events)
+			{
+				if (chartEvent is LaneHoldStartNote lhsn)
+				{
+					originalChartTotalSteps++;
+					originalChartNotePercentages[lhsn.Lane]++;
+				}
+				else if (chartEvent is LaneTapNote ltn)
+				{
+					originalChartTotalSteps++;
+					originalChartNotePercentages[ltn.Lane]++;
+				}
+			}
+
+			var generatedChartNotePercentages = new int[GeneratedChart.NumInputs];
+			var generatedChartTotalSteps = 0;
+			foreach (var chartEvent in GeneratedChart.Layers[0].Events)
+			{
+				if (chartEvent is LaneHoldStartNote lhsn)
+				{
+					generatedChartTotalSteps++;
+					generatedChartNotePercentages[lhsn.Lane]++;
+				}
+				else if (chartEvent is LaneTapNote ltn)
+				{
+					generatedChartTotalSteps++;
+					generatedChartNotePercentages[ltn.Lane]++;
+				}
+			}
+
 			foreach (var expressionCol in ExpressionColumnInfo)
 			{
 				expressedChartWidth += expressionCol.Width;
@@ -301,11 +332,11 @@ $@"		<div style=""height: 164px; margin-block-start: 0.0em; margin-block-end: 0.
 
 			var originalChartTitle = $"{OriginalChart.Type} {OriginalChart.DifficultyType}: Level {OriginalChart.DifficultyRating}";
 			if (!string.IsNullOrEmpty(OriginalChart.Description))
-				originalChartTitle += $", {OriginalChart.Description}";
+				originalChartTitle += $", {OriginalChart.Description} ({originalChartTotalSteps} steps)";
 
 			var generatedChartTitle = $"{GeneratedChart.Type} {GeneratedChart.DifficultyType}: Level {GeneratedChart.DifficultyRating}";
 			if (!string.IsNullOrEmpty(GeneratedChart.Description))
-				generatedChartTitle += $", {GeneratedChart.Description}";
+				generatedChartTitle += $", {GeneratedChart.Description} ({generatedChartTotalSteps} steps)";
 
 			StringBuilder.Append(
 $@"		<div id=""chartHeaders"" style=""z-index:10000000; border:none; margin-block-start: 0.0em; margin-block-end: 0.0em;"">
@@ -327,8 +358,10 @@ $@"					<th style=""table-layout: fixed; width: {chartCol.Width - TableBorderW}p
 
 			for (var a = 0; a < OriginalChart.NumInputs; a++)
 			{
+				var percentage = originalChartTotalSteps == 0 ? 0 :
+					Math.Round(originalChartNotePercentages[a] / (double) originalChartTotalSteps * 100);
 				StringBuilder.Append(
-$@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{ArrowNames[a % 4]}</th>
+$@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{ArrowNames[a % 4]} ({percentage}%)</th>
 ");
 			}
 
@@ -348,8 +381,10 @@ $@"					<th style=""table-layout: fixed; width: {chartCol.Width - TableBorderW}p
 
 			for (var a = 0; a < GeneratedChart.NumInputs; a++)
 			{
+				var percentage = generatedChartTotalSteps == 0 ? 0 :
+					Math.Round(generatedChartNotePercentages[a] / (double)generatedChartTotalSteps * 100);
 				StringBuilder.Append(
-$@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{ArrowNames[a % 4]}</th>
+$@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{ArrowNames[a % 4]} ({percentage}%)</th>
 ");
 			}
 

@@ -2,6 +2,8 @@ PerformedChart improvements:
 	Move to other side more frequently
 		Take into account density to swap sides at low density areas?
 		Take into account current step in cost?
+			what arrow is it on, and also where did it come from.
+				or maybe, track where your body is centered over time and look for a big move?
 
 	Preference:
 		Swaps that don't make you move so much (e.g. got a swap that is P1D, P2L, P2L, P2R (OOF))
@@ -38,6 +40,7 @@ Bugs:
 
 Misc:
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
+	Copy song pack files (pack art)
 
 Renderer Improvements:
 	Render note count distribution.
@@ -46,11 +49,6 @@ Renderer Improvements:
 	Fix the terrible orange and pink circle graphics.
 	Render performed chart starting position.
 	Render when the performed chart uses different StepTypes.
-
-Perf:
-	StepGraph generation:
-		Multithreaded StepGraph internals?
-		Save/Load?
 
 
 
