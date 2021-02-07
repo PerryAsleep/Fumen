@@ -1,6 +1,4 @@
 Im a maid.sm - sharpnel. error parsing notes.
-fix this crash
-System.IO.DirectoryNotFoundException: 'Could not find a part of the path 'C:\Users\perry\Desktop\DanceyBox-Export-Visualizations\2021-02-06 17-12-16\Touhou Gensouyou ~ Illusionary Dance Fantasy\[CondorTalon] The Ultimate Grilling Restaurant! Orin's Hell Mansion!\The Ultimate Grilling Restaurant! Orin's Hell Mansion!-Challenge-sm.html'.'
 limit html logs somehow? maybe not
 perf pass on whole program.
 

@@ -592,17 +592,28 @@ namespace ChartGenerator
 						Directory.CreateDirectory(visualizationDirectory);
 						var saveFile = Path.Combine(visualizationDirectory,  $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html");
 
-						var renderer = new Renderer(
-							songArgs.CurrentDir,
-							saveFile,
-							song,
-							chart,
-							expressedChart,
-							rootSearchNode,
-							performedChart,
-							newChart
-						);
-						renderer.Write();
+						// One time this write caused a DirectoryNotFoundException and I am not sure why.
+						// The directory existed and nothing looked incorrect about the path or file.
+						// For now, logging the exception as an error so it does not terminate the program.
+						try
+						{
+							var renderer = new Renderer(
+								songArgs.CurrentDir,
+								saveFile,
+								song,
+								chart,
+								expressedChart,
+								rootSearchNode,
+								performedChart,
+								newChart
+							);
+							renderer.Write();
+						}
+						catch (Exception e)
+						{
+							LogError($"Failed to write visualization to \"{saveFile}\". {e}",
+								songArgs.FileInfo, songArgs.RelativePath, song, newChart);
+						}
 					}
 				}
 			}
