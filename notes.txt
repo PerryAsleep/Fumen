@@ -1,4 +1,18 @@
+Im a maid.sm - sharpnel. error parsing notes.
+fix this crash
+System.IO.DirectoryNotFoundException: 'Could not find a part of the path 'C:\Users\perry\Desktop\DanceyBox-Export-Visualizations\2021-02-06 17-12-16\Touhou Gensouyou ~ Illusionary Dance Fantasy\[CondorTalon] The Ultimate Grilling Restaurant! Orin's Hell Mansion!\The Ultimate Grilling Restaurant! Orin's Hell Mansion!-Challenge-sm.html'.'
+limit html logs somehow? maybe not
+perf pass on whole program.
+
 PerformedChart improvements:
+	Faster patterns should move less.
+		See: more than friends
+	Swaps should move less, especially if fast.
+	Need to fix jumps into unclear footing.
+	On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
+		e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
+	Come & Get It: Did not understand roll was part of stream? Somehow ended up with crossovers which felt bad.
+
 	Move to other side more frequently
 		Take into account density to swap sides at low density areas?
 		Take into account current step in cost?

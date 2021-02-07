@@ -87,7 +87,12 @@ namespace ChartGenerator
 		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
 		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
 		[JsonInclude] public CopyBehavior NonChartFileCopyBehavior = CopyBehavior.DoNotCopy;
+
 		[JsonInclude] public LogLevel LogLevel = LogLevel.Info;
+		[JsonInclude] public bool LogToFile;
+		[JsonInclude] public string LogDirectory;
+		[JsonInclude] public int LogFlushIntervalSeconds;
+		[JsonInclude] public int LogBufferSizeBytes;
 
 		/// <summary>
 		/// Normalized DesiredArrowWeights.
@@ -278,6 +283,12 @@ namespace ChartGenerator
 					        + " This will likely result in a failures to generate Performed Charts."
 					        + " To ignore this type of step, include an entry for it in StepTypeReplacements and map"
 					        + " it to a type of step to use as a replacement.");
+			}
+
+			if (LogToFile && string.IsNullOrEmpty(LogDirectory))
+			{
+				LogError("LogToFile is true, but no LogDirectory specified.");
+				errors = true;
 			}
 
 			return !errors;

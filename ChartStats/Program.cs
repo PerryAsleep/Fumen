@@ -35,7 +35,7 @@ namespace ChartStats
 				return;
 
 			// Set the Log Level before validating Config.
-			Logger.LogLevel = config.LogLevel;
+			Logger.StartUp(config.LogLevel);
 
 			// Write headers.
 			// Assumption that charts are doubles.
@@ -57,6 +57,8 @@ namespace ChartStats
 			File.WriteAllText(config.OutputFileStepsPerSide, SBStepsPerSide.ToString());
 
 			Logger.Info("Done.");
+			Logger.Shutdown();
+			Console.ReadLine();
 		}
 
 		/// <summary>

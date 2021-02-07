@@ -3,6 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Fumen
+Logs/
+Visualizations/
+Exports/
+DoublesSongStats.csv
+DoublesStepsPerSide.csv
+
 # User-specific files
 *.rsuser
 *.suo

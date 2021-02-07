@@ -124,8 +124,9 @@ namespace ChartGenerator
 			if (config == null)
 				return;
 
-			// Set the Log Level before validating Config.
-			Logger.LogLevel = config.LogLevel;
+			// Create the logger as soon as possible. We need to load Config first for Logger configuration.
+			if (!CreateLogger())
+				return;
 
 			// Validate Config.
 			if (!config.Validate(SupportedInputTypes, SupportedOutputTypes))
@@ -142,6 +143,7 @@ namespace ChartGenerator
 			await FindAndProcessCharts();
 			
 			LogInfo("Done.");
+			Logger.Shutdown();
 			Console.ReadLine();
 		}
 
@@ -201,6 +203,35 @@ namespace ChartGenerator
 
 				LogInfo("Finished creating StepGraphs.");
 			}
+		}
+
+		/// <summary>
+		/// Creates the Logger for the application.
+		/// </summary>
+		/// <returns>True if successful and false if any error occurred.</returns>
+		private static bool CreateLogger()
+		{
+			try
+			{
+				var config = Config.Instance;
+				if (config.LogToFile)
+				{
+					var logFileName = ExportTime.ToString("yyyy-MM-dd HH-mm-ss") + ".log";
+					var logFilePath = Path.Combine(config.LogDirectory, logFileName);
+					Logger.StartUp(config.LogLevel, logFilePath, config.LogFlushIntervalSeconds, config.LogBufferSizeBytes);
+				}
+				else
+				{
+					Logger.StartUp(config.LogLevel);
+				}
+			}
+			catch (Exception e)
+			{
+				LogError($"Failed to create Logger. {e}");
+				return false;
+			}
+
+			return true;
 		}
 
 		/// <summary>

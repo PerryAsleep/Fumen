@@ -1,5 +1,9 @@
 {
+	// Logger configuration.
 	"LogLevel": "Info",
+	"LogToFile": true,
+	"LogFlushIntervalSeconds": 20,
+	"LogBufferSizeBytes": 10240,
 
 	// Test Chart Settings.
 	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Fumen\\TestDoubleStepHoldAlternateSameArrow",
@@ -9,7 +13,7 @@
 	//"OutputChartType": "dance-single",
 	//"OverwriteBehavior": "Always",
 
-	// Specific Song Settings.
+	// Test Specific Song Settings.
 	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
 	//"InputNameRegex": ".*fire\\.ssc$",
 	//"InputChartType": "dance-single",
@@ -17,18 +21,31 @@
 	//"OutputChartType": "dance-double",
 	//"OverwriteBehavior": "IfFumenGenerated",
 
-	// Normal Settings.
-	"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\",
-	"InputNameRegex": ".*\\.(sm|ssc)$",
-	"InputChartType": "dance-single",
-	"DifficultyRegex": ".",
-	"OutputChartType": "dance-double",
-	"OverwriteBehavior": "IfFumenGenerated",
+	// Test Pack Settings.
+	"InputDirectory":			"C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
+	"OutputDirectory":			"C:\\Users\\perry\\Projects\\Fumen\\Exports\\",
+	"VisualizationsDirectory":	"C:\\Users\\perry\\Projects\\Fumen\\Visualizations\\",
+	"LogDirectory":				"C:\\Users\\perry\\Projects\\Fumen\\Logs\\",
+	"InputNameRegex":			".*\\.(sm|ssc)$",
+	"InputChartType":			"dance-single",
+	"DifficultyRegex":			".",
+	"OutputChartType":			"dance-double",
+	"OverwriteBehavior":		"IfFumenGenerated",
+	"OutputVisualizations":		true,
+	"NonChartFileCopyBehavior":	"DoNotCopy",
 
-	"OutputDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Exports\\",
-	"OutputVisualizations": true,
-	"NonChartFileCopyBehavior": "DoNotCopy",
-	"VisualizationsDirectory": "C:\\Users\\perry\\Projects\\Fumen\\Visualizations",
+	// Normal Settings.
+	//"InputDirectory":			"C:\\Users\\perry\\Desktop\\DanceyBox-2021-02-06\\Songs\\",
+	//"OutputDirectory":			"C:\\Users\\perry\\Desktop\\DanceyBox-Export",
+	//"VisualizationsDirectory":	"C:\\Users\\perry\\Desktop\\DanceyBox-Export-Visualizations",
+	//"LogDirectory":				"C:\\Users\\perry\\Desktop\\DanceyBox-Export-Logs",
+	//"InputNameRegex":			".*\\.(sm|ssc)$",
+	//"InputChartType":			"dance-single",
+	//"DifficultyRegex":			".",
+	//"OutputChartType":			"dance-double",
+	//"OverwriteBehavior":		"IfFumenGenerated",
+	//"OutputVisualizations":		true,
+	//"NonChartFileCopyBehavior":	"DoNotCopy",
 
 	"DesiredArrowWeights": {
 		"dance-single": [25, 25, 25, 25],
