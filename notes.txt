@@ -1,6 +1,5 @@
 Im a maid.sm - sharpnel. error parsing notes.
 limit html logs somehow? maybe not
-perf pass on whole program.
 
 PerformedChart improvements:
 	Faster patterns should move less.

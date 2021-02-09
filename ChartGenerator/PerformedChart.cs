@@ -102,7 +102,7 @@ namespace ChartGenerator
 		private class SearchNode : IEquatable<SearchNode>
 		{
 			private static long IdCounter;
-
+			
 			/// <summary>
 			/// Unique identifier for preventing conflicts when storing SearchNodes in
 			/// HashSets or other data structures that rely on the IEquatable interface.
@@ -153,6 +153,30 @@ namespace ChartGenerator
 			/// </summary>
 			private readonly int[] StepCounts;
 
+			/// <summary>
+			/// Constructor.
+			/// </summary>
+			/// <param name="graphNode">
+			/// GraphNode representing the state of this SearchNode.
+			/// </param>
+			/// <param name="originalGraphLinkToNextNode">
+			/// The original GraphLink to the next GraphNode.
+			/// This will be used to determine which replacement GraphLinks are acceptable from
+			/// this SearchNode.
+			/// </param>
+			/// <param name="graphLinkFromPreviousNode">
+			/// The GraphLink to this SearchNode from the previous SearchNode.
+			/// </param>
+			/// <param name="depth">
+			/// The 0-based depth of this SearchNode.
+			/// </param>
+			/// <param name="previousNode">
+			/// The previous SearchNode.
+			/// </param>
+			/// <param name="steps">
+			/// For each arrow, whether it was stepped on to arrive at this SearchNode from the previous
+			/// SearchNode.
+			/// </param>
 			public SearchNode(
 				GraphNode graphNode,
 				GraphLink originalGraphLinkToNextNode,
@@ -170,8 +194,11 @@ namespace ChartGenerator
 				StepCounts = new int[steps.Length];
 				for (var a = 0; a < steps.Length; a++)
 					StepCounts[a] = (steps[a] ? 1 : 0) + (previousNode?.StepCounts[a] ?? 0);
+				
+				// Get the GraphLinks to use as replacements for the original GraphLink
+				GraphLinks = originalGraphLinkToNextNode == null ? new List<GraphLink>()
+					: GraphLinkReplacementCache[originalGraphLinkToNextNode];
 
-				GraphLinks = FindAllAcceptableLinks(originalGraphLinkToNextNode);
 				Cost = DetermineCost(steps);
 			}
 
@@ -215,95 +242,6 @@ namespace ChartGenerator
 				return deviationFromDesiredDistribution;
 			}
 
-			/// <summary>
-			/// Given a GraphLink from an ExpressedChart, return all acceptable GraphLinks that can be used
-			/// in its place in the PerformedChart.
-			/// Replacements are specified in Config.StepTypeReplacements.
-			/// </summary>
-			/// <param name="originalGraphLinkToNextNode">Original GraphLink.</param>
-			/// <returns>List of all valid GraphLink replacements.</returns>
-			private static List<GraphLink> FindAllAcceptableLinks(GraphLink originalGraphLinkToNextNode)
-			{
-				var acceptableLinks = new List<GraphLink>();
-				if (originalGraphLinkToNextNode == null)
-					return acceptableLinks;
-
-				var originalLinks = originalGraphLinkToNextNode.Links;
-
-				// Accumulate states to turn into GraphLinks.
-				// Loop over each foot and portion, updating tempStates with valid replacements.
-				var tempStates = new List<GraphLink.FootArrowState[,]>();
-				for (var f = 0; f < NumFeet; f++)
-				{
-					for (var p = 0; p < NumFootPortions; p++)
-					{
-						// Get the acceptable steps for the step at this Foot and FootPortion.
-						if (!originalLinks[f, p].Valid)
-							continue;
-						if (!Config.Instance.StepTypeReplacements.TryGetValue(originalLinks[f, p].Step, out var acceptableSteps))
-							continue;
-
-						// If no temp states exist yet, create new ones for this Foot and FootPortion.
-						if (tempStates.Count == 0)
-						{
-							foreach (var stepType in acceptableSteps)
-							{
-								var state = new GraphLink.FootArrowState[NumFeet, NumFootPortions];
-								state[f, p] = new GraphLink.FootArrowState(stepType, originalLinks[f, p].Action);
-								tempStates.Add(state);
-							}
-						}
-
-						// If temp states exist, loop over them and add to their states.
-						else
-						{
-							// Accumulate new states taking the state from the current tempStates and
-							// adding the new step to them.
-							var newStates = new List<GraphLink.FootArrowState[,]>();
-							foreach (var tempState in tempStates)
-							{
-								foreach (var stepType in acceptableSteps)
-								{
-									// Don't create invalid brackets. In a bracket, both FootPortions
-									// must use the same StepType.
-									if (p > 0
-									    && tempState[f, 0].Valid
-									    && StepData.Steps[(int) tempState[f, 0].Step].IsBracket
-									    && stepType != tempState[f, 0].Step)
-									{
-										continue;
-									}
-
-									// Create a new state, copied from the current temp state.
-									var state = new GraphLink.FootArrowState[NumFeet, NumFootPortions];
-									for (var f2 = 0; f2 < NumFeet; f2++)
-										for (var p2 = 0; p2 < NumFootPortions; p2++)
-											state[f2, p2] = tempState[f2, p2];
-									// Update the new state with the new StepType.
-									state[f, p] = new GraphLink.FootArrowState(stepType, originalLinks[f, p].Action);
-									newStates.Add(state);
-								}
-							}
-
-							// Update the tempStates with the newStates.
-							tempStates = newStates;
-						}
-					}
-				}
-
-				// Accumulate all the states into GraphLinks.
-				foreach (var state in tempStates)
-				{
-					var g = new GraphLink();
-					for (var f = 0; f < NumFeet; f++)
-						for (var p = 0; p < NumFootPortions; p++)
-							g.Links[f, p] = state[f, p];
-					acceptableLinks.Add(g);
-				}
-
-				return acceptableLinks;
-			}
-
 			#region IEquatable Implementation
 			public override bool Equals(object obj)
 			{
@@ -327,6 +265,16 @@ namespace ChartGenerator
 			}
 			#endregion
 		}
+
+		/// <summary>
+		/// Cache of GraphLink to all replacement GraphLink which can be used in a PerformedChart
+		/// based on the StepTypeReplacements in Config and the available GraphLinks in the
+		/// StepGraph for the OutputChartType.
+		/// This is cached as a performance optimization so we do not need to construct the list for
+		/// each node of a search.
+		/// It is expected that this 
+		/// </summary>
+		private static readonly Dictionary<GraphLink, List<GraphLink>> GraphLinkReplacementCache = new Dictionary<GraphLink, List<GraphLink>>();
 
 		/// <summary>
 		/// Root PerformanceNode of the PerformedChart.
@@ -383,6 +331,12 @@ namespace ChartGenerator
 			ExpressedChart expressedChart,
 			string logIdentifier)
 		{
+			if (GraphLinkReplacementCache.Count == 0)
+			{
+				LogError("Programmer Error. No cached GraphLink replacements. See CacheGraphLinks.", logIdentifier);
+				return null;
+			}
+
 			if (rootNodes == null || rootNodes.Count < 1 || rootNodes[0] == null || rootNodes[0].Count < 1)
 				return null;
 
@@ -1040,6 +994,117 @@ namespace ChartGenerator
 
 			return events;
 		}
+
+		#region GraphLink Cache
+		/// <summary>
+		/// Determines and caches all replacement GraphLinks for the given GraphLinks.
+		/// Caches into GraphLinkReplacementCache.
+		/// </summary>
+		/// <remarks>
+		/// Expected that the given GraphLinks represent the set of all GraphLinks in
+		/// the output StepGraph.
+		/// Expected that this method is called to populate the cache prior to calling
+		/// CreateFromExpressedChart.
+		/// </remarks>
+		/// <param name="graphLinks">Collection of GraphLinks</param>
+		public static void CacheGraphLinks(IEnumerable<GraphLink> graphLinks)
+		{
+			foreach (var graphLink in graphLinks)
+			{
+				if (!GraphLinkReplacementCache.ContainsKey(graphLink))
+					GraphLinkReplacementCache.Add(graphLink, FindAllAcceptableLinks(graphLink));
+			}
+		}
+
+		/// <summary>
+		/// Given a GraphLink from an ExpressedChart, return all acceptable GraphLinks that can be used
+		/// in its place in the PerformedChart.
+		/// Replacements are specified in Config.StepTypeReplacements.
+		/// </summary>
+		/// <param name="originalGraphLinkToNextNode">Original GraphLink.</param>
+		/// <returns>List of all valid GraphLink replacements.</returns>
+		private static List<GraphLink> FindAllAcceptableLinks(GraphLink originalGraphLinkToNextNode)
+		{
+			var acceptableLinks = new List<GraphLink>();
+			if (originalGraphLinkToNextNode == null)
+				return acceptableLinks;
+
+			var originalLinks = originalGraphLinkToNextNode.Links;
+
+			// Accumulate states to turn into GraphLinks.
+			// Loop over each foot and portion, updating tempStates with valid replacements.
+			var tempStates = new List<GraphLink.FootArrowState[,]>();
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					// Get the acceptable steps for the step at this Foot and FootPortion.
+					if (!originalLinks[f, p].Valid)
+						continue;
+					if (!Config.Instance.StepTypeReplacements.TryGetValue(originalLinks[f, p].Step, out var acceptableSteps))
+						continue;
+
+					// If no temp states exist yet, create new ones for this Foot and FootPortion.
+					if (tempStates.Count == 0)
+					{
+						foreach (var stepType in acceptableSteps)
+						{
+							var state = new GraphLink.FootArrowState[NumFeet, NumFootPortions];
+							state[f, p] = new GraphLink.FootArrowState(stepType, originalLinks[f, p].Action);
+							tempStates.Add(state);
+						}
+					}
+
+					// If temp states exist, loop over them and add to their states.
+					else
+					{
+						// Accumulate new states taking the state from the current tempStates and
+						// adding the new step to them.
+						var newStates = new List<GraphLink.FootArrowState[,]>();
+						foreach (var tempState in tempStates)
+						{
+							foreach (var stepType in acceptableSteps)
+							{
+								// Don't create invalid brackets. In a bracket, both FootPortions
+								// must use the same StepType.
+								if (p > 0
+									&& tempState[f, 0].Valid
+									&& StepData.Steps[(int)tempState[f, 0].Step].IsBracket
+									&& stepType != tempState[f, 0].Step)
+								{
+									continue;
+								}
+
+								// Create a new state, copied from the current temp state.
+								var state = new GraphLink.FootArrowState[NumFeet, NumFootPortions];
+								for (var f2 = 0; f2 < NumFeet; f2++)
+									for (var p2 = 0; p2 < NumFootPortions; p2++)
+										state[f2, p2] = tempState[f2, p2];
+								// Update the new state with the new StepType.
+								state[f, p] = new GraphLink.FootArrowState(stepType, originalLinks[f, p].Action);
+								newStates.Add(state);
+							}
+						}
+
+						// Update the tempStates with the newStates.
+						tempStates = newStates;
+					}
+				}
+			}
+
+			// Accumulate all the states into GraphLinks.
+			foreach (var state in tempStates)
+			{
+				var g = new GraphLink();
+				for (var f = 0; f < NumFeet; f++)
+					for (var p = 0; p < NumFootPortions; p++)
+						g.Links[f, p] = state[f, p];
+				acceptableLinks.Add(g);
+			}
+
+			return acceptableLinks;
+		}
+		#endregion GraphLink Cache
 
 		#region Logging
 		private static void LogError(string message, string logIdentifier)

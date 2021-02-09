@@ -158,6 +158,7 @@ namespace ChartGenerator
 			return stepGraph;
 		}
 
+		#region Public Search Methods
 		/// <summary>
 		/// Searches the StepGraph for a GraphNode matching the given left and right
 		/// foot states using DefaultFootPortions.
@@ -230,10 +231,47 @@ namespace ChartGenerator
 			return node.Equals(newNode);
 		}
 
+		/// <summary>
+		/// Finds all GraphLinks used by this StepGraph.
+		/// </summary>
+		/// <returns>HashSet of all GraphLinks in this StepGraph.</returns>
+		public HashSet<GraphLink> FindAllGraphLinks()
+		{
+			var allLinks = new HashSet<GraphLink>();
+			var trackedNodes = new HashSet<GraphNode>();
+			var nodes = new HashSet<GraphNode> { Root };
+			trackedNodes.Add(Root);
+			while (true)
+			{
+				var newNodes = new HashSet<GraphNode>();
+				foreach (var node in nodes)
+				{
+					foreach (var l in node.Links)
+					{
+						allLinks.Add(l.Key);
+						foreach (var g in l.Value)
+						{
+							if (!trackedNodes.Contains(g))
+							{
+								trackedNodes.Add(g);
+								newNodes.Add(g);
+							}
+						}
+					}
+				}
+
+				nodes = newNodes;
+				if (nodes.Count == 0)
+					break;
+			}
+			return allLinks;
+		}
+		#endregion Public Search Methods
+
 		#region Fill
 		private void Fill()
 		{
-			Log("Generating StepGraph...");
+			LogInfo("Generating StepGraph...");
 
 			VisitedNodes = new HashSet<GraphNode>();
 			var completeNodes = new HashSet<GraphNode>();
@@ -246,7 +284,7 @@ namespace ChartGenerator
 
 			while (currentNodes.Count > 0)
 			{
-				Log($"Level {level + 1}: Searching {currentNodes.Count} nodes...");
+				LogInfo($"Level {level + 1}: Searching {currentNodes.Count} nodes...");
 
 				var allChildren = new HashSet<GraphNode>();
 				foreach (var currentNode in currentNodes)
@@ -272,14 +310,14 @@ namespace ChartGenerator
 				var previousCount = allChildren.Count;
 				allChildren.RemoveWhere(n => completeNodes.Contains(n));
 
-				Log($"Level {level + 1}: Found {allChildren.Count} children (pruned from {previousCount}).");
+				LogInfo($"Level {level + 1}: Found {allChildren.Count} children (pruned from {previousCount}).");
 
 				// Search one level deeper
 				currentNodes = allChildren.ToList();
 				level++;
 			}
 
-			Log($"StepGraph generation complete. {completeNodes.Count} Nodes.");
+			LogInfo($"StepGraph generation complete. {completeNodes.Count} Nodes.");
 		}
 
 		private void AddNode(GraphNode currentNode, GraphNode newNode, GraphLink link)
@@ -1981,9 +2019,11 @@ namespace ChartGenerator
 		#endregion Fill Helpers
 		#endregion Fill
 
-		private void Log(string message)
+		#region Logging
+		private void LogInfo(string message)
 		{
 			Logger.Info($"[StepGraph ({NumArrows})] {message}");
 		}
+		#endregion Logging
 	}
 }

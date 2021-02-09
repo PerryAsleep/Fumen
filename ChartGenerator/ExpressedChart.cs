@@ -25,6 +25,8 @@ namespace ChartGenerator
 	/// Given a graph of StepNodes for set of arrows and an ExpressedChart, a PerformedChart
 	/// can be generated.
 	/// TODO: Consider consolidating search logic with PerformedChart?
+	/// TODO: Consider reworking the static methods in CreateFromSMEvents to be instance methods
+	/// so we can clean up all the state being passed along.
 	/// </summary>
 	public class ExpressedChart
 	{
@@ -311,7 +313,13 @@ namespace ChartGenerator
 		/// </summary>
 		/// <param name="events">List of Events from an SM Chart.</param>
 		/// <param name="stepGraph">StepGraph to use for searching the Events.</param>
-		/// <returns></returns>
+		/// <param name="logIdentifier">
+		/// Identifier to use when logging messages about this ExpressedChart.
+		/// </param>
+		/// <returns>
+		/// ExpressedChart and the root ChartSearchNode of the ExpressedChart.
+		/// If no ExpressedChart could be generated (null, null) will be returned.
+		/// </returns>
 		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(
 			List<Event> events,
 			StepGraph stepGraph,
@@ -359,7 +367,13 @@ namespace ChartGenerator
 			var eventIndex = 0;
 			var numEvents = events.Count;
 			var currentSearchNodes = new HashSet<ChartSearchNode> { root };
-			
+
+			// Performance optimization.
+			// Keep one array for generating SearchStates to use for GetLinkInstanceIfStateMatches.
+			// If this method gets refactored to construct the ExpressedChart earlier this should be
+			// a member variable so we don't have to pass it around.
+			var generatedStateBuffer = new SearchState[numArrows];
+
 			while (true)
 			{
 				// Failed to find a path through the chart
@@ -401,7 +415,7 @@ namespace ChartGenerator
 					}
 
 					// Add children and prune.
-					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
+					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
 						releases[0].Position, stepGraph, lastMines, lastReleases, logIdentifier);
 				}
 
@@ -438,7 +452,7 @@ namespace ChartGenerator
 					}
 
 					// Add children and prune.
-					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState,
+					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
 						steps[0].Position, stepGraph, lastMines, lastReleases, logIdentifier);
 				}
 
@@ -516,14 +530,19 @@ namespace ChartGenerator
 		/// </summary>
 		/// <param name="currentSearchNodes">All lowest-cost current ChartSearchNodes from previous state.</param>
 		/// <param name="currentState">Current state to search for paths into.</param>
+		/// <param name="generatedStateBuffer">Buffer to hold State when comparing in GetLinkInstanceIfStateMatches.</param>
 		/// <param name="position">Position of the state.</param>
 		/// <param name="stepGraph">StepGraph. Needed for cost determination.</param>
 		/// <param name="lastMines">Position of last mines per arrow. Needed for cost determination.</param>
 		/// <param name="lastReleases">Position of last releases per arrow. Needed for cost determination.</param>
+		/// <param name="logIdentifier">
+		/// Identifier to use when logging messages about this ExpressedChart.
+		/// </param>
 		/// <returns>HashSet of all lowest cost ChartSearchNodes satisfying this state.</returns>
 		private static HashSet<ChartSearchNode> AddChildrenAndPrune(
 			HashSet<ChartSearchNode> currentSearchNodes,
 			SearchState[] currentState,
+			SearchState[] generatedStateBuffer,
 			MetricPosition position,
 			StepGraph stepGraph,
 			MetricPosition[] lastMines,
@@ -552,10 +571,11 @@ namespace ChartGenerator
 				foreach (var l in searchNode.GraphNode.Links)
 				{
 					// Check every resulting child GraphNode.
-					foreach (var childNode in l.Value)
+					for (var childNodeIndex = 0; childNodeIndex < l.Value.Count; childNodeIndex++)
 					{
+						var childNode = l.Value[childNodeIndex];
 						// Most children will not match the new state. Ignore them.
-						var linkInstance = GetLinkInstanceIfStateMatches(currentState, childNode, l.Key);
+						var linkInstance = GetLinkInstanceIfStateMatches(currentState, generatedStateBuffer, childNode, l.Key);
 						if (linkInstance == null)
 							continue;
 
@@ -601,17 +621,18 @@ namespace ChartGenerator
 		/// state.
 		/// </summary>
 		/// <param name="searchState">Array of SearchStates. One SearchState per arrow.</param>
+		/// <param name="generatedStateBuffer">Buffer to hold State when comparing.</param>
 		/// <param name="node">GraphNode with state per foot.</param>
 		/// <param name="link">GraphLink that linked to the given node.</param>
 		/// <returns>True if the two representations match and false if they do not.</returns>
 		private static GraphLinkInstance GetLinkInstanceIfStateMatches(
 			SearchState[] searchState,
+			SearchState[] generatedStateBuffer,
 			GraphNode node,
 			GraphLink link)
 		{
-			SearchState[] generatedState = new SearchState[searchState.Length];
-			for (var s = 0; s < generatedState.Length; s++)
-				generatedState[s] = SearchState.Empty;
+			for (var s = 0; s < generatedStateBuffer.Length; s++)
+				generatedStateBuffer[s] = SearchState.Empty;
 
 			for (var f = 0; f < NumFeet; f++)
 			{
@@ -627,15 +648,15 @@ namespace ChartGenerator
 						{
 							case GraphArrowState.Held:
 							{
-								generatedState[node.State[f, p].Arrow] = SearchState.Hold;
+								generatedStateBuffer[node.State[f, p].Arrow] = SearchState.Hold;
 								break;
 							}
 							case GraphArrowState.Resting:
 							{
 								if (link.Links[f, p].Action == FootAction.Release)
-									generatedState[node.State[f, p].Arrow] = SearchState.Empty;
+									generatedStateBuffer[node.State[f, p].Arrow] = SearchState.Empty;
 								else
-									generatedState[node.State[f, p].Arrow] = SearchState.Tap;
+									generatedStateBuffer[node.State[f, p].Arrow] = SearchState.Tap;
 								break;
 							}
 						}
@@ -645,22 +666,22 @@ namespace ChartGenerator
 						switch (node.State[f, p].State)
 						{
 							case GraphArrowState.Held:
-								generatedState[node.State[f, p].Arrow] = SearchState.Holding;
+								generatedStateBuffer[node.State[f, p].Arrow] = SearchState.Holding;
 								break;
 						}
 					}
 				}
 			}
 
-			for (var s = 0; s < generatedState.Length; s++)
+			for (var s = 0; s < generatedStateBuffer.Length; s++)
 			{
-				if (generatedState[s] == searchState[s])
+				if (generatedStateBuffer[s] == searchState[s])
 					continue;
-				if (generatedState[s] == SearchState.Hold && searchState[s] == SearchState.Roll)
+				if (generatedStateBuffer[s] == SearchState.Hold && searchState[s] == SearchState.Roll)
 					continue;
-				if (generatedState[s] == SearchState.Tap && (searchState[s] == SearchState.Fake || searchState[s] == SearchState.Lift))
+				if (generatedStateBuffer[s] == SearchState.Tap && (searchState[s] == SearchState.Fake || searchState[s] == SearchState.Lift))
 					continue;
-				if (generatedState[s] == SearchState.Holding && searchState[s] == SearchState.Rolling)
+				if (generatedStateBuffer[s] == SearchState.Holding && searchState[s] == SearchState.Rolling)
 					continue;
 				return null;
 			}

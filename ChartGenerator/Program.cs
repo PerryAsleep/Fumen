@@ -139,6 +139,9 @@ namespace ChartGenerator
 			// Create StepGraphs.
 			await CreateStepGraphs();
 
+			// Cache the replacement GraphLinks from the OutputStepGraph.
+			PerformedChart.CacheGraphLinks(OutputStepGraph.FindAllGraphLinks());
+
 			// Find and process all charts.
 			await FindAndProcessCharts();
 			
