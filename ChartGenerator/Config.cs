@@ -285,10 +285,19 @@ namespace ChartGenerator
 					        + " it to a type of step to use as a replacement.");
 			}
 
-			if (LogToFile && string.IsNullOrEmpty(LogDirectory))
+			if (LogToFile)
 			{
-				LogError("LogToFile is true, but no LogDirectory specified.");
-				errors = true;
+				if (string.IsNullOrEmpty(LogDirectory))
+				{
+					LogError("LogToFile is true, but no LogDirectory specified.");
+					errors = true;
+				}
+
+				if (LogBufferSizeBytes <= 0)
+				{
+					LogError("Expected a non-negative LogBufferSizeBytes.");
+					errors = true;
+				}
 			}
 
 			return !errors;

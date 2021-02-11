@@ -190,8 +190,11 @@ namespace Fumen
 				TaskScheduler.Default);
 
 			// Start a timer to flush the StreamWriter to disk periodically.
-			var periodMillis = flushIntervalSeconds * 1000;
-			Timer = new Timer(FlushTimerCallback, null, periodMillis, periodMillis);
+			if (flushIntervalSeconds > 0)
+			{
+				var periodMillis = flushIntervalSeconds * 1000;
+				Timer = new Timer(FlushTimerCallback, null, periodMillis, periodMillis);
+			}
 		}
 
 		/// <summary>

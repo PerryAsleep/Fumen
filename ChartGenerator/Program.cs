@@ -125,11 +125,12 @@ namespace ChartGenerator
 				return;
 
 			// Create the logger as soon as possible. We need to load Config first for Logger configuration.
-			if (!CreateLogger())
-				return;
+			var loggerSuccess = CreateLogger();
 
-			// Validate Config.
+			// Validate Config, even if creating the logger failed. This will still log errors to the console.
 			if (!config.Validate(SupportedInputTypes, SupportedOutputTypes))
+				return;
+			if (!loggerSuccess)
 				return;
 
 			// Create a directory for outputting visualizations.
