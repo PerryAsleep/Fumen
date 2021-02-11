@@ -4,10 +4,13 @@
 The application understands most technical moves including crossovers, inverted steps (a.k.a Afronova walks), foot swaps, and brackets.
 
 ## Installation
-Download the latest version from the [Releases](https://github.com/PerryAsleep/Fumen/releases) page.
+`ChartGenerator` is available for Windows. Download the latest version from the [Releases](https://github.com/PerryAsleep/Fumen/releases) page.
 
 ## Configuration
 See the [Configuration](docs/Config.md) Guide.
 
 ## Usage
 Double-click `ChartGenerator.exe`.
+
+## How it Works
+TODO
