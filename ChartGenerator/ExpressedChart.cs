@@ -1019,18 +1019,18 @@ namespace ChartGenerator
 
 									if (doubleStep)
 									{
-										// When there are lots of double steps we want to promote alternating.
-										// It is better to hit two double steps with two feet rather than two with
-										// one foot.
-										if (tripleStep)
-											return CostNewArrow_TripleStep;
-
 										// If the other foot released later than this one then we are double-stepping
 										// out of a pattern where the author likely intended it.
 										if (doubleStepOtherFootReleasedAtSameTime)
 											return CostNewArrow_OtherHoldingOne;
 										if (doubleStepOtherFootReleasedAfterThisFoot)
 											return CostNewArrow_DoubleStepOtherFootReleasedLater;
+
+										// When there are lots of double steps we want to promote alternating.
+										// It is better to hit two double steps with two feet rather than two with
+										// one foot.
+										if (tripleStep)
+											return CostNewArrow_TripleStep;
 
 										// Mine indicated
 										if (thisMinePositionFollowingPreviousStep != null)
