@@ -152,8 +152,8 @@ namespace ChartGenerator
 			foreach (var expressedColInfo in ExpressionColumnInfo)
 				GeneratedChartX += expressedColInfo.Width;
 
-			if (!SongPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
-				SongPath += Path.DirectorySeparatorChar.ToString();
+			if (!SongPath.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString()))
+				SongPath += System.IO.Path.DirectorySeparatorChar.ToString();
 		}
 
 		public void Write()

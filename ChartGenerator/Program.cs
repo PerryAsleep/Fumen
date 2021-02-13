@@ -221,7 +221,7 @@ namespace ChartGenerator
 				if (config.LogToFile)
 				{
 					var logFileName = ExportTime.ToString("yyyy-MM-dd HH-mm-ss") + ".log";
-					var logFilePath = Path.Combine(config.LogDirectory, logFileName);
+					var logFilePath = Fumen.Path.Combine(config.LogDirectory, logFileName);
 					Logger.StartUp(config.LogLevel, logFilePath, config.LogFlushIntervalSeconds, config.LogBufferSizeBytes);
 				}
 				else
@@ -250,7 +250,7 @@ namespace ChartGenerator
 				{
 					var visualizationSubDir = ExportTime.ToString("yyyy-MM-dd HH-mm-ss");
 					VisualizationDir = Config.Instance.VisualizationsDirectory;
-					VisualizationDir = Path.Combine(VisualizationDir, visualizationSubDir);
+					VisualizationDir = Fumen.Path.Combine(VisualizationDir, visualizationSubDir);
 					LogInfo($"Creating directory for outputting visualizations: {VisualizationDir}.");
 					Directory.CreateDirectory(VisualizationDir);
 				}
@@ -278,7 +278,7 @@ namespace ChartGenerator
 			}
 
 			var songTasks = new List<Task>();
-			var pathSep = Path.DirectorySeparatorChar.ToString();
+			var pathSep = System.IO.Path.DirectorySeparatorChar.ToString();
 
 			// Search through the configured InputDirectory and all subdirectories.
 			var dirs = new Stack<string>();
@@ -321,7 +321,7 @@ namespace ChartGenerator
 					relativePath = relativePath.Substring(1, relativePath.Length - 1);
 				if (!relativePath.EndsWith(pathSep))
 					relativePath += pathSep;
-				var saveDir = Path.Combine(Config.Instance.OutputDirectory, relativePath);
+				var saveDir = Fumen.Path.Combine(Config.Instance.OutputDirectory, relativePath);
 
 				// Check each file.
 				var hasSong = false;
@@ -407,7 +407,7 @@ namespace ChartGenerator
 			// Save
 			var config = new SMWriterBase.SMWriterBaseConfig
 			{
-				FilePath = Path.Combine(songArgs.SaveDir, songArgs.FileInfo.Name),
+				FilePath = Fumen.Path.Combine(songArgs.SaveDir, songArgs.FileInfo.Name),
 				Song = song,
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
@@ -592,9 +592,9 @@ namespace ChartGenerator
 					// Write a visualization.
 					if (Config.Instance.OutputVisualizations)
 					{
-						var visualizationDirectory = Path.Combine(VisualizationDir, songArgs.RelativePath);
+						var visualizationDirectory = Fumen.Path.Combine(VisualizationDir, songArgs.RelativePath);
 						Directory.CreateDirectory(visualizationDirectory);
-						var saveFile = Path.Combine(visualizationDirectory,  $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html");
+						var saveFile = Fumen.Path.Combine(visualizationDirectory,  $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html");
 
 						// One time this write caused a DirectoryNotFoundException and I am not sure why.
 						// The directory existed and nothing looked incorrect about the path or file.

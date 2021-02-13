@@ -126,7 +126,7 @@ namespace ChartGenerator
 
 			try
 			{
-				using (FileStream openStream = File.OpenRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
+				using (FileStream openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
 				{
 					Instance = await JsonSerializer.DeserializeAsync<Config>(openStream, options);
 					Instance?.Init();
@@ -162,9 +162,9 @@ namespace ChartGenerator
 
 			// Convert paths to absolute paths.
 			if (!string.IsNullOrEmpty(OutputDirectory))
-				OutputDirectory = Path.GetFullPath(OutputDirectory);
+				OutputDirectory = System.IO.Path.GetFullPath(OutputDirectory);
 			if (!string.IsNullOrEmpty(InputDirectory))
-				InputDirectory = Path.GetFullPath(InputDirectory);
+				InputDirectory = System.IO.Path.GetFullPath(InputDirectory);
 
 			// Cache whether the output and input directories are the same.
 			OutputDirectoryEqualsDirectory =

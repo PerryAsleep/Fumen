@@ -41,9 +41,9 @@ namespace ChartGeneratorTests
 		/// <returns>String representation of path to sm file with extension.</returns>
 		public static string GetTestChartPath(string songFolder, string smFile = "test")
 		{
-			return Path.Combine(
+			return Fumen.Path.Combine(new []{
 				AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "ChartGeneratorTests", "TestData", songFolder,
-				$"{smFile}.sm");
+				$"{smFile}.sm"});
 		}
 
 		/// <summary>
