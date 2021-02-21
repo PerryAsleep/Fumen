@@ -104,7 +104,7 @@ namespace Fumen.Converters
 				return false;
 
 			// Record the string value in the extras.
-			Song.SourceExtras.Add(PropertyName, songValueStr);
+			Song.SourceExtras[PropertyName] = songValueStr;
 
 			// Only consider this line if the property is valid.
 			var prop = Song.GetType().GetProperty(SongPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -158,7 +158,7 @@ namespace Fumen.Converters
 				return false;
 
 			// Record the string value in the extras.
-			Chart.SourceExtras.Add(PropertyName, chartValueStr);
+			Chart.SourceExtras[PropertyName] = chartValueStr;
 
 			// Only consider this line if the property is valid.
 			var prop = Chart.GetType().GetProperty(ChartPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -508,7 +508,7 @@ namespace Fumen.Converters
 									if (int.TryParse(trimmedLine.Substring(startIndex, endIndex - startIndex),
 										out var keySoundIndex))
 									{
-										note.SourceExtras.Add(SMCommon.TagFumenKeySoundIndex, keySoundIndex);
+										note.SourceExtras[SMCommon.TagFumenKeySoundIndex] = keySoundIndex;
 									}
 								}
 							}
@@ -625,7 +625,7 @@ namespace Fumen.Converters
 			chart.Layers.Add(new Layer());
 
 			// Record whether this chart was written under NOTES or NOTES2.
-			chart.SourceExtras.Add(SMCommon.TagFumenNotesType, PropertyName);
+			chart.SourceExtras[SMCommon.TagFumenNotesType] = PropertyName;
 
 			// Parse the chart information before measure data.
 			var chartDifficultyRatingStr = value.Params[4]?.Trim(SMCommon.SMAllWhiteSpace) ?? "";
@@ -694,7 +694,7 @@ namespace Fumen.Converters
 				return false;
 
 			// Record whether this chart was written under NOTES or NOTES2.
-			Chart.SourceExtras.Add(SMCommon.TagFumenNotesType, PropertyName);
+			Chart.SourceExtras[SMCommon.TagFumenNotesType] = PropertyName;
 
 			// Parse the notes.
 			if (!ParseNotes(Chart, notesStr))
@@ -732,7 +732,7 @@ namespace Fumen.Converters
 			Chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
 			Chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
 
-			Chart.SourceExtras.Add(SMCommon.TagStepsType, Chart.Type);
+			Chart.SourceExtras[SMCommon.TagStepsType] = Chart.Type;
 
 			return true;
 		}
