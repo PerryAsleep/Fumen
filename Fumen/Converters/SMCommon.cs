@@ -342,7 +342,6 @@ namespace Fumen.Converters
 			var highestDenominator = ValidDenominators[ValidDenominators.Length - 1];
 			do
 			{
-				var found = false;
 				foreach (var validDenominator in ValidDenominators)
 				{
 					if (desiredSubDivision == validDenominator)
@@ -351,8 +350,6 @@ namespace Fumen.Converters
 						return true;
 					}
 				}
-				if (found)
-					break;
 				desiredSubDivision <<= 1;
 			}
 			while (desiredSubDivision <= highestDenominator);
