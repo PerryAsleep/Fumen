@@ -650,7 +650,7 @@ namespace Fumen.Converters
 			// Parse chart type and set number of players and inputs.
 			if (!SMCommon.TryGetChartType(chart.Type, out var smChartType))
 			{
-				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
+				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{chart.Type}'. This chart will be ignored.");
 				return true;
 			}
 			chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
