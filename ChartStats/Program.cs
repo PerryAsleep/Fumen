@@ -39,7 +39,7 @@ namespace ChartStats
 
 			// Write headers.
 			// Assumption that charts are doubles.
-			SBStats.AppendLine("Path,File,Song,Type,Difficulty,Rating,Notes Per Second,Total Steps,L,D,U,R,L,D,U,R,%L,%D,%U,%R,%L,%D,%U,%R");
+			SBStats.AppendLine("Path,File,Song,Type,Difficulty,Rating,NPS,Peak NPS,% Under .5x NPS,% Over 2x NPS,% Over 3x NPS,% Over 4x NPS,Total Steps,L,D,U,R,L,D,U,R,%L,%D,%U,%R,%L,%D,%U,%R");
 			SBStepsPerSide.Append("Path,File,Song,Type,Difficulty,Rating,Time");
 			foreach(var denominator in SMCommon.ValidDenominators)
 				SBStepsPerSide.Append($",1_{denominator * SMCommon.NumBeatsPerMeasure} Steps");
@@ -181,6 +181,8 @@ namespace ChartStats
 					var previousPosition = new MetricPosition();
 					var currentStepsBetweenSideUseVariableTiming = false;
 					var currentStepsBetweenSideGreatestDenominator = 0;
+					var peakNPS = 0.0;
+					var npsPerNote = new List<double>();
 
 					// Parse each event in the chart. Loop index incremented in internal while loop
 					// to capture jumps.
@@ -194,6 +196,8 @@ namespace ChartStats
 						var wasAStep = false;
 						for (var s = 0; s < chart.NumInputs; s++)
 							currentSteps[s] = false;
+						var numStepsAtThisPosition = 0;
+						var firstStep = totalSteps == 0;
 
 						// Process each note at the same position (capture jumps).
 						do
@@ -242,10 +246,10 @@ namespace ChartStats
 									timeOfFirstStepOnCurrentSide = currentTime;
 								currentStepCountOnSide++;
 								wasAStep = true;
+								numStepsAtThisPosition++;
 								currentStepsBetweenSideGreatestDenominator = Math.Max(
 									currentStepsBetweenSideGreatestDenominator,
-									chartEvent.Position.SubDivision.Reduce().Denominator
-								);
+									chartEvent.Position.SubDivision.Reduce().Denominator);
 							}
 
 							i++;
@@ -259,6 +263,30 @@ namespace ChartStats
 							currentTimeBetweenSteps = currentTime - previousTime;
 							if (Math.Abs(currentTimeBetweenSteps - previousTimeBetweenSteps) > 0.001)
 								currentStepsBetweenSideUseVariableTiming = true;
+						}
+
+						// NPS tracking
+						if (numStepsAtThisPosition > 0 && !firstStep)
+						{
+							var stepNPS = 0.0;
+							if (currentTimeBetweenSteps > 0.0)
+								stepNPS = numStepsAtThisPosition / currentTimeBetweenSteps;
+							if (stepNPS > peakNPS)
+								peakNPS = stepNPS;
+
+							for (var npsStep = 0; npsStep < numStepsAtThisPosition; npsStep++)
+							{
+								npsPerNote.Add(stepNPS);
+							}
+
+							// Add entries for the first notes using the second notes' time.
+							if (npsPerNote.Count < totalSteps)
+							{
+								for (var npsStep = 0; npsStep < numStepsAtThisPosition; npsStep++)
+								{
+									npsPerNote.Add(stepNPS);
+								}
+							}
 						}
 
 						// Quick and somewhat sloppy check to determine if this step is a jack.
@@ -347,7 +375,30 @@ namespace ChartStats
 					SBStats.Append($"{CSVEscape(fileInfo.Directory.FullName)},{CSVEscape(fileInfo.Name)},");
 					SBStats.Append(
 						$"{CSVEscape(song.Title)},{CSVEscape(chart.Type)},{CSVEscape(chart.DifficultyType)},{chart.DifficultyRating},");
+					
+					// NPS
 					SBStats.Append($"{nps},");
+					SBStats.Append($"{peakNPS},");
+					var numUnderHalf = 0;
+					var numOver2x = 0;
+					var numOver3x = 0;
+					var numOver4x = 0;
+					foreach (var noteNPS in npsPerNote)
+					{
+						if (noteNPS < 0.5 * nps)
+							numUnderHalf++;
+						else if (noteNPS > 2.0 * nps && noteNPS <= 3.0 * nps)
+							numOver2x++;
+						else if (noteNPS > 3.0 * nps && noteNPS <= 4.0 * nps)
+							numOver3x++;
+						else if (noteNPS > 4.0 * nps)
+							numOver4x++;
+					}
+					SBStats.Append($"{(double)numUnderHalf / totalSteps},");
+					SBStats.Append($"{(double)numOver2x / totalSteps},");
+					SBStats.Append($"{(double)numOver3x / totalSteps},");
+					SBStats.Append($"{(double)numOver4x / totalSteps},");
+
 					SBStats.Append($"{totalSteps},");
 					for (var i = 0; i < chart.NumInputs; i++)
 						SBStats.Append($"{steps[i]},");
