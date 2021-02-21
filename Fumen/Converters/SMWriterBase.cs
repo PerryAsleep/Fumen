@@ -690,7 +690,15 @@ namespace Fumen.Converters
 					* reducedSubDivision.Numerator;
 
 				// Record the note.
-				measureChars[measureNote.Lane, measureEventPositionInMeasure] = c;
+				if (measureNote.Lane >= 0 && measureNote.Lane < measureCharsDX
+					&& measureEventPositionInMeasure >= 0 && measureEventPositionInMeasure < measureCharsDY)
+				{
+					measureChars[measureNote.Lane, measureEventPositionInMeasure] = c;
+				}
+				else
+				{
+					Logger.Error($"Error writing note at position {measureNote.Position} lane {measureNote.Lane}.");
+				}
 			}
 
 			// Write the measure of accumulated characters.
@@ -762,7 +770,7 @@ namespace Fumen.Converters
 		protected static bool TryGetChartType(Chart chart, out SMCommon.ChartType chartType)
 		{
 			// If the Chart's Type is already a supported ChartType, use that.
-			if (Enum.TryParse(chart.Type, out chartType))
+			if (SMCommon.TryGetChartType(chart.Type, out chartType))
 				return true;
 
 			// Otherwise infer the ChartType from the number of inputs and players
