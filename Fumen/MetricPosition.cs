@@ -5,7 +5,7 @@ namespace Fumen
 	/// <summary>
 	/// Metric Position.
 	/// </summary>
-	public class MetricPosition : IComparable
+	public class MetricPosition : IComparable<MetricPosition>
 	{
 		public readonly int Measure;
 		public readonly int Beat;
@@ -89,9 +89,8 @@ namespace Fumen
 			return hash;
 		}
 
-		public int CompareTo(object obj)
+		public int CompareTo(MetricPosition other)
 		{
-			var other = (MetricPosition)obj;
 			if (Measure != other.Measure)
 				return Measure.CompareTo(other.Measure);
 			if (Beat != other.Beat)
