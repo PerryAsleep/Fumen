@@ -1,35 +1,43 @@
-Im a maid.sm - sharpnel. error parsing notes.
-limit html logs somehow? maybe not
+Immediate Bugs:
+	Crapyard Scent 24 hour file:
+		out of memory writing the visualization. need streamwriter for renderer.
+	Figure out which chart is causing the error writing note data. It is either a bad lane, or a bad (non 4/4) position.
+	touhou vizualization error
+		2021-02-20 11:29:36.815 [ERROR] [Main] [Touhou Gensouyou ~ Illusionary Dance Fantasy\[CondorTalon] The Ultimate Grilling Restaurant! Orin's Hell Mansion!\The Ultimate Grilling Restaurant! Orin's Hell Mansion!.sm "The Ultimate Grilling Restaurant! Orin's Hell Mansion!" dance-double Challenge] Failed to write visualization to "C:\Users\perry\Desktop\DanceyBox-Export-Visualizations\2021-02-20 11-21-16\Touhou Gensouyou ~ Illusionary Dance Fantasy\[CondorTalon] The Ultimate Grilling Restaurant! Orin's Hell Mansion!\The Ultimate Grilling Restaurant! Orin's Hell Mansion!-Challenge-sm.html". System.IO.DirectoryNotFoundException: Could not find a part of the path 'C:\Users\perry\Desktop\DanceyBox-Export-Visualizations\2021-02-20 11-21-16\Touhou Gensouyou ~ Illusionary Dance Fantasy\[CondorTalon] The Ultimate Grilling Restaurant! Orin's Hell Mansion!\The Ultimate Grilling Restaurant! Orin's Hell Mansion!-Challenge-sm.html'.
+   at System.IO.__Error.WinIOError(Int32 errorCode, String maybeFullPath)
+   at System.IO.FileStream.Init(String path, FileMode mode, FileAccess access, Int32 rights, Boolean useRights, FileShare share, Int32 bufferSize, FileOptions options, SECURITY_ATTRIBUTES secAttrs, String msgPath, Boolean bFromProxy, Boolean useLongPath, Boolean checkHost)
+   at System.IO.FileStream..ctor(String path, FileMode mode, FileAccess access, FileShare share, Int32 bufferSize, FileOptions options, String msgPath, Boolean bFromProxy, Boolean useLongPath, Boolean checkHost)
+   at System.IO.StreamWriter.CreateFile(String path, Boolean append, Boolean checkHost)
+   at System.IO.StreamWriter..ctor(String path, Boolean append, Encoding encoding, Int32 bufferSize, Boolean checkHost)
+   at System.IO.File.InternalWriteAllText(String path, String contents, Encoding encoding, Boolean checkHost)
+   at System.IO.File.WriteAllText(String path, String contents)
+   at ChartGenerator.Renderer.Write() in C:\Users\perry\Projects\Fumen\ChartGenerator\Renderer.cs:line 175
+   at ChartGenerator.Program.AddCharts(Song song, SongArgs songArgs) in C:\Users\perry\Projects\Fumen\ChartGenerator\Program.cs:line 616
 
-PerformedChart improvements:
-	Faster patterns should move less.
-		See: more than friends
-	Swaps should move less, especially if fast.
-	Need to fix jumps into unclear footing.
-	On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
-		e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
-	Come & Get It: Did not understand roll was part of stream? Somehow ended up with crossovers which felt bad.
+Sort dirs on export / time remaining?
 
-	Move to other side more frequently
-		Take into account density to swap sides at low density areas?
-		Take into account current step in cost?
-			what arrow is it on, and also where did it come from.
-				or maybe, track where your body is centered over time and look for a big move?
+PerformedChart Issues:
+	Test Charts:
+		more than friends
+		love bug yuce
 
-	Preference:
-		Swaps that don't make you move so much (e.g. got a swap that is P1D, P2L, P2L, P2R (OOF))
-		Preference for closer steps (e.g. RLR as 523 is less preferable than RLR as 524)
+	X NPS balance: Need to record average NPS and peak NPS stats so we know what numbers to use for balancing
+	X Add a cost for individual steps which move quickly over a certain bpm
+	X Add a cost for the body moving quickly over a series of steps if this quick move is a "burst" (nps)
 
-	Choosing bad patterns:
-		Going into a nebulous jump when the original chart did not.
+	Additional FootSwap tightening
+
+	Unclear Footing Problem:
+		Add something to graphlink for a jump when it us an ambiguous jump?
+		Add a new StepType AmbiguousNewArrow?
+			On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
+				e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
+	Choosing Bad Patterns
 		On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
-			e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
-		Maybe:
-			Don't choose patterns that wouldn't be expressed the same way.
-				This gets pretty difficult (need to be able to parse a DP pattern)
-
-Possible Bugs:
-	Will a Jump with NewArrow NewArrow include UD to DU?
+				e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
+			Maybe:
+				Don't choose patterns that wouldn't be expressed the same way.
+					This gets pretty difficult (need to be able to parse a DP pattern)
 
 Tests:
 	SM/SSC Reader unit Tests
@@ -48,12 +56,18 @@ Bugs:
 			7: Supposed to be swap instead of 3 jack?
 				same in 11, 13, 21
 			61: mine indicated foot swaps - questionable
+	Will a Jump with NewArrow NewArrow include UD to DU?
+	Bracket H New T New can pick up
 
 Misc:
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
 	Copy song pack files (pack art)
+	Load arrowdata from json so we can easily add piu charts without recompiling
+	if all 4 notes are full in sp and there is at least one mine, add mines so it is a whole row of mines in dp? or at least, 4 mines = 8 mines?
+	Preserving patters
 
 Renderer Improvements:
+	css to minimize log size
 	Render note count distribution.
 	Render Fakes and Lifts differently.
 	Render negative Stops (fakes) differently.
@@ -61,12 +75,3 @@ Renderer Improvements:
 	Render performed chart starting position.
 	Render when the performed chart uses different StepTypes.
 
-
-
-
-
-how do patterns? like 123412341234...
-	Separate structure in Expressed charts that map a range of stepevents to another range.
-		ranges that are longer (e.g. a repeated 16 note pattern) are more important to repeat
-
-Primitive Vides - LR hold, alternate jacks on down 

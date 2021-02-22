@@ -75,24 +75,38 @@ namespace ChartGenerator
 		/// </summary>
 		public static Config Instance { get; private set; }
 
-		[JsonInclude] public string InputDirectory;
-		[JsonInclude] public string InputNameRegex;
-		[JsonInclude] public string InputChartType;
-		[JsonInclude] public string OutputDirectory;
-		[JsonInclude] public string DifficultyRegex;
-		[JsonInclude] public string OutputChartType;
-		[JsonInclude] public OverwriteBehavior OverwriteBehavior = OverwriteBehavior.DoNotOverwrite;
-		[JsonInclude] public bool OutputVisualizations = true;
-		[JsonInclude] public string VisualizationsDirectory;
-		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
-		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
-		[JsonInclude] public CopyBehavior NonChartFileCopyBehavior = CopyBehavior.DoNotCopy;
-
+		// Logging
 		[JsonInclude] public LogLevel LogLevel = LogLevel.Info;
 		[JsonInclude] public bool LogToFile;
 		[JsonInclude] public string LogDirectory;
 		[JsonInclude] public int LogFlushIntervalSeconds;
 		[JsonInclude] public int LogBufferSizeBytes;
+
+		// Input
+		[JsonInclude] public string InputDirectory;
+		[JsonInclude] public string InputNameRegex;
+		[JsonInclude] public string InputChartType;
+		[JsonInclude] public string DifficultyRegex;
+
+		// Output
+		[JsonInclude] public string OutputDirectory;
+		[JsonInclude] public string OutputChartType;
+		[JsonInclude] public OverwriteBehavior OverwriteBehavior = OverwriteBehavior.DoNotOverwrite;
+		[JsonInclude] public CopyBehavior NonChartFileCopyBehavior = CopyBehavior.DoNotCopy;
+
+		// Visualizations
+		[JsonInclude] public bool OutputVisualizations = true;
+		[JsonInclude] public string VisualizationsDirectory;
+
+		// PerformedChart behaviors
+		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
+		[JsonInclude] public double IndividualStepTighteningMinTimeSeconds;
+		[JsonInclude] public double IndividualStepTighteningMaxTimeSeconds;
+		[JsonInclude] public int LateralTighteningPatternLength;
+		[JsonInclude] public double LateralTighteningRelativeNPS;
+		[JsonInclude] public double LateralTighteningAbsoluteNPS;
+		[JsonInclude] public double LateralTighteningSpeed;
+		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
 
 		/// <summary>
 		/// Normalized DesiredArrowWeights.
@@ -271,6 +285,49 @@ namespace ChartGenerator
 						}
 					}
 				}
+			}
+
+			if (IndividualStepTighteningMinTimeSeconds < 0.0)
+			{
+				LogError($"Negative value \"{IndividualStepTighteningMinTimeSeconds}\" specified for IndividualStepTighteningMinTimeSeconds. Expected non-negative value.");
+				errors = true;
+			}
+
+			if (IndividualStepTighteningMaxTimeSeconds < 0.0)
+			{
+				LogError($"Negative value \"{IndividualStepTighteningMaxTimeSeconds}\" specified for IndividualStepTighteningMaxTimeSeconds. Expected non-negative value.");
+				errors = true;
+			}
+
+			if (IndividualStepTighteningMinTimeSeconds > IndividualStepTighteningMaxTimeSeconds)
+			{
+				LogError($"IndividualStepTighteningMinTimeSeconds \"{IndividualStepTighteningMaxTimeSeconds}\" is greater than IndividualStepTighteningMaxTimeSeconds \"{IndividualStepTighteningMaxTimeSeconds}\"." 
+				         + "IndividualStepTighteningMinTimeSeconds must be less than or equal to IndividualStepTighteningMaxTimeSeconds.");
+				errors = true;
+			}
+
+			if (LateralTighteningPatternLength < 0)
+			{
+				LogError($"Negative value \"{LateralTighteningPatternLength}\" specified for LateralTighteningPatternLength. Expected non-negative value.");
+				errors = true;
+			}
+
+			if (LateralTighteningRelativeNPS < 0.0)
+			{
+				LogError($"Negative value \"{LateralTighteningRelativeNPS}\" specified for LateralTighteningRelativeNPS. Expected non-negative value.");
+				errors = true;
+			}
+
+			if (LateralTighteningAbsoluteNPS < 0.0)
+			{
+				LogError($"Negative value \"{LateralTighteningAbsoluteNPS}\" specified for LateralTighteningAbsoluteNPS. Expected non-negative value.");
+				errors = true;
+			}
+
+			if (LateralTighteningSpeed < 0.0)
+			{
+				LogError($"Negative value \"{LateralTighteningSpeed}\" specified for LateralTighteningSpeed. Expected non-negative value.");
+				errors = true;
 			}
 
 			// Warn on any missing StepTypeReplacements.

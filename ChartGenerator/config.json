@@ -14,15 +14,7 @@
 	//"OverwriteBehavior": "Always",
 
 	// Test Specific Song Settings.
-	//"InputDirectory": "C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
-	//"InputNameRegex": ".*fire\\.ssc$",
-	//"InputChartType": "dance-single",
-	//"DifficultyRegex": "Challenge",
-	//"OutputChartType": "dance-double",
-	//"OverwriteBehavior": "IfFumenGenerated",
-
-	// Test Pack Settings.
-	"InputDirectory":			"C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
+	"InputDirectory":			"C:\\Users\\perry\\Desktop\\DanceyBox-2021-02-06\\Songs\\Valex's Magical 4-Arrow Adventure 10\\",
 	"OutputDirectory":			"C:\\Users\\perry\\Projects\\Fumen\\Exports\\",
 	"VisualizationsDirectory":	"C:\\Users\\perry\\Projects\\Fumen\\Visualizations\\",
 	"LogDirectory":				"C:\\Users\\perry\\Projects\\Fumen\\Logs\\",
@@ -34,6 +26,19 @@
 	"OutputVisualizations":		true,
 	"NonChartFileCopyBehavior":	"DoNotCopy",
 
+	// Test Pack Settings.
+	//"InputDirectory":			"C:\\Games\\StepMania 5\\Songs\\Mute Sims X",
+	//"OutputDirectory":			"C:\\Users\\perry\\Projects\\Fumen\\Exports\\",
+	//"VisualizationsDirectory":	"C:\\Users\\perry\\Projects\\Fumen\\Visualizations\\",
+	//"LogDirectory":				"C:\\Users\\perry\\Projects\\Fumen\\Logs\\",
+	//"InputNameRegex":			".*\\.(sm|ssc)$",
+	//"InputChartType":			"dance-single",
+	//"DifficultyRegex":			".",
+	//"OutputChartType":			"dance-double",
+	//"OverwriteBehavior":		"IfFumenGenerated",
+	//"OutputVisualizations":		true,
+	//"NonChartFileCopyBehavior":	"DoNotCopy",
+
 	// Normal Settings.
 	//"InputDirectory":			"C:\\Users\\perry\\Desktop\\DanceyBox-2021-02-06\\Songs\\",
 	//"OutputDirectory":			"C:\\Users\\perry\\Desktop\\DanceyBox-Export",
@@ -43,8 +48,8 @@
 	//"InputChartType":			"dance-single",
 	//"DifficultyRegex":			".",
 	//"OutputChartType":			"dance-double",
-	//"OverwriteBehavior":		"IfFumenGenerated",
-	//"OutputVisualizations":		true,
+	//"OverwriteBehavior":		"IfFumenGeneratedAndNewerVersion",
+	//"OutputVisualizations":		false,
 	//"NonChartFileCopyBehavior":	"DoNotCopy",
 
 	"DesiredArrowWeights": {
@@ -52,6 +57,16 @@
 		// This distribution was determined by parsing doubles charts from many packs.
 		"dance-double": [6, 12, 10, 22, 22, 12, 10, 6]
 	},
+
+	// 16ths at 125
+	"IndividualStepTighteningMinTimeSeconds": 0.176471,
+	// 16ths at 170
+	"IndividualStepTighteningMaxTimeSeconds": 0.24,
+
+	"LateralTighteningPatternLength": 5,
+	"LateralTighteningRelativeNPS": 1.65,
+	"LateralTighteningAbsoluteNPS": 12.0,
+	"LateralTighteningSpeed": 3.0,
 
 	"StepTypeReplacements" :
 	{
@@ -83,30 +98,4 @@
 		// Allow Toes to be performed has Heels and vice versa with new bracket steps.
 		"BracketOneArrowToeNew":[ "BracketOneArrowToeNew", "BracketOneArrowHeelNew" ],
 	},
-
-	// "StepTypeReplacements" :
-	// {
-	// 	"SameArrow": [ "SameArrow" ],
-	// 	"NewArrow": [ "NewArrow" ],
-	// 	"CrossoverFront": [ "CrossoverFront" ],
-	// 	"CrossoverBehind": [ "CrossoverBehind" ],
-	// 	"InvertFront": [ "InvertFront" ],
-	// 	"InvertBehind": [ "InvertBehind" ],
-	// 	"FootSwap": [ "FootSwap" ],
-
-	// 	"BracketHeelNewToeNew":[ "BracketHeelNewToeNew" ],
-	// 	"BracketHeelNewToeSame":[ "BracketHeelNewToeSame" ],
-	// 	"BracketHeelSameToeNew":[ "BracketHeelSameToeNew" ],
-	// 	"BracketHeelSameToeSame":[ "BracketHeelSameToeSame" ],
-
-	// 	"BracketHeelSameToeSwap":[ "BracketHeelSameToeSwap" ],
-	// 	"BracketHeelNewToeSwap":[ "BracketHeelNewToeSwap" ],
-	// 	"BracketHeelSwapToeSame":[ "BracketHeelSwapToeSame" ],
-	// 	"BracketHeelSwapToeNew":[ "BracketHeelSwapToeNew" ],
-		
-	// 	"BracketOneArrowHeelSame":[ "BracketOneArrowHeelSame" ],
-	// 	"BracketOneArrowHeelNew":[ "BracketOneArrowHeelNew" ],
-	// 	"BracketOneArrowToeSame":[ "BracketOneArrowToeSame" ],
-	// 	"BracketOneArrowToeNew":[ "BracketOneArrowToeNew" ]
-	// }
 }

@@ -99,7 +99,7 @@ namespace ChartGenerator
 		/// and the position, so that all nodes can be stored and compared without
 		/// conflicting.
 		/// </summary>
-		private class SearchNode : IEquatable<SearchNode>
+		private class SearchNode : IEquatable<SearchNode>, IComparable<SearchNode>
 		{
 			private static long IdCounter;
 			
@@ -126,6 +126,7 @@ namespace ChartGenerator
 			/// The GraphLink into SearchNode N is StepEvent N-1's LinkInstance.
 			/// </summary>
 			public readonly int Depth;
+
 			/// <summary>
 			/// The previous SearchNode.
 			/// Used for backing up when hitting a dead end in a search.
@@ -142,11 +143,54 @@ namespace ChartGenerator
 			/// These are added during the search and pruned so at the end there is at most one next SearchNode.
 			/// </summary>
 			public readonly Dictionary<GraphLink, HashSet<SearchNode>> NextNodes = new Dictionary<GraphLink, HashSet<SearchNode>>();
+
 			/// <summary>
-			/// The Cost of this SearchNode for comparing to other SearchNodes in order to determine the best path.
+			/// This SearchNode's cost for using unwanted individual steps.
 			/// Higher values are worse.
 			/// </summary>
-			public readonly double Cost;
+			private readonly double TotalIndividualStepCost;
+			/// <summary>
+			/// This SearchNode's cost for using unwanted faster lateral movement.
+			/// Higher values are worse.
+			/// </summary>
+			private readonly double TotalLateralMovementSpeedCost;
+			/// <summary>
+			/// This SearchNode's cost for deviating from the configured DesiredArrowWeights.
+			/// Higher values are worse.
+			/// </summary>
+			private readonly double DistributionCost;
+			/// <summary>
+			/// This SearchNode's random weight for when all costs are equal.
+			/// Higher values are worse.
+			/// </summary>
+			private readonly double RandomWeight;
+
+			/// <summary>
+			/// Whether or not this SearchNode represents a step with either foot.
+			/// </summary>
+			private bool Stepped;
+			/// <summary>
+			/// The time in microseconds of the Events represented by this SearchNode.
+			/// </summary>
+			private readonly long TimeMicros;
+			/// <summary>
+			/// Lateral position of the body on the pads at this SearchNode.
+			/// Units are in arrows.
+			/// </summary>
+			private double LateralBodyPosition;
+			/// <summary>
+			/// For each arrow, the last time in microseconds that it was stepped on.
+			/// During construction, these values will be updated to this SearchNode's TimeMicros
+			/// if this SearchNode represents steps on any arrows.
+			/// </summary>
+			private readonly long[] LastTimeFootStepped;
+			/// <summary>
+			/// For each Foot and FootPortion, the last arrows that were stepped on by it.
+			/// During construction, these values will be updated based on this SearchNode's
+			/// steps.
+			/// </summary>
+			private readonly int[][] LastArrowsSteppedOnByFoot;
+
 			/// <summary>
 			/// The number of steps on each arrow up to and including this SearchNode.
 			/// Used to determine Cost.
@@ -167,39 +211,74 @@ namespace ChartGenerator
 			/// <param name="graphLinkFromPreviousNode">
 			/// The GraphLink to this SearchNode from the previous SearchNode.
 			/// </param>
-			/// <param name="depth">
-			/// The 0-based depth of this SearchNode.
+			/// <param name="timeMicros">
+			/// Time of the corresponding ExpressedChart event in microseconds.
 			/// </param>
-			/// <param name="previousNode">
-			/// The previous SearchNode.
-			/// </param>
+			/// <param name="depth"> The 0-based depth of this SearchNode. </param>
+			/// <param name="previousNode"> The previous SearchNode. </param>
 			/// <param name="steps">
 			/// For each arrow, whether it was stepped on to arrive at this SearchNode from the previous
 			/// SearchNode.
+			/// </param>
+			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
+			/// <param name="nps">Average notes per second of the Chart.</param>
+			/// <param name="randomWeight">
+			/// Random weight to use as a fallback for comparing SearchNodes with equal costs.
 			/// </param>
 			public SearchNode(
 				GraphNode graphNode,
 				GraphLink originalGraphLinkToNextNode,
 				GraphLink graphLinkFromPreviousNode,
+				long timeMicros,
 				int depth,
 				SearchNode previousNode,
-				bool[] steps)
+				bool[] steps,
+				StepGraph stepGraph,
+				double nps,
+				double randomWeight)
 			{
 				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
 				GraphLinkFromPreviousNode = graphLinkFromPreviousNode;
 				Depth = depth;
 				PreviousNode = previousNode;
+				TimeMicros = timeMicros;
+				RandomWeight = randomWeight;
+				Stepped = false;
 
+				// Compute StepCounts based on the previous SearchNode's StepCounts and
+				// the steps at this SearchNode.
 				StepCounts = new int[steps.Length];
 				for (var a = 0; a < steps.Length; a++)
 					StepCounts[a] = (steps[a] ? 1 : 0) + (previousNode?.StepCounts[a] ?? 0);
 				
-				// Get the GraphLinks to use as replacements for the original GraphLink
+				// Get the GraphLinks to use as replacements for the original GraphLink.
 				GraphLinks = originalGraphLinkToNextNode == null ? new List<GraphLink>()
 					: GraphLinkReplacementCache[originalGraphLinkToNextNode];
 
-				Cost = DetermineCost(steps);
+				// Copy the previous SearchNode's last step times to this nodes last step times.
+				// We will update them later if this SearchNode represents a step.
+				LastTimeFootStepped = new long[NumFeet];
+				for (var f = 0; f < NumFeet; f++)
+					LastTimeFootStepped[f] = previousNode?.LastTimeFootStepped[f] ?? 0L;
+
+				// Copy the previous SearchNode's LastArrowsSteppedOnByFoot values.
+				// We will update them later if this SearchNode represents a step.
+				LastArrowsSteppedOnByFoot = new int[NumFeet][];
+				for (var f = 0; f < NumFeet; f++)
+				{
+					LastArrowsSteppedOnByFoot[f] = new int[NumFootPortions];
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						LastArrowsSteppedOnByFoot[f][p] = previousNode?.LastArrowsSteppedOnByFoot[f][p] ?? InvalidArrowIndex;
+					}
+				}
+
+				double individualStepCost;
+				double lateralMovementSpeedCost;
+				(DistributionCost, individualStepCost, lateralMovementSpeedCost) = DetermineCostsAndUpdateStepTracking(stepGraph, nps);
+				TotalIndividualStepCost = (PreviousNode?.TotalIndividualStepCost ?? 0.0) + individualStepCost;
+				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + lateralMovementSpeedCost;
 			}
 
 			/// <summary>
@@ -215,32 +294,267 @@ namespace ChartGenerator
 			}
 
 			/// <summary>
-			/// Determines the Cost of this SearchNode.
+			/// Determines the costs of this SearchNode.
+			/// The three costs returned are the distribution cost, the individual step cost, and the
+			/// lateral movement speed cost.
 			/// Higher values are worse.
+			/// Also updates LastArrowsSteppedOnByFoot, LastTimeFootStepped, and LateralBodyPosition.
+			/// Expects that LastArrowsSteppedOnByFoot and LastTimeFootStepped represent values from the
+			/// previous SearchNode at the time of calling.
 			/// </summary>
-			/// <param name="steps">
-			/// Whether each arrow was stepped on in order to move from the previous SearchNode to this SearchNode.
-			/// </param>
-			/// <returns>Cost to use for this SearchNode.</returns>
-			private double DetermineCost(bool[] steps)
+			/// <param name="averageNps">Average notes per second of the Chart.</param>
+			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
+			/// <returns>
+			/// Costs to use for this SearchNode.
+			/// Value 1: distribution cost
+			/// Value 2: individual step cost
+			/// Value 3: lateral movement speed cost
+			/// </returns>
+			private (double, double, double) DetermineCostsAndUpdateStepTracking(StepGraph stepGraph, double averageNps)
 			{
-				// Determine how far off the chart up to this point is from the desired distribution of arrows.
+				// Record the previous step time.
+				// This is currently stored in LastTimeFootStepped from initialization.
+				// We will update LastTimeFootStepped for this step later.
+				var previousStepTime = 0L;
+				for (var f = 0; f < NumFeet; f++)
+				{
+					if (LastTimeFootStepped[f] > previousStepTime)
+						previousStepTime = LastTimeFootStepped[f];
+				}
+
+				// Determine distribution cost by calculating how far off the chart up to this point
+				// is from the desired distribution of arrows.
+				var distributionCost = 0.0;
 				var weights = Config.Instance.GetOutputDesiredArrowWeightsNormalized();
 				var totalSteps = 0;
 				for (var a = 0; a < StepCounts.Length; a++)
 					totalSteps += StepCounts[a];
-				var totalDifferenceFromDesiredLanePercentage = 0.0;
-				for (var a = 0; a < StepCounts.Length; a++)
-					totalDifferenceFromDesiredLanePercentage += Math.Abs((double)StepCounts[a] / totalSteps - weights[a]);
-				var deviationFromDesiredDistribution = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
+				if (totalSteps > 0)
+				{
+					var totalDifferenceFromDesiredLanePercentage = 0.0;
+					for (var a = 0; a < StepCounts.Length; a++)
+						totalDifferenceFromDesiredLanePercentage += Math.Abs((double) StepCounts[a] / totalSteps - weights[a]);
+					distributionCost = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
+				}
 
-				// TODO: Scale the deviation from the desired distribution so that we don't consider it too heavily
-				// at the start of the chart where there aren't enough arrows for it to be meaningful.
+				// Determine how the feet step at this SearchNode.
+				// While checking each foot, 
+				var individualStepCost = 0.0;
+				if (GraphLinkFromPreviousNode != null)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						var steppedWithThisFoot = false;
+						var bracketedWithThisFoot = false;
+						var steppedWithOtherFoot = false;
+						var thisFootPortionSteppingWith = InvalidFootPortion;
+						var otherFoot = OtherFoot(f);
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (GraphLinkFromPreviousNode.Links[f, p].Valid &&
+							    GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+							{
+								bracketedWithThisFoot = steppedWithThisFoot;
+								steppedWithThisFoot = true;
+								Stepped = true;
+								thisFootPortionSteppingWith = p;
+							}
 
-				// TODO: Consider this step.
+							if (GraphLinkFromPreviousNode.Links[otherFoot, p].Valid)
+								steppedWithOtherFoot = true;
+						}
 
-				return deviationFromDesiredDistribution;
+						// Check for updating this SearchNode's individual step cost if the Config is
+						// configured to use individual step tightening.
+						if (steppedWithThisFoot
+						    && !bracketedWithThisFoot
+						    && !steppedWithOtherFoot
+						    && Config.Instance.IndividualStepTighteningMinTimeSeconds > 0.0)
+						{
+							var arrowBeingSteppedTo = GraphNode.State[f, thisFootPortionSteppingWith].Arrow;
+							var timeBetweenStepsSeconds = (TimeMicros - LastTimeFootStepped[f]) / 1000000.0;
+
+							for (var p = 0; p < NumFootPortions; p++)
+							{
+								if (LastArrowsSteppedOnByFoot[f][p] == InvalidArrowIndex)
+									continue;
+
+								var arrowBeingSteppedFrom = LastArrowsSteppedOnByFoot[f][p];
+								var travelDistance = stepGraph.ArrowData[arrowBeingSteppedTo].TravelDistanceWithArrow[arrowBeingSteppedFrom];
+								
+								// Determine the normalized speed penalty
+								double speedPenalty;
+
+								// The configure min and max speeds are a range.
+								if (Config.Instance.IndividualStepTighteningMinTimeSeconds <
+								    Config.Instance.IndividualStepTighteningMaxTimeSeconds)
+								{
+									// Clamp to a normalized value.
+									// Invert since lower times represent faster movements, which are worse.
+									speedPenalty = Math.Min(1.0, Math.Max(0.0,
+										1.0 - (timeBetweenStepsSeconds - Config.Instance.IndividualStepTighteningMinTimeSeconds) 
+										/ (Config.Instance.IndividualStepTighteningMaxTimeSeconds - Config.Instance.IndividualStepTighteningMinTimeSeconds)));
+								}
+
+								// The configured min and max speeds are the same, and are non-zero.
+								else
+								{
+									// If the actual speed is faster than the configured speed then use the full speed penalty
+									// of 1.0. Otherwise use no speed penalty of 0.0;
+									speedPenalty = timeBetweenStepsSeconds < Config.Instance.IndividualStepTighteningMinTimeSeconds ? 1.0 : 0.0;
+								}
+
+								individualStepCost = Math.Max(individualStepCost, speedPenalty * travelDistance);
+							}
+						}
+
+						// Update our values for tracking the last steps.
+						if (steppedWithThisFoot)
+						{
+							LastTimeFootStepped[f] = TimeMicros;
+							for (var p = 0; p < NumFootPortions; p++)
+							{
+								if (GraphLinkFromPreviousNode.Links[f, p].Valid &&
+								    GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+								{
+									LastArrowsSteppedOnByFoot[f][p] = GraphNode.State[f, p].Arrow;
+								}
+								else
+								{
+									LastArrowsSteppedOnByFoot[f][p] = InvalidArrowIndex;
+								}
+							}
+						}
+					}
+				}
+
+				// Now that we have updated the LastTimeFootStepped and LastArrowsSteppedOnByFoot values,
+				// calculate the lateral position at this node so we can check for lateral speed cost.
+				LateralBodyPosition = GetLateralBodyPosition(stepGraph);
+
+				// Determine the lateral body movement cost.
+				// When notes are more dense the body should move side to side less.
+				var lateralMovementSpeedCost = 0.0;
+				if (Config.Instance.LateralTighteningPatternLength > 0)
+				{
+					// Scan backwards over the previous LateralTighteningPatternLength steps.
+					var stepCounter = Config.Instance.LateralTighteningPatternLength;
+					var node = PreviousNode;
+					bool? goingLeft = null;
+					var previousPosition = LateralBodyPosition;
+					var previousTime = TimeMicros;
+					while (stepCounter > 0 && node != null)
+					{
+						// Skip SearchNodes which aren't steps.
+						if (!node.Stepped)
+						{
+							node = node.PreviousNode;
+							continue;
+						}
+
+						// If we have already tracked lateral movement in one direction, make sure we do
+						// not start moving in the other direction.
+						if (goingLeft != null)
+						{
+							// If we were going left and are now going right, stop searching.
+							if (goingLeft.Value)
+							{
+								if (node.LateralBodyPosition > previousPosition)
+								{
+									break;
+								}
+							}
+							// If we were going right and are now going left, stop searching.
+							else
+							{
+								if (node.LateralBodyPosition < previousPosition)
+								{
+									break;
+								}
+							}
+						}
+
+						// If the body moved without changing directions, update the tracking
+						// variables and continue.
+						if (Math.Abs(previousPosition - node.LateralBodyPosition) > 0.0001)
+						{
+							// If we do not know yet whether we are moving right or left, set that now.
+							if (goingLeft == null)
+								goingLeft = node.LateralBodyPosition < previousPosition;
+
+							previousPosition = node.LateralBodyPosition;
+							previousTime = node.TimeMicros;
+							stepCounter--;
+						}
+
+						node = node.PreviousNode;
+					}
+
+					// If we scanned backwards the full amount and found an uninterrupted period of movement
+					// in one direction, then perform the nps and speed checks.
+					if (stepCounter == 0)
+					{
+						var nps = Config.Instance.LateralTighteningPatternLength * 1000000.0 / (TimeMicros - previousTime);
+						var speed = (Math.Abs(LateralBodyPosition - previousPosition) * 1000000.0) / (TimeMicros - previousTime);
+						if ((nps > averageNps * Config.Instance.LateralTighteningRelativeNPS
+							 || nps > Config.Instance.LateralTighteningAbsoluteNPS)
+						    && speed > Config.Instance.LateralTighteningSpeed)
+						{
+							lateralMovementSpeedCost = speed - Config.Instance.LateralTighteningSpeed;
+						}
+					}
+				}
+
+				return (distributionCost, individualStepCost, lateralMovementSpeedCost);
 			}
+
+			/// <summary>
+			/// Gets the lateral position of the body for this SearchNode.
+			/// </summary>
+			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
+			/// <returns>Lateral position of the body for this SearchNode.</returns>
+			private double GetLateralBodyPosition(StepGraph stepGraph)
+			{
+				var numPoints = 0;
+				var x = 0.0;
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						if (LastArrowsSteppedOnByFoot[f][p] == InvalidArrowIndex)
+							continue;
+
+						numPoints++;
+						x += stepGraph.ArrowData[LastArrowsSteppedOnByFoot[f][p]].X;
+					}
+				}
+
+				if (numPoints > 0)
+					x /= numPoints;
+
+				return x;
+			}
+
+			#region IComparable Implementation
+			public int CompareTo(SearchNode other)
+			{
+				// First consider individual step cost. It is most important to avoid individual bad steps.
+				if (Math.Abs(TotalIndividualStepCost - other.TotalIndividualStepCost) > 0.00001)
+					return TotalIndividualStepCost < other.TotalIndividualStepCost ? -1 : 1;
+
+				// Next consider lateral movement speed. We want to avoid moving on bursts.
+				if (Math.Abs(TotalLateralMovementSpeedCost - other.TotalLateralMovementSpeedCost) > 0.00001)
+					return TotalLateralMovementSpeedCost < other.TotalLateralMovementSpeedCost ? -1 : 1;
+
+				// If the individual steps and body movement are good, try to match a good distribution next.
+				if (Math.Abs(DistributionCost - other.DistributionCost) > 0.00001)
+					return DistributionCost < other.DistributionCost ? -1 : 1;
+
+				// Finally, use a random weight. This is helpful to break up patterns.
+				// For example breaking up L U D R into L D U R as well.
+				return RandomWeight.CompareTo(other.RandomWeight);
+			}
+			#endregion IComparable Implementation
 
 			#region IEquatable Implementation
 			public override bool Equals(object obj)
@@ -263,7 +577,7 @@ namespace ChartGenerator
 			{
 				return (int)Id;
 			}
-			#endregion
+			#endregion IEquatable Implementation
 		}
 
 		/// <summary>
@@ -319,6 +633,9 @@ namespace ChartGenerator
 		/// desirable GraphNodes. Inner Lists expected to contain GraphNodes of equal preference.
 		/// </param>
 		/// <param name="expressedChart">ExpressedChart to search.</param>
+		/// <param name="randomSeed">
+		/// Random seed to use when needing to make random choices when creating the PerformedChart.
+		/// </param>
 		/// <param name="logIdentifier">
 		/// Identifier to use when logging messages about this PerformedChart.
 		/// </param>
@@ -329,6 +646,7 @@ namespace ChartGenerator
 			StepGraph stepGraph,
 			List<List<GraphNode>> rootNodes,
 			ExpressedChart expressedChart,
+			int randomSeed,
 			string logIdentifier)
 		{
 			if (GraphLinkReplacementCache.Count == 0)
@@ -342,9 +660,8 @@ namespace ChartGenerator
 
 			SearchNode rootSearchNode = null;
 			GraphNode rootGraphNodeToUse = null;
-
-			// HACK consistent seed
-			var random = new Random(1);
+			var nps = FindNPS(expressedChart);
+			var random = new Random(randomSeed);
 
 			// Find a path of SearchNodes through the ExpressedChart.
 			if (expressedChart.StepEvents.Count > 0)
@@ -368,9 +685,13 @@ namespace ChartGenerator
 							rootGraphNode,
 							expressedChart.StepEvents[0].LinkInstance.GraphLink,
 							null,
+							0L,
 							depth,
 							null,
-							new bool[stepGraph.NumArrows]);
+							new bool[stepGraph.NumArrows],
+							stepGraph,
+							nps,
+							random.NextDouble());
 						var currentSearchNodes = new HashSet<SearchNode>();
 						currentSearchNodes.Add(rootSearchNode);
 						
@@ -382,7 +703,7 @@ namespace ChartGenerator
 								// Choose path with lowest cost.
 								SearchNode bestNode = null;
 								foreach (var node in currentSearchNodes)
-									if (bestNode == null || node.Cost < bestNode.Cost)
+									if (bestNode == null || node.CompareTo(bestNode) < 0)
 										bestNode = node;
 
 								// Remove any nodes that are not chosen so there is only one path through the chart.
@@ -438,9 +759,13 @@ namespace ChartGenerator
 											nextGraphNode,
 											graphLinkToNextNode,
 											graphLink,
+											expressedChart.StepEvents[depth].TimeMicros,
 											nextDepth,
 											searchNode,
-											steps
+											steps,
+											stepGraph,
+											nps,
+											random.NextDouble()
 										);
 
 										// Do not consider this next SearchNode if it results in an invalid state.
@@ -548,6 +873,49 @@ namespace ChartGenerator
 			return performedChart;
 		}
 
+		/// <summary>
+		/// Finds the notes per second of the entire Chart represented by the given ExpressedChart.
+		/// </summary>
+		/// <param name="expressedChart">ExpressedChart to find the notes per second of.</param>
+		/// <returns>Notes per second of the Chart represented by the given ExpressedChart.</returns>
+		private static double FindNPS(ExpressedChart expressedChart)
+		{
+			var nps = 0.0;
+			var startTime = long.MaxValue;
+			var endTime = 0L;
+			var numSteps = 0;
+			foreach (var stepEvent in expressedChart.StepEvents)
+			{
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						if (stepEvent.LinkInstance.GraphLink.Links[f, p].Valid
+						    && stepEvent.LinkInstance.GraphLink.Links[f, p].Action != FootAction.Release)
+						{
+							if (stepEvent.TimeMicros < startTime)
+								startTime = stepEvent.TimeMicros;
+							numSteps++;
+							endTime = stepEvent.TimeMicros;
+						}
+					}
+				}
+			}
+
+			if (endTime > startTime)
+			{
+				nps = (numSteps * 1000000.0) / (endTime - startTime);
+			}
+
+			return nps;
+		}
+
+		/// <summary>
+		/// Prunes the given HashSet of SearchNodes to a HashSet that contains
+		/// only the lowest cost SearchNode per unique GraphNode.
+		/// </summary>
+		/// <param name="nodes">HashSet of SearchNodes to prune.</param>
+		/// <returns>Pruned SearchNodes.</returns>
 		private static HashSet<SearchNode> Prune(HashSet<SearchNode> nodes)
 		{
 			// Set up a Dictionary to track the best ChartSearchNode per GraphNode.
@@ -558,7 +926,7 @@ namespace ChartGenerator
 				if (bestNodes.TryGetValue(node.GraphNode, out var currentNode))
 				{
 					// This node is better.
-					if (node.Cost < currentNode.Cost)
+					if (node.CompareTo(currentNode) < 1)
 					{
 						Prune(currentNode);
 
@@ -581,6 +949,11 @@ namespace ChartGenerator
 			return bestNodes.Values.ToHashSet();
 		}
 
+		/// <summary>
+		/// Removes the given SearchNode from the tree.
+		/// Removes all parents up until the first parent with other children.
+		/// </summary>
+		/// <param name="node">SearchNode to prune.</param>
 		private static void Prune(SearchNode node)
 		{
 			// Prune the node up until parent that has other children.

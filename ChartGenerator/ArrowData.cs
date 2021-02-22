@@ -9,19 +9,47 @@ namespace ChartGenerator
 	/// of one or more pads. This data informs how the other arrows are associated with
 	/// this arrow. For example, per arrow, it is useful to know which other arrows
 	/// are bracketable with it, are steppable to from it, form crossovers with it, etc.
+	/// TODO: Make a class which contains the array of ArrowData and also other values like MaxBracketSeparation.
+	/// TODO: Load ArrowData from file.
 	/// </summary>
 	public class ArrowData
 	{
 		/// <summary>
-		/// The position / index of this arrow.
+		/// When the foot travels in Y it needs to travel less than when it travels in X
+		/// since the foot is longer than it is wide. Movements in Y are substantially shorter
+		/// as a result. This value is subtracted from Y deltas when computing TravelDistanceWithArrow.
+		/// values.
 		/// </summary>
-		public int Position;
+		private const double YTravelDistanceCompensation = 0.5;
+
+		/// <summary>
+		/// The lane / index of this arrow.
+		/// </summary>
+		public int Lane;
+
+		/// <summary>
+		/// X position of the center of this arrow on the pads.
+		/// </summary>
+		public int X;
+
+		/// <summary>
+		/// Y position of the center of this arrow on the pads.
+		/// </summary>
+		public int Y;
 
 		/// <summary>
 		/// Which arrows are valid as a next step from this arrow for either foot.
 		/// Index is arrow.
 		/// </summary>
 		public bool[] ValidNextArrows;
+
+		/// <summary>
+		/// Approximate distance the foot needs to move from this arrow to the other arrows.
+		/// This distance takes into account that Y distances require less movement due to the
+		/// length of the foot.
+		/// Index is arrow.
+		/// </summary>
+		public double[] TravelDistanceWithArrow;
 
 		/// <summary>
 		/// Which arrows are bracketable with this arrow for the given foot when the
@@ -111,7 +139,8 @@ namespace ChartGenerator
 				// P1L
 				new ArrowData
 				{
-					Position = P1L,
+					Lane = P1L,
+					X = 0, Y = 1,
 
 					// A foot on P1L can move next to P1D, P1U, or P1R
 					ValidNextArrows = FromSP(new[] {P1D, P1U, P1R}),
@@ -166,7 +195,8 @@ namespace ChartGenerator
 				// P1D
 				new ArrowData
 				{
-					Position = P1D,
+					Lane = P1D,
+					X = 1, Y = 2,
 
 					// A foot on P1D can move next to P1L, P1U, or P1R
 					ValidNextArrows = FromSP(new[] {P1L, P1U, P1R}),
@@ -221,7 +251,8 @@ namespace ChartGenerator
 				// P1U
 				new ArrowData
 				{
-					Position = P1U,
+					Lane = P1U,
+					X = 1, Y = 0,
 
 					// A foot on P1U can move next to P1L, P1D, or P1R
 					ValidNextArrows = FromSP(new[] {P1L, P1D, P1R}),
@@ -276,7 +307,8 @@ namespace ChartGenerator
 				// P1R
 				new ArrowData
 				{
-					Position = P1R,
+					Lane = P1R,
+					X = 2, Y = 1,
 
 					// A foot on P1R can move next to P1L, P1D, or P1U
 					ValidNextArrows = FromSP(new[] {P1L, P1D, P1U}),
@@ -329,6 +361,8 @@ namespace ChartGenerator
 				}
 			};
 
+			SetTravelDistances(SPArrowData);
+
 			bool[] noneDP = {false, false, false, false, false, false, false, false};
 			bool[] FromDP(IEnumerable<int> arrows)
 			{
@@ -343,7 +377,8 @@ namespace ChartGenerator
 				// P1L
 				new ArrowData
 				{
-					Position = P1L,
+					Lane = P1L,
+					X = 0, Y = 1,
 
 					// A foot on P1L can move next to P1D, P1U, or P1R
 					ValidNextArrows = FromDP(new[] {P1D, P1U, P1R}),
@@ -398,7 +433,8 @@ namespace ChartGenerator
 				// P1D
 				new ArrowData
 				{
-					Position = P1D,
+					Lane = P1D,
+					X = 1, Y = 2,
 
 					// A foot on P1D can move next to P1L, P1U, P1R, or P2L
 					ValidNextArrows = FromDP(new[] {P1L, P1U, P1R, P2L}),
@@ -453,7 +489,8 @@ namespace ChartGenerator
 				// P1U
 				new ArrowData
 				{
-					Position = P1U,
+					Lane = P1U,
+					X = 1, Y = 0,
 
 					// A foot on P1U can move next to P1L, P1D, P1R, or P2L
 					ValidNextArrows = FromDP(new[] {P1L, P1D, P1R, P2L}),
@@ -508,7 +545,8 @@ namespace ChartGenerator
 				// P1R
 				new ArrowData
 				{
-					Position = P1R,
+					Lane = P1R,
+					X = 2, Y = 1,
 
 					// A foot on P1R can move next to P1L, P1D, P1U, P2L, P2D, or P2U
 					ValidNextArrows = FromDP(new[] {P1L, P1D, P1U, P2L, P2D, P2U}),
@@ -563,7 +601,8 @@ namespace ChartGenerator
 				// P2L
 				new ArrowData
 				{
-					Position = P2L,
+					Lane = P2L,
+					X = 3, Y = 1,
 
 					// A foot on P2L can move next to P1D, P1U, P1R, P2D, P2U, or P2R
 					ValidNextArrows = FromDP(new[] {P1D, P1U, P1R, P2D, P2U, P2R}),
@@ -618,7 +657,8 @@ namespace ChartGenerator
 				// P2D
 				new ArrowData
 				{
-					Position = P2D,
+					Lane = P2D,
+					X = 4, Y = 2,
 
 					// A foot on P2D can move next to P1R, P2L, P2U, and P2R
 					ValidNextArrows = FromDP(new[] {P1R, P2L, P2U, P2R}),
@@ -673,7 +713,8 @@ namespace ChartGenerator
 				// P2U
 				new ArrowData
 				{
-					Position = P2U,
+					Lane = P2U,
+					X = 4, Y = 0,
 
 					// A foot on P2U can move next to P1R, P2L, P2D, and P2R
 					ValidNextArrows = FromDP(new[] {P1R, P2L, P2D, P2R}),
@@ -728,7 +769,8 @@ namespace ChartGenerator
 				// P2R
 				new ArrowData
 				{
-					Position = P2R,
+					Lane = P2R,
+					X = 5, Y = 1,
 
 					// A foot on P2R can move next to P2L, P2D, and P2U
 					ValidNextArrows = FromDP(new[] {P2L, P2D, P2U}),
@@ -781,6 +823,8 @@ namespace ChartGenerator
 				}
 			};
 
+			SetTravelDistances(DPArrowData);
+
 			// Determine the max bracket separation.
 			MaxBracketSeparation = 0;
 			foreach (var arrowData in new[] {SPArrowData, DPArrowData})
@@ -797,6 +841,28 @@ namespace ChartGenerator
 								MaxBracketSeparation = Math.Max(MaxBracketSeparation, Math.Abs(a2 - a));
 						}
 					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Sets the TravelDistanceWithArrow values for each ArrowData in the given array
+		/// based off of the X and Y positions of the other ArrowData entries.
+		/// </summary>
+		/// <param name="arrowData">ArrowData array to set TravelDistanceWithArrow values on.</param>
+		private static void SetTravelDistances(ArrowData[] arrowData)
+		{
+			foreach (var data in arrowData)
+			{
+				data.TravelDistanceWithArrow = new double[arrowData.Length];
+				foreach (var otherData in arrowData)
+				{
+					var dx = data.X - otherData.X;
+					// Subtract YTravelDistanceCompensation from y since the heel and toe make forward
+					// and backward movements shorter.
+					var dy = Math.Max(0.0, Math.Abs(data.Y - otherData.Y) - YTravelDistanceCompensation);
+					var d = Math.Sqrt(dx * dx + dy * dy);
+					data.TravelDistanceWithArrow[otherData.Lane] = d;
 				}
 			}
 		}

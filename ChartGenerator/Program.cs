@@ -6,6 +6,7 @@ using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// Version number. Recorded into a Chart's Description field using FumenGeneratedFormattedVersion.
 		/// </summary>
-		private const double Version = 0.1;
+		private const double Version = 0.2;
 		/// <summary>
 		/// Format for recording the Version into a Chart's Description field.
 		/// </summary>
@@ -504,6 +505,7 @@ namespace ChartGenerator
 						OutputStepGraph,
 						OutputStartNodes,
 						expressedChart,
+						GeneratePerformedChartRandomSeed(songArgs.FileInfo.Name),
 						GetLogIdentifier(songArgs.FileInfo, songArgs.RelativePath, song, chart));
 					if (performedChart == null)
 					{
@@ -802,6 +804,18 @@ namespace ChartGenerator
 				if (e is TimeSignature || e is TempoChange || e is Stop)
 					dest.Add(e);
 			}
+		}
+
+		/// <summary>
+		/// Generates a random seed to use for a PerformedChart based on the Song's file name.
+		/// Creating a PerformedChart from the same inputs more than once should produce the same result.
+		/// </summary>
+		/// <param name="fileName">Name of the Song file to hash to generate the seed.</param>
+		/// <returns>Random seed to use.</returns>
+		private static int GeneratePerformedChartRandomSeed(string fileName)
+		{
+			var hash = MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName));
+			return BitConverter.ToInt32(hash, 0);
 		}
 
 		#region Logging

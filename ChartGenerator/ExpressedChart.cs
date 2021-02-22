@@ -57,7 +57,20 @@ namespace ChartGenerator
 		/// </summary>
 		public abstract class ChartEvent
 		{
+			protected ChartEvent(MetricPosition position, long timeMicros)
+			{
+				Position = position;
+				TimeMicros = timeMicros;
+			}
+
+			/// <summary>
+			/// MetricPosition of this event.
+			/// </summary>
 			public MetricPosition Position;
+			/// <summary>
+			/// Time in microseconds of this event.
+			/// </summary>
+			public long TimeMicros;
 		}
 
 		/// <summary>
@@ -65,6 +78,12 @@ namespace ChartGenerator
 		/// </summary>
 		public class StepEvent : ChartEvent
 		{
+			public StepEvent(MetricPosition position, long timeMicros, GraphLinkInstance linkInstance)
+				: base(position, timeMicros)
+			{
+				LinkInstance = linkInstance;
+			}
+
 			/// <summary>
 			/// GraphLinkInstance representing the all steps occurring at a single Metric position.
 			/// This GraphLink is the Link to this Event as opposed to the link from this Event.
@@ -78,6 +97,12 @@ namespace ChartGenerator
 		/// </summary>
 		public class MineEvent : ChartEvent
 		{
+			public MineEvent(MetricPosition position, long timeMicros, int arrow)
+				: base(position, timeMicros)
+			{
+				OriginalArrow = arrow;
+			}
+
 			/// <summary>
 			/// The MineType to use for expressing this mine.
 			/// </summary>
@@ -135,9 +160,13 @@ namespace ChartGenerator
 			/// </summary>
 			public readonly InstanceStepType[] InstanceTypes;
 			/// <summary>
-			/// Position in the SM Chart of this ChartSearchNode.
+			/// Position in the Chart of this ChartSearchNode.
 			/// </summary>
 			public readonly MetricPosition Position;
+			/// <summary>
+			/// Time in microseconds in the Chart of this ChartSearchNode.
+			/// </summary>
+			public readonly long TimeMicros;
 			/// <summary>
 			/// Cumulative Cost to reach this ChartSearchNode.
 			/// </summary>
@@ -164,6 +193,7 @@ namespace ChartGenerator
 			public ChartSearchNode(
 				GraphNode graphNode,
 				MetricPosition position,
+				long timeMicros,
 				int cost,
 				int totalCost,
 				ChartSearchNode previousNode,
@@ -173,6 +203,7 @@ namespace ChartGenerator
 				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
 				Position = position;
+				TimeMicros = timeMicros;
 				Cost = cost;
 				TotalCost = totalCost;
 				PreviousNode = previousNode;
@@ -346,6 +377,7 @@ namespace ChartGenerator
 			var root = new ChartSearchNode(
 				stepGraph.Root,
 				new MetricPosition(),
+				0L,
 				0,
 				0,
 				null,
@@ -402,7 +434,7 @@ namespace ChartGenerator
 				}
 
 				// Parse all the events at the next position.
-				ParseNextEvents(events, ref eventIndex, out var releases, out var mines, out var steps);
+				ParseNextEvents(events, ref eventIndex, out var releases, out var mines, out var steps, out long timeMicros);
 
 				// Process Releases.
 				if (releases.Count > 0)
@@ -416,7 +448,7 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						releases[0].Position, stepGraph, lastMines, lastReleases, logIdentifier);
+						releases[0].Position, timeMicros, stepGraph, lastMines, lastReleases, logIdentifier);
 				}
 
 				// Get mines and record them for processing after the search is complete.
@@ -453,7 +485,7 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						steps[0].Position, stepGraph, lastMines, lastReleases, logIdentifier);
+						steps[0].Position, timeMicros, stepGraph, lastMines, lastReleases, logIdentifier);
 				}
 
 				// Update the current state now that the events at this position have been processed.
@@ -494,21 +526,25 @@ namespace ChartGenerator
 		/// <param name="releases">List of LaneHoldEndNotes to hold all releases.</param>
 		/// <param name="mines">List of LaneNotes to hold all mines.</param>
 		/// <param name="steps">List of LaneNotes to hold all taps, holds, and rolls.</param>
+		/// <param name="timeMicros">Time in microseconds of the events.</param>
 		private static void ParseNextEvents(
 			List<Event> events,
 			ref int eventIndex,
 			out List<LaneHoldEndNote> releases,
 			out List<LaneNote> mines,
-			out List<LaneNote> steps)
+			out List<LaneNote> steps,
+			out long timeMicros)
 		{
 			releases = new List<LaneHoldEndNote>();
 			mines = new List<LaneNote>();
 			steps = new List<LaneNote>();
+			timeMicros = 0L;
 
 			if (eventIndex >= events.Count)
 				return;
 
 			var pos = events[eventIndex].Position;
+			timeMicros = events[eventIndex].TimeMicros;
 			while (eventIndex < events.Count && events[eventIndex].Position == pos)
 			{
 				if (events[eventIndex] is LaneHoldEndNote lhen)
@@ -532,6 +568,7 @@ namespace ChartGenerator
 		/// <param name="currentState">Current state to search for paths into.</param>
 		/// <param name="generatedStateBuffer">Buffer to hold State when comparing in GetLinkInstanceIfStateMatches.</param>
 		/// <param name="position">Position of the state.</param>
+		/// <param name="timeMicros">Time in microseconds of the state.</param>
 		/// <param name="stepGraph">StepGraph. Needed for cost determination.</param>
 		/// <param name="lastMines">Position of last mines per arrow. Needed for cost determination.</param>
 		/// <param name="lastReleases">Position of last releases per arrow. Needed for cost determination.</param>
@@ -544,6 +581,7 @@ namespace ChartGenerator
 			SearchState[] currentState,
 			SearchState[] generatedStateBuffer,
 			MetricPosition position,
+			long timeMicros,
 			StepGraph stepGraph,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
@@ -589,6 +627,7 @@ namespace ChartGenerator
 						var childSearchNode = new ChartSearchNode(
 							childNode,
 							position,
+							timeMicros,
 							cost,
 							searchNode.TotalCost + cost,
 							searchNode,
@@ -761,7 +800,7 @@ namespace ChartGenerator
 
 		/// <summary>
 		/// Prunes the given HashSet of ChartSearchNodes to a HashSet that contains
-		/// only one ChartSearchNode per GraphNode representing the lowest cost ChartSearchNode.
+		/// only the lowest cost ChartSearchNode per unique GraphNode.
 		/// </summary>
 		/// <param name="nodes">HashSet of ChartSearchNodes to prune.</param>
 		/// <returns>Pruned ChartSearchNodes.</returns>
@@ -1680,11 +1719,7 @@ namespace ChartGenerator
 			while (searchNode != null)
 			{
 				// Create a new StepEvent for this step ChartSearchNode for adding to the ExpressedChart.
-				var stepEvent = new StepEvent
-				{
-					Position = searchNode.Position,
-					LinkInstance = searchNode.PreviousLink,
-				};
+				var stepEvent = new StepEvent(searchNode.Position, searchNode.TimeMicros, searchNode.PreviousLink);
 
 				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
 				if (searchNode.NextNodes.Count > 0)

@@ -240,13 +240,11 @@ namespace ChartGenerator
 			var (n, f) = GetHowRecentIsNeighboringArrow(true, releaseIndex, numArrows, releases, mine.Lane);
 			if (n >= 0)
 			{
-				return new ExpressedChart.MineEvent
+				return new ExpressedChart.MineEvent(mine.Position, mine.TimeMicros, mine.Lane)
 				{
 					Type = MineType.AfterArrow,
-					Position = mine.Position,
 					ArrowIsNthClosest = n,
-					FootAssociatedWithPairedNote = f,
-					OriginalArrow = mine.Lane
+					FootAssociatedWithPairedNote = f
 				};
 			}
 
@@ -255,22 +253,16 @@ namespace ChartGenerator
 			(n, f) = GetHowRecentIsNeighboringArrow(false, stepIndex, numArrows, steps, mine.Lane);
 			if (n >= 0)
 			{
-				return new ExpressedChart.MineEvent
+				return new ExpressedChart.MineEvent(mine.Position, mine.TimeMicros, mine.Lane)
 				{
 					Type = MineType.BeforeArrow,
-					Position = mine.Position,
 					ArrowIsNthClosest = n,
-					FootAssociatedWithPairedNote = f,
-					OriginalArrow = mine.Lane
+					FootAssociatedWithPairedNote = f
 				};
 			}
 
 			// The mine could not be associated with an arrow, use the default NoArrow type.
-			return new ExpressedChart.MineEvent
-			{
-				Position = mine.Position,
-				OriginalArrow = mine.Lane
-			};
+			return new ExpressedChart.MineEvent(mine.Position, mine.TimeMicros, mine.Lane);
 		}
 
 		/// <summary>
