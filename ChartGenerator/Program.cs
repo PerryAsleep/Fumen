@@ -406,9 +406,10 @@ namespace ChartGenerator
 			AddCharts(song, songArgs);
 
 			// Save
+			var saveFile = Fumen.Path.GetWin32FileSystemFullPath(Fumen.Path.Combine(songArgs.SaveDir, songArgs.FileInfo.Name));
 			var config = new SMWriterBase.SMWriterBaseConfig
 			{
-				FilePath = Fumen.Path.Combine(songArgs.SaveDir, songArgs.FileInfo.Name),
+				FilePath = saveFile,
 				Song = song,
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
@@ -596,7 +597,9 @@ namespace ChartGenerator
 					{
 						var visualizationDirectory = Fumen.Path.Combine(VisualizationDir, songArgs.RelativePath);
 						Directory.CreateDirectory(visualizationDirectory);
-						var saveFile = Fumen.Path.Combine(visualizationDirectory,  $"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html");
+						var saveFile = Fumen.Path.GetWin32FileSystemFullPath(
+							Fumen.Path.Combine(visualizationDirectory,
+								$"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html"));
 
 						// One time this write caused a DirectoryNotFoundException and I am not sure why.
 						// The directory existed and nothing looked incorrect about the path or file.
@@ -722,7 +725,9 @@ namespace ChartGenerator
 				// Copy the file.
 				try
 				{
-					File.Copy(fi.FullName, destFilePath, true);
+					File.Copy(Fumen.Path.GetWin32FileSystemFullPath(fi.FullName),
+						Fumen.Path.GetWin32FileSystemFullPath(destFilePath),
+						true);
 				}
 				catch (Exception e)
 				{

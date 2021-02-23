@@ -59,5 +59,19 @@ namespace Fumen
 			}
 			return System.IO.Path.Combine(cleanedPaths);
 		}
+
+		/// <summary>
+		/// Gets the full path, prepended with \\?\ to allows paths longer than 260 characters
+		/// in some .NetFramework API calls which are still restricted by MAX_PATH.
+		/// </summary>
+		/// <remarks>
+		/// See https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
+		/// </remarks>
+		/// <param name="path">The path to format.</param>
+		/// <returns>Full formatted path.</returns>
+		public static string GetWin32FileSystemFullPath(string path)
+		{
+			return @"\\?\" + System.IO.Path.GetFullPath(path);
+		}
 	}
 }

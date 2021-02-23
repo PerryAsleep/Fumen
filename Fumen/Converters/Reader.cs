@@ -32,12 +32,13 @@ namespace Fumen.Converters
 			var fileFormat = FileFormat.GetFileFormatByExtension(fileInfo.Extension.ToLower());
 			if (fileFormat == null)
 				return null;
+			var fullName = Fumen.Path.GetWin32FileSystemFullPath(fileInfo.FullName);
 			switch (fileFormat.Type)
 			{
 				case FileFormatType.SM:
-					return new SMReader(fileInfo.FullName);
+					return new SMReader(fullName);
 				case FileFormatType.SSC:
-					return new SSCReader(fileInfo.FullName);
+					return new SSCReader(fullName);
 			}
 			return null;
 		}
