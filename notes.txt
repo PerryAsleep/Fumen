@@ -1,7 +1,5 @@
 Immediate Bugs:
 	Figure out which chart is causing the error writing note data. It is either a bad lane, or a bad (non 4/4) position.
-	
-Sort dirs on export / time remaining?
 
 PerformedChart Issues:
 	Test Charts:
@@ -52,6 +50,7 @@ Misc:
 	Load arrowdata from json so we can easily add piu charts without recompiling
 	if all 4 notes are full in sp and there is at least one mine, add mines so it is a whole row of mines in dp? or at least, 4 mines = 8 mines?
 	Preserving patters
+	time remaining on export?
 
 Renderer Improvements:
 	css to minimize log size

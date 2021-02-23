@@ -293,6 +293,9 @@ namespace ChartGenerator
 				try
 				{
 					var subDirs = Directory.GetDirectories(currentDir);
+					// Reverse sort the subdirectories since we use a queue to pop.
+					// Sorting helps the user get a rough idea of progress, and makes it easier to tell if a song pack is complete.
+					Array.Sort(subDirs, (a, b) => String.Compare(b, a, StringComparison.CurrentCultureIgnoreCase));
 					foreach (var str in subDirs)
 						dirs.Push(str);
 				}
