@@ -81,7 +81,7 @@ namespace ChartGenerator
 			"Br 1 T New",
 		};
 
-		private StringBuilder StringBuilder = new StringBuilder();
+		private StreamWriter StreamWriter;
 		private Song Song;
 		private Chart OriginalChart;
 		private ExpressedChart ExpressedChart;
@@ -158,26 +158,27 @@ namespace ChartGenerator
 
 		public void Write()
 		{
-			StringBuilder.Append("<!DOCTYPE html>\r\n");
-			WriteHead();
-			StringBuilder.Append("<html>\r\n\t<body>\r\n");
-			WriteTitle();
-			WriteChartHeaders();
-			StringBuilder.Append($"		<div style=\"position:absolute; top:{BannerH + ChartHeaderH * 2}px;\">\r\n");
-			WriteChart(OriginalChart, OriginalChartX, true);
-			WriteChart(GeneratedChart, GeneratedChartX, false);
-			StringBuilder.Append("		</div>\r\n");
-			WriteScript();
-			StringBuilder.Append("\t</body>\r\n</html>\r\n");
-
-			// Write to file
 			// TODO: Async
-			File.WriteAllText(SaveFile, StringBuilder.ToString());
+			using (StreamWriter = new StreamWriter(SaveFile))
+			{
+				StreamWriter.Write("<!DOCTYPE html>\r\n");
+				WriteHead();
+				StreamWriter.Write("<html>\r\n\t<body>\r\n");
+				WriteTitle();
+				WriteChartHeaders();
+				StreamWriter.Write($"		<div style=\"position:absolute; top:{BannerH + ChartHeaderH * 2}px;\">\r\n");
+				WriteChart(OriginalChart, OriginalChartX, true);
+				WriteChart(GeneratedChart, GeneratedChartX, false);
+				StreamWriter.Write("		</div>\r\n");
+				WriteScript();
+				StreamWriter.Write("\t</body>\r\n</html>\r\n");
+			}
+			StreamWriter = null;
 		}
 
 		private void WriteHead()
 		{
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"<head>
 	<style>
 body {{
@@ -252,7 +253,7 @@ p {{
 				subtitle = $@"<span style=""color:#6b6b6b""> {Song.SubTitle}</span>";
 			var artist = Song.Artist ?? "";
 
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"		<div style=""height: 164px; margin-block-start: 0.0em; margin-block-end: 0.0em;"">
 			<img style=""float: left; width: {BannerW}x; height: {BannerH}px; margin-block-start: 0.0em; margin-block-end: 0.0em;"" src=""{img}""/>
 			<h1 style=""text-align: left; font-size: 50px; margin-block-start: 0.0em; margin-block-end: 0.0em;"">{title}{subtitle}</h1>
@@ -338,7 +339,7 @@ $@"		<div style=""height: 164px; margin-block-start: 0.0em; margin-block-end: 0.
 			if (!string.IsNullOrEmpty(GeneratedChart.Description))
 				generatedChartTitle += $", {GeneratedChart.Description} ({generatedChartTotalSteps} steps)";
 
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"		<div id=""chartHeaders"" style=""z-index:10000000; border:none; margin-block-start: 0.0em; margin-block-end: 0.0em;"">
 			<table style=""border-collapse: collapse; background: #dbdbdb; width: {fullWidth}px;"">
 				<tr>
@@ -351,7 +352,7 @@ $@"		<div id=""chartHeaders"" style=""z-index:10000000; border:none; margin-bloc
 
 			foreach (var chartCol in ChartColumnInfo)
 			{
-				StringBuilder.Append(
+				StreamWriter.Write(
 $@"					<th style=""table-layout: fixed; width: {chartCol.Width - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{chartCol.Name}</th>
 ");
 			}
@@ -360,21 +361,21 @@ $@"					<th style=""table-layout: fixed; width: {chartCol.Width - TableBorderW}p
 			{
 				var percentage = originalChartTotalSteps == 0 ? 0 :
 					Math.Round(originalChartNotePercentages[a] / (double) originalChartTotalSteps * 100);
-				StringBuilder.Append(
+				StreamWriter.Write(
 $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{ArrowNames[a % 4]} ({percentage}%)</th>
 ");
 			}
 
 			foreach (var expressionCol in ExpressionColumnInfo)
 			{
-				StringBuilder.Append(
+				StreamWriter.Write(
 $@"					<th style=""table-layout: fixed; width: {expressionCol.Width - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{expressionCol.Name}</th>
 ");
 			}
 
 			foreach (var chartCol in ChartColumnInfo)
 			{
-				StringBuilder.Append(
+				StreamWriter.Write(
 $@"					<th style=""table-layout: fixed; width: {chartCol.Width - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{chartCol.Name}</th>
 ");
 			}
@@ -383,12 +384,12 @@ $@"					<th style=""table-layout: fixed; width: {chartCol.Width - TableBorderW}p
 			{
 				var percentage = generatedChartTotalSteps == 0 ? 0 :
 					Math.Round(generatedChartNotePercentages[a] / (double)generatedChartTotalSteps * 100);
-				StringBuilder.Append(
+				StreamWriter.Write(
 $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{ArrowNames[a % 4]} ({percentage}%)</th>
 ");
 			}
 
-			StringBuilder.Append(
+			StreamWriter.Write(
 @"				</tr>
 			</table>
 		</div>
@@ -474,7 +475,7 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 				}
 				if (colVal != null)
 				{
-					StringBuilder.Append(
+					StreamWriter.Write(
 $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px; height:{colH}px; z-index:10;"">{colVal}</p>
 ");
 				}
@@ -596,7 +597,7 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 
 			var x = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.Mines].X;
 			var h = ChartTextH * mines.Count;
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width:{MinesColW}px; height:{h}px; z-index:10;"">{minesStr}</p>
 ");
 		}
@@ -643,7 +644,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width
 							var stepStr = StepTypeStrings[(int)node.PreviousLink.GraphLink.Links[L, p].Step];
 							if (node.PreviousLink.GraphLink.IsJump())
 								stepStr = "[Jump] " + stepStr;
-							StringBuilder.Append(
+							StreamWriter.Write(
 $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{leftX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
 ");
 							writeCost = true;
@@ -657,7 +658,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{le
 							var stepStr = StepTypeStrings[(int)node.PreviousLink.GraphLink.Links[R, p].Step];
 							if (node.PreviousLink.GraphLink.IsJump())
 								stepStr = "[Jump] " + stepStr;
-							StringBuilder.Append(
+							StreamWriter.Write(
 $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{rightX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
 ");
 							writeCost = true;
@@ -669,7 +670,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{ri
 					if (writeCost)
 					{
 						var costX = ExpressedChartX + ExpressionColumnInfo[(int) ExpressionColumns.Cost].X;
-						StringBuilder.Append(
+						StreamWriter.Write(
 $@"			<p style=""position:absolute; top:{(int) (y - ChartTextH * .5)}px; left:{costX}px; width:{CostColW}px; height:{ChartTextH}px; z-index:10;"">{node.Cost}</p>
 ");
 					}
@@ -684,7 +685,7 @@ $@"			<p style=""position:absolute; top:{(int) (y - ChartTextH * .5)}px; left:{c
 			var x = firstLaneX + (arrow * ArrowW);
 			var img = SrcDir + "mine.png";
 
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
 ");
 		}
@@ -775,7 +776,7 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 			img = SrcDir + img;
 
 			// Arrow
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
 ");
 			// Foot indicator
@@ -783,7 +784,7 @@ $@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - Arr
 			{
 				img = foot == L ? "l.png" : "r.png";
 				img = SrcDir + img;
-				StringBuilder.Append(
+				StreamWriter.Write(
 $@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
 ");
 			}
@@ -796,11 +797,11 @@ $@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - Arr
 			cap = SrcDir + cap;
 			var x = firstLaneX + arrow * ArrowW;
 
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"			<div id=""{id}"" style=""position:absolute; top:{(int)startY}px; left:{x}px; width:{ArrowW}px; height:{(int)(endY - startY)}px; z-index:{(int)startY - 1}; border:none;""></div>
 ");
 
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"			<img src=""{cap}"" style=""position:absolute; top:{(int)endY}px; left:{x}px; width:{ArrowW}px; height:{HoldCapH}px; z-index:{(int)startY - 1}; border:none;""/>
 ");
 		}
@@ -825,7 +826,7 @@ $@"			<img src=""{cap}"" style=""position:absolute; top:{(int)endY}px; left:{x}p
 					if (b == 0)
 					{
 						// Write measure number
-						StringBuilder.Append(
+						StreamWriter.Write(
 $@"			<p style=""position:absolute; top:{(int)(y - mmH * .5)}px; left:{mmX}px; width:{mmW}px; height:{mmH}px; z-index:10;"">{currentMeasure + m}</p>
 ");
 						barH = MeasureMarkerH;
@@ -838,7 +839,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - mmH * .5)}px; left:{mmX}px; w
 					}
 
 					// Write measure / beat marker
-					StringBuilder.Append(
+					StreamWriter.Write(
 $@"			<div style=""position:absolute; top:{(int)y}px; left:{barX}px; width:{barW}px; height:{barH}px; background: #929292""></div>
 ");
 				}
@@ -847,7 +848,7 @@ $@"			<div style=""position:absolute; top:{(int)y}px; left:{barX}px; width:{barW
 
 		private void WriteScript()
 		{
-			StringBuilder.Append(
+			StreamWriter.Write(
 $@"		<script>
 			window.onscroll = function() {{ updateSticky() }};
 			var chartHeaders = document.getElementById(""chartHeaders"");

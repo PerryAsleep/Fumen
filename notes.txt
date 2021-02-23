@@ -1,6 +1,4 @@
 Immediate Bugs:
-	Crapyard Scent 24 hour file:
-		out of memory writing the visualization. need streamwriter for renderer.
 	Figure out which chart is causing the error writing note data. It is either a bad lane, or a bad (non 4/4) position.
 	
 Sort dirs on export / time remaining?
