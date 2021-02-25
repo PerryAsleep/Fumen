@@ -604,9 +604,6 @@ namespace ChartGenerator
 							Fumen.Path.Combine(visualizationDirectory,
 								$"{fileNameNoExtension}-{chart.DifficultyType}-{extension}.html"));
 
-						// One time this write caused a DirectoryNotFoundException and I am not sure why.
-						// The directory existed and nothing looked incorrect about the path or file.
-						// For now, logging the exception as an error so it does not terminate the program.
 						try
 						{
 							var renderer = new Renderer(
@@ -634,8 +631,13 @@ namespace ChartGenerator
 				songArgs.FileInfo, songArgs.RelativePath, song);
 
 			// Remove overwritten charts.
-			foreach (var i in chartsIndicesToRemove)
-				song.Charts.RemoveAt(i);
+			if (chartsIndicesToRemove.Count > 0)
+			{
+				// Ensure the indices are sorted descending so they don't shift when removing.
+				chartsIndicesToRemove.Sort((a, b) => b.CompareTo(a));
+				foreach (var i in chartsIndicesToRemove)
+					song.Charts.RemoveAt(i);
+			}
 
 			// Add new charts.
 			song.Charts.AddRange(newCharts);
