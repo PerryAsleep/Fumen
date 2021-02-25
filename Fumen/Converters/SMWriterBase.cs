@@ -20,11 +20,11 @@ namespace Fumen.Converters
 		public enum MeasureSpacingBehavior
 		{
 			/// <summary>
-			/// Use the greatest unmodified sub-division from any note in the measure.
+			/// Use the raw measure positions from the Note extra data.
 			/// This option should be used when loading an sm file and writing it back out
 			/// as it will preserve the spacing.
 			/// </summary>
-			UseUnmodifiedChartSubDivisions,
+			UseSubDivisionDenominatorAsMeasureSpacing,
 			/// <summary>
 			/// Use the least common multiple of the sub-divisions. This will write the
 			/// least number of lines for the notes in the measure. This may write sub-divisions
@@ -114,11 +114,6 @@ namespace Fumen.Converters
 			/// Used for writing the correct number of blank lines in the file.
 			/// </summary>
 			public int LCM = 1;
-			/// <summary>
-			/// Greatest unmodified denominator of note beat sub-divisions for all notes in this
-			/// measure. Used for writing the correct number of blank lines in the file.
-			/// </summary>
-			public int GreatestUnmodifiedDenominator = 1;
 			/// <summary>
 			/// Whether or not this is the first measure for the chart.
 			/// </summary>
@@ -285,8 +280,8 @@ namespace Fumen.Converters
 					{
 						StreamWriter.Write(MSDFile.ParamMarker);
 					}
-
-					StreamWriter.Write(MSDFile.Escape(entry));
+					if (!string.IsNullOrEmpty(entry))
+						StreamWriter.Write(MSDFile.Escape(entry));
 					first = false;
 				}
 
@@ -632,8 +627,6 @@ namespace Fumen.Converters
 						measures.Add(new MeasureData());
 
 					measures[measure].Notes.Add(note);
-					measures[measure].GreatestUnmodifiedDenominator = Math.Max(
-						measures[measure].GreatestUnmodifiedDenominator, note.Position.SubDivision.Denominator);
 					measures[measure].LCM = Fraction.LeastCommonMultiple(
 						note.Position.SubDivision.Reduce().Denominator,
 						measures[measure].LCM);
@@ -648,24 +641,59 @@ namespace Fumen.Converters
 
 		private void WriteMeasure(Chart chart, MeasureData measureData, int measureIndex)
 		{
+			// For UseLeastCommonMultiple and UseLeastCommonMultipleFromStepmaniaEditor we will
+			// determine the number of lines to write per beat, assuming 4 beats per measure since
+			// Stepmania enforces 4/4.
+			// For UseSubDivisionDenominatorAsMeasureSpacing we will use the SubDivision denominator
+			// as the measure spacing.
+			// This helps maintain spacing for charts which were not written in Stepmania and
+			// use technically unsupported spacing (like 14 notes per measure).
 			var linesPerBeat = 1;
+			var measureCharsDY = 0;
 			switch (Config.MeasureSpacingBehavior)
 			{
-				case MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions:
+				case MeasureSpacingBehavior.UseSubDivisionDenominatorAsMeasureSpacing:
 				{
-					linesPerBeat = measureData.GreatestUnmodifiedDenominator;
+					if (measureData.Notes.Count > 0)
+					{
+						foreach (var measureNote in measureData.Notes)
+						{
+							// Every note must also have the same denominator (number of lines in the measure).
+							if (measureCharsDY == 0)
+							{
+								measureCharsDY = measureNote.Position.SubDivision.Denominator;
+							}
+							else if (measureCharsDY != measureNote.Position.SubDivision.Denominator)
+							{
+								Logger.Error($"Notes in measure {measureIndex} have inconsistent SubDivision denominators."
+								             + " These must all be equal when using UseSubDivisionDenominatorAsMeasureSpacing MeasureSpacingBehavior.");
+								return;
+							}
+						}
+					}
+					// Still treat blank measures as 4 lines.
+					else
+					{
+						measureCharsDY = SMCommon.NumBeatsPerMeasure;
+					}
 					break;
 				}
 				case MeasureSpacingBehavior.UseLeastCommonMultiple:
 				{
 					linesPerBeat = measureData.LCM;
+					measureCharsDY = SMCommon.NumBeatsPerMeasure * linesPerBeat;
 					break;
 				}
 				case MeasureSpacingBehavior.UseLeastCommonMultipleFromStepmaniaEditor:
 				{
 					// Make sure the notes can actually be represented by the stepmania editor.
 					if (!SMCommon.GetLowestValidSMSubDivision(measureData.LCM, out linesPerBeat))
-						Logger.Error($"Unsupported subdivisions {measureData.LCM} for notes in measure index {measureIndex}.");
+					{
+						Logger.Error($"Unsupported subdivisions {measureData.LCM} for notes in measure index {measureIndex}."
+							+ " Consider using UseLeastCommonMultiple MeasureSpacingBehavior.");
+						return;
+					}
+					measureCharsDY = SMCommon.NumBeatsPerMeasure * linesPerBeat;
 					break;
 				}
 			}
@@ -673,7 +701,6 @@ namespace Fumen.Converters
 			// Set up a grid of characters to write.
 			// TODO: Support keysound tagging.
 			var measureCharsDX = chart.NumInputs;
-			var measureCharsDY = SMCommon.NumBeatsPerMeasure * linesPerBeat;
 			var measureChars = new char[measureCharsDX, measureCharsDY];
 
 			// Populate characters in the grid based on the events of the measure.
@@ -684,21 +711,43 @@ namespace Fumen.Converters
 
 				// Determine the position to record the note.
 				var reducedSubDivision = measureNote.Position.SubDivision.Reduce();
-				var measureEventPositionInMeasure =
-					measureNote.Position.Beat * linesPerBeat
-					+ (linesPerBeat / Math.Max(1, reducedSubDivision.Denominator))
-					* reducedSubDivision.Numerator;
+				int measureEventPositionInMeasure;
 
-				// Record the note.
-				if (measureNote.Lane >= 0 && measureNote.Lane < measureCharsDX
-					&& measureEventPositionInMeasure >= 0 && measureEventPositionInMeasure < measureCharsDY)
+				// When using UseSubDivisionDenominatorAsMeasureSpacing, get the y position directly from the extra data.
+				if (Config.MeasureSpacingBehavior == MeasureSpacingBehavior.UseSubDivisionDenominatorAsMeasureSpacing)
 				{
-					measureChars[measureNote.Lane, measureEventPositionInMeasure] = c;
+					var n = measureNote.Position.Beat * measureCharsDY + measureNote.Position.SubDivision.Numerator;
+					if (n % SMCommon.NumBeatsPerMeasure != 0)
+					{
+						Logger.Error($"Note at position {measureNote.Position} has a position which cannot be mapped to {measureCharsDY} lines."
+						             + " When using UseSubDivisionDenominatorAsMeasureSpacing MeasureSpacingBehavior the notes in one measure must"
+						             + " all share the same SubDivision denominator and that denominator must be the number of lines for the measure.");
+						return;
+					}
+					measureEventPositionInMeasure = n / SMCommon.NumBeatsPerMeasure;
 				}
+				// Otherwise calculate the position based on the lines per beat.
 				else
 				{
-					Logger.Error($"Error writing note at position {measureNote.Position} lane {measureNote.Lane}.");
+					measureEventPositionInMeasure = measureNote.Position.Beat * linesPerBeat
+						+ (linesPerBeat / Math.Max(1, reducedSubDivision.Denominator))
+						* reducedSubDivision.Numerator;
 				}
+
+				// Bounds checks.
+				if (measureNote.Lane < 0 || measureNote.Lane >= chart.NumInputs)
+				{
+					Logger.Error($"Note at position {measureNote.Position} has invalid lane {measureNote.Lane}.");
+					return;
+				}
+				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
+				{
+					Logger.Error($"Note has invalid position {measureNote.Position}.");
+					return;
+				}
+
+				// Record the note.
+				measureChars[measureNote.Lane, measureEventPositionInMeasure] = c;
 			}
 
 			// Write the measure of accumulated characters.

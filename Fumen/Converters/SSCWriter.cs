@@ -132,7 +132,7 @@ namespace Fumen.Converters
 			var chartDifficultyType = GetChartDifficultyTypeString(chart);
 
 			StreamWriter.WriteLine();
-			StreamWriter.WriteLine($"//---------------{charTypeStr} - {MSDFile.Escape(chart.Description)}----------------");
+			StreamWriter.WriteLine($"//---------------{charTypeStr} - {MSDFile.Escape(chart.Description ?? "")}----------------");
 			StreamWriter.WriteLine($"{MSDFile.ValueStartMarker}{SMCommon.TagNoteData}{MSDFile.ParamMarker}{MSDFile.ValueEndMarker}");
 			WriteChartPropertyFromExtras(chart, SMCommon.TagChartName);
 			WriteChartProperty(chart, SMCommon.TagStepsType, charTypeStr);

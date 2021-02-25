@@ -414,7 +414,7 @@ namespace ChartGenerator
 			{
 				FilePath = saveFile,
 				Song = song,
-				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseUnmodifiedChartSubDivisions,
+				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseSubDivisionDenominatorAsMeasureSpacing,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
 			};
 			var fileFormat = FileFormat.GetFileFormatByExtension(songArgs.FileInfo.Extension);

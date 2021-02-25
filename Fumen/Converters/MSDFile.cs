@@ -29,6 +29,8 @@ namespace Fumen.Converters
 
 		public static string Escape(string input)
 		{
+			if (string.IsNullOrEmpty(input))
+				return input;
 			return input
 				.Replace($"{ValueEndMarker}", $"{EscapeMarker}{ValueEndMarker}")
 				.Replace($"{ParamMarker}", $"{EscapeMarker}{ParamMarker}")

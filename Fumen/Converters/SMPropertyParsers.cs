@@ -401,7 +401,6 @@ namespace Fumen.Converters
 						.Split(new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
 					var linesInMeasure = lines.Length;
 					var lineInMeasure = 0;
-					var linesPerBeat = linesInMeasure / SMCommon.NumBeatsPerMeasure;
 					foreach (var line in lines)
 					{
 						var trimmedLine = line.Trim(SMCommon.SMAllWhiteSpace);
@@ -540,11 +539,12 @@ namespace Fumen.Converters
 								continue;
 
 							// Configure common parameters on the note and add it.
-							var beat = lineInMeasure / linesPerBeat;
+							var beat = (lineInMeasure * SMCommon.NumBeatsPerMeasure) / linesInMeasure;
+							var subDivisionNumerator = lineInMeasure * SMCommon.NumBeatsPerMeasure - linesInMeasure * beat;
+							var subDivisionDenominator = linesInMeasure;
 							note.Lane = laneIndex;
 							note.Player = player;
-							note.Position = new MetricPosition(measure, beat, lineInMeasure - beat * linesPerBeat, linesPerBeat);
-
+							note.Position = new MetricPosition(measure, beat, subDivisionNumerator, subDivisionDenominator);
 							currentMeasureEvents.Add(note);
 						}
 

@@ -1,6 +1,3 @@
-Immediate Bugs:
-	Figure out which chart is causing the error writing note data. It is either a bad lane, or a bad (non 4/4) position.
-
 PerformedChart Issues:
 	Test Charts:
 		more than friends

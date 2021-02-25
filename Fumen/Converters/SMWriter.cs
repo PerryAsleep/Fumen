@@ -102,7 +102,7 @@ namespace Fumen.Converters
 
 			// Write chart header.
 			StreamWriter.WriteLine();
-			StreamWriter.WriteLine($"//---------------{charTypeStr} - {MSDFile.Escape(chart.Description)}----------------");
+			StreamWriter.WriteLine($"//---------------{charTypeStr} - {MSDFile.Escape(chart.Description ?? "")}----------------");
 			WriteChartNotesValueStart(chart);
 			StreamWriter.WriteLine($"     {charTypeStr}{MSDFile.ParamMarker}");
 			StreamWriter.WriteLine($"     {MSDFile.Escape(chart.Description)}{MSDFile.ParamMarker}");
