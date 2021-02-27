@@ -4,11 +4,23 @@ namespace Fumen
 {
 	/// <summary>
 	/// Metric Position.
+	/// Implements IComparable for comparable checks with other MetricPositions from the same
+	/// piece if music. Comparing MetricPositions from separate pieces of music may produce
+	/// unwanted results as different pieces of music use different time signatures and tempos.
 	/// </summary>
-	public class MetricPosition : IComparable<MetricPosition>
+	public class MetricPosition : IComparable<MetricPosition>, IEquatable<MetricPosition>
 	{
+		/// <summary>
+		/// Measure within a piece of music. 0 indexed.
+		/// </summary>
 		public readonly int Measure;
+		/// <summary>
+		/// Beat within Measure. 0 indexed.
+		/// </summary>
 		public readonly int Beat;
+		/// <summary>
+		/// Subdivision within Beat.
+		/// </summary>
 		public readonly Fraction SubDivision = new Fraction(0, 0);
 
 		public MetricPosition()
@@ -78,6 +90,11 @@ namespace Fumen
 		public override bool Equals(object o)
 		{
 			return o is MetricPosition p && this == p;
+		}
+
+		public bool Equals(MetricPosition other)
+		{
+			return this == other;
 		}
 
 		public override int GetHashCode()

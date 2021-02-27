@@ -10,10 +10,6 @@ namespace Fumen
 		public readonly int Numerator;
 		public readonly int Denominator;
 
-		public Fraction()
-		{
-		}
-
 		public Fraction(Fraction other)
 		{
 			Numerator = other.Numerator;
