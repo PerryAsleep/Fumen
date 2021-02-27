@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
@@ -27,7 +28,7 @@ namespace Fumen.Converters
 			using (StreamWriter = new StreamWriter(Config.FilePath))
 			{
 				// Version
-				if (!TryGetSongExtra(SMCommon.TagVersion, out var version))
+				if (!Config.Song.Extras.TryGetExtra(SMCommon.TagVersion, out object version, MatchesSourceFileFormatType()))
 					WriteSongProperty(SMCommon.TagVersion, Version.ToString("N2"));
 				else
 				{
@@ -55,15 +56,15 @@ namespace Fumen.Converters
 				WriteSongPropertyFromExtras(SMCommon.TagLyricsPath);
 				WriteSongPropertyFromExtras(SMCommon.TagCDTitle);
 				WriteSongPropertyMusic();
-				if (TryGetSongExtra(SMCommon.TagPreview, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagPreview, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagPreview);
-				if (TryGetSongExtra(SMCommon.TagInstrumentTrack, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagInstrumentTrack, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack);
 				WriteSongPropertyOffset();
 				WriteSongProperty(SMCommon.TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMCommon.SMDoubleFormat));
 				WriteSongProperty(SMCommon.TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMCommon.SMDoubleFormat));
 				WriteSongPropertyFromExtras(SMCommon.TagSelectable);
-				if (TryGetSongExtra(SMCommon.TagDisplayBPM, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM);
 
 				// Timing data.
@@ -79,27 +80,27 @@ namespace Fumen.Converters
 				WriteSongPropertyFromExtras(SMCommon.TagFakes);
 				WriteSongPropertyFromExtras(SMCommon.TagLabels);
 
-				if (TryGetSongExtra(SMCommon.TagLastSecondHint, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagLastSecondHint, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagLastSecondHint);
 				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true);
-				if (TryGetSongExtra(SMCommon.TagBGChanges, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagBGChanges);
-				if (TryGetSongExtra(SMCommon.TagBGChanges1, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges1, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1);
-				if (TryGetSongExtra(SMCommon.TagBGChanges2, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges2, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2);
-				if (TryGetSongExtra(SMCommon.TagFGChanges, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagFGChanges);
 				WriteSongPropertyFromExtras(SMCommon.TagKeySounds);		// TODO: Write keysounds properly
 				WriteSongPropertyFromExtras(SMCommon.TagAttacks);
 
 				// Cache
-				if (TryGetSongExtra(SMCommon.TagFirstSecond, out _)
-				    || TryGetSongExtra(SMCommon.TagLastSecond, out _)
-				    || TryGetSongExtra(SMCommon.TagSongFileName, out _)
-				    || TryGetSongExtra(SMCommon.TagHasMusic, out _)
-				    || TryGetSongExtra(SMCommon.TagHasBanner, out _)
-				    || TryGetSongExtra(SMCommon.TagMusicLength, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFirstSecond, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(SMCommon.TagLastSecond, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(SMCommon.TagSongFileName, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(SMCommon.TagHasMusic, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(SMCommon.TagHasBanner, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(SMCommon.TagMusicLength, out object _, MatchesSourceFileFormatType()))
 				{
 					StreamWriter.WriteLine("// cache tags:");
 					WriteSongPropertyFromExtras(SMCommon.TagFirstSecond);
@@ -150,18 +151,19 @@ namespace Fumen.Converters
 			if (Config.PropertyEmissionBehavior == PropertyEmissionBehavior.MatchSource)
 			{
 				writeTimingData = false;
-				if (TryGetChartExtra(chart, SMCommon.TagOffset, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagBPMs, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagStops, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagDelays, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagWarps, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagTimeSignatures, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagTickCounts, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagCombos, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagSpeeds, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagScrolls, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagFakes, out _)
-				    || TryGetChartExtra(chart, SMCommon.TagLabels, out _))
+				var matchesSource = MatchesSourceFileFormatType();
+				if (chart.Extras.TryGetExtra(SMCommon.TagOffset, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagBPMs, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagStops, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagDelays, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagWarps, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagTimeSignatures, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagTickCounts, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagCombos, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagSpeeds, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagScrolls, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagFakes, out object _, matchesSource)
+				    || chart.Extras.TryGetExtra(SMCommon.TagLabels, out object _, matchesSource))
 					writeTimingData = true;
 			}
 			if (writeTimingData)

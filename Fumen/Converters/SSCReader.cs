@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
@@ -102,10 +102,9 @@ namespace Fumen.Converters
 					activeChart = new Chart();
 					activeChart.Layers.Add(new Layer());
 					// Add a 4/4 Time Signature.
-					activeChart.Layers[0].Events.Add(new TimeSignature()
+					activeChart.Layers[0].Events.Add(new TimeSignature(new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure))
 					{
-						Position = new MetricPosition(),
-						Signature = new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure)
+						Position = new MetricPosition()
 					});
 
 					activeChartTempos = new Dictionary<double, double>();
@@ -120,7 +119,7 @@ namespace Fumen.Converters
 					// Matches Stepmania logic. If any timing value is present, assume all timing values must be from the
 					// Chart and not the Song.
 					if (ChartTimingDataTags.Contains(valueStr))
-						activeChart.SourceExtras[SMCommon.TagFumenChartUsesOwnTimingData] = true;
+						activeChart.Extras.AddSourceExtra(SMCommon.TagFumenChartUsesOwnTimingData, true, true);
 
 					if (chartPropertyParsers.TryGetValue(valueStr, out var propertyParser))
 						propertyParser.Parse(value);
@@ -164,7 +163,7 @@ namespace Fumen.Converters
 			}
 
 			var useChartTimingData = false;
-			if (chart.SourceExtras.TryGetValue(SMCommon.TagFumenChartUsesOwnTimingData, out var useTimingDataObject))
+			if (chart.Extras.TryGetSourceExtra(SMCommon.TagFumenChartUsesOwnTimingData, out object useTimingDataObject))
 			{
 				if (useTimingDataObject is bool b)
 					useChartTimingData = b;
@@ -181,7 +180,7 @@ namespace Fumen.Converters
 			if (string.IsNullOrEmpty(chart.MusicFile))
 			{
 				var chartMusicFile = "";
-				if (song.SourceExtras.TryGetValue(SMCommon.TagMusic, out var chartMusicFileObj))
+				if (song.Extras.TryGetSourceExtra(SMCommon.TagMusic, out object chartMusicFileObj))
 					chartMusicFile = (string)chartMusicFileObj;
 				if (!string.IsNullOrEmpty(chartMusicFile))
 					chart.MusicFile = chartMusicFile;
@@ -189,7 +188,7 @@ namespace Fumen.Converters
 			if (string.IsNullOrEmpty(chart.Author))
 			{
 				var chartAuthor = "";
-				if (song.SourceExtras.TryGetValue(SMCommon.TagCredit, out var chartAuthorObj))
+				if (song.Extras.TryGetSourceExtra(SMCommon.TagCredit, out object chartAuthorObj))
 					chartAuthor = (string)chartAuthorObj;
 				if (!string.IsNullOrEmpty(chartAuthor))
 					chart.Author = chartAuthor;
@@ -204,15 +203,15 @@ namespace Fumen.Converters
 			if (string.IsNullOrEmpty(chart.GenreTransliteration) && !string.IsNullOrEmpty(song.GenreTransliteration))
 				chart.GenreTransliteration = song.GenreTransliteration;
 
-			if (!chart.SourceExtras.ContainsKey(SMCommon.TagOffset) && song.SourceExtras.ContainsKey(SMCommon.TagOffset))
+			if (!chart.Extras.TryGetSourceExtra(SMCommon.TagOffset, out object _)
+			    && song.Extras.TryGetSourceExtra(SMCommon.TagOffset, out object offsetObj))
 			{
-				if (song.SourceExtras.TryGetValue(SMCommon.TagOffset, out var offsetObj))
-					chart.ChartOffsetFromMusic = (double)offsetObj;
+				chart.ChartOffsetFromMusic = (double)offsetObj;
 			}
 
-			if (!chart.SourceExtras.ContainsKey(SMCommon.TagDisplayBPM))
+			if (!chart.Extras.TryGetSourceExtra(SMCommon.TagDisplayBPM, out object _))
 				chart.Tempo = SMCommon.GetDisplayBPMStringFromSourceExtrasList(
-					song.SourceExtras,
+					song.Extras,
 					useChartTimingData ? chartTempos : songTempos);
 
 			SMCommon.SetEventTimeMicros(chart);
@@ -229,7 +228,7 @@ namespace Fumen.Converters
 			var parsers = new Dictionary<string, PropertyParser>()
 			{
 				// Song tags.
-				[SMCommon.TagVersion] = new PropertyToSourceExtrasParser<double>(SMCommon.TagVersion, song.SourceExtras),
+				[SMCommon.TagVersion] = new PropertyToSourceExtrasParser<double>(SMCommon.TagVersion, song.Extras),
 				[SMCommon.TagTitle] = new PropertyToSongPropertyParser(SMCommon.TagTitle, nameof(Song.Title), song),
 				[SMCommon.TagSubtitle] = new PropertyToSongPropertyParser(SMCommon.TagSubtitle, nameof(Song.SubTitle), song),
 				[SMCommon.TagArtist] = new PropertyToSongPropertyParser(SMCommon.TagArtist, nameof(Song.Artist), song),
@@ -237,53 +236,53 @@ namespace Fumen.Converters
 				[SMCommon.TagSubtitleTranslit] = new PropertyToSongPropertyParser(SMCommon.TagSubtitleTranslit, nameof(Song.SubTitleTransliteration), song),
 				[SMCommon.TagArtistTranslit] = new PropertyToSongPropertyParser(SMCommon.TagArtistTranslit, nameof(Song.ArtistTransliteration), song),
 				[SMCommon.TagGenre] = new PropertyToSongPropertyParser(SMCommon.TagGenre, nameof(Song.Genre), song),
-				[SMCommon.TagOrigin] = new PropertyToSourceExtrasParser<string>(SMCommon.TagOrigin, song.SourceExtras),
-				[SMCommon.TagCredit] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCredit, song.SourceExtras),
+				[SMCommon.TagOrigin] = new PropertyToSourceExtrasParser<string>(SMCommon.TagOrigin, song.Extras),
+				[SMCommon.TagCredit] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCredit, song.Extras),
 				[SMCommon.TagBanner] = new PropertyToSongPropertyParser(SMCommon.TagBanner, nameof(Song.SongSelectImage), song),
-				[SMCommon.TagBackground] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBackground, song.SourceExtras),
-				[SMCommon.TagPreviewVid] = new PropertyToSourceExtrasParser<string>(SMCommon.TagPreviewVid, song.SourceExtras),
-				[SMCommon.TagJacket] = new PropertyToSourceExtrasParser<string>(SMCommon.TagJacket, song.SourceExtras),
-				[SMCommon.TagCDImage] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCDImage, song.SourceExtras),
-				[SMCommon.TagDiscImage] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDiscImage, song.SourceExtras),
-				[SMCommon.TagLyricsPath] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLyricsPath, song.SourceExtras),
-				[SMCommon.TagCDTitle] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCDTitle, song.SourceExtras),
-				[SMCommon.TagMusic] = new PropertyToSourceExtrasParser<string>(SMCommon.TagMusic, song.SourceExtras),
+				[SMCommon.TagBackground] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBackground, song.Extras),
+				[SMCommon.TagPreviewVid] = new PropertyToSourceExtrasParser<string>(SMCommon.TagPreviewVid, song.Extras),
+				[SMCommon.TagJacket] = new PropertyToSourceExtrasParser<string>(SMCommon.TagJacket, song.Extras),
+				[SMCommon.TagCDImage] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCDImage, song.Extras),
+				[SMCommon.TagDiscImage] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDiscImage, song.Extras),
+				[SMCommon.TagLyricsPath] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLyricsPath, song.Extras),
+				[SMCommon.TagCDTitle] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCDTitle, song.Extras),
+				[SMCommon.TagMusic] = new PropertyToSourceExtrasParser<string>(SMCommon.TagMusic, song.Extras),
 				[SMCommon.TagPreview] = new PropertyToSongPropertyParser(SMCommon.TagPreview, nameof(Song.PreviewMusicFile), song),
-				[SMCommon.TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(SMCommon.TagInstrumentTrack, song.SourceExtras),
-				[SMCommon.TagMusicLength] = new PropertyToSourceExtrasParser<double>(SMCommon.TagMusicLength, song.SourceExtras),
-				[SMCommon.TagLastSecondHint] = new PropertyToSourceExtrasParser<double>(SMCommon.TagLastSecondHint, song.SourceExtras),
+				[SMCommon.TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(SMCommon.TagInstrumentTrack, song.Extras),
+				[SMCommon.TagMusicLength] = new PropertyToSourceExtrasParser<double>(SMCommon.TagMusicLength, song.Extras),
+				[SMCommon.TagLastSecondHint] = new PropertyToSourceExtrasParser<double>(SMCommon.TagLastSecondHint, song.Extras),
 				[SMCommon.TagSampleStart] = new PropertyToSongPropertyParser(SMCommon.TagSampleStart, nameof(Song.PreviewSampleStart), song),
 				[SMCommon.TagSampleLength] = new PropertyToSongPropertyParser(SMCommon.TagSampleLength, nameof(Song.PreviewSampleLength), song),
-				[SMCommon.TagDisplayBPM] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagDisplayBPM, song.SourceExtras),
-				[SMCommon.TagSelectable] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSelectable, song.SourceExtras),
-				[SMCommon.TagAnimations] = new PropertyToSourceExtrasParser<string>(SMCommon.TagAnimations, song.SourceExtras),
-				[SMCommon.TagBGChanges] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges, song.SourceExtras),
-				[SMCommon.TagBGChanges1] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges1, song.SourceExtras),
-				[SMCommon.TagBGChanges2] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges2, song.SourceExtras),
-				[SMCommon.TagFGChanges] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFGChanges, song.SourceExtras),
+				[SMCommon.TagDisplayBPM] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagDisplayBPM, song.Extras),
+				[SMCommon.TagSelectable] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSelectable, song.Extras),
+				[SMCommon.TagAnimations] = new PropertyToSourceExtrasParser<string>(SMCommon.TagAnimations, song.Extras),
+				[SMCommon.TagBGChanges] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges, song.Extras),
+				[SMCommon.TagBGChanges1] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges1, song.Extras),
+				[SMCommon.TagBGChanges2] = new PropertyToSourceExtrasParser<string>(SMCommon.TagBGChanges2, song.Extras),
+				[SMCommon.TagFGChanges] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFGChanges, song.Extras),
 				// TODO: Parse Keysounds properly.
-				[SMCommon.TagKeySounds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagKeySounds, song.SourceExtras),
-				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, song.SourceExtras),
-				[SMCommon.TagOffset] = new PropertyToSourceExtrasParser<double>(SMCommon.TagOffset, song.SourceExtras),
+				[SMCommon.TagKeySounds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagKeySounds, song.Extras),
+				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, song.Extras),
+				[SMCommon.TagOffset] = new PropertyToSourceExtrasParser<double>(SMCommon.TagOffset, song.Extras),
 
 				// These tags are only used if the individual charts do not specify values.
-				[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, songStops, song.SourceExtras, SMCommon.TagFumenRawStopsStr),
-				[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, song.SourceExtras),
-				[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, songTempos, song.SourceExtras, SMCommon.TagFumenRawBpmsStr),
-				[SMCommon.TagWarps] = new PropertyToSourceExtrasParser<string>(SMCommon.TagWarps, song.SourceExtras),
-				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, song.SourceExtras),
+				[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, songStops, song.Extras, SMCommon.TagFumenRawStopsStr),
+				[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, song.Extras),
+				[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, songTempos, song.Extras, SMCommon.TagFumenRawBpmsStr),
+				[SMCommon.TagWarps] = new PropertyToSourceExtrasParser<string>(SMCommon.TagWarps, song.Extras),
+				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, song.Extras),
 				// Removed, see https://github.com/stepmania/stepmania/issues/9
-				[SMCommon.TagTimeSignatures] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTimeSignatures, song.SourceExtras),
-				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.SourceExtras),
-				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, song.SourceExtras),
-				[SMCommon.TagSpeeds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSpeeds, song.SourceExtras),
-				[SMCommon.TagScrolls] = new PropertyToSourceExtrasParser<string>(SMCommon.TagScrolls, song.SourceExtras),
-				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, song.SourceExtras),
-				[SMCommon.TagFirstSecond] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFirstSecond, song.SourceExtras),
-				[SMCommon.TagLastSecond] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLastSecond, song.SourceExtras),
-				[SMCommon.TagSongFileName] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSongFileName, song.SourceExtras),
-				[SMCommon.TagHasMusic] = new PropertyToSourceExtrasParser<string>(SMCommon.TagHasMusic, song.SourceExtras),
-				[SMCommon.TagHasBanner] = new PropertyToSourceExtrasParser<string>(SMCommon.TagHasBanner, song.SourceExtras),
+				[SMCommon.TagTimeSignatures] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTimeSignatures, song.Extras),
+				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.Extras),
+				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, song.Extras),
+				[SMCommon.TagSpeeds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSpeeds, song.Extras),
+				[SMCommon.TagScrolls] = new PropertyToSourceExtrasParser<string>(SMCommon.TagScrolls, song.Extras),
+				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, song.Extras),
+				[SMCommon.TagFirstSecond] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFirstSecond, song.Extras),
+				[SMCommon.TagLastSecond] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLastSecond, song.Extras),
+				[SMCommon.TagSongFileName] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSongFileName, song.Extras),
+				[SMCommon.TagHasMusic] = new PropertyToSourceExtrasParser<string>(SMCommon.TagHasMusic, song.Extras),
+				[SMCommon.TagHasBanner] = new PropertyToSourceExtrasParser<string>(SMCommon.TagHasBanner, song.Extras),
 			};
 			foreach (var kvp in parsers)
 				kvp.Value.SetLogger(Logger);
@@ -297,33 +296,33 @@ namespace Fumen.Converters
 		{
 			var parsers = new Dictionary<string, PropertyParser>()
 			{
-				[SMCommon.TagVersion] = new PropertyToSourceExtrasParser<double>(SMCommon.TagVersion, chart.SourceExtras),
-				[SMCommon.TagChartName] = new PropertyToSourceExtrasParser<string>(SMCommon.TagChartName, chart.SourceExtras),
+				[SMCommon.TagVersion] = new PropertyToSourceExtrasParser<double>(SMCommon.TagVersion, chart.Extras),
+				[SMCommon.TagChartName] = new PropertyToSourceExtrasParser<string>(SMCommon.TagChartName, chart.Extras),
 				[SMCommon.TagStepsType] = new ChartTypePropertyParser(chart),
-				[SMCommon.TagChartStyle] = new PropertyToSourceExtrasParser<string>(SMCommon.TagChartStyle, chart.SourceExtras),
+				[SMCommon.TagChartStyle] = new PropertyToSourceExtrasParser<string>(SMCommon.TagChartStyle, chart.Extras),
 				[SMCommon.TagDescription] = new PropertyToChartPropertyParser(SMCommon.TagDescription, nameof(Chart.Description), chart),
 				[SMCommon.TagDifficulty] = new PropertyToChartPropertyParser(SMCommon.TagDifficulty, nameof(Chart.DifficultyType), chart),
 				[SMCommon.TagMeter] = new PropertyToChartPropertyParser(SMCommon.TagMeter, nameof(Chart.DifficultyRating), chart),
-				[SMCommon.TagRadarValues] = new PropertyToSourceExtrasParser<string>(SMCommon.TagRadarValues, chart.SourceExtras),
+				[SMCommon.TagRadarValues] = new PropertyToSourceExtrasParser<string>(SMCommon.TagRadarValues, chart.Extras),
 				[SMCommon.TagCredit] = new PropertyToChartPropertyParser(SMCommon.TagCredit, nameof(Chart.Author), chart),
 				[SMCommon.TagMusic] = new PropertyToChartPropertyParser(SMCommon.TagMusic, nameof(Chart.MusicFile), chart),
-				[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, chartTempos, chart.SourceExtras, SMCommon.TagFumenRawBpmsStr),
-				[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, chartStops, chart.SourceExtras, SMCommon.TagFumenRawStopsStr),
-				[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, chart.SourceExtras),
+				[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, chartTempos, chart.Extras, SMCommon.TagFumenRawBpmsStr),
+				[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, chartStops, chart.Extras, SMCommon.TagFumenRawStopsStr),
+				[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, chart.Extras),
 				// Removed, see https://github.com/stepmania/stepmania/issues/9
-				[SMCommon.TagTimeSignatures] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTimeSignatures, chart.SourceExtras),
-				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, chart.SourceExtras),
-				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, chart.SourceExtras),
-				[SMCommon.TagWarps] = new PropertyToSourceExtrasParser<string>(SMCommon.TagWarps, chart.SourceExtras),
-				[SMCommon.TagSpeeds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSpeeds, chart.SourceExtras),
-				[SMCommon.TagScrolls] = new PropertyToSourceExtrasParser<string>(SMCommon.TagScrolls, chart.SourceExtras),
-				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, chart.SourceExtras),
-				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, chart.SourceExtras),
-				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, chart.SourceExtras),
+				[SMCommon.TagTimeSignatures] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTimeSignatures, chart.Extras),
+				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, chart.Extras),
+				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, chart.Extras),
+				[SMCommon.TagWarps] = new PropertyToSourceExtrasParser<string>(SMCommon.TagWarps, chart.Extras),
+				[SMCommon.TagSpeeds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSpeeds, chart.Extras),
+				[SMCommon.TagScrolls] = new PropertyToSourceExtrasParser<string>(SMCommon.TagScrolls, chart.Extras),
+				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, chart.Extras),
+				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, chart.Extras),
+				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, chart.Extras),
 				[SMCommon.TagOffset] = new PropertyToChartPropertyParser(SMCommon.TagOffset, nameof(Chart.ChartOffsetFromMusic), chart),
-				[SMCommon.TagSampleStart] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleStart, chart.SourceExtras),
-				[SMCommon.TagSampleLength] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleLength, chart.SourceExtras),
-				[SMCommon.TagSelectable] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSelectable, chart.SourceExtras),
+				[SMCommon.TagSampleStart] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleStart, chart.Extras),
+				[SMCommon.TagSampleLength] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleLength, chart.Extras),
+				[SMCommon.TagSelectable] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSelectable, chart.Extras),
 				[SMCommon.TagDisplayBPM] = new PropertyToChartPropertyParser(SMCommon.TagDisplayBPM, nameof(Chart.Tempo), chart),
 				[SMCommon.TagNotes] = new ChartNotesPropertyParser(SMCommon.TagNotes, chart),
 				[SMCommon.TagNotes2] = new ChartNotesPropertyParser(SMCommon.TagNotes2, chart),

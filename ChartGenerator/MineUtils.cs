@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Fumen;
+using Fumen.ChartDefinition;
 using static ChartGenerator.Constants;
 
 namespace ChartGenerator

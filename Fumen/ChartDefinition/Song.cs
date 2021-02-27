@@ -1,7 +1,11 @@
 ﻿using System.Collections.Generic;
 
-namespace Fumen
+namespace Fumen.ChartDefinition
 {
+	/// <summary>
+	/// Song data.
+	/// A Song has multiple Charts.
+	/// </summary>
 	public class Song
 	{
 		public FileFormatType SourceType { get; set; }
@@ -23,9 +27,14 @@ namespace Fumen
 		public double PreviewSampleStart { get; set; }
 		public double PreviewSampleLength { get; set; }
 
-		public Dictionary<string, object> SourceExtras { get; set; } = new Dictionary<string, object>();
-		public Dictionary<string, object> DestExtras { get; set; } = new Dictionary<string, object>();
-
+		/// <summary>
+		/// The Charts making up this Song.
+		/// </summary>
 		public List<Chart> Charts { get; set; } = new List<Chart>();
+
+		/// <summary>
+		/// Miscellaneous extra information associated with this Song.
+		/// </summary>
+		public Extras Extras { get; set; } = new Extras();
 	}
 }

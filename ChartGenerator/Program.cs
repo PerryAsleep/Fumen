@@ -9,6 +9,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Fumen.ChartDefinition;
 
 namespace ChartGenerator
 {
@@ -583,8 +584,7 @@ namespace ChartGenerator
 						Tempo = chart.Tempo,
 						DifficultyRating = chart.DifficultyRating,
 						DifficultyType = chart.DifficultyType,
-						SourceExtras = chart.SourceExtras,
-						DestExtras = chart.DestExtras,
+						Extras = chart.Extras,
 						Type = Config.Instance.OutputChartType,
 						NumPlayers = 1,
 						NumInputs = OutputStepGraph.NumArrows

@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
@@ -49,10 +50,10 @@ namespace Fumen.Converters
 				WriteSongPropertyOffset(fallbackChartMissingSongProperties);
 				WriteSongProperty(SMCommon.TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMCommon.SMDoubleFormat));
 				WriteSongProperty(SMCommon.TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMCommon.SMDoubleFormat));
-				if (TryGetSongExtra(SMCommon.TagLastBeatHint, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagLastBeatHint, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagLastBeatHint);
 				WriteSongPropertyFromExtras(SMCommon.TagSelectable);
-				if (TryGetSongExtra(SMCommon.TagDisplayBPM, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM);
 				WriteSongPropertyBPMs(fallbackChartMissingSongProperties);
 				WriteSongPropertyStops(fallbackChartMissingSongProperties);
@@ -62,13 +63,13 @@ namespace Fumen.Converters
 				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, true);
 				WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack, true);
 				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true);
-				if (TryGetSongExtra(SMCommon.TagBGChanges, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagBGChanges);
-				if (TryGetSongExtra(SMCommon.TagBGChanges1, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges1, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1);
-				if (TryGetSongExtra(SMCommon.TagBGChanges2, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges2, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2);
-				if (TryGetSongExtra(SMCommon.TagFGChanges, out _))
+				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagFGChanges);
 				WriteSongPropertyFromExtras(SMCommon.TagKeySounds);		// TODO: Write keysounds properly
 				WriteSongPropertyFromExtras(SMCommon.TagAttacks);

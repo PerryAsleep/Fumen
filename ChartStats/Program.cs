@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Fumen;
+using Fumen.ChartDefinition;
 using Fumen.Converters;
 
 namespace ChartStats

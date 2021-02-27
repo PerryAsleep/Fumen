@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
@@ -247,6 +248,11 @@ namespace Fumen.Converters
 			}
 		}
 
+		protected bool MatchesSourceFileFormatType()
+		{
+			return Config.Song.SourceType == FileFormatType;
+		}
+
 		protected string GetChartDifficultyTypeString(Chart chart)
 		{
 			if (ChartDifficultyTypes.TryGetValue(chart, out var difficultyType))
@@ -313,64 +319,45 @@ namespace Fumen.Converters
 			return false;
 		}
 
-		protected bool TryGetChartExtra(Chart chart, string sKey, out object value)
-		{
-			value = null;
-			if (chart.DestExtras.TryGetValue(sKey, out value))
-				return true;
-			if (Config.Song.SourceType == FileFormatType && chart.SourceExtras.TryGetValue(sKey, out value))
-				return true;
-			return false;
-		}
-
 		protected void WriteChartProperty(Chart chart, string smPropertyName, object value, bool stepmaniaOmitted = false)
 		{
-			var inSource = TryGetChartExtra(chart, smPropertyName, out _);
+			var inSource = chart.Extras.TryGetExtra(smPropertyName, out object _, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
 				WritePropertyInternal(smPropertyName, value);
 		}
 
 		protected void WriteChartPropertyFromExtras(Chart chart, string smPropertyName, bool stepmaniaOmitted = false)
 		{
-			var inSource = TryGetChartExtra(chart, smPropertyName, out var value);
+			var inSource = chart.Extras.TryGetExtra(smPropertyName, out object value, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
 				WritePropertyInternal(smPropertyName, value);
 		}
-
-		protected bool TryGetSongExtra(string sKey, out object value)
-		{
-			value = null;
-			if (Config.Song.DestExtras.TryGetValue(sKey, out value))
-				return true;
-			if (Config.Song.SourceType == FileFormatType && Config.Song.SourceExtras.TryGetValue(sKey, out value))
-				return true;
-			return false;
-		}
-
 		protected void WriteSongProperty(string smPropertyName, object value, bool stepmaniaOmitted = false)
 		{
-			var inSource = TryGetSongExtra(smPropertyName, out _);
+			var inSource = Config.Song.Extras.TryGetExtra(smPropertyName, out object _, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
 				WritePropertyInternal(smPropertyName, value);
 		}
 
 		protected void WriteSongPropertyFromExtras(string smPropertyName, bool stepmaniaOmitted = false)
 		{
-			var inSource = TryGetSongExtra(smPropertyName, out var value);
+			var inSource = Config.Song.Extras.TryGetExtra(smPropertyName, out object value, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
 				WritePropertyInternal(smPropertyName, value);
 		}
 
 		protected void WriteSongPropertyMusic(Chart fallbackChart = null, bool stepmaniaOmitted = false)
 		{
-			if (!TryGetSongExtra(SMCommon.TagMusic, out var value) && fallbackChart != null)
+			if (!Config.Song.Extras.TryGetExtra(SMCommon.TagMusic, out object value, MatchesSourceFileFormatType())
+			    && fallbackChart != null)
 				value = fallbackChart.MusicFile;
 			WriteSongProperty(SMCommon.TagMusic, value?.ToString() ?? "", stepmaniaOmitted);
 		}
 
 		protected void WriteSongPropertyOffset(Chart fallbackChart = null, bool stepmaniaOmitted = false)
 		{
-			if (!TryGetSongExtra(SMCommon.TagOffset, out var value) && fallbackChart != null)
+			if (!Config.Song.Extras.TryGetExtra(SMCommon.TagOffset, out object value, MatchesSourceFileFormatType())
+			    && fallbackChart != null)
 				value = fallbackChart.ChartOffsetFromMusic.ToString(SMCommon.SMDoubleFormat);
 			WriteSongProperty(SMCommon.TagOffset, value?.ToString() ?? "", stepmaniaOmitted);
 		}
@@ -380,9 +367,8 @@ namespace Fumen.Converters
 			// If we have a raw string from the source file, use it.
 			// Stepmania files have changed how they format BPMs and Stops over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
-			if (Config.Song.SourceType == FileFormatType
-			    && Config.Song.SourceExtras.ContainsKey(SMCommon.TagFumenRawBpmsStr)
-			    && Config.Song.SourceExtras[SMCommon.TagFumenRawBpmsStr] is string rawStr)
+			if (MatchesSourceFileFormatType()
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
 				return;
@@ -400,9 +386,7 @@ namespace Fumen.Converters
 		protected void WriteChartPropertyBPMs(Chart chart, bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			if (Config.Song.SourceType == FileFormatType
-			    && chart.SourceExtras.ContainsKey(SMCommon.TagFumenRawBpmsStr)
-			    && chart.SourceExtras[SMCommon.TagFumenRawBpmsStr] is string rawStr)
+			if (chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
 				return;
@@ -427,14 +411,8 @@ namespace Fumen.Converters
 
 				// If present, use the original double value from the source chart so as not to lose
 				// or alter the precision.
-				var timeInBeats = tempoChangeBeats[tc];
-				if (Config.Song.SourceType == FileFormatType
-				    && tc.SourceExtras.ContainsKey(SMCommon.TagFumenDoublePosition)
-				    && tc.SourceExtras[SMCommon.TagFumenDoublePosition] is double)
-				{
-					timeInBeats = (double) tc.SourceExtras[SMCommon.TagFumenDoublePosition];
-				}
-
+				if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats, MatchesSourceFileFormatType()))
+					timeInBeats = tempoChangeBeats[tc];
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				var tempoStr = tc.TempoBPM.ToString(SMCommon.SMDoubleFormat);
@@ -483,9 +461,8 @@ namespace Fumen.Converters
 			// If we have a raw string from the source file, use it.
 			// Stepmania files have changed how they format BPMs and Stops over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
-			if (Config.Song.SourceType == FileFormatType
-			    && Config.Song.SourceExtras.ContainsKey(SMCommon.TagFumenRawStopsStr)
-			    && Config.Song.SourceExtras[SMCommon.TagFumenRawStopsStr] is string rawStr)
+			if (MatchesSourceFileFormatType()
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagStops, rawStr, stepmaniaOmitted);
 				return;
@@ -503,9 +480,7 @@ namespace Fumen.Converters
 		protected void WriteChartPropertyStops(Chart chart, bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			if (Config.Song.SourceType == FileFormatType
-			    && chart.SourceExtras.ContainsKey(SMCommon.TagFumenRawStopsStr)
-			    && chart.SourceExtras[SMCommon.TagFumenRawStopsStr] is string rawStr)
+			if (chart.Extras.TryGetExtra(SMCommon.TagFumenRawStopsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagStops, rawStr, stepmaniaOmitted);
 				return;
@@ -530,22 +505,12 @@ namespace Fumen.Converters
 
 				// If present, use the original double values from the source chart so as not to lose
 				// or alter the precision.
-				var timeInBeats = stopBeats[stop];
-				if (Config.Song.SourceType == FileFormatType
-				    && stop.SourceExtras.ContainsKey(SMCommon.TagFumenDoublePosition)
-				    && stop.SourceExtras[SMCommon.TagFumenDoublePosition] is double)
-				{
-					timeInBeats = (double)stop.SourceExtras[SMCommon.TagFumenDoublePosition];
-				}
+				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats, MatchesSourceFileFormatType()))
+					timeInBeats = stopBeats[stop];
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
-				var length = stop.LengthMicros / 1000000.0;
-				if (Config.Song.SourceType == FileFormatType
-				    && stop.SourceExtras.ContainsKey(SMCommon.TagFumenDoubleValue)
-				    && stop.SourceExtras[SMCommon.TagFumenDoubleValue] is double)
-				{
-					length = (double)stop.SourceExtras[SMCommon.TagFumenDoubleValue];
-				}
+				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+					length = stop.LengthMicros / 1000000.0;
 				var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
 
 				sb.Append($"{timeInBeatsStr}={lengthStr}");
@@ -595,10 +560,8 @@ namespace Fumen.Converters
 
 		protected void WriteChartNotesValueStart(Chart chart)
 		{
-			var notesType = SMCommon.TagNotes;
-			if (TryGetChartExtra(chart, SMCommon.TagFumenNotesType, out var notesTypeObj)
-			    && notesTypeObj is string notesTypeObjStr)
-				notesType = notesTypeObjStr;
+			if (!chart.Extras.TryGetExtra(SMCommon.TagFumenNotesType, out string notesType, MatchesSourceFileFormatType()))
+				notesType = SMCommon.TagNotes;
 			StreamWriter.WriteLine($"{MSDFile.ValueStartMarker}{notesType}{MSDFile.ParamMarker}");
 		}
 
@@ -771,8 +734,8 @@ namespace Fumen.Converters
 			    && SMCommon.NoteChars.Contains(note.DestType[0]))
 				return note.DestType[0];
 
-			if (Config.Song.SourceType == FileFormatType
-			    && note.SourceType.Length == 1
+			if (MatchesSourceFileFormatType()
+			    && note.SourceType?.Length == 1
 			    && SMCommon.NoteChars.Contains(note.SourceType[0]))
 				return note.SourceType[0];
 
@@ -787,20 +750,8 @@ namespace Fumen.Converters
 
 		protected string GetRadarValues(Chart chart)
 		{
-			var radarValues = new List<double>();
-			if (chart.DestExtras.ContainsKey(SMCommon.TagRadarValues)
-			    && chart.DestExtras[SMCommon.TagRadarValues] is List<double>)
-			{
-				radarValues = (List<double>)chart.DestExtras[SMCommon.TagRadarValues];
-			}
-			else if (Config.Song.SourceType == FileFormatType
-			         && chart.SourceExtras.ContainsKey(SMCommon.TagRadarValues)
-			         && chart.SourceExtras[SMCommon.TagRadarValues] is List<double>)
-			{
-				radarValues = (List<double>)chart.SourceExtras[SMCommon.TagRadarValues];
-			}
-
-			if (radarValues.Count <= 0)
+			if (!chart.Extras.TryGetExtra(SMCommon.TagRadarValues, out List<double> radarValues, MatchesSourceFileFormatType())
+			    || radarValues.Count <= 0)
 				return "";
 
 			var sb = new StringBuilder();

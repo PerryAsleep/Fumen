@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
@@ -104,7 +105,7 @@ namespace Fumen.Converters
 				return false;
 
 			// Record the string value in the extras.
-			Song.SourceExtras[PropertyName] = songValueStr;
+			Song.Extras.AddSourceExtra(PropertyName, songValueStr, true);
 
 			// Only consider this line if the property is valid.
 			var prop = Song.GetType().GetProperty(SongPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -128,7 +129,7 @@ namespace Fumen.Converters
 			prop.SetValue(Song, o, null);
 
 			// Overwrite the extras value with the correct type.
-			Song.SourceExtras[PropertyName] = o;
+			Song.Extras.AddSourceExtra(PropertyName, o, true);
 
 			return true;
 		}
@@ -158,7 +159,7 @@ namespace Fumen.Converters
 				return false;
 
 			// Record the string value in the extras.
-			Chart.SourceExtras[PropertyName] = chartValueStr;
+			Chart.Extras.AddSourceExtra(PropertyName, chartValueStr, true);
 
 			// Only consider this line if the property is valid.
 			var prop = Chart.GetType().GetProperty(ChartPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -182,14 +183,14 @@ namespace Fumen.Converters
 			prop.SetValue(Chart, o, null);
 
 			// Overwrite the extras value with the correct type.
-			Chart.SourceExtras[PropertyName] = o;
+			Chart.Extras.AddSourceExtra(PropertyName, o, true);
 
 			return true;
 		}
 	}
 
 	/// <summary>
-	/// Parses a value with one parameter into the SourceExtras as the type T.
+	/// Parses a value with one parameter into the Extras as the type T.
 	/// Examples:
 	/// #SELECTABLE:YES;
 	/// #VERSION:0.83;
@@ -197,12 +198,12 @@ namespace Fumen.Converters
 	/// <typeparam name="T"></typeparam>
 	public class PropertyToSourceExtrasParser<T> : PropertyParser where T : IConvertible
 	{
-		private readonly Dictionary<string, object> SourceExtras;
+		private readonly Extras Extras;
 
-		public PropertyToSourceExtrasParser(string smPropertyName, Dictionary<string, object> sourceExtras)
+		public PropertyToSourceExtrasParser(string smPropertyName, Extras extras)
 			: base(smPropertyName)
 		{
-			SourceExtras = sourceExtras;
+			Extras = extras;
 		}
 
 		public override bool Parse(MSDFile.Value value)
@@ -222,14 +223,14 @@ namespace Fumen.Converters
 				return true;
 			}
 
-			SourceExtras[PropertyName] = tValue;
+			Extras.AddSourceExtra(PropertyName, tValue, true);
 			return true;
 		}
 	}
 
 	/// <summary>
 	/// Parses a value with multiple parameters separated by the MSDFile ParamMarker
-	/// into a List of values of type T and stores it on the SourceExtras.
+	/// into a List of values of type T and stores it on the Extras.
 	/// It is important to use a list instead of a raw string when parameters are
 	/// separated by the MSDFile ParamMarker so we do not escape them when writing
 	/// back out. We need to understand that they are separate values.
@@ -239,12 +240,12 @@ namespace Fumen.Converters
 	/// <typeparam name="T"></typeparam>
 	public class ListPropertyToSourceExtrasParser<T> : PropertyParser where T : IConvertible
 	{
-		private readonly Dictionary<string, object> SourceExtras;
+		private readonly Extras Extras;
 
-		public ListPropertyToSourceExtrasParser(string smPropertyName, Dictionary<string, object> sourceExtras)
+		public ListPropertyToSourceExtrasParser(string smPropertyName, Extras extras)
 			: base(smPropertyName)
 		{
-			SourceExtras = sourceExtras;
+			Extras = extras;
 		}
 
 		public override bool Parse(MSDFile.Value value)
@@ -272,7 +273,7 @@ namespace Fumen.Converters
 				}
 			}
 
-			SourceExtras[PropertyName] = parsedList;
+			Extras.AddSourceExtra(PropertyName, parsedList, true);
 			return true;
 		}
 	}
@@ -280,7 +281,7 @@ namespace Fumen.Converters
 	/// <summary>
 	/// Parses a value with one parameter that is a string of comma-separated times to values.
 	/// Parses these into a Dictionary of doubles to values of type T.
-	/// Will also store the raw value on the SourceExtras if given raw string property name.
+	/// Will also store the raw value on the Extras if given raw string property name.
 	/// Example:
 	/// #BPMS:0.000=175.000,100.000=125.000;
 	/// </summary>
@@ -288,18 +289,18 @@ namespace Fumen.Converters
 	public class CSVListAtTimePropertyParser<T> : PropertyParser where T : IConvertible
 	{
 		private readonly Dictionary<double, T> Values;
-		private readonly Dictionary<string, object> SourceExtras;
+		private readonly Extras Extras;
 		private readonly string RawStringPropertyName;
 
 		public CSVListAtTimePropertyParser(
 			string smPropertyName,
 			Dictionary<double, T> values,
-			Dictionary<string, object> sourceExtras = null,
+			Extras extras = null,
 			string rawStringPropertyName = null)
 			: base(smPropertyName)
 		{
 			Values = values;
-			SourceExtras = sourceExtras;
+			Extras = extras;
 			RawStringPropertyName = rawStringPropertyName;
 		}
 
@@ -311,7 +312,7 @@ namespace Fumen.Converters
 
 			// Record the raw string to preserve formatting when writing.
 			if (!string.IsNullOrEmpty(RawStringPropertyName))
-				SourceExtras?.Add(RawStringPropertyName, rawStr);
+				Extras?.AddSourceExtra(RawStringPropertyName, rawStr);
 
 			if (!string.IsNullOrEmpty(rawStr))
 			{
@@ -352,7 +353,7 @@ namespace Fumen.Converters
 				}
 			}
 
-			SourceExtras?.Add(PropertyName, Values);
+			Extras?.AddSourceExtra(PropertyName, Values);
 
 			return true;
 		}
@@ -507,7 +508,7 @@ namespace Fumen.Converters
 									if (int.TryParse(trimmedLine.Substring(startIndex, endIndex - startIndex),
 										out var keySoundIndex))
 									{
-										note.SourceExtras[SMCommon.TagFumenKeySoundIndex] = keySoundIndex;
+										note.Extras.AddSourceExtra(SMCommon.TagFumenKeySoundIndex, keySoundIndex, true);
 									}
 								}
 							}
@@ -625,7 +626,7 @@ namespace Fumen.Converters
 			chart.Layers.Add(new Layer());
 
 			// Record whether this chart was written under NOTES or NOTES2.
-			chart.SourceExtras[SMCommon.TagFumenNotesType] = PropertyName;
+			chart.Extras.AddSourceExtra(SMCommon.TagFumenNotesType, PropertyName, true);
 
 			// Parse the chart information before measure data.
 			var chartDifficultyRatingStr = value.Params[4]?.Trim(SMCommon.SMAllWhiteSpace) ?? "";
@@ -645,7 +646,7 @@ namespace Fumen.Converters
 					radarValues.Add(d);
 				}
 			}
-			chart.SourceExtras[SMCommon.TagRadarValues] = radarValues;
+			chart.Extras.AddSourceExtra(SMCommon.TagRadarValues, radarValues, true);
 
 			// Parse chart type and set number of players and inputs.
 			if (!SMCommon.TryGetChartType(chart.Type, out var smChartType))
@@ -657,10 +658,9 @@ namespace Fumen.Converters
 			chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
 
 			// Add a 4/4 time signature
-			chart.Layers[0].Events.Add(new TimeSignature()
+			chart.Layers[0].Events.Add(new TimeSignature(new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure))
 			{
-				Position = new MetricPosition(),
-				Signature = new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure)
+				Position = new MetricPosition()
 			});
 
 			// Parse the notes.
@@ -694,7 +694,7 @@ namespace Fumen.Converters
 				return false;
 
 			// Record whether this chart was written under NOTES or NOTES2.
-			Chart.SourceExtras[SMCommon.TagFumenNotesType] = PropertyName;
+			Chart.Extras.AddSourceExtra(SMCommon.TagFumenNotesType, PropertyName, true);
 
 			// Parse the notes.
 			if (!ParseNotes(Chart, notesStr))
@@ -732,7 +732,7 @@ namespace Fumen.Converters
 			Chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
 			Chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
 
-			Chart.SourceExtras[SMCommon.TagStepsType] = Chart.Type;
+			Chart.Extras.AddSourceExtra(SMCommon.TagStepsType, Chart.Type, true);
 
 			return true;
 		}

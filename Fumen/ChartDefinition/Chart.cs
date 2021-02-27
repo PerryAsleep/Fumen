@@ -1,7 +1,11 @@
 ﻿using System.Collections.Generic;
 
-namespace Fumen
+namespace Fumen.ChartDefinition
 {
+	/// <summary>
+	/// Chart data.
+	/// A Chart has Events on Layers.
+	/// </summary>
 	public class Chart
 	{
 		public string Artist { get; set; }
@@ -65,15 +69,13 @@ namespace Fumen
 		public int NumInputs { get; set; }
 
 		/// <summary>
-		/// Extra Information from the source file for this Chart.
-		/// </summary>
-		public Dictionary<string, object> SourceExtras { get; set; } = new Dictionary<string, object>();
-
-		public Dictionary<string, object> DestExtras { get; set; } = new Dictionary<string, object>();
-
-		/// <summary>
 		/// Layers of Events, including the Notes of the Chart.
 		/// </summary>
 		public List<Layer> Layers { get; set; } = new List<Layer>();
+
+		/// <summary>
+		/// Miscellaneous extra information associated with this Chart.
+		/// </summary>
+		public Extras Extras { get; set; } = new Extras();
 	}
 }

@@ -7,6 +7,7 @@ using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
 using System.Threading.Tasks;
+using Fumen.ChartDefinition;
 
 namespace ChartGeneratorTests
 {

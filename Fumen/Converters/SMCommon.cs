@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
@@ -369,17 +370,16 @@ namespace Fumen.Converters
 			// Insert tempo change events.
 			foreach (var tempo in tempos)
 			{
-				var tempoChangeEvent = new TempoChange()
+				var tempoChangeEvent = new TempoChange(tempo.Value)
 				{
 					Position = new MetricPosition(
 						(int)tempo.Key / NumBeatsPerMeasure,
 						(int)tempo.Key % NumBeatsPerMeasure,
-						FindClosestSMSubDivision(tempo.Key - (int)tempo.Key)),
-					TempoBPM = tempo.Value
+						FindClosestSMSubDivision(tempo.Key - (int)tempo.Key))
 				};
 
 				// Record the actual doubles.
-				tempoChangeEvent.SourceExtras.Add(TagFumenDoublePosition, tempo.Key);
+				tempoChangeEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tempo.Key);
 				chart.Layers[0].Events.Add(tempoChangeEvent);
 			}
 		}
@@ -396,18 +396,17 @@ namespace Fumen.Converters
 		{
 			foreach (var stop in stops)
 			{
-				var stopEvent = new Stop()
+				var stopEvent = new Stop((long)(stop.Value * 1000000.0))
 				{
 					Position = new MetricPosition(
 						(int)stop.Key / NumBeatsPerMeasure,
 						(int)stop.Key % NumBeatsPerMeasure,
-						FindClosestSMSubDivision(stop.Key - (int)stop.Key)),
-					LengthMicros = (long)(stop.Value * 1000000.0)
+						FindClosestSMSubDivision(stop.Key - (int)stop.Key))
 				};
 
 				// Record the actual doubles.
-				stopEvent.SourceExtras.Add(TagFumenDoublePosition, stop.Key);
-				stopEvent.SourceExtras.Add(TagFumenDoubleValue, stop.Value);
+				stopEvent.Extras.AddSourceExtra(TagFumenDoublePosition, stop.Key);
+				stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, stop.Value);
 
 				chart.Layers[0].Events.Add(stopEvent);
 			}
@@ -420,19 +419,19 @@ namespace Fumen.Converters
 		/// it tries to look through the provided tempo events from the Song or Chart
 		/// and use the one at position 0.0.
 		/// </summary>
-		/// <param name="sourceExtras">
-		/// SourceExtras from Song or Chart to check the TagDisplayBPM value.
+		/// <param name="extras">
+		/// Extras from Song or Chart to check the TagDisplayBPM value.
 		/// </param>
 		/// <param name="tempos">
 		/// Dictionary of time to value of tempos parsed from the Song or Chart.
 		/// </param>
 		/// <returns>String representation of display tempo to use.</returns>
 		public static string GetDisplayBPMStringFromSourceExtrasList(
-			Dictionary<string, object> sourceExtras,
+			Extras extras,
 			Dictionary<double, double> tempos)
 		{
 			var displayTempo = "";
-			if (sourceExtras.TryGetValue(TagDisplayBPM, out var chartDisplayTempoObj))
+			if (extras.TryGetSourceExtra(TagDisplayBPM, out object chartDisplayTempoObj))
 			{
 				if (chartDisplayTempoObj is List<string> tempoList)
 				{
