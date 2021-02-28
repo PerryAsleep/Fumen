@@ -87,6 +87,8 @@ namespace ChartGenerator
 
 		public const int CostNewArrow_FootSwap_DoubleStep_NoMineIndication = 150;
 		public const int CostNewArrow_FootSwap_DoubleStep_MineIndication = 75;
+		public const int CostNewArrow_FootSwap_OtherHolding = 21;
+		public const int CostNewArrow_FootSwap_OtherInBracketPosture = 21;
 		public const int CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow = 1;
 		public const int CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow = 2;
 		public const int CostNewArrow_FootSwap_SubsequentSwap = 6;
@@ -94,27 +96,27 @@ namespace ChartGenerator
 		public const int CostNewArrow_FootSwap_NoIndication_NotBracketable = 8;
 
 		public const int CostNewArrow_Invert_FromSwap = 200;
-		public const int CostNewArrow_Invert_OtherHeld = 30;
+		public const int CostNewArrow_Invert_OtherHeld = 5;
 		public const int CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated = 300;
 		public const int CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication = 400;
-		public const int CostNewArrow_Invert = 30;
+		public const int CostNewArrow_Invert = 6;
 
-		public const int CostTwoArrows_Bracket_OtherFootHoldingBoth = 1;
-		public const int CostTwoArrows_Bracket_DoubleStep = 100;
-		public const int CostTwoArrows_Bracket_PreferredDueToMovement = 5;
-		public const int CostTwoArrows_Bracket_PreferredDueToMovement_Swap = 8;
-		public const int CostTwoArrows_Bracket = 10;
-		public const int CostTwoArrows_Bracket_BothSame = 2;
-		public const int CostTwoArrows_Bracket_Swap = 11;
+		public const int CostTwoArrows_Bracket_OtherFootHoldingBoth = 10;
+		public const int CostTwoArrows_Bracket_DoubleStep = 1000;
+		public const int CostTwoArrows_Bracket_PreferredDueToMovement = 50;
+		public const int CostTwoArrows_Bracket_PreferredDueToMovement_Swap = 80;
+		public const int CostTwoArrows_Bracket = 100;
+		public const int CostTwoArrows_Bracket_BothSame = 20;
+		public const int CostTwoArrows_Bracket_Swap = 110;
 
-		public const int CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket = 20;
-		public const int CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable = 15;
-		public const int CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement = 7;
-		public const int CostTwoArrows_Jump_BothNewAndNeitherBracketable = 12;
-		public const int CostTwoArrows_Jump_BothNewAndOneBracketable = 10;
-		public const int CostTwoArrows_Jump_BothSame = 2;
-		public const int CostTwoArrows_Jump_BothNew = 6;
-		public const int CostTwoArrows_Jump_OneNew = 5;
+		public const int CostTwoArrows_Jump_OtherFootHoldingOne_ThisFootCouldBracket = 200;
+		public const int CostTwoArrows_Jump_OtherFootHoldingOne_NotBracketable = 150;
+		public const int CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement = 70;
+		public const int CostTwoArrows_Jump_BothNewAndNeitherBracketable = 120;
+		public const int CostTwoArrows_Jump_BothNewAndOneBracketable = 100;
+		public const int CostTwoArrows_Jump_BothSame = 20;
+		public const int CostTwoArrows_Jump_BothNew = 60;
+		public const int CostTwoArrows_Jump_OneNew = 50;
 
 		public const int CostThreeArrows = 0;
 		public const int CostFourArrows = 0;

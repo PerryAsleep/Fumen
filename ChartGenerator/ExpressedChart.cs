@@ -925,7 +925,8 @@ namespace ChartGenerator
 							out var thisCanCrossoverToNewArrow,
 							out var thisMinePositionFollowingPreviousStep,
 							out var thisReleasePositionOfPreviousStep,
-							out var thisFootPreviousArrows);
+							out var thisFootPreviousArrows,
+							out var thisFootInBacketPosture);
 						GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
 							out var otherAnyHeld,
 							out var otherAllHeld,
@@ -935,7 +936,8 @@ namespace ChartGenerator
 							out var otherCanCrossoverToNewArrow,
 							out var otherMinePositionFollowingPreviousStep,
 							out var otherReleasePositionOfPreviousStep,
-							out var otherFootPreviousArrows);
+							out var otherFootPreviousArrows,
+							out var otherFootInBracketPosture);
 
 						var doubleStep = previousStepLink != null && previousStepLink.IsStepWithFoot(thisFoot) && !otherAnyHeld;
 						var doubleStepOtherFootReleasedAtSameTime = false;
@@ -1149,6 +1151,13 @@ namespace ChartGenerator
 											return CostNewArrow_FootSwap_DoubleStep_MineIndication;
 										return CostNewArrow_FootSwap_DoubleStep_NoMineIndication;
 									}
+
+									// If the other foot is holding this swap becomes more unlikely as it may
+									// mean a previous bracket should have been a jump.
+									if (otherAnyHeld && !thisAnyHeld)
+										return CostNewArrow_FootSwap_OtherHolding;
+									if (otherFootInBracketPosture && !thisAnyHeld)
+										return CostNewArrow_FootSwap_OtherInBracketPosture;
 
 									// Mine indicated
 									if (mineIndicatedOnThisFootsArrow)
@@ -1405,7 +1414,8 @@ namespace ChartGenerator
 			out bool canCrossoverToNewArrow,
 			out MetricPosition minePositionFollowingPreviousStep,
 			out MetricPosition releasePositionOfPreviousStep,
-			out int[] previousArrows)
+			out int[] previousArrows,
+			out bool inBracketPosture)
 		{
 			anyHeld = false;
 			allHeld = true;
@@ -1416,6 +1426,7 @@ namespace ChartGenerator
 			canCrossoverToNewArrow = false;
 			releasePositionOfPreviousStep = new MetricPosition();
 			previousArrows = new int[NumFootPortions];
+			inBracketPosture = true;
 
 			// TODO: Should this logic include inverted steps too?
 
@@ -1466,6 +1477,7 @@ namespace ChartGenerator
 				}
 				else
 				{
+					inBracketPosture = false;
 					allHeld = false;
 				}
 			}
