@@ -3,10 +3,6 @@ PerformedChart Issues:
 		more than friends
 		love bug yuce
 
-	X NPS balance: Need to record average NPS and peak NPS stats so we know what numbers to use for balancing
-	X Add a cost for individual steps which move quickly over a certain bpm
-	X Add a cost for the body moving quickly over a series of steps if this quick move is a "burst" (nps)
-
 	Additional FootSwap tightening
 
 	Unclear Footing Problem:
@@ -20,6 +16,13 @@ PerformedChart Issues:
 			Maybe:
 				Don't choose patterns that wouldn't be expressed the same way.
 					This gets pretty difficult (need to be able to parse a DP pattern)
+
+Charts with Bugs?
+	Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
+		This is extremely complicated with lots of swaps into brackets and intentional double stepping.
+	Skittles Selection 8\GIGA VIOLATE (10): measure 67
+		Not terrible. Interprets jump as bracket, and that can result in spread in the performed chart.
+	Hero The True Mascot of HS
 
 Tests:
 	SM/SSC Reader unit Tests
