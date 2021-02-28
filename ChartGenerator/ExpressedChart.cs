@@ -1035,6 +1035,9 @@ namespace ChartGenerator
 										// The other foot is holding but this foot is not holding
 										else
 										{
+											if (previousStepLink.IsStepWithFoot(otherFoot))
+												return CostNewArrow_Alternating;
+
 											// TODO: There could be patterns where you roll two feet
 											// while one foot holds a bracket. This isn't considering that.
 											return CostNewArrow_OtherHoldingOne;
@@ -1049,7 +1052,11 @@ namespace ChartGenerator
 
 										// The other foot could make this step.
 										if (otherCanStepToNewArrow)
+										{
+											if (doubleStep)
+												return CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep_DoubleStep;
 											return CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep;
+										}
 
 										// The other foot cannot hit this arrow.
 										if (doubleStep)
@@ -1156,12 +1163,6 @@ namespace ChartGenerator
 									// mean a previous bracket should have been a jump.
 									if (otherAnyHeld && !thisAnyHeld)
 										return CostNewArrow_FootSwap_OtherHolding;
-									if (otherFootInBracketPosture && !thisAnyHeld)
-										return CostNewArrow_FootSwap_OtherInBracketPosture;
-
-									// Mine indicated
-									if (mineIndicatedOnThisFootsArrow)
-										return CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
 
 									// Determine if there was a mine on another free lane.
 									// Some chart authors use this to signal a footswap.
@@ -1191,6 +1192,15 @@ namespace ChartGenerator
 											break;
 										}
 									}
+
+									// Swapping after a bracket. Usually this means the previous bracket should have been a jump,
+									// but if it is mine indicated then lower the cost to prefer the bracket.
+									if (otherFootInBracketPosture && !thisAnyHeld && !mineIndicatedOnThisFootsArrow && !mineIndicatedOnFreeLaneArrow)
+										return CostNewArrow_FootSwap_OtherInBracketPosture;
+
+									// Mine indicated
+									if (mineIndicatedOnThisFootsArrow)
+										return CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
 									if (mineIndicatedOnFreeLaneArrow)
 										return CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
 
