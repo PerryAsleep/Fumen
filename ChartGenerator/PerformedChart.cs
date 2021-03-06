@@ -165,6 +165,22 @@ namespace ChartGenerator
 			/// Higher values are worse.
 			/// </summary>
 			private readonly double RandomWeight;
+			/// <summary>
+			/// The total number of misleading steps for the path up to and including this SearchNode.
+			/// Misleading steps are steps which any reasonable player would interpret differently
+			/// than intended. For example if the intent is a NewArrow NewArrow jump but that is
+			/// represented as a jump from LU to UD players would keep their right foot on U as a
+			/// SameArrow step while moving only their left foot, leaving them in an unexpected
+			/// orientation that they will likely need to double-step to correct from.
+			/// </summary>
+			private readonly int MisleadingStepCount;
+			/// <summary>
+			/// The total number of ambiguous steps for the path to to and including this SearchNode.
+			/// Ambiguous steps are steps which any reasonably player would interpret as having more
+			/// than one equally viable option for performing. For example if the player is on LR and
+			/// the next step is D, that could be done with either the left foot or the right foot.
+			/// </summary>
+			private readonly int AmbiguousStepCount;
 
 			/// <summary>
 			/// Whether or not this SearchNode represents a step with either foot.
@@ -186,6 +202,12 @@ namespace ChartGenerator
 			/// </summary>
 			private readonly long[] LastTimeFootStepped;
 			/// <summary>
+			/// For each arrow, the last time in microseconds that it was released.
+			/// During construction, these values will be updated to this SearchNode's TimeMicros
+			/// if this SearchNode represents releases on any arrows.
+			/// </summary>
+			private readonly long[] LastTimeFootReleased;
+			/// <summary>
 			/// For each Foot and FootPortion, the last arrows that were stepped on by it.
 			/// During construction, these values will be updated based on this SearchNode's
 			/// steps.
@@ -197,6 +219,11 @@ namespace ChartGenerator
 			/// Used to determine Cost.
 			/// </summary>
 			private readonly int[] StepCounts;
+
+			/// <summary>
+			/// The PerformanceFootActions performed by this SearchNode. Index is arrow/lane.
+			/// </summary>
+			public readonly PerformanceFootAction[] Actions;
 
 			/// <summary>
 			/// Constructor.
@@ -217,9 +244,8 @@ namespace ChartGenerator
 			/// </param>
 			/// <param name="depth"> The 0-based depth of this SearchNode. </param>
 			/// <param name="previousNode"> The previous SearchNode. </param>
-			/// <param name="steps">
-			/// For each arrow, whether it was stepped on to arrive at this SearchNode from the previous
-			/// SearchNode.
+			/// <param name="actions">
+			/// For each arrow, the PerformanceFootAction to take for this SearchNode.
 			/// </param>
 			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
 			/// <param name="nps">Average notes per second of the Chart.</param>
@@ -233,7 +259,7 @@ namespace ChartGenerator
 				long timeMicros,
 				int depth,
 				SearchNode previousNode,
-				bool[] steps,
+				PerformanceFootAction[] actions,
 				StepGraph stepGraph,
 				double nps,
 				double randomWeight)
@@ -246,13 +272,22 @@ namespace ChartGenerator
 				TimeMicros = timeMicros;
 				RandomWeight = randomWeight;
 				Stepped = false;
+				Actions = actions;
 
-				// Compute StepCounts based on the previous SearchNode's StepCounts and
-				// the steps at this SearchNode.
-				StepCounts = new int[steps.Length];
-				for (var a = 0; a < steps.Length; a++)
-					StepCounts[a] = (steps[a] ? 1 : 0) + (previousNode?.StepCounts[a] ?? 0);
-				
+				// Copy the previous SearchNode's ambiguous and misleading step counts.
+				// We will update them later after determining if this SearchNode represents
+				// an ambiguous or misleading step.
+				AmbiguousStepCount = previousNode?.AmbiguousStepCount ?? 0;
+				MisleadingStepCount = previousNode?.MisleadingStepCount ?? 0;
+
+				// Copy the previous SearchNode's StepCounts and update them.
+				StepCounts = new int[Actions.Length];
+				for (var a = 0; a < Actions.Length; a++)
+				{
+					StepCounts[a] = (previousNode?.StepCounts[a] ?? 0) 
+						+ (Actions[a] == PerformanceFootAction.Tap || Actions[a] == PerformanceFootAction.Hold ? 1 : 0);
+				}
+
 				// Get the GraphLinks to use as replacements for the original GraphLink.
 				GraphLinks = originalGraphLinkToNextNode == null ? new List<GraphLink>()
 					: GraphLinkReplacementCache[originalGraphLinkToNextNode];
@@ -262,6 +297,9 @@ namespace ChartGenerator
 				LastTimeFootStepped = new long[NumFeet];
 				for (var f = 0; f < NumFeet; f++)
 					LastTimeFootStepped[f] = previousNode?.LastTimeFootStepped[f] ?? 0L;
+				LastTimeFootReleased = new long[NumFeet];
+				for (var f = 0; f < NumFeet; f++)
+					LastTimeFootReleased[f] = previousNode?.LastTimeFootReleased[f] ?? 0L;
 
 				// Copy the previous SearchNode's LastArrowsSteppedOnByFoot values.
 				// We will update them later if this SearchNode represents a step.
@@ -280,6 +318,12 @@ namespace ChartGenerator
 				(DistributionCost, individualStepCost, lateralMovementSpeedCost) = DetermineCostsAndUpdateStepTracking(stepGraph, nps);
 				TotalIndividualStepCost = (PreviousNode?.TotalIndividualStepCost ?? 0.0) + individualStepCost;
 				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + lateralMovementSpeedCost;
+
+				var (ambiguous, misleading) = DetermineAmbiguity(stepGraph);
+				if (ambiguous)
+					AmbiguousStepCount++;
+				if (misleading)
+					MisleadingStepCount++;
 			}
 
 			/// <summary>
@@ -352,13 +396,21 @@ namespace ChartGenerator
 						var otherFoot = OtherFoot(f);
 						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (GraphLinkFromPreviousNode.Links[f, p].Valid &&
-							    GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+							if (GraphLinkFromPreviousNode.Links[f, p].Valid)
 							{
-								bracketedWithThisFoot = steppedWithThisFoot;
-								steppedWithThisFoot = true;
-								Stepped = true;
-								thisFootPortionSteppingWith = p;
+								if (GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Release
+								    || GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Tap)
+								{
+									LastTimeFootReleased[f] = TimeMicros;
+								}
+
+								if (GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+								{
+									bracketedWithThisFoot = steppedWithThisFoot;
+									steppedWithThisFoot = true;
+									Stepped = true;
+									thisFootPortionSteppingWith = p;
+								}
 							}
 
 							if (GraphLinkFromPreviousNode.Links[otherFoot, p].Valid)
@@ -536,10 +588,200 @@ namespace ChartGenerator
 				return x;
 			}
 
+			/// <summary>
+			/// Determines whether this SearchNode represents an ambiguous or a misleading step.
+			/// </summary>
+			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
+			/// <returns>
+			/// Tuple of values for representing an ambiguous or misleading step.
+			/// Value 1: True if this step is ambiguous and false otherwise.
+			/// Value 2: True if this step is misleading and false otherwise.
+			/// </returns>
+			private (bool, bool) DetermineAmbiguity(StepGraph stepGraph)
+			{
+				// Technically the first step can be ambiguous
+				if (GraphLinkFromPreviousNode == null)
+					return (false, false);
+
+				// Perform early outs if this step does not represent a single NewArrow step or
+				// a NewArrow NewArrow jump.
+				var isJump = true;
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						if (p == DefaultFootPortion)
+						{
+							// We only care about single steps and jumps, not releases.
+							if (GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Release)
+								return (false, false);
+							if (!GraphLinkFromPreviousNode.Links[f, p].Valid)
+								isJump = false;
+							else if (GraphLinkFromPreviousNode.Links[f, p].Step != StepType.NewArrow)
+								return (false, false);
+						}
+						// We only care about single steps and jumps, not brackets.
+						else if (GraphLinkFromPreviousNode.Links[f, p].Valid)
+							return (false, false);
+					}
+				}
+
+				// For ambiguity for a step, the step must follow a jump with a release at the same time
+				// with no mines to indicate footing. The step must also be bracketable from both feet.
+				if (!isJump)
+				{
+					// Use the previous node since this node has already updated the LastTimeFootReleased for its step.
+					// If the feet were not released at the same time, we did not come from a jump, meaning this step
+					// is not ambiguous
+					if (PreviousNode.LastTimeFootReleased[L] != PreviousNode.LastTimeFootReleased[R])
+						return (false, false);
+
+					// TODO: Mines
+
+					// Determine which arrow is being stepped on so we can perform bracket checks.
+					var arrowBeingSteppedOn = InvalidArrowIndex;
+					for (var a = 0; a < Actions.Length; a++)
+					{
+						if (Actions[a] == PerformanceFootAction.Tap || Actions[a] == PerformanceFootAction.Hold)
+						{
+							arrowBeingSteppedOn = a;
+							break;
+						}
+					}
+					// Determine if each foot is bracketable with the arrow being stepped on.
+					var leftBracketable = false;
+					var rightBracketable = false;
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						if (!leftBracketable && PreviousNode.LastArrowsSteppedOnByFoot[L][p] != InvalidArrowIndex)
+						{
+							var leftFrom = PreviousNode.LastArrowsSteppedOnByFoot[L][p];
+							leftBracketable =
+								stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[L][leftFrom]
+								|| stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[L][leftFrom];
+						}
+						if (!rightBracketable && PreviousNode.LastArrowsSteppedOnByFoot[R][p] != InvalidArrowIndex)
+						{
+							var rightFrom = PreviousNode.LastArrowsSteppedOnByFoot[R][p];
+							rightBracketable =
+								stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[R][rightFrom]
+								|| stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[R][rightFrom];
+						}
+					}
+					// If one foot can bracket to this arrow and the other foot cannot, it is not ambiguous.
+					if (leftBracketable != rightBracketable)
+						return (false, false);
+				}
+
+				// For ambiguity there must be a GraphLink that is the same as the GraphLink
+				// to this node, but the feet are flipped, which results in a different GraphNode
+				// but generates the same arrows.
+
+				// Generate a flipped GraphLink.
+				var otherGraphLink = new GraphLink();
+				for (var f = 0; f < NumFeet; f++)
+					for (var p = 0; p < NumFootPortions; p++)
+						if (p == DefaultFootPortion)
+							otherGraphLink.Links[OtherFoot(f), p] = GraphLinkFromPreviousNode.Links[f, p];
+
+				// For ambiguity the arrows generated from the steps from both nodes must be the same.
+				var ambiguous = DoesAnySiblingNodeFromLinkMatchActions(otherGraphLink, stepGraph);
+
+				// Determine if this step is misleading.
+				// If this is a NewArrow NewArrow jump and there is a NewArrow SameArrow,
+				// or even a SameArrow SameArrow jump that results in a matching GraphNode then
+				// this step is misleading as SameArrow steps are what a player would do.
+				var misleading = false;
+				if (isJump)
+				{
+					// Assuming taps here for simplicity since for footing we just care about stepping at all.
+					// DoesAnySiblingNodeFromLinkMatchActions will treat Steps and Holds equally as steps.
+
+					// Check left foot SameArrow right foot NewArrow.
+					var leftSameLink = new GraphLink();
+					leftSameLink.Links[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
+					leftSameLink.Links[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.NewArrow, FootAction.Tap);
+					misleading = DoesAnySiblingNodeFromLinkMatchActions(leftSameLink, stepGraph);
+					if (misleading)
+						return (ambiguous, misleading);
+
+					// Check right foot SameArrow left foot NewArrow.
+					var rightSameLink = new GraphLink();
+					rightSameLink.Links[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.NewArrow, FootAction.Tap);
+					rightSameLink.Links[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
+					misleading = DoesAnySiblingNodeFromLinkMatchActions(rightSameLink, stepGraph);
+					if (misleading)
+						return (ambiguous, misleading);
+
+					// Check SameArrow SameArrow.
+					var bothSameLink = new GraphLink();
+					bothSameLink.Links[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
+					bothSameLink.Links[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
+					misleading = DoesAnySiblingNodeFromLinkMatchActions(bothSameLink, stepGraph);
+				}
+
+				return (ambiguous, misleading);
+			}
+
+			/// <summary>
+			/// Determines if any sibling GraphNode to this SearchNode's GraphNode, reachable
+			/// from this SearchNode's parent by the given GraphLink represents the same set
+			/// of PerformanceFootActions. If it does match, then it means that this SearchNode
+			/// represents an ambiguous or misleading step.
+			/// </summary>
+			/// <param name="siblingLink">GraphLink from the parent SearchNode to the sibling.</param>
+			/// <param name="stepGraph">StepGraph for this PerformedChart.</param>
+			/// <returns>
+			/// Whether there exists a sibling GraphNode matching the actions of this SearchNode's GraphNode.
+			/// </returns>
+			private bool DoesAnySiblingNodeFromLinkMatchActions(GraphLink siblingLink, StepGraph stepGraph)
+			{
+				// If this link isn't a valid from the parent node, then no node from it will match.
+				if (!PreviousNode.GraphNode.Links.ContainsKey(siblingLink))
+					return false;
+
+				// Check all sibling nodes for the link.
+				foreach (var otherNode in PreviousNode.GraphNode.Links[siblingLink])
+				{
+					// Skip this node if it is the same GraphNode from this SearchNode (not a sibling).
+					if (otherNode.Equals(GraphNode))
+						continue;
+
+					// Check if the PerformanceFootActions from the sibling match this SearchNode's Actions.
+					var otherActions = GetActionsForNode(otherNode, siblingLink, stepGraph.NumArrows);
+					var match = true;
+					for (var a = 0; a < Actions.Length; a++)
+					{
+						// At this point in the search only Tap and Hold are in use for steps.
+						if ((Actions[a] == PerformanceFootAction.Tap || Actions[a] == PerformanceFootAction.Hold)
+						    != (otherActions[a] == PerformanceFootAction.Tap || otherActions[a] == PerformanceFootAction.Hold))
+						{
+							match = false;
+							break;
+						}
+					}
+					if (match)
+						return true;
+				}
+
+				return false;
+			}
+
 			#region IComparable Implementation
 			public int CompareTo(SearchNode other)
 			{
-				// First consider individual step cost. It is most important to avoid individual bad steps.
+				// First, consider misleading steps. These are steps which a player would
+				// never interpret as intended.
+				if (MisleadingStepCount != other.MisleadingStepCount)
+					return MisleadingStepCount < other.MisleadingStepCount ? -1 : 1;
+
+				// Next consider consider ambiguous steps. These are steps which the player
+				// would recognize as having multiple options could result in the wrong footing.
+				if (AmbiguousStepCount != other.AmbiguousStepCount)
+					return AmbiguousStepCount < other.AmbiguousStepCount ? -1 : 1;
+
+				// Next consider individual step cost. This is a measure of how uncomfortably energetic
+				// the individual steps are.
 				if (Math.Abs(TotalIndividualStepCost - other.TotalIndividualStepCost) > 0.00001)
 					return TotalIndividualStepCost < other.TotalIndividualStepCost ? -1 : 1;
 
@@ -689,7 +931,7 @@ namespace ChartGenerator
 							0L,
 							depth,
 							null,
-							new bool[stepGraph.NumArrows],
+							new PerformanceFootAction[stepGraph.NumArrows],
 							stepGraph,
 							nps,
 							random.NextDouble());
@@ -743,13 +985,6 @@ namespace ChartGenerator
 									{
 										// Determine new step information.
 										var actions = GetActionsForNode(nextGraphNode, graphLink, stepGraph.NumArrows);
-										var steps = new bool[stepGraph.NumArrows];
-										for (var a = 0; a < stepGraph.NumArrows; a++)
-										{
-											if (actions[a] == PerformanceFootAction.Tap
-											    || actions[a] == PerformanceFootAction.Hold)
-												steps[a] = true;
-										}
 
 										GraphLink graphLinkToNextNode = null;
 										if (nextDepth < expressedChart.StepEvents.Count)
@@ -763,7 +998,7 @@ namespace ChartGenerator
 											expressedChart.StepEvents[depth].TimeMicros,
 											nextDepth,
 											searchNode,
-											steps,
+											actions,
 											stepGraph,
 											nps,
 											random.NextDouble()
@@ -815,7 +1050,7 @@ namespace ChartGenerator
 				// Log a warning if we had to fall back to a worse tier of root GraphNodes.
 				if (tier > 0)
 				{
-					LogWarn($"Using fallback root at tier {tier}.", logIdentifier);
+					LogInfo($"Using fallback root at tier {tier}.", logIdentifier);
 				}
 			}
 
@@ -869,7 +1104,7 @@ namespace ChartGenerator
 			var lastPerformanceNode = currentPerformanceNode;
 
 			// Add Mines
-			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, lastPerformanceNode);
+			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, lastPerformanceNode, random);
 
 			return performedChart;
 		}
@@ -996,21 +1231,11 @@ namespace ChartGenerator
 			if (expressedChart.StepEvents[previousNode.Depth - 1].Position != expressedChart.StepEvents[node.Depth - 1].Position)
 				return false;
 
-			// Determine what actions are performed for both the current and previous node.
-			var currentActions = GetActionsForNode(
-				node.GraphNode,
-				node.GraphLinkFromPreviousNode,
-				numArrows);
-			var previousActions = GetActionsForNode(
-				previousNode.GraphNode,
-				previousNode.GraphLinkFromPreviousNode,
-				numArrows);
-
 			// Check if the previous node released on the same arrow tha the current node is stepping on.
 			for (var a = 0; a < numArrows; a++)
 			{
-				if (previousActions[a] == PerformanceFootAction.Release &&
-				    currentActions[a] != PerformanceFootAction.None && currentActions[a] != PerformanceFootAction.Release)
+				if (previousNode.Actions[a] == PerformanceFootAction.Release &&
+				    node.Actions[a] != PerformanceFootAction.None && node.Actions[a] != PerformanceFootAction.Release)
 					return true;
 			}
 			return false;
@@ -1034,7 +1259,8 @@ namespace ChartGenerator
 			PerformedChart performedChart,
 			StepGraph stepGraph,
 			ExpressedChart expressedChart,
-			PerformanceNode lastPerformanceNode)
+			PerformanceNode lastPerformanceNode,
+			Random random)
 		{
 			// Record which lanes have arrows in them.
 			var numLanesWithArrows = 0;
@@ -1093,6 +1319,7 @@ namespace ChartGenerator
 			var releaseIndex = 0;
 			MetricPosition previousMinePosition = null;
 			var arrowsOccupiedByMines = new bool[stepGraph.NumArrows];
+			var randomLaneOrder = Enumerable.Range(0, stepGraph.NumArrows).OrderBy(x => random.Next()).ToArray();
 			foreach (var mineEvent in expressedChart.MineEvents)
 			{
 				// Advance the step and release indices to follow and precede the event respectively.
@@ -1124,7 +1351,8 @@ namespace ChartGenerator
 							steps,
 							stepIndex,
 							arrowsOccupiedByMines,
-							mineEvent.Position);
+							mineEvent.Position,
+							randomLaneOrder);
 						if (bestArrow != InvalidArrowIndex)
 						{
 							// Add mine event

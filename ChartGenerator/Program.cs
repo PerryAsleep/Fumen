@@ -23,7 +23,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// Version number. Recorded into a Chart's Description field using FumenGeneratedFormattedVersion.
 		/// </summary>
-		private const double Version = 0.2;
+		private const double Version = 0.3;
 		/// <summary>
 		/// Format for recording the Version into a Chart's Description field.
 		/// </summary>

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Fumen;
 using Fumen.ChartDefinition;
 using static ChartGenerator.Constants;
@@ -374,6 +376,7 @@ namespace ChartGenerator
 		/// at the position of the mine in question. Tracked externally.
 		/// </param>
 		/// <param name="minePosition">Position of the mine in question.</param>
+		/// <param name="randomLaneOrder">Randomly ordered lane indices for fallback random lane choices.</param>
 		/// <returns>The Nth most recent arrow or InvalidArrowIndex if none could be found.</returns>
 		public static int FindBestNthMostRecentArrow(
 			bool searchBackwards,
@@ -385,7 +388,8 @@ namespace ChartGenerator
 			List<FootActionEvent> steps,
 			int stepIndex,
 			bool[] arrowsOccupiedByMines,
-			MetricPosition minePosition)
+			MetricPosition minePosition,
+			int[] randomLaneOrder)
 		{
 			var events = searchBackwards ? releases : steps;
 			var searchIndex = searchBackwards ? releaseIndex : stepIndex;
@@ -452,6 +456,22 @@ namespace ChartGenerator
 
 				// Advance search
 				searchIndex += searchBackwards ? -1 : 1;
+			}
+
+			// It is possible for the search to fail in some edge cases. For example if we are trying to place
+			// a mine after the 4th most recent arrow and the Performed chart has only filled 3 lanes at this point
+			// then we will not find a match. In this case, see if we can choose a random free arrow.
+			if (bestArrow == InvalidArrowIndex)
+			{
+				foreach (var a in randomLaneOrder)
+				{
+					if (!consideredArrows[a]
+					    && IsArrowFreeAtPosition(a, minePosition, releases, releaseIndex, steps, stepIndex, arrowsOccupiedByMines))
+					{
+						bestArrow = a;
+						break;
+					}
+				}
 			}
 
 			return bestArrow;

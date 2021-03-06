@@ -6,23 +6,17 @@ PerformedChart Issues:
 	Additional FootSwap tightening
 
 	Unclear Footing Problem:
-		Add something to graphlink for a jump when it us an ambiguous jump?
-		Add a new StepType AmbiguousNewArrow?
-			On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
-				e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
-	Choosing Bad Patterns
-		On a NewArrow NewArrow jump we might choose NewArrow FootSwap - feels bad
-				e.g. on DP from R on P2D, L on P2U a NewArrow NewArrow jump went to L on P1R, R on P2U. P2U is a swap and this looks wrong.
-			Maybe:
-				Don't choose patterns that wouldn't be expressed the same way.
-					This gets pretty difficult (need to be able to parse a DP pattern)
+		It would be best to keep ambiguous footing if the original chart had it.
+		But it is still an improvement to never choose ambiguous steps.
+
+		Ambiguity cannot be represented in the stepgraph since it depends on which steps preceded it.
+			For example home position to down is only ambiguous after a jump. It is not ambiguous after a step (you alternate).
 
 Charts with Bugs?
 	Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
 		This is extremely complicated with lots of swaps into brackets and intentional double stepping.
 	Skittles Selection 8\GIGA VIOLATE (10): measure 67
 		Not terrible. Interprets jump as bracket, and that can result in spread in the performed chart.
-	Hero The True Mascot of HS
 
 Tests:
 	SM/SSC Reader unit Tests
