@@ -146,9 +146,9 @@ namespace Fumen.Converters
 				// Handle parsing characters within a value.
 
 				// Handle ending a parameter.
-				if (currentValueSB.Length > 0 && (buffer[i] == ParamMarker || buffer[i] == ValueEndMarker))
+				if (buffer[i] == ParamMarker || buffer[i] == ValueEndMarker)
 				{
-					Values[Values.Count - 1].Params.Add(currentValueSB.ToString());
+					Values[Values.Count - 1].Params.Add(currentValueSB.Length > 0 ? currentValueSB.ToString() : "");
 					// Continue to start parsing a new parameter below.
 				}
 
