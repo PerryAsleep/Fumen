@@ -81,6 +81,7 @@ namespace ChartGenerator
 		public const int CostNewArrow_StepFromJump_OtherFootNotBracketable_ThisFootBracketable = 3;
 		public const int CostNewArrow_StepFromJump_Ambiguous = 2;
 
+		public const int CostNewArrow_Crossover_AfterJump = 20;
 		public const int CostNewArrow_Crossover_OtherHeld = 3;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated = 100;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication = 200;
@@ -115,6 +116,8 @@ namespace ChartGenerator
 		public const int CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement = 70;
 		public const int CostTwoArrows_Jump_BothNewAndNeitherBracketable = 120;
 		public const int CostTwoArrows_Jump_BothNewAndOneBracketable = 100;
+		public const int CostTwoArrows_Jump_Inverted = 80;
+		public const int CostTwoArrows_Jump_CrossedOver = 70;
 		public const int CostTwoArrows_Jump_BothSame = 20;
 		public const int CostTwoArrows_Jump_BothNew = 60;
 		public const int CostTwoArrows_Jump_OneNew = 50;

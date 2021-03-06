@@ -1133,6 +1133,9 @@ namespace ChartGenerator
 							case StepType.CrossoverFront:
 							case StepType.CrossoverBehind:
 								{
+									if (previousStepLink?.IsJump() ?? false)
+										return CostNewArrow_Crossover_AfterJump;
+
 									if (otherAnyHeld)
 										return CostNewArrow_Crossover_OtherHeld;
 
@@ -1357,20 +1360,46 @@ namespace ChartGenerator
 							if (atLeastOneFootPrefersBracket)
 								return CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement;
 
+							var inverted = childNode.Orientation == BodyOrientation.InvertedLeftOverRight
+							               || childNode.Orientation == BodyOrientation.InvertedRightOverLeft;
+							if (inverted)
+								return CostTwoArrows_Jump_Inverted;
+
 							var bothNew = true;
 							var bothSame = true;
+							var lArrow = InvalidArrowIndex;
+							var rArrow = InvalidArrowIndex;
 							for (var f = 0; f < NumFeet; f++)
 							{
 								for (var p = 0; p < NumFootPortions; p++)
 								{
 									if (!link.Links[f, p].Valid)
 										continue;
+									if (f == L)
+										lArrow = childNode.State[f, p].Arrow;
+									if (f == R)
+										rArrow = childNode.State[f, p].Arrow;
 									if (link.Links[f, p].Step == StepType.NewArrow)
 										bothSame = false;
 									if (link.Links[f, p].Step == StepType.SameArrow)
 										bothNew = false;
 								}
 							}
+
+							var crossedOver = false;
+							if (!holdingAny[L] && !holdingAny[R])
+							{
+								if (arrowData[lArrow].OtherFootPairingsOtherFootCrossoverBehind[L][rArrow]
+								    || arrowData[lArrow].OtherFootPairingsOtherFootCrossoverFront[L][rArrow]
+								    || arrowData[rArrow].OtherFootPairingsOtherFootCrossoverBehind[R][lArrow]
+								    || arrowData[rArrow].OtherFootPairingsOtherFootCrossoverFront[R][lArrow])
+								{
+									crossedOver = true;
+								}
+							}
+
+							if (crossedOver)
+								return CostTwoArrows_Jump_CrossedOver;
 
 							if (bothSame)
 								return CostTwoArrows_Jump_BothSame;

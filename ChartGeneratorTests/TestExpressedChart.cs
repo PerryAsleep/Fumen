@@ -1323,6 +1323,33 @@ namespace ChartGeneratorTests
 		#region Step After Jump
 
 		/// <summary>
+		/// Test that in a long sequence with a variety of jump step patterns we do not
+		/// crossover or invert.
+		/// </summary>
+		[TestMethod]
+		public void TestJumpStepNoCrossovers()
+		{
+			var ec = Load(GetTestChartPath("TestJumpStepNoCrossovers"));
+			foreach (var step in ec.StepEvents)
+			{
+				var links = step.LinkInstance.GraphLink.Links;
+				for (var f = 0; f < NumFeet; f++)
+				{
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						if (links[f, p].Valid)
+						{
+							Assert.IsFalse(links[f, p].Step == StepType.CrossoverBehind
+										   || links[f, p].Step == StepType.CrossoverFront
+										   || links[f, p].Step == StepType.InvertBehind
+										   || links[f, p].Step == StepType.InvertFront);
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
 		/// Series of tests for stepping after a jump to a new arrow where both feet can bracket to the new
 		/// arrow. The foot to use to hit the arrow depend on mine and hold indication.
 		/// </summary>
