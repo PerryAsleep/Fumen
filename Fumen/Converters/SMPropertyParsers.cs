@@ -613,7 +613,7 @@ namespace Fumen.Converters
 
 			if (value.Params.Count < 7)
 			{
-				Logger?.Warn($"{PropertyName}: Expected at least 7 parameters Found {value.Params.Count}. Ignoring all note data.");
+				Logger?.Warn($"{PropertyName}: Expected at least 7 parameters. Found {value.Params.Count}. Ignoring all note data.");
 				return true;
 			}
 
