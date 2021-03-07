@@ -13,6 +13,29 @@ PerformedChart Issues:
 			For example home position to down is only ambiguous after a jump. It is not ambiguous after a step (you alternate).
 
 Charts with Bugs?
+
+	Do not involve expressed chart costs:
+		LiLac Box (measure 10)
+			chooses a jump on the same two arrows that were a previous bracket (misleading)
+		Barracuda (measure 41)
+			chose an ambiguous jump. no good. maybe becuase one is a hold?
+
+	Involve expressed chart costs:
+		The love bug (measure 31)
+			does a double step over a crossover to avoid a newarrow newarrow jump 
+				bug is jump costs are too high
+		sorry sorry (measure 7)
+			does a bracket + foot swap to avoid a jump
+		Oh! (measure 44)
+			chose a bracket over a jump. this results in a really ambiguous pattern on dp
+		Hold it against me (measyure 42)
+			tricky. could go either way. goes against norm for hold indication of oduble step.
+			67 - totally unnecesary foot swap. likely jump cost related.
+			lots of little problems because of the holds
+
+
+
+
 	Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
 		This is extremely complicated with lots of swaps into brackets and intentional double stepping.
 	Skittles Selection 8\GIGA VIOLATE (10): measure 67

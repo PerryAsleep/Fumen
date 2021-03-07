@@ -31,6 +31,11 @@ namespace ChartGenerator
 				State = state;
 			}
 
+			public bool EqualsFooting(FootArrowState other)
+			{
+				return Arrow == other.Arrow;
+			}
+
 			#region IEquatable Implementation
 			public override bool Equals(object obj)
 			{
@@ -90,6 +95,29 @@ namespace ChartGenerator
 		{
 			State = state;
 			Orientation = orientation;
+		}
+
+		/// <summary>
+		/// Returns whether or not the given GraphNode matches this GraphNode's
+		/// footing. Does not check GraphArrowState differences.
+		/// </summary>
+		/// <param name="other">Other GraphNode to compare against.</param>
+		/// <returns>
+		/// Whether or not the given GraphNode matches this GraphNode's footing.
+		/// </returns>
+		public bool EqualsFooting(GraphNode other)
+		{
+			if (other == null)
+				return false;
+			if (State.Length != other.State.Length)
+				return false;
+			for (var f = 0; f < NumFeet; f++)
+				for (var p = 0; p < NumFootPortions; p++)
+					if (!State[f, p].EqualsFooting(other.State[f, p]))
+						return false;
+			if (Orientation != other.Orientation)
+				return false;
+			return true;
 		}
 
 		#region IEquatable Implementation

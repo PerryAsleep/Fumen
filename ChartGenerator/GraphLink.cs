@@ -150,6 +150,35 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
+		/// Whether or not this link represents a bracket step with exactly one foot.
+		/// </summary>
+		/// <returns>
+		/// True if this link is a bracket step with exactly one foot and false otherwise.
+		/// </returns>
+		public bool IsBracketStep()
+		{
+			var numFeetWithSteps = 0;
+			var bracketFound = false;
+			for (var f = 0; f < NumFeet; f++)
+			{
+				var allPortionsStep = true;
+				var anyValid = false;
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (Links[f, p].Valid)
+						anyValid = true;
+					if (!Links[f, p].Valid || Links[f, p].Action == FootAction.Release)
+						allPortionsStep = false;
+				}
+				if (allPortionsStep)
+					bracketFound = true;
+				if (anyValid)
+					numFeetWithSteps++;
+			}
+			return numFeetWithSteps == 1 && bracketFound;
+		}
+
+		/// <summary>
 		/// Whether or not this link represents a footswap.
 		/// This includes a bracket that is also a footswap.
 		/// </summary>

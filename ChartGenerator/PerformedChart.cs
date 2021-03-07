@@ -603,9 +603,10 @@ namespace ChartGenerator
 				if (GraphLinkFromPreviousNode == null)
 					return (false, false);
 
-				// Perform early outs if this step does not represent a single NewArrow step or
-				// a NewArrow NewArrow jump.
+				// Perform early outs while determining some information about this step.
 				var isJump = true;
+				var involvesSameArrowStep = false;
+				var involvesNewArrowStep = false;
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var p = 0; p < NumFootPortions; p++)
@@ -617,14 +618,39 @@ namespace ChartGenerator
 								return (false, false);
 							if (!GraphLinkFromPreviousNode.Links[f, p].Valid)
 								isJump = false;
-							else if (GraphLinkFromPreviousNode.Links[f, p].Step != StepType.NewArrow)
+							else if (GraphLinkFromPreviousNode.Links[f, p].Step != StepType.NewArrow
+								&& GraphLinkFromPreviousNode.Links[f, p].Step != StepType.SameArrow)
 								return (false, false);
+							involvesSameArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.SameArrow;
+							involvesNewArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.NewArrow;
 						}
 						// We only care about single steps and jumps, not brackets.
 						else if (GraphLinkFromPreviousNode.Links[f, p].Valid)
 							return (false, false);
 					}
 				}
+
+				// Some jumps involving new arrows can be misleading.
+				if (involvesSameArrowStep)
+				{
+					// Steps on the same arrow are not ambiguous.
+					if (!isJump)
+						return (false, false);
+
+					// Jumps with same arrow.
+					var matchesPreviousArrows = DoNonInstanceActionsMatch(Actions, PreviousNode.Actions);
+					var followsBracket = PreviousNode.GraphLinkFromPreviousNode?.IsBracketStep() ?? false;
+
+					// Any jump involving a new arrow that matches the previous arrows is misleading.
+					// Any same arrow same arrow jump following a bracket is misleading.
+					if (matchesPreviousArrows && (involvesNewArrowStep || followsBracket))
+						return (false, true);
+
+					// Failing the above checks, jumps with same arrow steps are not ambiguous.
+					return (false, false);
+				}
+
+				// At this point we are either dealing with a NewArrow step or a NewArrow NewArrow jump.
 
 				// For ambiguity for a step, the step must follow a jump with a release at the same time
 				// with no mines to indicate footing. The step must also be bracketable from both feet.
@@ -744,27 +770,32 @@ namespace ChartGenerator
 				foreach (var otherNode in PreviousNode.GraphNode.Links[siblingLink])
 				{
 					// Skip this node if it is the same GraphNode from this SearchNode (not a sibling).
-					if (otherNode.Equals(GraphNode))
+					if (otherNode.EqualsFooting(GraphNode))
 						continue;
 
 					// Check if the PerformanceFootActions from the sibling match this SearchNode's Actions.
 					var otherActions = GetActionsForNode(otherNode, siblingLink, stepGraph.NumArrows);
-					var match = true;
-					for (var a = 0; a < Actions.Length; a++)
-					{
-						// At this point in the search only Tap and Hold are in use for steps.
-						if ((Actions[a] == PerformanceFootAction.Tap || Actions[a] == PerformanceFootAction.Hold)
-						    != (otherActions[a] == PerformanceFootAction.Tap || otherActions[a] == PerformanceFootAction.Hold))
-						{
-							match = false;
-							break;
-						}
-					}
-					if (match)
+					if (DoNonInstanceActionsMatch(Actions, otherActions))
 						return true;
 				}
 
 				return false;
+			}
+
+			private static bool DoNonInstanceActionsMatch(PerformanceFootAction[] actions, PerformanceFootAction[] otherActions)
+			{
+				if (actions.Length != otherActions.Length)
+					return false;
+				for (var a = 0; a < actions.Length; a++)
+				{
+					// At this point in the search only Tap and Hold are in use for steps.
+					if ((actions[a] == PerformanceFootAction.Tap || actions[a] == PerformanceFootAction.Hold)
+					    != (otherActions[a] == PerformanceFootAction.Tap || otherActions[a] == PerformanceFootAction.Hold))
+					{
+						return false;
+					}
+				}
+				return true;
 			}
 
 			#region IComparable Implementation
