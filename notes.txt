@@ -5,24 +5,11 @@ PerformedChart Issues:
 Document new bracket parsing config.
 
 Charts with Bugs?
-	Do not involve expressed chart costs:
-		X LiLac Box (measure 10)
-			chooses a jump on the same two arrows that were a previous bracket (misleading)
-		X Barracuda (measure 41) - good chart for unit test
-			chose an ambiguous jump. no good. maybe becuase one is a hold?
 	Involve expressed chart costs:
-		X The love bug (measure 31) - good chart for unit test
-			does a double step over a crossover to avoid a newarrow newarrow jump 
-				bug is jump costs are too high
-		X sorry sorry (measure 7)
-			does a bracket + foot swap to avoid a jump
-		X Skittles Selection 8\GIGA VIOLATE (10): measure 67
-			Not terrible. Interprets jump as bracket, and that can result in spread in the performed chart.
 		Oh! (measure 44)
 			chose a bracket over a jump. this results in a really ambiguous pattern on dp
 		Hold it against me (measyure 42)
 			tricky. could go either way. goes against norm for hold indication of oduble step.
-			X 67 - totally unnecesary foot swap. bug in hold logic in expressed chart.
 			lots of little problems because of the holds
 		Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
 			This is extremely complicated with lots of swaps into brackets and intentional double stepping.
