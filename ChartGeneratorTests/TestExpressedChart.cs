@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ChartGenerator;
-using Fumen;
 using Fumen.Converters;
 using static ChartGenerator.Constants;
 using System.Threading.Tasks;
@@ -62,8 +59,9 @@ namespace ChartGeneratorTests
 			Task.Run(async () => { song = await new SMReader(smFile).Load(); }).Wait();
 
 			// Default to the first chart.
-			List<Event> events = song.Charts[0].Layers[0].Events;
-			
+			var events = song.Charts[0].Layers[0].Events;
+			var difficultyRating = song.Charts[0].DifficultyRating;
+
 			// Use the specified chart, if present.
 			if (chartDifficultyType != null)
 			{
@@ -72,13 +70,25 @@ namespace ChartGeneratorTests
 					if (chart.DifficultyType == chartDifficultyType)
 					{
 						events = chart.Layers[0].Events;
+						difficultyRating = chart.DifficultyRating;
 						break;
 					}
 				}
 			}
 
 			// Create the expressed chart.
-			var (expressedChart, _) = ExpressedChart.CreateFromSMEvents(events, SPGraph);
+			// PKL - I am not wild about this config living here. Ideally it should live
+			// per test chart.
+			var config = new ExpressedChartConfig
+			{
+				DefaultBracketParsingMethod = BracketParsingMethod.Balanced,
+				BracketParsingDetermination = BracketParsingDetermination.ChooseMethodDynamically,
+				MinLevelForBrackets = 0,
+				UseAggressiveBracketsWhenMoreSimultaneousNotesThanOneFootCanCover = true,
+				BalancedBracketsPerMinuteForAggressiveBrackets = 3.0,
+				BalancedBracketsPerMinuteForNoBrackets = 0.571
+			};
+			var expressedChart = ExpressedChart.CreateFromSMEvents(events, SPGraph, config, difficultyRating);
 			return expressedChart;
 		}
 

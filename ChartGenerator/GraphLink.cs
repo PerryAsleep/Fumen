@@ -208,6 +208,24 @@ namespace ChartGenerator
 			return false;
 		}
 
+		/// <summary>
+		/// Gets wither this link involves any brackets.
+		/// Includes both single arrow and multiple arrow steps.
+		/// </summary>
+		/// <returns>True if this link involves any brackets and false otherwise.</returns>
+		public bool InvolvesBracket()
+		{
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (Links[f, p].Valid && StepData.Steps[(int) Links[f, p].Step].IsBracket)
+						return true;
+				}
+			}
+			return false;
+		}
+
 		#region IEquatable Implementation
 		public bool Equals(GraphLink other)
 		{

@@ -36,6 +36,45 @@ namespace ChartGenerator
 	}
 
 	/// <summary>
+	/// Enumeration of methods for parsing brackets in ExpressedCharts.
+	/// When encountering two arrows it can be subjective whether these
+	/// arrows are meant to represent a bracket step or a jump. These behaviors
+	/// allow a user to better control this behavior.
+	/// </summary>
+	public enum BracketParsingMethod
+	{
+		/// <summary>
+		/// Aggressively interpret steps as brackets. In most cases brackets
+		/// will preferred but in some cases jumps will still be preferred.
+		/// </summary>
+		Aggressive,
+		/// <summary>
+		/// Use a balanced method of interpreting brackets.
+		/// </summary>
+		Balanced,
+		/// <summary>
+		/// Never user brackets unless there is no other option.
+		/// </summary>
+		NoBrackets
+	}
+
+	/// <summary>
+	/// Enumeration of methods for determining which BracketParsingMethod should
+	/// be used.
+	/// </summary>
+	public enum BracketParsingDetermination
+	{
+		/// <summary>
+		/// Dynamically choose the BracketParsingMethod based on configuration values.
+		/// </summary>
+		ChooseMethodDynamically,
+		/// <summary>
+		/// Use the configuration's default method.
+		/// </summary>
+		UseDefaultMethod,
+	}
+
+	/// <summary>
 	/// Enumeration of methods for copying files.
 	/// </summary>
 	public enum CopyBehavior
@@ -55,9 +94,130 @@ namespace ChartGenerator
 	}
 
 	/// <summary>
+	/// A rule for matching a file to a configuration data object to use.
+	/// </summary>
+	public class ConfigRule
+	{
+		/// <summary>
+		/// Regular expression for matching full file names.
+		/// </summary>
+		[JsonInclude] public string FileRegex;
+		/// <summary>
+		/// Regular expression for matching chart difficulty types.
+		/// </summary>
+		[JsonInclude] public string DifficultyRegex;
+		/// <summary>
+		/// Configuration data identifier to use when matched.
+		/// </summary>
+		[JsonInclude] public string Config;
+	}
+
+	/// <summary>
+	/// Configuration data for ExpressedChart behavior.
+	/// </summary>
+	public class ExpressedChartConfig
+	{
+		/// <summary>
+		/// The default method to use for parsing brackets.
+		/// </summary>
+		[JsonInclude] public BracketParsingMethod DefaultBracketParsingMethod = BracketParsingMethod.Balanced;
+		/// <summary>
+		/// How to make the determination of which BracketParsingMethod to use.
+		/// </summary>
+		[JsonInclude] public BracketParsingDetermination BracketParsingDetermination = BracketParsingDetermination.ChooseMethodDynamically;
+		
+		/// <summary>
+		/// When using the ChooseMethodDynamically BracketParsingDetermination, a level under which BracketParsingMethod NoBrackets
+		/// will be chosen.
+		/// </summary>
+		[JsonInclude] public int MinLevelForBrackets;
+		/// <summary>
+		/// When using the ChooseMethodDynamically BracketParsingDetermination, whether or not encountering more simultaneous
+		/// arrows than one foot can cover should result in using BracketParsingMethod Aggressive.
+		/// </summary>
+		[JsonInclude] public bool UseAggressiveBracketsWhenMoreSimultaneousNotesThanOneFootCanCover;
+		/// <summary>
+		/// When using the ChooseMethodDynamically BracketParsingDetermination, a Balanced bracket per minute count over which
+		/// should result in BracketParsingMethod Aggressive being used.
+		/// </summary>
+		[JsonInclude] public double BalancedBracketsPerMinuteForAggressiveBrackets;
+		/// <summary>
+		/// When using the ChooseMethodDynamically BracketParsingDetermination, a Balanced bracket per minute count under which
+		/// should result in BracketParsingMethod NoBrackets being used.
+		/// </summary>
+		[JsonInclude] public double BalancedBracketsPerMinuteForNoBrackets;
+	}
+
+	/// <summary>
+	/// Configuration data for PerformedChart behavior.
+	/// </summary>
+	public class PerformedChartConfig
+	{
+		/// <summary>
+		/// Dictionary of StepMania StepsType to a List of integers representing weights
+		/// for each lane. When generating a PerformedChart we should try to match these weights
+		/// for distributing arrows.
+		/// </summary>
+		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
+
+		/// <summary>
+		/// When assigning costs for tightening individual steps, the lower time for the tightening range.
+		/// See Config.md for more information.
+		/// Time in seconds between steps for one foot.
+		/// </summary>
+		[JsonInclude] public double IndividualStepTighteningMinTimeSeconds;
+		/// <summary>
+		/// When assigning costs for tightening individual steps, the higher time for the tightening range.
+		/// See Config.md for more information.
+		/// Time in seconds between steps for one foot.
+		/// </summary>
+		[JsonInclude] public double IndividualStepTighteningMaxTimeSeconds;
+
+		/// <summary>
+		/// When assigning costs lateral body movement tightening, the pattern length to use.
+		/// See Config.md for more information.
+		/// </summary>
+		[JsonInclude] public int LateralTighteningPatternLength;
+		/// <summary>
+		/// When assigning costs lateral body movement tightening, the relative NPS over which patterns should cost more.
+		/// See Config.md for more information.
+		/// </summary>
+		[JsonInclude] public double LateralTighteningRelativeNPS;
+		/// <summary>
+		/// When assigning costs lateral body movement tightening, the absolute NPS over which patterns should cost more.
+		/// See Config.md for more information.
+		/// </summary>
+		[JsonInclude] public double LateralTighteningAbsoluteNPS;
+		/// <summary>
+		/// When assigning costs lateral body movement tightening, the lateral body speed in arrows per second over
+		/// which patterns should cost more.
+		/// See Config.md for more information.
+		/// </summary>
+		[JsonInclude] public double LateralTighteningSpeed;
+
+		/// <summary>
+		/// Normalized DesiredArrowWeights.
+		/// Values sum to 1.0.
+		/// </summary>
+		public Dictionary<string, List<double>> DesiredArrowWeightsNormalized;
+
+		/// <summary>
+		/// Gets the desired arrow weights for the output chart type.
+		/// Values normalized to sum to 1.0.
+		/// </summary>
+		/// <returns>List of normalized weights.</returns>
+		public List<double> GetOutputDesiredArrowWeightsNormalized()
+		{
+			// Validation already ensures this key is present.
+			return DesiredArrowWeightsNormalized[Config.Instance.OutputChartType];
+		}
+	}
+
+	/// <summary>
 	/// Configuration for ChartGenerator.
 	/// Deserialized from json config file.
 	/// Use Load to load Config.
+	/// See Config.md for detailed descriptions and examples of Config values.
 	/// </summary>
 	public class Config
 	{
@@ -75,44 +235,112 @@ namespace ChartGenerator
 		/// </summary>
 		public static Config Instance { get; private set; }
 
-		// Logging
+		/// <summary>
+		/// Logging log level.
+		/// </summary>
 		[JsonInclude] public LogLevel LogLevel = LogLevel.Info;
+		/// <summary>
+		/// Whether or not log to a file.
+		/// </summary>
 		[JsonInclude] public bool LogToFile;
+		/// <summary>
+		/// Directory to use for writing the log file.
+		/// </summary>
 		[JsonInclude] public string LogDirectory;
+		/// <summary>
+		/// Interval in seconds after which to flush the log file to disk.
+		/// </summary>
 		[JsonInclude] public int LogFlushIntervalSeconds;
+		/// <summary>
+		/// Log buffer size in bytes. When full the buffer log will flush to disk.
+		/// </summary>
 		[JsonInclude] public int LogBufferSizeBytes;
-
-		// Input
-		[JsonInclude] public string InputDirectory;
-		[JsonInclude] public string InputNameRegex;
-		[JsonInclude] public string InputChartType;
-		[JsonInclude] public string DifficultyRegex;
-
-		// Output
-		[JsonInclude] public string OutputDirectory;
-		[JsonInclude] public string OutputChartType;
-		[JsonInclude] public OverwriteBehavior OverwriteBehavior = OverwriteBehavior.DoNotOverwrite;
-		[JsonInclude] public CopyBehavior NonChartFileCopyBehavior = CopyBehavior.DoNotCopy;
-
-		// Visualizations
-		[JsonInclude] public bool OutputVisualizations = true;
-		[JsonInclude] public string VisualizationsDirectory;
-
-		// PerformedChart behaviors
-		[JsonInclude] public Dictionary<string, List<int>> DesiredArrowWeights;
-		[JsonInclude] public double IndividualStepTighteningMinTimeSeconds;
-		[JsonInclude] public double IndividualStepTighteningMaxTimeSeconds;
-		[JsonInclude] public int LateralTighteningPatternLength;
-		[JsonInclude] public double LateralTighteningRelativeNPS;
-		[JsonInclude] public double LateralTighteningAbsoluteNPS;
-		[JsonInclude] public double LateralTighteningSpeed;
-		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
+		/// <summary>
+		/// Whether or not to log to the console.
+		/// </summary>
+		[JsonInclude] public bool LogToConsole;
 
 		/// <summary>
-		/// Normalized DesiredArrowWeights.
-		/// Values sum to 1.0.
+		/// Directory to recursively search through for finding Charts to convert.
 		/// </summary>
-		private Dictionary<string, List<double>> DesiredArrowWeightsNormalized;
+		[JsonInclude] public string InputDirectory;
+		/// <summary>
+		/// Regular expression for file names to match for Charts to convert.
+		/// </summary>
+		[JsonInclude] public string InputNameRegex;
+		/// <summary>
+		/// StepMania StepsType of Charts to match for conversion.
+		/// </summary>
+		[JsonInclude] public string InputChartType;
+		/// <summary>
+		/// Regular expression for matching StepMania DifficultyNames to match Charts for conversion.
+		/// </summary>
+		[JsonInclude] public string DifficultyRegex;
+
+		/// <summary>
+		/// Directory to write converted Charts to.
+		/// </summary>
+		[JsonInclude] public string OutputDirectory;
+		/// <summary>
+		/// StepMania StepsType to convert to.
+		/// </summary>
+		[JsonInclude] public string OutputChartType;
+		/// <summary>
+		/// OverwriteBehavior for controlling how to handle converting when the OutputChartType
+		/// already exists in the input Song.
+		/// </summary>
+		[JsonInclude] public OverwriteBehavior OverwriteBehavior = OverwriteBehavior.DoNotOverwrite;
+		/// <summary>
+		/// CopyBehavior for controlling how to copy other files adjacent to the input Song
+		/// when writing the output Song file.
+		/// </summary>
+		[JsonInclude] public CopyBehavior NonChartFileCopyBehavior = CopyBehavior.DoNotCopy;
+
+		/// <summary>
+		/// Whether or not to output visualization files.
+		/// </summary>
+		[JsonInclude] public bool OutputVisualizations = true;
+		/// <summary>
+		/// Directory to output visualization files to.
+		/// </summary>
+		[JsonInclude] public string VisualizationsDirectory;
+
+		/// <summary>
+		/// Identifier of the default ExpressedChartConfig to use.
+		/// Expected that this identifier is a key in ExpressedChartConfigs.
+		/// </summary>
+		[JsonInclude] public string DefaultExpressedChartConfig;
+		/// <summary>
+		/// Identifier of the default PerformedChartConfig to use.
+		/// Expected that this identifier is a key in PerformedChartConfigs.
+		/// </summary>
+		[JsonInclude] public string DefaultPerformedChartConfig;
+
+		/// <summary>
+		/// List of rules for matching files to ExpressedChartConfigs.
+		/// Higher-indexed matching ConfigRules will be used over lower-indexed matching ConfigRules.
+		/// </summary>
+		[JsonInclude] public ConfigRule[] ExpressedChartConfigRules;
+		/// <summary>
+		/// List of rules for matching files to PerformedChartConfigs.
+		/// Higher-indexed matching ConfigRules will be used over lower-indexed matching ConfigRules.
+		/// </summary>
+		[JsonInclude] public ConfigRule[] PerformedChartConfigRules;
+
+		/// <summary>
+		/// Dictionary of identifier to ExpressedChartConfig.
+		/// </summary>
+		[JsonInclude] public Dictionary<string, ExpressedChartConfig> ExpressedChartConfigs;
+		/// <summary>
+		/// Dictionary of identifier to PerformedChartConfig.
+		/// </summary>
+		[JsonInclude] public Dictionary<string, PerformedChartConfig> PerformedChartConfigs;
+
+		/// <summary>
+		/// Which StepTypes are valid for use in a PerformedChart when encountering the key StepType.
+		/// </summary>
+		[JsonInclude] public Dictionary<StepType, HashSet<StepType>> StepTypeReplacements;
+
 		/// <summary>
 		/// Cached value for whether the output directory is the same as the input directory.
 		/// </summary>
@@ -160,17 +388,24 @@ namespace ChartGenerator
 		private void Init()
 		{
 			// Initialize normalized weights.
-			if (DesiredArrowWeights != null)
+			if (PerformedChartConfigs != null)
 			{
-				DesiredArrowWeightsNormalized = new Dictionary<string, List<double>>();
-				foreach (var entry in DesiredArrowWeights)
+				foreach (var kvp in PerformedChartConfigs)
 				{
-					DesiredArrowWeightsNormalized[entry.Key] = new List<double>();
-					var sum = 0;
-					foreach (var weight in entry.Value)
-						sum += weight;
-					foreach (var weight in entry.Value)
-						DesiredArrowWeightsNormalized[entry.Key].Add((double) weight / sum);
+					var performedChartConfig = kvp.Value;
+					if (performedChartConfig.DesiredArrowWeights != null)
+					{
+						performedChartConfig.DesiredArrowWeightsNormalized = new Dictionary<string, List<double>>();
+						foreach (var entry in performedChartConfig.DesiredArrowWeights)
+						{
+							performedChartConfig.DesiredArrowWeightsNormalized[entry.Key] = new List<double>();
+							var sum = 0;
+							foreach (var weight in entry.Value)
+								sum += weight;
+							foreach (var weight in entry.Value)
+								performedChartConfig.DesiredArrowWeightsNormalized[entry.Key].Add((double) weight / sum);
+						}
+					}
 				}
 			}
 
@@ -213,6 +448,11 @@ namespace ChartGenerator
 				LogError("No InputNameRegex specified.");
 				errors = true;
 			}
+			else if (!IsValidRegex(InputNameRegex))
+			{
+				LogError($"Invalid regular expression for InputNameRegex: \"{InputNameRegex}\".");
+				errors = true;
+			}
 			if (string.IsNullOrEmpty(InputChartType))
 			{
 				LogError("No InputChartType specified.");
@@ -220,7 +460,8 @@ namespace ChartGenerator
 			}
 			if (!supportedInputTypes.Contains(InputChartType))
 			{
-				LogError($"Unsupported InputChartType \"{InputChartType}\" found. Expected value in [{string.Join(", ", supportedInputTypes)}].");
+				LogError($"Unsupported InputChartType \"{InputChartType}\" found. Expected value in "
+				         + $"[{string.Join(", ", supportedInputTypes)}].");
 				errors = true;
 			}
 
@@ -240,6 +481,11 @@ namespace ChartGenerator
 				LogError("No DifficultyRegex specified.");
 				errors = true;
 			}
+			else if (!IsValidRegex(DifficultyRegex))
+			{
+				LogError($"Invalid regular expression for DifficultyRegex: \"{DifficultyRegex}\".");
+				errors = true;
+			}
 			if (string.IsNullOrEmpty(OutputChartType))
 			{
 				LogError("No OutputChartType specified.");
@@ -249,7 +495,8 @@ namespace ChartGenerator
 			{
 				if (!supportedOutputTypes.Contains(OutputChartType))
 				{
-					LogError($"Unsupported OutputChartType \"{OutputChartType}\" found. Expected value in [{string.Join(", ", supportedOutputTypes)}].");
+					LogError($"Unsupported OutputChartType \"{OutputChartType}\" found. Expected value in "
+					         + $" [{string.Join(", ", supportedOutputTypes)}].");
 					errors = true;
 				}
 
@@ -260,74 +507,272 @@ namespace ChartGenerator
 					errors = true;
 				}
 
-				var desiredWeightsValid = DesiredArrowWeights != null && DesiredArrowWeights.ContainsKey(OutputChartType);
-				if (!desiredWeightsValid)
+				if (PerformedChartConfigs != null)
 				{
-					LogError($"No DesiredArrowWeights specified for \"{OutputChartType}\".");
-					errors = true;
-				}
-				
-				if (smChartTypeValid && desiredWeightsValid)
-				{
-					var expectedNumArrows = SMCommon.Properties[(int) smChartType].NumInputs;
-					if (DesiredArrowWeights[OutputChartType].Count != expectedNumArrows)
+					foreach (var kvp in PerformedChartConfigs)
 					{
-						LogError($"DesiredArrowWeights[\"{OutputChartType}\"] has {DesiredArrowWeights[OutputChartType].Count} entries. Expected {expectedNumArrows}.");
-						errors = true;
-					}
+						var pcc = kvp.Value;
+						var pccId = kvp.Key;
 
-					foreach (var weight in DesiredArrowWeights[OutputChartType])
-					{
-						if (weight < 0)
+						var desiredWeightsValid = pcc.DesiredArrowWeights != null
+						                          && pcc.DesiredArrowWeights.ContainsKey(OutputChartType);
+						if (!desiredWeightsValid)
 						{
-							LogError($"Negative weight \"{weight}\" in DesiredArrowWeights[\"{OutputChartType}\"].");
+							LogError(
+								$"PerformedChartConfig \"{pccId}\": No DesiredArrowWeights specified for \"{OutputChartType}\".");
 							errors = true;
+						}
+
+						if (smChartTypeValid && desiredWeightsValid)
+						{
+							var expectedNumArrows = SMCommon.Properties[(int) smChartType].NumInputs;
+							if (pcc.DesiredArrowWeights[OutputChartType].Count != expectedNumArrows)
+							{
+								LogError($"PerformedChartConfig \"{pccId}\": DesiredArrowWeights[\"{OutputChartType}\"] has "
+								         + $"{pcc.DesiredArrowWeights[OutputChartType].Count} entries. Expected {expectedNumArrows}.");
+								errors = true;
+							}
+
+							foreach (var weight in pcc.DesiredArrowWeights[OutputChartType])
+							{
+								if (weight < 0)
+								{
+									LogError($"PerformedChartConfig \"{pccId}\": Negative weight \"{weight}\" in " +
+									         $"DesiredArrowWeights[\"{OutputChartType}\"].");
+									errors = true;
+								}
+							}
 						}
 					}
 				}
 			}
 
-			if (IndividualStepTighteningMinTimeSeconds < 0.0)
+			if (PerformedChartConfigs == null || PerformedChartConfigs.Count < 1)
 			{
-				LogError($"Negative value \"{IndividualStepTighteningMinTimeSeconds}\" specified for IndividualStepTighteningMinTimeSeconds. Expected non-negative value.");
+				LogError("No PerformedChartConfigs specified. Expected at least one.");
 				errors = true;
 			}
 
-			if (IndividualStepTighteningMaxTimeSeconds < 0.0)
+			if (string.IsNullOrEmpty(DefaultPerformedChartConfig))
 			{
-				LogError($"Negative value \"{IndividualStepTighteningMaxTimeSeconds}\" specified for IndividualStepTighteningMaxTimeSeconds. Expected non-negative value.");
+				LogError("No DefaultPerformedChartConfig specified.");
 				errors = true;
 			}
 
-			if (IndividualStepTighteningMinTimeSeconds > IndividualStepTighteningMaxTimeSeconds)
+			if (PerformedChartConfigs != null
+			    && !string.IsNullOrEmpty(DefaultPerformedChartConfig)
+				&& !PerformedChartConfigs.ContainsKey(DefaultPerformedChartConfig))
 			{
-				LogError($"IndividualStepTighteningMinTimeSeconds \"{IndividualStepTighteningMaxTimeSeconds}\" is greater than IndividualStepTighteningMaxTimeSeconds \"{IndividualStepTighteningMaxTimeSeconds}\"." 
-				         + "IndividualStepTighteningMinTimeSeconds must be less than or equal to IndividualStepTighteningMaxTimeSeconds.");
+				LogError($"DefaultPerformedChartConfig \"{DefaultPerformedChartConfig}\" not found in PerformedChartConfigs.");
 				errors = true;
 			}
 
-			if (LateralTighteningPatternLength < 0)
+			if (PerformedChartConfigs != null)
 			{
-				LogError($"Negative value \"{LateralTighteningPatternLength}\" specified for LateralTighteningPatternLength. Expected non-negative value.");
+				foreach (var kvp in PerformedChartConfigs)
+				{
+					var pcc = kvp.Value;
+					var pccId = kvp.Key;
+
+					if (pcc.IndividualStepTighteningMinTimeSeconds < 0.0)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": Negative value \"{pcc.IndividualStepTighteningMinTimeSeconds}\" "
+							+ "specified for IndividualStepTighteningMinTimeSeconds. Expected non-negative value.");
+						errors = true;
+					}
+
+					if (pcc.IndividualStepTighteningMaxTimeSeconds < 0.0)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": Negative value \"{pcc.IndividualStepTighteningMaxTimeSeconds}\" "
+							+ "specified for IndividualStepTighteningMaxTimeSeconds. Expected non-negative value.");
+						errors = true;
+					}
+
+					if (pcc.IndividualStepTighteningMinTimeSeconds > pcc.IndividualStepTighteningMaxTimeSeconds)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": IndividualStepTighteningMinTimeSeconds \"{pcc.IndividualStepTighteningMinTimeSeconds}\" "
+							+ $"is greater than IndividualStepTighteningMaxTimeSeconds \"{pcc.IndividualStepTighteningMaxTimeSeconds}\". "
+							+ "IndividualStepTighteningMinTimeSeconds must be less than or equal to IndividualStepTighteningMaxTimeSeconds.");
+						errors = true;
+					}
+
+					if (pcc.LateralTighteningPatternLength < 0)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": Negative value \"{pcc.LateralTighteningPatternLength}\" specified for "
+							+ "LateralTighteningPatternLength. Expected non-negative value.");
+						errors = true;
+					}
+
+					if (pcc.LateralTighteningRelativeNPS < 0.0)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": Negative value \"{pcc.LateralTighteningRelativeNPS}\" specified for "
+							+ "LateralTighteningRelativeNPS. Expected non-negative value.");
+						errors = true;
+					}
+
+					if (pcc.LateralTighteningAbsoluteNPS < 0.0)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": Negative value \"{pcc.LateralTighteningAbsoluteNPS}\" specified for "
+							+ "LateralTighteningAbsoluteNPS. Expected non-negative value.");
+						errors = true;
+					}
+
+					if (pcc.LateralTighteningSpeed < 0.0)
+					{
+						LogError(
+							$"PerformedChartConfig \"{pccId}\": Negative value \"{pcc.LateralTighteningSpeed}\" specified for "
+							+ "LateralTighteningSpeed. Expected non-negative value.");
+						errors = true;
+					}
+				}
+			}
+
+			if (ExpressedChartConfigs == null || ExpressedChartConfigs.Count < 1)
+			{
+				LogError("No ExpressedChartConfigs specified. Expected at least one.");
 				errors = true;
 			}
 
-			if (LateralTighteningRelativeNPS < 0.0)
+			if (string.IsNullOrEmpty(DefaultExpressedChartConfig))
 			{
-				LogError($"Negative value \"{LateralTighteningRelativeNPS}\" specified for LateralTighteningRelativeNPS. Expected non-negative value.");
+				LogError("No DefaultExpressedChartConfig specified.");
 				errors = true;
 			}
 
-			if (LateralTighteningAbsoluteNPS < 0.0)
+			if (ExpressedChartConfigs != null
+			    && !string.IsNullOrEmpty(DefaultExpressedChartConfig)
+			    && !ExpressedChartConfigs.ContainsKey(DefaultExpressedChartConfig))
 			{
-				LogError($"Negative value \"{LateralTighteningAbsoluteNPS}\" specified for LateralTighteningAbsoluteNPS. Expected non-negative value.");
+				LogError($"DefaultExpressedChartConfig \"{DefaultExpressedChartConfig}\" not found in ExpressedChartConfigs.");
 				errors = true;
 			}
 
-			if (LateralTighteningSpeed < 0.0)
+			if (ExpressedChartConfigs != null)
 			{
-				LogError($"Negative value \"{LateralTighteningSpeed}\" specified for LateralTighteningSpeed. Expected non-negative value.");
-				errors = true;
+				foreach (var kvp in ExpressedChartConfigs)
+				{
+					var ecc = kvp.Value;
+					var eccId = kvp.Key;
+
+					if (ecc.BalancedBracketsPerMinuteForAggressiveBrackets < 0.0)
+					{
+						LogError($"ExpressedChartConfig \"{eccId}\" BalancedBracketsPerMinuteForAggressiveBrackets "
+						         + $" {ecc.BalancedBracketsPerMinuteForAggressiveBrackets} must be non-negative.");
+						errors = true;
+					}
+					if (ecc.BalancedBracketsPerMinuteForNoBrackets < 0.0)
+					{
+						LogError($"ExpressedChartConfig \"{eccId}\" BalancedBracketsPerMinuteForNoBrackets "
+						         + $" {ecc.BalancedBracketsPerMinuteForNoBrackets} must be non-negative.");
+						errors = true;
+					}
+
+					if (ecc.BalancedBracketsPerMinuteForAggressiveBrackets <= ecc.BalancedBracketsPerMinuteForNoBrackets
+					    && ecc.BalancedBracketsPerMinuteForAggressiveBrackets != 0.0
+					    && ecc.BalancedBracketsPerMinuteForNoBrackets != 0.0)
+					{
+						LogError($"ExpressedChartConfig \"{eccId}\" BalancedBracketsPerMinuteForAggressiveBrackets"
+						         + $" {ecc.BalancedBracketsPerMinuteForAggressiveBrackets} is not greater than"
+						         + $" BalancedBracketsPerMinuteForNoBrackets {ecc.BalancedBracketsPerMinuteForNoBrackets}."
+						         + " If these values are non-zero, BalancedBracketsPerMinuteForAggressiveBrackets must be"
+						         + " greater than BalancedBracketsPerMinuteForNoBrackets.");
+						errors = true;
+					}
+				}
+			}
+
+			// Validate ExpressedChartConfigRules.
+			if (ExpressedChartConfigRules != null)
+			{
+				for (var i = 0; i < ExpressedChartConfigRules.Length; i++)
+				{
+					var configRule = ExpressedChartConfigRules[i];
+					if (string.IsNullOrEmpty(configRule.Config))
+					{
+						LogError($"ExpressedChartConfigRules[{i}] No Config specified.");
+						errors = true;
+					}
+
+					if (ExpressedChartConfigs != null
+					    && !string.IsNullOrEmpty(configRule.Config)
+					    && !ExpressedChartConfigs.ContainsKey(configRule.Config))
+					{
+						LogError($"ExpressedChartConfigRules[{i}] Config \"{configRule.Config}\" not found in ExpressedChartConfigs.");
+						errors = true;
+					}
+
+					if (string.IsNullOrEmpty(configRule.FileRegex))
+					{
+						LogError($"ExpressedChartConfigRules[{i}] No FileRegex specified.");
+						errors = true;
+					}
+					else if (!IsValidRegex(configRule.FileRegex))
+					{
+						LogError($"ExpressedChartConfigRules[{i}] Invalid regular expression for FileRegex: \"{configRule.FileRegex}\".");
+						errors = true;
+					}
+
+					if (string.IsNullOrEmpty(configRule.DifficultyRegex))
+					{
+						LogError($"ExpressedChartConfigRules[{i}] No DifficultyRegex specified.");
+						errors = true;
+					}
+					else if (!IsValidRegex(configRule.DifficultyRegex))
+					{
+						LogError($"ExpressedChartConfigRules[{i}] Invalid regular expression for DifficultyRegex: \"{configRule.DifficultyRegex}\".");
+						errors = true;
+					}
+				}
+			}
+
+			// Validate PerformedChartConfigRules.
+			if (PerformedChartConfigRules != null)
+			{
+				for (var i = 0; i < PerformedChartConfigRules.Length; i++)
+				{
+					var configRule = PerformedChartConfigRules[i];
+					if (string.IsNullOrEmpty(configRule.Config))
+					{
+						LogError($"PerformedChartConfigRules[{i}] No Config specified.");
+						errors = true;
+					}
+
+					if (PerformedChartConfigs != null
+					    && !string.IsNullOrEmpty(configRule.Config)
+					    && !PerformedChartConfigs.ContainsKey(configRule.Config))
+					{
+						LogError($"PerformedChartConfigRules[{i}] Config \"{configRule.Config}\" not found in PerformedChartConfigs.");
+						errors = true;
+					}
+
+					if (string.IsNullOrEmpty(configRule.FileRegex))
+					{
+						LogError($"PerformedChartConfigRules[{i}] No FileRegex specified.");
+						errors = true;
+					}
+					else if (!IsValidRegex(configRule.FileRegex))
+					{
+						LogError($"PerformedChartConfigRules[{i}] Invalid regular expression for FileRegex: \"{configRule.FileRegex}\".");
+						errors = true;
+					}
+
+					if (string.IsNullOrEmpty(configRule.DifficultyRegex))
+					{
+						LogError($"PerformedChartConfigRules[{i}] No DifficultyRegex specified.");
+						errors = true;
+					}
+					else if (!IsValidRegex(configRule.DifficultyRegex))
+					{
+						LogError($"PerformedChartConfigRules[{i}] Invalid regular expression for DifficultyRegex: \"{configRule.DifficultyRegex}\".");
+						errors = true;
+					}
+				}
 			}
 
 			// Warn on any missing StepTypeReplacements.
@@ -370,17 +815,6 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
-		/// Gets the desired arrow weights for the output chart type.
-		/// Values normalized to sum to 1.0.
-		/// </summary>
-		/// <returns>List of normalized weights.</returns>
-		public List<double> GetOutputDesiredArrowWeightsNormalized()
-		{
-			// Validation already ensures this key is present.
-			return DesiredArrowWeightsNormalized[OutputChartType];
-		}
-
-		/// <summary>
 		/// Determines whether the difficulty represented by the given string
 		/// matches the Config DifficultyRegex.
 		/// </summary>
@@ -388,16 +822,7 @@ namespace ChartGenerator
 		/// <returns>True if this difficulty matches and false otherwise.</returns>
 		public bool DifficultyMatches(string difficulty)
 		{
-			var matches = false;
-			try
-			{
-				matches = Regex.IsMatch(difficulty, DifficultyRegex, RegexOptions.Singleline, TimeSpan.FromSeconds(1));
-			}
-			catch (Exception e)
-			{
-				LogError($"Failed to determine if difficulty \"{difficulty}\" matches DifficultyRegex \"{DifficultyRegex}\". {e}");
-			}
-			return matches;
+			return Matches(DifficultyRegex, difficulty);
 		}
 
 		/// <summary>
@@ -408,14 +833,101 @@ namespace ChartGenerator
 		/// <returns>True if this file name matches and false otherwise.</returns>
 		public bool InputNameMatches(string inputFileName)
 		{
+			return Matches(InputNameRegex, inputFileName);
+		}
+
+		/// <summary>
+		/// Gets the ExpressedChartConfig to use for the Chart represented by the given FileInfo
+		/// and difficulty.
+		/// </summary>
+		/// <param name="file">FileInfo for the file containing the Chart.</param>
+		/// <param name="difficulty">Difficulty string of the Chart.</param>
+		/// <returns>ExpressedChartConfig to use and its identifier.</returns>
+		public (ExpressedChartConfig, string) GetExpressedChartConfig(FileInfo file, string difficulty)
+		{
+			// Check for rules specific to this file and difficulty.
+			if (ExpressedChartConfigRules != null && ExpressedChartConfigRules.Length > 0)
+			{
+				// Loop in reverse order to prioritize later matches.
+				for (var i = ExpressedChartConfigRules.Length - 1; i >= 0; i--)
+				{
+					if (Matches(ExpressedChartConfigRules[i].FileRegex, file.FullName)
+					    && Matches(ExpressedChartConfigRules[i].DifficultyRegex, difficulty))
+					{
+						return (ExpressedChartConfigs[ExpressedChartConfigRules[i].Config],
+							ExpressedChartConfigRules[i].Config);
+					}
+				}
+			}
+
+			// Fallback to the default config.
+			return (ExpressedChartConfigs[DefaultExpressedChartConfig], DefaultExpressedChartConfig);
+		}
+
+		/// <summary>
+		/// Gets the PerformedChartConfig to use for the Chart represented by the given FileInfo
+		/// and difficulty.
+		/// </summary>
+		/// <param name="file">FileInfo for the file containing the Chart.</param>
+		/// <param name="difficulty">Difficulty string of the Chart.</param>
+		/// <returns>PerformedChartConfig to use and its identifier.</returns>
+		public (PerformedChartConfig, string) GetPerformedChartConfig(FileInfo file, string difficulty)
+		{
+			// Check for rules specific to this file and difficulty.
+			if (PerformedChartConfigRules != null && PerformedChartConfigRules.Length > 0)
+			{
+				// Loop in reverse order to prioritize later matches.
+				for (var i = PerformedChartConfigRules.Length - 1; i >= 0; i--)
+				{
+					if (Matches(PerformedChartConfigRules[i].FileRegex, file.FullName)
+					    && Matches(PerformedChartConfigRules[i].DifficultyRegex, difficulty))
+					{
+						return (PerformedChartConfigs[PerformedChartConfigRules[i].Config],
+							PerformedChartConfigRules[i].Config);
+					}
+				}
+			}
+
+			// Fallback to the default config.
+			return (PerformedChartConfigs[DefaultPerformedChartConfig], DefaultPerformedChartConfig);
+		}
+
+		/// <summary>
+		/// Returns whether or not the given regular expression string is a valid regular expression.
+		/// </summary>
+		/// <param name="regex">Regular expression string to check.</param>
+		/// <returns>True if the given regular expression string is valid and false otherwise.</returns>
+		private static bool IsValidRegex(string regex)
+		{
+			if (string.IsNullOrEmpty(regex))
+				return false;
+			try
+			{
+				var _ = Regex.IsMatch("", regex, RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+			}
+			catch (ArgumentException)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		/// <summary>
+		/// Returns whether the given input string matches the given regular expression.
+		/// </summary>
+		/// <param name="regex">Regular expression string to check.</param>
+		/// <param name="input">Input string to check against the regular expression.</param>
+		/// <returns>True if the given regular expression string is valid and false otherwise.</returns>
+		private static bool Matches(string regex, string input)
+		{
 			var matches = false;
 			try
 			{
-				matches = Regex.IsMatch(inputFileName, InputNameRegex, RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+				matches = Regex.IsMatch(input, regex, RegexOptions.Singleline, TimeSpan.FromSeconds(1));
 			}
 			catch (Exception e)
 			{
-				LogError($"Failed to determine if file \"{inputFileName}\" matches InputNameRegex \"{InputNameRegex}\". {e}");
+				LogError($"Failed to determine if \"{input}\" matches \"{regex}\". {e}");
 			}
 			return matches;
 		}

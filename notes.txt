@@ -1,45 +1,31 @@
 PerformedChart Issues:
-	Test Charts:
-		more than friends
-		love bug yuce
-
 	Additional FootSwap tightening
+	Choosing odd NewArrow NewArrow jumps that involve a swap. e.g. UD to DR with left moving from U to D.
 
-	Unclear Footing Problem:
-		It would be best to keep ambiguous footing if the original chart had it.
-		But it is still an improvement to never choose ambiguous steps.
-
-		Ambiguity cannot be represented in the stepgraph since it depends on which steps preceded it.
-			For example home position to down is only ambiguous after a jump. It is not ambiguous after a step (you alternate).
+Document new bracket parsing config.
 
 Charts with Bugs?
-
 	Do not involve expressed chart costs:
-		LiLac Box (measure 10)
+		X LiLac Box (measure 10)
 			chooses a jump on the same two arrows that were a previous bracket (misleading)
-		Barracuda (measure 41)
+		X Barracuda (measure 41) - good chart for unit test
 			chose an ambiguous jump. no good. maybe becuase one is a hold?
-
 	Involve expressed chart costs:
-		The love bug (measure 31)
+		X The love bug (measure 31) - good chart for unit test
 			does a double step over a crossover to avoid a newarrow newarrow jump 
 				bug is jump costs are too high
-		sorry sorry (measure 7)
+		X sorry sorry (measure 7)
 			does a bracket + foot swap to avoid a jump
+		X Skittles Selection 8\GIGA VIOLATE (10): measure 67
+			Not terrible. Interprets jump as bracket, and that can result in spread in the performed chart.
 		Oh! (measure 44)
 			chose a bracket over a jump. this results in a really ambiguous pattern on dp
 		Hold it against me (measyure 42)
 			tricky. could go either way. goes against norm for hold indication of oduble step.
-			67 - totally unnecesary foot swap. likely jump cost related.
+			X 67 - totally unnecesary foot swap. bug in hold logic in expressed chart.
 			lots of little problems because of the holds
-
-
-
-
-	Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
-		This is extremely complicated with lots of swaps into brackets and intentional double stepping.
-	Skittles Selection 8\GIGA VIOLATE (10): measure 67
-		Not terrible. Interprets jump as bracket, and that can result in spread in the performed chart.
+		Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
+			This is extremely complicated with lots of swaps into brackets and intentional double stepping.
 
 Tests:
 	SM/SSC Reader unit Tests
@@ -58,13 +44,14 @@ Bugs:
 			7: Supposed to be swap instead of 3 jack?
 				same in 11, 13, 21
 			61: mine indicated foot swaps - questionable
-	Will a Jump with NewArrow NewArrow include UD to DU?
-	Bracket H New T New can pick up
 
 Misc:
+	Document how it works.
+	Load arrowdata from json so we can easily add piu charts without recompiling
+	public / private pass
+	comment / cost cleanup
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
 	Copy song pack files (pack art)
-	Load arrowdata from json so we can easily add piu charts without recompiling
 	if all 4 notes are full in sp and there is at least one mine, add mines so it is a whole row of mines in dp? or at least, 4 mines = 8 mines?
 	Preserving patters
 	time remaining on export?

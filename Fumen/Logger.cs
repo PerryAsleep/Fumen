@@ -64,7 +64,7 @@ namespace Fumen
 		/// <summary>
 		/// Task for writing enqueued messages to the StreamWriter.
 		/// </summary>
-		private readonly Task WriteQueueToStreamTask;
+		private readonly Task WriteQueueTask;
 		/// <summary>
 		/// Timer for periodically flushing the StreamWriter to disk.
 		/// </summary>
@@ -73,6 +73,10 @@ namespace Fumen
 		/// Object for locking the StreamWriter.
 		/// </summary>
 		private readonly object StreamWriterLock = new object();
+		/// <summary>
+		/// Whether or not to write to the console when logging.
+		/// </summary>
+		private readonly bool WriteToConsole;
 
 		/// <summary>
 		/// Start up the logger.
@@ -82,16 +86,18 @@ namespace Fumen
 		/// <param name="logFilePath">Path to the log file to stream to. Will be created if it does not exist.</param>
 		/// <param name="flushIntervalSeconds">Interval in seconds to flush the log to disk.</param>
 		/// <param name="bufferSizeBytes">Buffer size. Buffer will flush to disk when it is full.</param>
+		/// <param name="writeToConsole">Whether or not to write the console in addition to the log file.</param>
 		public static void StartUp(
 			LogLevel logLevel,
 			string logFilePath,
 			int flushIntervalSeconds,
-			int bufferSizeBytes)
+			int bufferSizeBytes,
+			bool writeToConsole)
 		{
 			LogLevel = logLevel;
 
 			Instance?.Dispose();
-			Instance = new Logger(logFilePath, flushIntervalSeconds, bufferSizeBytes);
+			Instance = new Logger(logFilePath, flushIntervalSeconds, bufferSizeBytes, writeToConsole);
 		}
 
 		/// <summary>
@@ -102,7 +108,9 @@ namespace Fumen
 		public static void StartUp(LogLevel logLevel)
 		{
 			LogLevel = logLevel;
+
 			Instance?.Dispose();
+			Instance = new Logger();
 		}
 
 		/// <summary>
@@ -124,7 +132,6 @@ namespace Fumen
 			if (LogLevel > LogLevel.Info)
 				return;
 			var formattedMessage = FormatMessage("[INFO]", message);
-			Console.WriteLine(formattedMessage);
 			Instance?.Log(formattedMessage);
 		}
 
@@ -138,7 +145,6 @@ namespace Fumen
 			if (LogLevel > LogLevel.Warn)
 				return;
 			var formattedMessage = FormatMessage("[WARNING]", message);
-			Console.WriteLine(formattedMessage);
 			Instance?.Log(formattedMessage);
 		}
 
@@ -152,7 +158,6 @@ namespace Fumen
 			if (LogLevel > LogLevel.Error)
 				return;
 			var formattedMessage = FormatMessage("[ERROR]", message);
-			Console.WriteLine(formattedMessage);
 			Instance?.Log(formattedMessage);
 		}
 
@@ -170,10 +175,12 @@ namespace Fumen
 		/// <summary>
 		/// Private Constructor.
 		/// </summary>
+		/// <remarks>The logger will write to a log file and optionally to the console.</remarks>
 		/// <param name="logFilePath">Path to the log file to stream to. Will be created if it does not exist.</param>
 		/// <param name="flushIntervalSeconds">Interval in seconds to flush the log to disk.</param>
 		/// <param name="bufferSizeBytes">Buffer size. Buffer will flush to disk when it is full.</param>
-		private Logger(string logFilePath, int flushIntervalSeconds, int bufferSizeBytes)
+		/// <param name="writeToConsole">Whether or not to write the console in addition to the log file.</param>
+		private Logger(string logFilePath, int flushIntervalSeconds, int bufferSizeBytes, bool writeToConsole)
 		{
 			FileStream = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
 			StreamWriter = new StreamWriter(FileStream, Encoding.UTF8, bufferSizeBytes)
@@ -181,10 +188,11 @@ namespace Fumen
 				AutoFlush = false
 			};
 			LogQueue = new BlockingCollection<string>(QueueCapacity);
+			WriteToConsole = writeToConsole;
 
 			// Start a Task to write enqueued messages to the StreamWriter.
-			WriteQueueToStreamTask = Task.Factory.StartNew(
-				WriteQueueToStream,
+			WriteQueueTask = Task.Factory.StartNew(
+				WriteQueue,
 				CancellationToken.None,
 				TaskCreationOptions.LongRunning,
 				TaskScheduler.Default);
@@ -198,13 +206,27 @@ namespace Fumen
 		}
 
 		/// <summary>
+		/// Private Constructor.
+		/// </summary>
+		/// <remarks>The logger will write to the console.</remarks>
+		private Logger()
+		{
+			LogQueue = new BlockingCollection<string>(QueueCapacity);
+			WriteQueueTask = Task.Factory.StartNew(
+				WriteQueue,
+				CancellationToken.None,
+				TaskCreationOptions.LongRunning,
+				TaskScheduler.Default);
+		}
+
+		/// <summary>
 		/// IDisposable Dispose method to dispose IDisposable resources.
 		/// </summary>
 		public void Dispose()
 		{
 			Timer.Dispose();
 			LogQueue?.CompleteAdding();
-			WriteQueueToStreamTask?.Wait();
+			WriteQueueTask?.Wait();
 			StreamWriter?.Dispose();
 			FileStream?.Dispose();
 			LogQueue?.Dispose();
@@ -241,13 +263,20 @@ namespace Fumen
 		/// <summary>
 		/// Method called via a Task to write enqueued messages to the StreamWriter.
 		/// </summary>
-		private void WriteQueueToStream()
+		private void WriteQueue()
 		{
 			foreach (var message in LogQueue.GetConsumingEnumerable())
 			{
-				lock (StreamWriterLock)
+				if (WriteToConsole)
 				{
-					StreamWriter?.WriteLine(message);
+					Console.WriteLine(message);
+				}
+				if (StreamWriter != null)
+				{
+					lock (StreamWriterLock)
+					{
+						StreamWriter?.WriteLine(message);
+					}
 				}
 			}
 		}

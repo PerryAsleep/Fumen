@@ -196,13 +196,13 @@ namespace ChartGenerator
 			/// </summary>
 			private double LateralBodyPosition;
 			/// <summary>
-			/// For each arrow, the last time in microseconds that it was stepped on.
+			/// For each foot, the last time in microseconds that it was stepped on.
 			/// During construction, these values will be updated to this SearchNode's TimeMicros
 			/// if this SearchNode represents steps on any arrows.
 			/// </summary>
 			private readonly long[] LastTimeFootStepped;
 			/// <summary>
-			/// For each arrow, the last time in microseconds that it was released.
+			/// For each foot, the last time in microseconds that it was released.
 			/// During construction, these values will be updated to this SearchNode's TimeMicros
 			/// if this SearchNode represents releases on any arrows.
 			/// </summary>
@@ -262,7 +262,8 @@ namespace ChartGenerator
 				PerformanceFootAction[] actions,
 				StepGraph stepGraph,
 				double nps,
-				double randomWeight)
+				double randomWeight,
+				PerformedChartConfig config)
 			{
 				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
@@ -315,7 +316,7 @@ namespace ChartGenerator
 
 				double individualStepCost;
 				double lateralMovementSpeedCost;
-				(DistributionCost, individualStepCost, lateralMovementSpeedCost) = DetermineCostsAndUpdateStepTracking(stepGraph, nps);
+				(DistributionCost, individualStepCost, lateralMovementSpeedCost) = DetermineCostsAndUpdateStepTracking(stepGraph, nps, config);
 				TotalIndividualStepCost = (PreviousNode?.TotalIndividualStepCost ?? 0.0) + individualStepCost;
 				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + lateralMovementSpeedCost;
 
@@ -355,7 +356,10 @@ namespace ChartGenerator
 			/// Value 2: individual step cost
 			/// Value 3: lateral movement speed cost
 			/// </returns>
-			private (double, double, double) DetermineCostsAndUpdateStepTracking(StepGraph stepGraph, double averageNps)
+			private (double, double, double) DetermineCostsAndUpdateStepTracking(
+				StepGraph stepGraph,
+				double averageNps,
+				PerformedChartConfig config)
 			{
 				// Record the previous step time.
 				// This is currently stored in LastTimeFootStepped from initialization.
@@ -370,7 +374,7 @@ namespace ChartGenerator
 				// Determine distribution cost by calculating how far off the chart up to this point
 				// is from the desired distribution of arrows.
 				var distributionCost = 0.0;
-				var weights = Config.Instance.GetOutputDesiredArrowWeightsNormalized();
+				var weights = config.GetOutputDesiredArrowWeightsNormalized();
 				var totalSteps = 0;
 				for (var a = 0; a < StepCounts.Length; a++)
 					totalSteps += StepCounts[a];
@@ -422,7 +426,7 @@ namespace ChartGenerator
 						if (steppedWithThisFoot
 						    && !bracketedWithThisFoot
 						    && !steppedWithOtherFoot
-						    && Config.Instance.IndividualStepTighteningMinTimeSeconds > 0.0)
+						    && config.IndividualStepTighteningMinTimeSeconds > 0.0)
 						{
 							var arrowBeingSteppedTo = GraphNode.State[f, thisFootPortionSteppingWith].Arrow;
 							var timeBetweenStepsSeconds = (TimeMicros - LastTimeFootStepped[f]) / 1000000.0;
@@ -439,14 +443,14 @@ namespace ChartGenerator
 								double speedPenalty;
 
 								// The configure min and max speeds are a range.
-								if (Config.Instance.IndividualStepTighteningMinTimeSeconds <
-								    Config.Instance.IndividualStepTighteningMaxTimeSeconds)
+								if (config.IndividualStepTighteningMinTimeSeconds <
+								    config.IndividualStepTighteningMaxTimeSeconds)
 								{
 									// Clamp to a normalized value.
 									// Invert since lower times represent faster movements, which are worse.
 									speedPenalty = Math.Min(1.0, Math.Max(0.0,
-										1.0 - (timeBetweenStepsSeconds - Config.Instance.IndividualStepTighteningMinTimeSeconds) 
-										/ (Config.Instance.IndividualStepTighteningMaxTimeSeconds - Config.Instance.IndividualStepTighteningMinTimeSeconds)));
+										1.0 - (timeBetweenStepsSeconds - config.IndividualStepTighteningMinTimeSeconds) 
+										/ (config.IndividualStepTighteningMaxTimeSeconds - config.IndividualStepTighteningMinTimeSeconds)));
 								}
 
 								// The configured min and max speeds are the same, and are non-zero.
@@ -454,7 +458,7 @@ namespace ChartGenerator
 								{
 									// If the actual speed is faster than the configured speed then use the full speed penalty
 									// of 1.0. Otherwise use no speed penalty of 0.0;
-									speedPenalty = timeBetweenStepsSeconds < Config.Instance.IndividualStepTighteningMinTimeSeconds ? 1.0 : 0.0;
+									speedPenalty = timeBetweenStepsSeconds < config.IndividualStepTighteningMinTimeSeconds ? 1.0 : 0.0;
 								}
 
 								individualStepCost = Math.Max(individualStepCost, speedPenalty * travelDistance);
@@ -488,10 +492,10 @@ namespace ChartGenerator
 				// Determine the lateral body movement cost.
 				// When notes are more dense the body should move side to side less.
 				var lateralMovementSpeedCost = 0.0;
-				if (Config.Instance.LateralTighteningPatternLength > 0)
+				if (config.LateralTighteningPatternLength > 0)
 				{
 					// Scan backwards over the previous LateralTighteningPatternLength steps.
-					var stepCounter = Config.Instance.LateralTighteningPatternLength;
+					var stepCounter = config.LateralTighteningPatternLength;
 					var node = PreviousNode;
 					bool? goingLeft = null;
 					var previousPosition = LateralBodyPosition;
@@ -547,13 +551,13 @@ namespace ChartGenerator
 					// in one direction, then perform the nps and speed checks.
 					if (stepCounter == 0)
 					{
-						var nps = Config.Instance.LateralTighteningPatternLength * 1000000.0 / (TimeMicros - previousTime);
+						var nps = config.LateralTighteningPatternLength * 1000000.0 / (TimeMicros - previousTime);
 						var speed = (Math.Abs(LateralBodyPosition - previousPosition) * 1000000.0) / (TimeMicros - previousTime);
-						if ((nps > averageNps * Config.Instance.LateralTighteningRelativeNPS
-							 || nps > Config.Instance.LateralTighteningAbsoluteNPS)
-						    && speed > Config.Instance.LateralTighteningSpeed)
+						if ((nps > averageNps * config.LateralTighteningRelativeNPS
+							 || nps > config.LateralTighteningAbsoluteNPS)
+						    && speed > config.LateralTighteningSpeed)
 						{
-							lateralMovementSpeedCost = speed - Config.Instance.LateralTighteningSpeed;
+							lateralMovementSpeedCost = speed - config.LateralTighteningSpeed;
 						}
 					}
 				}
@@ -621,8 +625,11 @@ namespace ChartGenerator
 							else if (GraphLinkFromPreviousNode.Links[f, p].Step != StepType.NewArrow
 								&& GraphLinkFromPreviousNode.Links[f, p].Step != StepType.SameArrow)
 								return (false, false);
-							involvesSameArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.SameArrow;
-							involvesNewArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.NewArrow;
+							if (GraphLinkFromPreviousNode.Links[f, p].Valid)
+							{
+								involvesSameArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.SameArrow;
+								involvesNewArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.NewArrow;
+							}
 						}
 						// We only care about single steps and jumps, not brackets.
 						else if (GraphLinkFromPreviousNode.Links[f, p].Valid)
@@ -767,8 +774,10 @@ namespace ChartGenerator
 					return false;
 
 				// Check all sibling nodes for the link.
-				foreach (var otherNode in PreviousNode.GraphNode.Links[siblingLink])
+				var otherNodes = PreviousNode.GraphNode.Links[siblingLink];
+				for (var n = 0; n < otherNodes.Count; n++)
 				{
+					var otherNode = otherNodes[n];
 					// Skip this node if it is the same GraphNode from this SearchNode (not a sibling).
 					if (otherNode.EqualsFooting(GraphNode))
 						continue;
@@ -867,11 +876,11 @@ namespace ChartGenerator
 		/// <summary>
 		/// Root PerformanceNode of the PerformedChart.
 		/// </summary>
-		public readonly PerformanceNode Root;
+		private readonly PerformanceNode Root;
 		/// <summary>
 		/// Number of arrows in the Chart.
 		/// </summary>
-		public readonly int NumArrows;
+		private readonly int NumArrows;
 		/// <summary>
 		/// Identifier to use when logging messages about this PerformedChart.
 		/// </summary>
@@ -891,6 +900,11 @@ namespace ChartGenerator
 			NumArrows = numArrows;
 			Root = root;
 			LogIdentifier = logIdentifier;
+		}
+
+		public PerformanceNode GetRootPerformanceNode()
+		{
+			return Root;
 		}
 
 		/// <summary>
@@ -918,6 +932,7 @@ namespace ChartGenerator
 		/// </returns>
 		public static PerformedChart CreateFromExpressedChart(
 			StepGraph stepGraph,
+			PerformedChartConfig config,
 			List<List<GraphNode>> rootNodes,
 			ExpressedChart expressedChart,
 			int randomSeed,
@@ -965,7 +980,8 @@ namespace ChartGenerator
 							new PerformanceFootAction[stepGraph.NumArrows],
 							stepGraph,
 							nps,
-							random.NextDouble());
+							random.NextDouble(),
+							config);
 						var currentSearchNodes = new HashSet<SearchNode>();
 						currentSearchNodes.Add(rootSearchNode);
 						
@@ -1004,16 +1020,19 @@ namespace ChartGenerator
 							{
 								// Check every GraphLink out of the SearchNode.
 								var deadEnd = true;
-								foreach (var graphLink in searchNode.GraphLinks)
+								for (var l = 0; l < searchNode.GraphLinks.Count; l++)
 								{
+									var graphLink = searchNode.GraphLinks[l];
 									// The GraphNode may not actually have this GraphLink due to
 									// the StepTypeReplacements.
 									if (!searchNode.GraphNode.Links.ContainsKey(graphLink))
 										continue;
 									
 									// Check every GraphNode linked to by this GraphLink.
-									foreach (var nextGraphNode in searchNode.GraphNode.Links[graphLink])
+									var nextNodes = searchNode.GraphNode.Links[graphLink];
+									for (var n = 0; n < nextNodes.Count; n++)
 									{
+										var nextGraphNode = nextNodes[n];
 										// Determine new step information.
 										var actions = GetActionsForNode(nextGraphNode, graphLink, stepGraph.NumArrows);
 
@@ -1032,7 +1051,8 @@ namespace ChartGenerator
 											actions,
 											stepGraph,
 											nps,
-											random.NextDouble()
+											random.NextDouble(),
+											config
 										);
 
 										// Do not consider this next SearchNode if it results in an invalid state.
@@ -1151,8 +1171,9 @@ namespace ChartGenerator
 			var startTime = long.MaxValue;
 			var endTime = 0L;
 			var numSteps = 0;
-			foreach (var stepEvent in expressedChart.StepEvents)
+			for (var e = 0; e < expressedChart.StepEvents.Count; e++)
 			{
+				var stepEvent = expressedChart.StepEvents[e];
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var p = 0; p < NumFootPortions; p++)
@@ -1351,8 +1372,9 @@ namespace ChartGenerator
 			MetricPosition previousMinePosition = null;
 			var arrowsOccupiedByMines = new bool[stepGraph.NumArrows];
 			var randomLaneOrder = Enumerable.Range(0, stepGraph.NumArrows).OrderBy(x => random.Next()).ToArray();
-			foreach (var mineEvent in expressedChart.MineEvents)
+			for (var m = 0; m < expressedChart.MineEvents.Count; m++)
 			{
+				var mineEvent = expressedChart.MineEvents[m];
 				// Advance the step and release indices to follow and precede the event respectively.
 				while (stepIndex < steps.Count && steps[stepIndex].Position <= mineEvent.Position)
 					stepIndex++;

@@ -26,8 +26,6 @@ namespace ChartGenerator
 	/// Given a graph of StepNodes for set of arrows and an ExpressedChart, a PerformedChart
 	/// can be generated.
 	/// TODO: Consider consolidating search logic with PerformedChart?
-	/// TODO: Consider reworking the static methods in CreateFromSMEvents to be instance methods
-	/// so we can clean up all the state being passed along.
 	/// </summary>
 	public class ExpressedChart
 	{
@@ -171,11 +169,11 @@ namespace ChartGenerator
 			/// <summary>
 			/// Cumulative Cost to reach this ChartSearchNode.
 			/// </summary>
-			public readonly int TotalCost;
+			public int TotalCost;
 			/// <summary>
 			/// Cost to reach this ChartSearchNode from the previous node.
 			/// </summary>
-			public readonly int Cost;
+			public int Cost;
 			/// <summary>
 			/// Previous ChartSearchNode.
 			/// </summary>
@@ -190,13 +188,16 @@ namespace ChartGenerator
 			/// Value is set of all ChartSearchNodes possible from that GraphLink.
 			/// </summary>
 			public readonly Dictionary<GraphLink, HashSet<ChartSearchNode>> NextNodes = new Dictionary<GraphLink, HashSet<ChartSearchNode>>();
+			/// <summary>
+			/// For each arrow/lane, the last foot which stepped on it. Updated with this
+			/// ChartSearchNode's state during construction.
+			/// </summary>
+			public int[] LastFootUsedToStepOnArrow;
 
 			public ChartSearchNode(
 				GraphNode graphNode,
 				MetricPosition position,
 				long timeMicros,
-				int cost,
-				int totalCost,
 				ChartSearchNode previousNode,
 				GraphLinkInstance previousLink,
 				InstanceStepType[] instanceTypes)
@@ -205,11 +206,41 @@ namespace ChartGenerator
 				GraphNode = graphNode;
 				Position = position;
 				TimeMicros = timeMicros;
-				Cost = cost;
-				TotalCost = totalCost;
 				PreviousNode = previousNode;
 				PreviousLink = previousLink;
 				InstanceTypes = instanceTypes;
+
+				// Copy the LastFootUsedToStepOnArrow data from the previous node and update
+				// lanes based on this state.
+				LastFootUsedToStepOnArrow = new int[InstanceTypes.Length];
+				for (var a = 0; a < LastFootUsedToStepOnArrow.Length; a++)
+					LastFootUsedToStepOnArrow[a] = previousNode?.LastFootUsedToStepOnArrow[a] ?? InvalidFoot;
+				if (PreviousLink != null)
+				{
+					for (var f = 0; f < NumFeet; f++)
+					{
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (PreviousLink.GraphLink.Links[f, p].Valid
+							    && (PreviousLink.GraphLink.Links[f, p].Action == FootAction.Tap
+							        || PreviousLink.GraphLink.Links[f, p].Action == FootAction.Hold))
+							{
+								LastFootUsedToStepOnArrow[GraphNode.State[f, p].Arrow] = f;
+							}
+						}
+					}
+				}
+			}
+
+			/// <summary>
+			/// Sets the cost of this ChartSearchNode.
+			/// Will update the Cost and TotalCost.
+			/// </summary>
+			/// <param name="cost">Cost of this ChartSearchNode.</param>
+			public void SetCost(int cost)
+			{
+				Cost = cost;
+				TotalCost = (PreviousNode?.TotalCost ?? 0) + Cost;
 			}
 
 			/// <summary>
@@ -294,10 +325,51 @@ namespace ChartGenerator
 		/// StepType and a Tap FootAction.
 		/// </summary>
 		public List<StepEvent> StepEvents = new List<StepEvent>();
+		/// <summary>
+		/// All the MineEvents which make up this chart.
+		/// </summary>
 		public List<MineEvent> MineEvents = new List<MineEvent>();
 
 		/// <summary>
-		/// Custom Comparer for MineEvents so the EffectiveChart uses a consistent order.
+		/// How to parse brackets when encountering steps which could be brackets or jumps.
+		/// </summary>
+		private BracketParsingMethod BracketParsingMethod;
+		/// <summary>
+		/// Identifier to use in log messages.
+		/// </summary>
+		private readonly string LogIdentifier;
+		/// <summary>
+		/// StepGraph to use for parsing the Chart's Events.
+		/// </summary>
+		private readonly StepGraph StepGraph;
+		/// <summary>
+		/// Root ChartSearchNode of the ExpressedChart.
+		/// </summary>
+		private ChartSearchNode Root;
+		
+		/// <summary>
+		/// Cached Events from the Chart to express.
+		/// Unneeded and set to null after search is complete.
+		/// </summary>
+		private List<Event> Events;
+		/// <summary>
+		/// Cached LaneNotes representing Mines from the Chart's Events.
+		/// Unneeded and set to null after search is complete.
+		/// </summary>
+		private List<LaneNote> MineNotes;
+
+		public ChartSearchNode GetRootSearchNode()
+		{
+			return Root;
+		}
+
+		public BracketParsingMethod GetBracketParsingMethod()
+		{
+			return BracketParsingMethod;
+		}
+
+		/// <summary>
+		/// Custom Comparer for MineEvents so the ExpressedChart uses a consistent order.
 		/// </summary>
 		public class MineEventComparer : IComparer<MineEvent>
 		{
@@ -332,6 +404,19 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
+		/// Private Constructor.
+		/// </summary>
+		/// <param name="events">List of Events from the Chart to express.</param>
+		/// <param name="logIdentifier">Log identifier string to use when logging.</param>
+		/// <param name="stepGraph">StepGraph for the Events</param>
+		private ExpressedChart(List<Event> events, string logIdentifier, StepGraph stepGraph)
+		{
+			Events = events;
+			LogIdentifier = logIdentifier;
+			StepGraph = stepGraph;
+		}
+
+		/// <summary>
 		/// Creates an ExpressedChart by iteratively searching through the List of given Events
 		/// that correspond to an SM Chart. Multiple ExpressedCharts may represent the same SM
 		/// Chart. This method tries to generate the ExpressedChart that best matches the intent
@@ -343,49 +428,135 @@ namespace ChartGenerator
 		/// alternating expression as that has a lower cost and is more natural. See GetCost for
 		/// more details on how cost is determined.
 		/// </summary>
-		/// <param name="events">List of Events from an SM Chart.</param>
+		/// <param name="events">List of Events from the Chart to express.</param>
 		/// <param name="stepGraph">StepGraph to use for searching the Events.</param>
+		/// <param name="config">ExpressedChartConfig to use for generating the ExpressedChart.</param>
+		/// <param name="difficultyRating">
+		/// Difficulty rating of the Chart for the events. Used in some cases when the
+		/// ExpressedChartConfig specifies to use difficulty for bracket parsing.
+		/// </param>
 		/// <param name="logIdentifier">
 		/// Identifier to use when logging messages about this ExpressedChart.
 		/// </param>
 		/// <returns>
-		/// ExpressedChart and the root ChartSearchNode of the ExpressedChart.
-		/// If no ExpressedChart could be generated (null, null) will be returned.
+		/// The generated ExpressedChart or null if no ExpressedChart could be found.
 		/// </returns>
-		public static (ExpressedChart, ChartSearchNode) CreateFromSMEvents(
+		public static ExpressedChart CreateFromSMEvents(
 			List<Event> events,
 			StepGraph stepGraph,
+			ExpressedChartConfig config,
+			double difficultyRating,
 			string logIdentifier = null)
 		{
-			// Log if this chart has fakes or lifts.
-			var hasLifts = false;
-			var hasFakes = false;
-			foreach (var smEvent in events)
+			// Set up a new ExpressedChart.
+			ExpressedChart expressedChart = new ExpressedChart(events, logIdentifier, stepGraph);
+			
+			// Log Lift and Fake information.
+			expressedChart.LogLiftAndFakeInformation();
+
+			// Determine the BracketParsingMethod to use.
+			BracketParsingMethod bracketParsingMethod = BracketParsingMethod.Balanced;
+			var needToSearch = true;
+			switch (config.BracketParsingDetermination)
 			{
-				if (smEvent is LaneTapNote ltn)
+				// When configured to use the default method, simply use that.
+				case BracketParsingDetermination.UseDefaultMethod:
 				{
-					if (ltn.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Lift].ToString())
-						hasLifts = true;
-					else if (ltn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Fake].ToString())
-						hasFakes = true;
+					bracketParsingMethod = config.DefaultBracketParsingMethod;
+					break;
+				}
+
+				// When configured to determine the method dynamically, perform a series of checks.
+				case BracketParsingDetermination.ChooseMethodDynamically:
+				{
+					// If this Chart's DifficultyRating is under the minimum level for brackets, then
+					// use BracketParsingMethod NoBrackets.
+					if (difficultyRating < config.MinLevelForBrackets)
+					{
+						bracketParsingMethod = BracketParsingMethod.NoBrackets;
+					}
+					// If configured to use Aggressive parsing when the Chart has more simultaneous
+					// arrows than one foot can cover, scan the chart for simultaneous notes and use
+					// BracketParsingMethod Aggressive if appropriate.
+					else if (config.UseAggressiveBracketsWhenMoreSimultaneousNotesThanOneFootCanCover
+					         && expressedChart.HasMoreSimultaneousNotesThanOneFootCanCover())
+					{
+						bracketParsingMethod = BracketParsingMethod.Aggressive;
+					}
+					// Otherwise, check for balanced brackets per minute.
+					else if (config.BalancedBracketsPerMinuteForAggressiveBrackets > 0.0)
+					{
+						needToSearch = false;
+
+						// Parse the chart with balanced bracket parsing so we can assess
+						// what kind of chart it is and potentially adjust the bracket parsing
+						// method.
+						expressedChart.BracketParsingMethod = BracketParsingMethod.Balanced;
+						if (!expressedChart.Search())
+						{
+							return null;
+						}
+
+						// Determine brackets per minute
+						var brackets = expressedChart.GetBracketCount();
+						if (brackets > 0)
+						{
+							var startTime = expressedChart.Events.First().TimeMicros;
+							var endTime = expressedChart.Events.Last().TimeMicros;
+							var bracketsPerMinute = brackets / (((endTime - startTime) / 1000000.0) / 60.0);
+							if (bracketsPerMinute >= config.BalancedBracketsPerMinuteForAggressiveBrackets)
+							{
+								bracketParsingMethod = BracketParsingMethod.Aggressive;
+								needToSearch = true;
+							}
+							else if (bracketsPerMinute <= config.BalancedBracketsPerMinuteForNoBrackets)
+							{
+								bracketParsingMethod = BracketParsingMethod.NoBrackets;
+								needToSearch = true;
+							}
+						}
+					}
+					break;
 				}
 			}
-			if (hasLifts)
-				LogWarn("Chart has lifts. These will be treated as taps for ExpressedChart generation.", logIdentifier);
-			if (hasFakes)
-				LogInfo("Chart has fakes. These will be treated as taps for ExpressedChart generation.", logIdentifier);
 
-			var root = new ChartSearchNode(
-				stepGraph.Root,
+			// If we still need to search, search now.
+			if (needToSearch)
+			{
+				expressedChart.BracketParsingMethod = bracketParsingMethod;
+				if (!expressedChart.Search())
+				{
+					return null;
+				}
+			}
+
+			// Now that the search is complete, add all the events to a new ExpressedChart.
+			expressedChart.AddSteps();
+			expressedChart.AddMines();
+
+			// We no longer need to maintain references to the Chart data.
+			expressedChart.Events = null;
+			expressedChart.MineNotes = null;
+			
+			return expressedChart;
+		}
+
+		/// <summary>
+		/// Searches through this ExpressedChart's Events for the best representation.
+		/// If successful, Root will represent the root ChartSearchNode of the ExpressedChart.
+		/// </summary>
+		/// <returns>True if the search was successful and false otherwise.</returns>
+		private bool Search()
+		{
+			Root = new ChartSearchNode(
+				StepGraph.Root,
 				new MetricPosition(),
 				0L,
-				0,
-				0,
 				null,
 				null,
-				new InstanceStepType[stepGraph.NumArrows]);
+				new InstanceStepType[StepGraph.NumArrows]);
 
-			var numArrows = stepGraph.NumArrows;
+			var numArrows = StepGraph.NumArrows;
 			var currentState = new SearchState[numArrows];
 			var lastMines = new MetricPosition[numArrows];
 			var lastReleases = new MetricPosition[numArrows];
@@ -396,10 +567,10 @@ namespace ChartGenerator
 				lastReleases[a] = new MetricPosition();
 			}
 
-			var smMines = new List<LaneNote>();
+			MineNotes = new List<LaneNote>();
 			var eventIndex = 0;
-			var numEvents = events.Count;
-			var currentSearchNodes = new HashSet<ChartSearchNode> { root };
+			var numEvents = Events.Count;
+			var currentSearchNodes = new HashSet<ChartSearchNode> { Root };
 
 			// Performance optimization.
 			// Keep one array for generating SearchStates to use for GetLinkInstanceIfStateMatches.
@@ -411,7 +582,10 @@ namespace ChartGenerator
 			{
 				// Failed to find a path through the chart
 				if (currentSearchNodes.Count == 0)
-					return (null, null);
+				{
+					Root = null;
+					return false;
+				}
 
 				// Reached the end.
 				if (eventIndex >= numEvents)
@@ -435,37 +609,39 @@ namespace ChartGenerator
 				}
 
 				// Parse all the events at the next position.
-				ParseNextEvents(events, ref eventIndex, out var releases, out var mines, out var steps, out long timeMicros);
+				ParseNextEvents(ref eventIndex, out var releases, out var mines, out var steps, out long timeMicros);
 
 				// Process Releases.
 				if (releases.Count > 0)
 				{
 					// Update state.
-					foreach (var releaseEvent in releases)
+					for (var r = 0; r < releases.Count; r++)
 					{
+						var releaseEvent = releases[r];
 						currentState[releaseEvent.Lane] = SearchState.Empty;
 						lastReleases[releaseEvent.Lane] = releaseEvent.Position;
 					}
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						releases[0].Position, timeMicros, stepGraph, lastMines, lastReleases, logIdentifier);
+						releases[0].Position, timeMicros, lastMines, lastReleases);
 				}
 
 				// Get mines and record them for processing after the search is complete.
 				if (mines.Count > 0)
 				{
-					smMines.AddRange(mines);
-					foreach (var mineNote in mines)
-						lastMines[mineNote.Lane] = mineNote.Position;
+					MineNotes.AddRange(mines);
+					for (var m = 0; m < mines.Count; m++)
+						lastMines[mines[m].Lane] = mines[m].Position;
 				}
 
 				// Get taps, holds, and rolls.
 				if (steps.Count > 0)
 				{
 					// Update state.
-					foreach (var stepEvent in steps)
+					for (var s = 0; s < steps.Count; s++)
 					{
+						var stepEvent = steps[s];
 						if (stepEvent is LaneTapNote)
 						{
 							if (stepEvent.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Fake].ToString())
@@ -486,15 +662,15 @@ namespace ChartGenerator
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						steps[0].Position, timeMicros, stepGraph, lastMines, lastReleases, logIdentifier);
+						steps[0].Position, timeMicros, lastMines, lastReleases);
 				}
 
 				// Update the current state now that the events at this position have been processed.
 				for (var a = 0; a < numArrows; a++)
 				{
 					if (currentState[a] == SearchState.Tap
-					    || currentState[a] == SearchState.Fake
-					    || currentState[a] == SearchState.Lift)
+						|| currentState[a] == SearchState.Fake
+						|| currentState[a] == SearchState.Lift)
 					{
 						currentState[a] = SearchState.Empty;
 						lastReleases[a] = steps[0].Position;
@@ -510,11 +686,103 @@ namespace ChartGenerator
 				}
 			}
 
-			// Now that the search is complete, add all the events to a new ExpressedChart.
-			var expressedChart = new ExpressedChart();
-			AddStepsToExpressedChart(expressedChart, root);
-			AddMinesToExpressedChart(expressedChart, root, smMines, numArrows);
-			return (expressedChart, root);
+			return true;
+		}
+
+		/// <summary>
+		/// Logs information about if the Events for this ExpressedChart use Fakes or Lifts.
+		/// </summary>
+		private void LogLiftAndFakeInformation()
+		{
+			var hasLifts = false;
+			var hasFakes = false;
+			for (var i = 0; i < Events.Count; i++)
+			{
+				var smEvent = Events[i];
+				if (smEvent is LaneTapNote ltn)
+				{
+					if (ltn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Lift].ToString())
+						hasLifts = true;
+					else if (ltn.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Fake].ToString())
+						hasFakes = true;
+				}
+			}
+			if (hasLifts)
+				LogWarn("Chart has lifts. These will be treated as taps for ExpressedChart generation.", LogIdentifier);
+			if (hasFakes)
+				LogInfo("Chart has fakes. These will be treated as taps for ExpressedChart generation.", LogIdentifier);
+		}
+
+		/// <summary>
+		/// Determines whether the Events for this ExpressedChart include any portions
+		/// where there are more arrows being stepped on than one foot could cover.
+		/// In other words, are there completely unambiguous brackets.
+		/// O(n) time complexity.
+		/// </summary>
+		/// <returns>
+		/// True if the Events for this ExpressedChart include portions with more
+		/// simultaneous notes than one foot could cover and false otherwise.
+		/// </returns>
+		private bool HasMoreSimultaneousNotesThanOneFootCanCover()
+		{
+			var heldLanes = new bool[StepGraph.NumArrows];
+			for (var i = 0; i < Events.Count;)
+			{
+				var numTaps = 0;
+				// Process each note at the same position.
+				do
+				{
+					var smEvent = Events[i];
+					if (smEvent is LaneHoldStartNote lhsn)
+					{
+						heldLanes[lhsn.Lane] = true;
+					}
+					else if (smEvent is LaneHoldEndNote lhen)
+					{
+						heldLanes[lhen.Lane] = false;
+					}
+					if (smEvent is LaneTapNote)
+					{
+						numTaps++;
+					}
+					i++;
+				}
+				// Continue looping if the next event is at the same position.
+				while (i < Events.Count && Events[i].Position == Events[i - 1].Position);
+
+				var numHeld = 0;
+				for (var l = 0; l < StepGraph.NumArrows; l++)
+				{
+					if (heldLanes[l])
+						numHeld++;
+				}
+
+				if (numTaps + numHeld > NumFootPortions)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Gets the number of brackets in the ExpressedChart.
+		/// Includes both single arrow and multiple arrow steps.
+		/// O(n) time complexity.
+		/// </summary>
+		/// <returns>Number of brackets in the ExpressedChart.</returns>
+		private int GetBracketCount()
+		{
+			var bracketCount = 0;
+			var node = Root;
+			while (node != null)
+			{
+				if (node.PreviousLink?.GraphLink?.InvolvesBracket() ?? false)
+					bracketCount++;
+				node = node.GetNextNode();
+			}
+			return bracketCount;
 		}
 
 		/// <summary>
@@ -522,14 +790,12 @@ namespace ChartGenerator
 		/// eventIndex and occur at the same position into releases, steps, and mines. Updates
 		/// eventIndex based on which events were parsed.
 		/// </summary>
-		/// <param name="events">List of Events to parse.</param>
 		/// <param name="eventIndex">Current index into Events. Will be updated.</param>
 		/// <param name="releases">List of LaneHoldEndNotes to hold all releases.</param>
 		/// <param name="mines">List of LaneNotes to hold all mines.</param>
 		/// <param name="steps">List of LaneNotes to hold all taps, holds, and rolls.</param>
 		/// <param name="timeMicros">Time in microseconds of the events.</param>
-		private static void ParseNextEvents(
-			List<Event> events,
+		private void ParseNextEvents(
 			ref int eventIndex,
 			out List<LaneHoldEndNote> releases,
 			out List<LaneNote> mines,
@@ -541,21 +807,21 @@ namespace ChartGenerator
 			steps = new List<LaneNote>();
 			timeMicros = 0L;
 
-			if (eventIndex >= events.Count)
+			if (eventIndex >= Events.Count)
 				return;
 
-			var pos = events[eventIndex].Position;
-			timeMicros = events[eventIndex].TimeMicros;
-			while (eventIndex < events.Count && events[eventIndex].Position == pos)
+			var pos = Events[eventIndex].Position;
+			timeMicros = Events[eventIndex].TimeMicros;
+			while (eventIndex < Events.Count && Events[eventIndex].Position == pos)
 			{
-				if (events[eventIndex] is LaneHoldEndNote lhen)
+				if (Events[eventIndex] is LaneHoldEndNote lhen)
 					releases.Add(lhen);
-				else if (events[eventIndex] is LaneNote ln
+				else if (Events[eventIndex] is LaneNote ln
 				         && ln.SourceType == SMCommon.NoteChars[(int)SMCommon.NoteType.Mine].ToString())
 					mines.Add(ln);
-				else if (events[eventIndex] is LaneHoldStartNote lhsn)
+				else if (Events[eventIndex] is LaneHoldStartNote lhsn)
 					steps.Add(lhsn);
-				else if (events[eventIndex] is LaneTapNote ltn)
+				else if (Events[eventIndex] is LaneTapNote ltn)
 					steps.Add(ltn);
 				eventIndex++;
 			}
@@ -570,28 +836,22 @@ namespace ChartGenerator
 		/// <param name="generatedStateBuffer">Buffer to hold State when comparing in GetLinkInstanceIfStateMatches.</param>
 		/// <param name="position">Position of the state.</param>
 		/// <param name="timeMicros">Time in microseconds of the state.</param>
-		/// <param name="stepGraph">StepGraph. Needed for cost determination.</param>
 		/// <param name="lastMines">Position of last mines per arrow. Needed for cost determination.</param>
 		/// <param name="lastReleases">Position of last releases per arrow. Needed for cost determination.</param>
-		/// <param name="logIdentifier">
-		/// Identifier to use when logging messages about this ExpressedChart.
-		/// </param>
 		/// <returns>HashSet of all lowest cost ChartSearchNodes satisfying this state.</returns>
-		private static HashSet<ChartSearchNode> AddChildrenAndPrune(
+		private HashSet<ChartSearchNode> AddChildrenAndPrune(
 			HashSet<ChartSearchNode> currentSearchNodes,
 			SearchState[] currentState,
 			SearchState[] generatedStateBuffer,
 			MetricPosition position,
 			long timeMicros,
-			StepGraph stepGraph,
 			MetricPosition[] lastMines,
-			MetricPosition[] lastReleases,
-			string logIdentifier)
+			MetricPosition[] lastReleases)
 		{
 			var childSearchNodes = new HashSet<ChartSearchNode>();
 
-			var instanceTypes = new InstanceStepType[stepGraph.NumArrows];
-			for (var a = 0; a < stepGraph.NumArrows; a++)
+			var instanceTypes = new InstanceStepType[StepGraph.NumArrows];
+			for (var a = 0; a < StepGraph.NumArrows; a++)
 			{
 				if (currentState[a] == SearchState.Roll || currentState[a] == SearchState.Rolling)
 					instanceTypes[a] = InstanceStepType.Roll;
@@ -613,27 +873,28 @@ namespace ChartGenerator
 					for (var childNodeIndex = 0; childNodeIndex < l.Value.Count; childNodeIndex++)
 					{
 						var childNode = l.Value[childNodeIndex];
+						
 						// Most children will not match the new state. Ignore them.
 						var linkInstance = GetLinkInstanceIfStateMatches(currentState, generatedStateBuffer, childNode, l.Key);
 						if (linkInstance == null)
 							continue;
 
-						// This GraphLink and child GraphNode result in a matching state.
-						// Determine the cost to go from this GraphLink to this GraphNode.
-						var cost = GetCost(l.Key, searchNode, childNode, currentState, position, lastMines, lastReleases,
-							stepGraph.ArrowData, logIdentifier);
-
-						// Record the result as a new ChartSearchNode to be checked for pruning once
-						// all children have been determined.
 						var childSearchNode = new ChartSearchNode(
 							childNode,
 							position,
 							timeMicros,
-							cost,
-							searchNode.TotalCost + cost,
 							searchNode,
 							linkInstance,
 							instanceTypes);
+
+						// This GraphLink and child GraphNode result in a matching state.
+						// Determine the cost to go from this GraphLink to this GraphNode.
+						var cost = GetCost(childSearchNode, currentState, lastMines, lastReleases, StepGraph.ArrowData);
+						childSearchNode.SetCost(cost);
+
+						// Record the result as a new ChartSearchNode to be checked for pruning once
+						// all children have been determined.
+						
 						AddChildSearchNode(searchNode, l.Key, childSearchNode, childSearchNodes);
 
 						deadEnd = false;
@@ -649,7 +910,7 @@ namespace ChartGenerator
 
 			if (childSearchNodes.Count == 0)
 			{
-				LogError($"Failed to find node at {position}.", logIdentifier);
+				LogError($"Failed to find node at {position}.", LogIdentifier);
 			}
 
 			// Prune the children and return the results.
@@ -788,7 +1049,11 @@ namespace ChartGenerator
 		/// <param name="link">GraphLink linking to the child ChartSearchNode.</param>
 		/// <param name="child">Child ChartSearchNode.</param>
 		/// <param name="childSearchNodes">HashSet of ChartSearchNode to update with the new child.</param>
-		private static void AddChildSearchNode(ChartSearchNode parent, GraphLink link, ChartSearchNode child, HashSet<ChartSearchNode> childSearchNodes)
+		private static void AddChildSearchNode(
+			ChartSearchNode parent,
+			GraphLink link,
+			ChartSearchNode child,
+			HashSet<ChartSearchNode> childSearchNodes)
 		{
 			if (!parent.NextNodes.TryGetValue(link, out var childNodes))
 			{
@@ -859,30 +1124,31 @@ namespace ChartGenerator
 
 		#region Cost Evaluation
 		/// <summary>
-		/// Determine the cost of a step represented by the given GraphLink to the
-		/// given GraphNode from the given parent ChartSearchNode.
+		/// Determine the cost of arriving to the ChartSearchNode from its parent.
 		/// The cost represents how unlikely it is that this step is the best step
 		/// to take to perform the chart being searched. Higher values are worse.
 		/// For example, a double-step has high cost.
 		/// </summary>
-		/// <param name="link"></param>
-		/// <param name="parentSearchNode"></param>
+		/// <param name="searchNode">ChartSearchNode to get the cost of.</param>
 		/// <param name="state"></param>
-		/// <param name="lastMines"></param>
-		/// <param name="lastReleases"></param>
+		/// <param name="lastMines">
+		/// MetricPosition of the last Mines encountered up to this point, per lane.
+		/// </param>
+		/// <param name="lastReleases">
+		/// MetricPosition of the last time there was a release on each lane.
+		/// </param>
 		/// <param name="arrowData"></param>
-		/// <returns></returns>
-		private static int GetCost(
-			GraphLink link,
-			ChartSearchNode parentSearchNode,
-			GraphNode childNode,
+		/// <returns>Cost to the given ChartSearchNode from its parent.</returns>
+		private int GetCost(
+			ChartSearchNode searchNode,
 			SearchState[] state,
-			MetricPosition position,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
-			ArrowData[] arrowData,
-			string logIdentifier)
+			ArrowData[] arrowData)
 		{
+			var position = searchNode.Position;
+			var link = searchNode.PreviousLink.GraphLink;
+
 			// Releases have a 0 cost.
 			for (var f = 0; f < NumFeet; f++)
 				for (var p = 0; p < NumFootPortions; p++)
@@ -905,8 +1171,8 @@ namespace ChartGenerator
 				}
 			}
 
-			GraphLink previousStepLink = parentSearchNode.GetPreviousStepLink()?.GraphLink ?? null;
-			GraphLink previousPreviousStepLink = parentSearchNode.GetPreviousStepLink(2)?.GraphLink ?? null;
+			GraphLink previousStepLink = searchNode.PreviousNode.GetPreviousStepLink()?.GraphLink ?? null;
+			GraphLink previousPreviousStepLink = searchNode.PreviousNode.GetPreviousStepLink(2)?.GraphLink ?? null;
 
 			switch (numSteps)
 			{
@@ -915,7 +1181,7 @@ namespace ChartGenerator
 						var thisArrow = lastArrowStep;
 						GetSingleStepStepAndFoot(link, out var step, out var thisFoot);
 						var otherFoot = OtherFoot(thisFoot);
-						var previousState = parentSearchNode.GraphNode.State;
+						var previousState = searchNode.PreviousNode.GraphNode.State;
 						GetOneArrowStepInfo(thisFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
 							out var thisAnyHeld,
 							out var thisAllHeld,
@@ -926,7 +1192,7 @@ namespace ChartGenerator
 							out var thisMinePositionFollowingPreviousStep,
 							out var thisReleasePositionOfPreviousStep,
 							out var thisFootPreviousArrows,
-							out var thisFootInBacketPosture);
+							out var thisFootInBracketPosture);
 						GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
 							out var otherAnyHeld,
 							out var otherAllHeld,
@@ -965,6 +1231,15 @@ namespace ChartGenerator
 						thisAnyHeld |= thisReleasePositionOfPreviousStep == position;
 						otherAnyHeld |= otherReleasePositionOfPreviousStep == position;
 
+						if (BracketParsingMethod == BracketParsingMethod.NoBrackets
+							&& (step == StepType.BracketOneArrowHeelSame
+							|| step == StepType.BracketOneArrowToeSame
+							|| step == StepType.BracketOneArrowHeelNew
+							|| step == StepType.BracketOneArrowToeNew))
+						{
+							return NoBrackets_CostBracket;
+						}
+
 						switch (step)
 						{
 							case StepType.SameArrow:
@@ -982,8 +1257,6 @@ namespace ChartGenerator
 									// TODO: give preference to alternating in long patters
 									// For example,		LR, U, LR, D, LR, U, LR D
 									// Should not be all L or all R on the single steps
-
-									// TODO: very slight preference to right foot on downbeat if all else is equal?
 
 									if (otherAnyHeld)
 									{
@@ -1133,7 +1406,7 @@ namespace ChartGenerator
 							case StepType.CrossoverFront:
 							case StepType.CrossoverBehind:
 								{
-									if (previousStepLink?.IsJump() ?? false)
+									if ((previousStepLink?.IsJump() ?? false) && !otherAnyHeld)
 										return CostNewArrow_Crossover_AfterJump;
 
 									if (otherAnyHeld)
@@ -1242,7 +1515,7 @@ namespace ChartGenerator
 							}
 							default:
 							{
-								LogError($"[Cost Determination] Unexpected StepType {step:G} for {numSteps} step at {position}.", logIdentifier);
+								LogError($"[Cost Determination] Unexpected StepType {step:G} for {numSteps} step at {position}.", LogIdentifier);
 								return CostUnknown;
 							}
 						}
@@ -1255,12 +1528,11 @@ namespace ChartGenerator
 						var holdingAll = new bool[NumFeet];
 						var newArrowIfThisFootSteps = new bool[NumFeet];
 						var bracketableDistanceIfThisFootSteps = new bool[NumFeet];
+						var involvesSwapIfBracketed = new bool[NumFeet];
 						for (var f = 0; f < NumFeet; f++)
 						{
 							GetTwoArrowStepInfo(
-								position,
-								parentSearchNode,
-								childNode,
+								searchNode,
 								state,
 								f,
 								arrowData,
@@ -1269,7 +1541,8 @@ namespace ChartGenerator
 								out holdingAny[f],
 								out holdingAll[f],
 								out newArrowIfThisFootSteps[f],
-								out bracketableDistanceIfThisFootSteps[f]);
+								out bracketableDistanceIfThisFootSteps[f],
+								out involvesSwapIfBracketed[f]);
 						}
 
 						// If previous was step with other foot and that other foot would need to move to reach one
@@ -1294,6 +1567,11 @@ namespace ChartGenerator
 						// Evaluate Bracket
 						if (GetBracketStepAndFoot(link, out var step, out var foot))
 						{
+							if (BracketParsingMethod == BracketParsingMethod.NoBrackets)
+							{
+								return NoBrackets_CostBracket;
+							}
+
 							var otherFoot = OtherFoot(foot);
 
 							// If the other foot is holding all possible arrows, there is no choice.
@@ -1331,6 +1609,17 @@ namespace ChartGenerator
 						// Evaluate Jump
 						if (link.IsJump())
 						{
+							if (BracketParsingMethod == BracketParsingMethod.Aggressive)
+							{
+								for (var f = 0; f < NumFeet; f++)
+								{
+									if (preferBracketDueToAmountOfMovement[f] && !involvesSwapIfBracketed[f])
+									{
+										return AggressiveBrackets_CostJump_BracketPreferredDueToMovement;
+									}
+								}
+							}
+
 							var onlyFootHoldingOne = InvalidFoot;
 							for (var f = 0; f < NumFeet; f++)
 							{
@@ -1343,6 +1632,14 @@ namespace ChartGenerator
 										onlyFootHoldingOne = InvalidFoot;
 										break;
 									}
+								}
+							}
+
+							if (BracketParsingMethod == BracketParsingMethod.Aggressive)
+							{
+								if (onlyFootHoldingOne != InvalidFoot && couldBeBracketed[OtherFoot(onlyFootHoldingOne)])
+								{
+									return AggressiveBrackets_CostJump_OtherFootHoldingOne_ThisFootCouldBracket;
 								}
 							}
 
@@ -1360,8 +1657,8 @@ namespace ChartGenerator
 							if (atLeastOneFootPrefersBracket)
 								return CostTwoArrows_Jump_OneFootPrefersBracketToDueMovement;
 
-							var inverted = childNode.Orientation == BodyOrientation.InvertedLeftOverRight
-							               || childNode.Orientation == BodyOrientation.InvertedRightOverLeft;
+							var inverted = searchNode.GraphNode.Orientation == BodyOrientation.InvertedLeftOverRight
+							               || searchNode.GraphNode.Orientation == BodyOrientation.InvertedRightOverLeft;
 							if (inverted)
 								return CostTwoArrows_Jump_Inverted;
 
@@ -1376,9 +1673,9 @@ namespace ChartGenerator
 									if (!link.Links[f, p].Valid)
 										continue;
 									if (f == L)
-										lArrow = childNode.State[f, p].Arrow;
+										lArrow = searchNode.GraphNode.State[f, p].Arrow;
 									if (f == R)
-										rArrow = childNode.State[f, p].Arrow;
+										rArrow = searchNode.GraphNode.State[f, p].Arrow;
 									if (link.Links[f, p].Step == StepType.NewArrow)
 										bothSame = false;
 									if (link.Links[f, p].Step == StepType.SameArrow)
@@ -1416,23 +1713,17 @@ namespace ChartGenerator
 							return CostTwoArrows_Jump_OneNew;
 						}
 
-						LogError($"[Cost Determination] Unexpected behavior for {numSteps} steps at {position}.", logIdentifier);
+						LogError($"[Cost Determination] Unexpected behavior for {numSteps} steps at {position}.", LogIdentifier);
 						return CostUnknown;
 					}
 
 				case 3:
-					// Bracket jump. The various ways to do this don't make an appreciable difference for cost.
-					// All three arrow steps must be a jump, must be 2 arrows with one foot and 1 arrow with the other.
-					// TODO: Same as quad, there is a choice
 					return CostThreeArrows;
-
 				case 4:
-					// Quads don't have any choice.
-					// TODO: That's not true. There are two quads, LLRR and LRLR
 					return CostFourArrows;
 				default:
 				{
-					LogError($"[Cost Determination] Unexpected number of steps ({numSteps}) at {position}.", logIdentifier);
+					LogError($"[Cost Determination] Unexpected number of steps ({numSteps}) at {position}.", LogIdentifier);
 					return CostUnknown;
 				}
 			}
@@ -1572,9 +1863,7 @@ namespace ChartGenerator
 		}
 
 		private static void GetTwoArrowStepInfo(
-			MetricPosition position,
-			ChartSearchNode parentSearchNode,
-			GraphNode childNode,
+			ChartSearchNode searchNode,
 			SearchState[] state,
 			int foot,
 			ArrowData[] arrowData,
@@ -1583,13 +1872,17 @@ namespace ChartGenerator
 			out bool holdingAny,
 			out bool holdingAll,
 			out bool newArrowIfThisFootSteps,
-			out bool bracketableDistanceIfThisFootSteps)
+			out bool bracketableDistanceIfThisFootSteps,
+			out bool involvesSwapIfBracketed)
 		{
+			var parentSearchNode = searchNode.PreviousNode;
+
 			couldBeBracketed = false;
 			holdingAny = false;
 			holdingAll = false;
 			newArrowIfThisFootSteps = false;
 			bracketableDistanceIfThisFootSteps = false;
+			involvesSwapIfBracketed = false;
 
 			// Determine if any are held by this foot
 			if (parentSearchNode != null)
@@ -1618,7 +1911,8 @@ namespace ChartGenerator
 						var held = parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Held;
 						if (!held)
 						{
-							held = position == releasePositionOfPreviousStep;
+							held = searchNode.Position == releasePositionOfPreviousStep
+							       && parentSearchNode.LastFootUsedToStepOnArrow[previousArrow] == foot;
 						}
 
 						if (held)
@@ -1640,7 +1934,7 @@ namespace ChartGenerator
 						var newArrowBeingSteppedOnByThisFoot = InvalidArrowIndex;
 						for (var newP = 0; newP < NumFootPortions; newP++)
 						{
-							newArrowBeingSteppedOnByThisFoot = childNode.State[foot, newP].Arrow;
+							newArrowBeingSteppedOnByThisFoot = searchNode.GraphNode.State[foot, newP].Arrow;
 							if (newArrowBeingSteppedOnByThisFoot != InvalidArrowIndex)
 								break;
 						}
@@ -1664,6 +1958,7 @@ namespace ChartGenerator
 				couldBeBracketed = true;
 				var numSteps = 0;
 				var steppedArrow = InvalidArrowIndex;
+				var otherFoot = OtherFoot(foot);
 				for (var a = 0; a < state.Length; a++)
 				{
 					if (state[a] == SearchState.Tap
@@ -1682,6 +1977,18 @@ namespace ChartGenerator
 								    && arrowData[steppedArrow].BracketablePairingsOtherHeel[foot][a]);
 							if (!bracketable)
 								couldBeBracketed = false;
+						}
+
+						if (!involvesSwapIfBracketed && parentSearchNode != null)
+						{
+							for (var p = 0; p < NumFootPortions; p++)
+							{
+								if (parentSearchNode.GraphNode.State[otherFoot, p].Arrow == a)
+								{
+									involvesSwapIfBracketed = true;
+									break;
+								}
+							}
 						}
 
 						steppedArrow = a;
@@ -1758,12 +2065,10 @@ namespace ChartGenerator
 		/// This is run after the SM Chart has been searched and a single path of
 		/// ChartSearchNodes has been generated.
 		/// </summary>
-		/// <param name="expressedChart">ExpressedChart to add step events to.</param>
-		/// <param name="rootSearchNode">Root ChartSearchNode.</param>
-		private static void AddStepsToExpressedChart(ExpressedChart expressedChart, ChartSearchNode rootSearchNode)
+		private void AddSteps()
 		{
 			// Current node for iterating through the chart.
-			var searchNode = rootSearchNode;
+			var searchNode = Root;
 
 			// The first node is the resting position and not an event in the chart.
 			searchNode = searchNode.GetNextNode();
@@ -1780,7 +2085,7 @@ namespace ChartGenerator
 					searchNode = null;
 
 				// Record the StepEvent.
-				expressedChart.StepEvents.Add(stepEvent);
+				StepEvents.Add(stepEvent);
 			}
 		}
 
@@ -1789,30 +2094,23 @@ namespace ChartGenerator
 		/// This is run after the SM Chart has been searched and a single path of
 		/// ChartSearchNodes has been generated.
 		/// </summary>
-		/// <param name="expressedChart">ExpressedChart to add mines to.</param>
-		/// <param name="rootSearchNode">Root ChartSearchNode.</param>
-		/// <param name="smMines">List of LaneNotes representing mines from the SM Chart.</param>
-		/// <param name="numArrows">Number of arrows in the SM Chart.</param>
-		private static void AddMinesToExpressedChart(
-			ExpressedChart expressedChart,
-			ChartSearchNode rootSearchNode,
-			List<LaneNote> smMines,
-			int numArrows)
+		private void AddMines()
 		{
 			// Create sorted lists of releases and steps.
 			var stepEvents = new List<ChartSearchNode>();
-			var chartSearchNode = rootSearchNode;
+			var chartSearchNode = Root;
 			while (chartSearchNode != null)
 			{
 				stepEvents.Add(chartSearchNode);
 				chartSearchNode = chartSearchNode.GetNextNode();
 			}
-			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents, numArrows);
+			var (releases, steps) = MineUtils.GetReleasesAndSteps(stepEvents, StepGraph.NumArrows);
 
 			var stepIndex = 0;
 			var releaseIndex = InvalidArrowIndex;
-			foreach (var smMineEvent in smMines)
+			for(var i = 0; i < MineNotes.Count; i++)
 			{
+				var smMineEvent = MineNotes[i];
 				// Advance the step and release indices to follow and precede the event respectively.
 				while (stepIndex < steps.Count && steps[stepIndex].Position <= smMineEvent.Position)
 					stepIndex++;
@@ -1821,11 +2119,11 @@ namespace ChartGenerator
 
 				// Create and add a new MineEvent.
 				var expressedMineEvent = MineUtils.CreateExpressedMineEvent(
-					numArrows, releases, releaseIndex, steps, stepIndex, smMineEvent);
-				expressedChart.MineEvents.Add(expressedMineEvent);
+					StepGraph.NumArrows, releases, releaseIndex, steps, stepIndex, smMineEvent);
+				MineEvents.Add(expressedMineEvent);
 			}
 
-			expressedChart.MineEvents.Sort(new MineEventComparer());
+			MineEvents.Sort(new MineEventComparer());
 		}
 
 		#region Logging

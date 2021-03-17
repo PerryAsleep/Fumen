@@ -86,9 +86,10 @@ namespace ChartGenerator
 		private Song Song;
 		private Chart OriginalChart;
 		private ExpressedChart ExpressedChart;
-		private ExpressedChart.ChartSearchNode OriginalExpressedSearchNode;
+		private string ExpressedChartConfigName;
 		private Chart GeneratedChart;
 		private PerformedChart GeneratedPerformedChart;
+		private string PerformedChartConfigName;
 		private string SongPath;
 		private string SaveFile;
 
@@ -131,8 +132,9 @@ namespace ChartGenerator
 			Song song,
 			Chart originalChart,
 			ExpressedChart expressedChart,
-			ExpressedChart.ChartSearchNode originalExpressedSearchNode,
+			string expressedChartConfigName,
 			PerformedChart generatedPerformedChart,
+			string performedChartConfigName,
 			Chart generatedChart)
 		{
 			SongPath = songPath;
@@ -140,8 +142,9 @@ namespace ChartGenerator
 			Song = song;
 			OriginalChart = originalChart;
 			ExpressedChart = expressedChart;
-			OriginalExpressedSearchNode = originalExpressedSearchNode;
+			ExpressedChartConfigName = expressedChartConfigName;
 			GeneratedPerformedChart = generatedPerformedChart;
+			PerformedChartConfigName = performedChartConfigName;
 			GeneratedChart = generatedChart;
 
 			ExpressedChartX = 0;
@@ -345,7 +348,7 @@ $@"		<div id=""chartHeaders"" style=""z-index:10000000; border:none; margin-bloc
 			<table style=""border-collapse: collapse; background: #dbdbdb; width: {fullWidth}px;"">
 				<tr>
 					<th colspan=""{originalChartCols}"" style=""table-layout: fixed; width: {originalChartWidth}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{originalChartTitle}</th>
-					<th colspan=""{expressedChartCols}"" style=""table-layout: fixed; width: {expressedChartWidth}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">Expression</th>
+					<th colspan=""{expressedChartCols}"" style=""table-layout: fixed; width: {expressedChartWidth}px; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">Expression [{ExpressedChartConfigName}] (BracketParsingMethod: {ExpressedChart.GetBracketParsingMethod():G})</th>
 					<th colspan=""{generatedChartCols}"" style=""table-layout: fixed; width: {generatedChartWidth}x; height: {colH}px; padding: 0px; border: {TableBorderW}px solid black"">{generatedChartTitle}</th>
 				</tr>
 				<tr>
@@ -414,8 +417,8 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 			var lastHoldStarts = new int[chart.NumInputs];
 			var lastHoldWasRoll = new bool[chart.NumInputs];
 
-			var currentExpressedChartSearchNode = OriginalExpressedSearchNode;
-			var currentPerformedChartNode = GeneratedPerformedChart.Root;
+			var currentExpressedChartSearchNode = ExpressedChart.GetRootSearchNode();
+			var currentPerformedChartNode = GeneratedPerformedChart.GetRootPerformanceNode();
 			var currentExpressedMineIndex = 0;
 
 			foreach (var chartEvent in chart.Layers[0].Events)

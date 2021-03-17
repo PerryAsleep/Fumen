@@ -23,7 +23,7 @@ namespace ChartGenerator
 		/// <summary>
 		/// Version number. Recorded into a Chart's Description field using FumenGeneratedFormattedVersion.
 		/// </summary>
-		private const double Version = 0.3;
+		private const double Version = 0.4;
 		/// <summary>
 		/// Format for recording the Version into a Chart's Description field.
 		/// </summary>
@@ -131,13 +131,22 @@ namespace ChartGenerator
 
 			// Validate Config, even if creating the logger failed. This will still log errors to the console.
 			if (!config.Validate(SupportedInputTypes, SupportedOutputTypes))
+			{
+				Logger.Shutdown();
 				return;
+			}
 			if (!loggerSuccess)
+			{
+				Logger.Shutdown();
 				return;
+			}
 
 			// Create a directory for outputting visualizations.
 			if (!CreateVisualizationOutputDirectory())
+			{
+				Logger.Shutdown();
 				return;
+			}
 
 			// Create StepGraphs.
 			await CreateStepGraphs();
@@ -224,9 +233,14 @@ namespace ChartGenerator
 				{
 					var logFileName = ExportTime.ToString("yyyy-MM-dd HH-mm-ss") + ".log";
 					var logFilePath = Fumen.Path.Combine(config.LogDirectory, logFileName);
-					Logger.StartUp(config.LogLevel, logFilePath, config.LogFlushIntervalSeconds, config.LogBufferSizeBytes);
+					Logger.StartUp(
+						config.LogLevel,
+						logFilePath,
+						config.LogFlushIntervalSeconds,
+						config.LogBufferSizeBytes,
+						config.LogToConsole);
 				}
-				else
+				else if (config.LogToConsole)
 				{
 					Logger.StartUp(config.LogLevel);
 				}
@@ -495,9 +509,12 @@ namespace ChartGenerator
 					}
 
 					// Create an ExpressedChart.
-					var (expressedChart, rootSearchNode) = ExpressedChart.CreateFromSMEvents(
+					var (ecc, eccName) = Config.Instance.GetExpressedChartConfig(songArgs.FileInfo, chart.DifficultyType);
+					var expressedChart = ExpressedChart.CreateFromSMEvents(
 						chart.Layers[0].Events,
 						InputStepGraph,
+						ecc,
+						chart.DifficultyRating,
 						GetLogIdentifier(songArgs.FileInfo, songArgs.RelativePath, song, chart));
 					if (expressedChart == null)
 					{
@@ -506,8 +523,10 @@ namespace ChartGenerator
 					}
 
 					// Create a PerformedChart.
+					var (pcc, pccName) = Config.Instance.GetPerformedChartConfig(songArgs.FileInfo, chart.DifficultyType);
 					var performedChart = PerformedChart.CreateFromExpressedChart(
 						OutputStepGraph,
+						pcc,
 						OutputStartNodes,
 						expressedChart,
 						GeneratePerformedChartRandomSeed(songArgs.FileInfo.Name),
@@ -592,7 +611,9 @@ namespace ChartGenerator
 					newChart.Layers.Add(new Layer {Events = events});
 					newCharts.Add(newChart);
 
-					LogInfo($"Generated new Chart from {chart.Type} {chart.DifficultyType} Chart.",
+					LogInfo($"Generated new {newChart.Type} {newChart.DifficultyType} Chart from {chart.Type} {chart.DifficultyType} Chart"
+						+ $" using ExpressedChartConfig \"{eccName}\" (BracketParsingMethod {expressedChart.GetBracketParsingMethod():G})"
+						+ $" and PerformedChartConfig \"{pccName}\".",
 						songArgs.FileInfo, songArgs.RelativePath, song, newChart);
 
 					// Write a visualization.
@@ -612,8 +633,9 @@ namespace ChartGenerator
 								song,
 								chart,
 								expressedChart,
-								rootSearchNode,
+								eccName,
 								performedChart,
+								pccName,
 								newChart
 							);
 							renderer.Write();
@@ -627,7 +649,7 @@ namespace ChartGenerator
 				}
 			}
 
-			LogInfo($"Generated {newCharts.Count} new Charts (replaced {chartsIndicesToRemove.Count}).",
+			LogInfo($"Generated {newCharts.Count} new {Config.Instance.OutputChartType} Charts (replaced {chartsIndicesToRemove.Count}).",
 				songArgs.FileInfo, songArgs.RelativePath, song);
 
 			// Remove overwritten charts.
@@ -831,14 +853,11 @@ namespace ChartGenerator
 		#region Logging
 		private static string GetLogIdentifier(FileInfo fi, string relativePath, Song song = null, Chart chart = null)
 		{
-			var sb = new StringBuilder();
-			sb.Append($"[{relativePath}{fi.Name}");
+			if (chart != null && song != null)
+				return $"[{relativePath}{fi.Name} \"{song.Title}\" {chart.Type} {chart.DifficultyType}]";
 			if (song != null)
-				sb.Append($" \"{song.Title}\"");
-			if (chart != null)
-				sb.Append($" {chart.Type} {chart.DifficultyType}");
-			sb.Append("]");
-			return sb.ToString();
+				return $"[{relativePath}{fi.Name} \"{song.Title}\"]";
+			return $"[{relativePath}{fi.Name}]";
 		}
 		
 		private static void LogError(string message)
