@@ -437,7 +437,7 @@ namespace ChartGenerator
 									continue;
 
 								var arrowBeingSteppedFrom = LastArrowsSteppedOnByFoot[f][p];
-								var travelDistance = stepGraph.ArrowData[arrowBeingSteppedTo].TravelDistanceWithArrow[arrowBeingSteppedFrom];
+								var travelDistance = stepGraph.PadData.ArrowData[arrowBeingSteppedTo].TravelDistanceWithArrow[arrowBeingSteppedFrom];
 								
 								// Determine the normalized speed penalty
 								double speedPenalty;
@@ -582,7 +582,7 @@ namespace ChartGenerator
 							continue;
 
 						numPoints++;
-						x += stepGraph.ArrowData[LastArrowsSteppedOnByFoot[f][p]].X;
+						x += stepGraph.PadData.ArrowData[LastArrowsSteppedOnByFoot[f][p]].X;
 					}
 				}
 
@@ -690,15 +690,15 @@ namespace ChartGenerator
 						{
 							var leftFrom = PreviousNode.LastArrowsSteppedOnByFoot[L][p];
 							leftBracketable =
-								stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[L][leftFrom]
-								|| stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[L][leftFrom];
+								stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[L][leftFrom]
+								|| stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[L][leftFrom];
 						}
 						if (!rightBracketable && PreviousNode.LastArrowsSteppedOnByFoot[R][p] != InvalidArrowIndex)
 						{
 							var rightFrom = PreviousNode.LastArrowsSteppedOnByFoot[R][p];
 							rightBracketable =
-								stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[R][rightFrom]
-								|| stepGraph.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[R][rightFrom];
+								stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[R][rightFrom]
+								|| stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[R][rightFrom];
 						}
 					}
 					// If one foot can bracket to this arrow and the other foot cannot, it is not ambiguous.

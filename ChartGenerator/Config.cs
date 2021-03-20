@@ -427,14 +427,8 @@ namespace ChartGenerator
 		/// Will log errors and warnings.
 		/// Returns true if no errors were found.
 		/// </summary>
-		/// <param name="supportedInputTypes">
-		/// ChartTypes that are supported as valid input types.
-		/// </param>
-		/// <param name="supportedOutputTypes">
-		/// ChartTypes that are supported as valid output types.
-		/// </param>
 		/// <returns>True of no errors were found and false otherwise.</returns>
-		public bool Validate(List<string> supportedInputTypes, List<string> supportedOutputTypes)
+		public bool Validate()
 		{
 			var errors = false;
 
@@ -458,11 +452,14 @@ namespace ChartGenerator
 				LogError("No InputChartType specified.");
 				errors = true;
 			}
-			if (!supportedInputTypes.Contains(InputChartType))
+			else
 			{
-				LogError($"Unsupported InputChartType \"{InputChartType}\" found. Expected value in "
-				         + $"[{string.Join(", ", supportedInputTypes)}].");
-				errors = true;
+				var smChartTypeValid = SMCommon.TryGetChartType(InputChartType, out _);
+				if (!smChartTypeValid)
+				{
+					LogError($"InputChartType \"{InputChartType}\" is not a valid stepmania chart type.");
+					errors = true;
+				}
 			}
 
 			if (OutputVisualizations && string.IsNullOrEmpty(VisualizationsDirectory))
@@ -493,13 +490,6 @@ namespace ChartGenerator
 			}
 			if (OutputChartType != null)
 			{
-				if (!supportedOutputTypes.Contains(OutputChartType))
-				{
-					LogError($"Unsupported OutputChartType \"{OutputChartType}\" found. Expected value in "
-					         + $" [{string.Join(", ", supportedOutputTypes)}].");
-					errors = true;
-				}
-
 				var smChartTypeValid = SMCommon.TryGetChartType(OutputChartType, out var smChartType);
 				if (!smChartTypeValid)
 				{
@@ -903,7 +893,7 @@ namespace ChartGenerator
 				return false;
 			try
 			{
-				var _ = Regex.IsMatch("", regex, RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+				var _ = Regex.IsMatch("", regex, RegexOptions.Singleline, TimeSpan.FromSeconds(5));
 			}
 			catch (ArgumentException)
 			{
@@ -923,7 +913,7 @@ namespace ChartGenerator
 			var matches = false;
 			try
 			{
-				matches = Regex.IsMatch(input, regex, RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+				matches = Regex.IsMatch(input, regex, RegexOptions.Singleline, TimeSpan.FromSeconds(5));
 			}
 			catch (Exception e)
 			{

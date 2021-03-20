@@ -20,16 +20,6 @@ namespace ChartGenerator
 
 		// Arrows
 		public const int InvalidArrowIndex = -1;
-		public const int NumSPArrows = 4;
-		public const int NumDPArrows = 8;
-		public const int P1L = 0;
-		public const int P1D = 1;
-		public const int P1U = 2;
-		public const int P1R = 3;
-		public const int P2L = 4;
-		public const int P2D = 5;
-		public const int P2U = 6;
-		public const int P2R = 7;
 
 		// Costs
 		public const int CostUnknown = 1000;

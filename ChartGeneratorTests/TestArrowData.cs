@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ChartGenerator;
 using static ChartGenerator.Constants;
 
@@ -10,6 +11,18 @@ namespace ChartGeneratorTests
 	[TestClass]
 	public class TestArrowData
 	{
+		private static PadData SPPadData;
+		private static PadData DPPadData;
+
+		static TestArrowData()
+		{
+			var spPadDataTask = PadData.LoadPadData("dance-single", "dance-single.json");
+			var dpPadDataTask = PadData.LoadPadData("dance-double", "dance-double.json");
+			Task.WaitAll(spPadDataTask, dpPadDataTask);
+			SPPadData = spPadDataTask.Result;
+			DPPadData = dpPadDataTask.Result;
+		}
+
 		/// <summary>
 		/// ArrowData arrays should be symmetric.
 		/// Asymmetric data likely means a typo in construction.
@@ -17,8 +30,8 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestSymmetry()
 		{
-			TestSymmetry(ArrowData.SPArrowData);
-			TestSymmetry(ArrowData.DPArrowData);
+			TestSymmetry(SPPadData.ArrowData);
+			TestSymmetry(DPPadData.ArrowData);
 		}
 
 		private void TestSymmetry(ArrowData[] arrowData)
@@ -57,8 +70,8 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestValidNextArrows()
 		{
-			TestValidNextArrows(ArrowData.SPArrowData);
-			TestValidNextArrows(ArrowData.DPArrowData);
+			TestValidNextArrows(SPPadData.ArrowData);
+			TestValidNextArrows(DPPadData.ArrowData);
 		}
 
 		private void TestValidNextArrows(ArrowData[] arrowData)

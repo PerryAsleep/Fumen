@@ -25,7 +25,13 @@ namespace ChartGeneratorTests
 		/// </summary>
 		static TestExpressedChart()
 		{
-			SPGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
+			var padDataTask = PadData.LoadPadData("dance-single", "dance-single.json");
+			padDataTask.Wait();
+			var padData = padDataTask.Result;
+			SPGraph = StepGraph.CreateStepGraph(
+				padData,
+				padData.StartingPositions[0][0][L],
+				padData.StartingPositions[0][0][R]);
 		}
 
 		/// <summary>

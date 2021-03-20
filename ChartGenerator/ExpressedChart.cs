@@ -889,7 +889,7 @@ namespace ChartGenerator
 
 						// This GraphLink and child GraphNode result in a matching state.
 						// Determine the cost to go from this GraphLink to this GraphNode.
-						var cost = GetCost(childSearchNode, currentState, lastMines, lastReleases, StepGraph.ArrowData);
+						var cost = GetCost(childSearchNode, currentState, lastMines, lastReleases, StepGraph.PadData);
 						childSearchNode.SetCost(cost);
 
 						// Record the result as a new ChartSearchNode to be checked for pruning once
@@ -1137,14 +1137,14 @@ namespace ChartGenerator
 		/// <param name="lastReleases">
 		/// MetricPosition of the last time there was a release on each lane.
 		/// </param>
-		/// <param name="arrowData"></param>
+		/// <param name="padData">PadData for the Chart.</param>
 		/// <returns>Cost to the given ChartSearchNode from its parent.</returns>
 		private int GetCost(
 			ChartSearchNode searchNode,
 			SearchState[] state,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
-			ArrowData[] arrowData)
+			PadData padData)
 		{
 			var position = searchNode.Position;
 			var link = searchNode.PreviousLink.GraphLink;
@@ -1182,7 +1182,7 @@ namespace ChartGenerator
 						GetSingleStepStepAndFoot(link, out var step, out var thisFoot);
 						var otherFoot = OtherFoot(thisFoot);
 						var previousState = searchNode.PreviousNode.GraphNode.State;
-						GetOneArrowStepInfo(thisFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
+						GetOneArrowStepInfo(thisFoot, thisArrow, lastMines, lastReleases, padData, previousState,
 							out var thisAnyHeld,
 							out var thisAllHeld,
 							out var thisCanStepToNewArrow,
@@ -1193,7 +1193,7 @@ namespace ChartGenerator
 							out var thisReleasePositionOfPreviousStep,
 							out var thisFootPreviousArrows,
 							out var thisFootInBracketPosture);
-						GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, arrowData, previousState,
+						GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, padData, previousState,
 							out var otherAnyHeld,
 							out var otherAllHeld,
 							out var otherCanStepToNewArrow,
@@ -1443,7 +1443,7 @@ namespace ChartGenerator
 									// Determine if there was a mine on another free lane.
 									// Some chart authors use this to signal a footswap.
 									var mineIndicatedOnFreeLaneArrow = false;
-									for (var arrow = 0; arrow < arrowData.Length; arrow++)
+									for (var arrow = 0; arrow < padData.NumArrows; arrow++)
 									{
 										// Skip this arrow if it was hit by the other foot.
 										var thisArrowIsForOtherFoot = false;
@@ -1535,7 +1535,7 @@ namespace ChartGenerator
 								searchNode,
 								state,
 								f,
-								arrowData,
+								padData,
 								lastReleases,
 								out couldBeBracketed[f],
 								out holdingAny[f],
@@ -1686,10 +1686,10 @@ namespace ChartGenerator
 							var crossedOver = false;
 							if (!holdingAny[L] && !holdingAny[R])
 							{
-								if (arrowData[lArrow].OtherFootPairingsOtherFootCrossoverBehind[L][rArrow]
-								    || arrowData[lArrow].OtherFootPairingsOtherFootCrossoverFront[L][rArrow]
-								    || arrowData[rArrow].OtherFootPairingsOtherFootCrossoverBehind[R][lArrow]
-								    || arrowData[rArrow].OtherFootPairingsOtherFootCrossoverFront[R][lArrow])
+								if (padData.ArrowData[lArrow].OtherFootPairingsOtherFootCrossoverBehind[L][rArrow]
+								    || padData.ArrowData[lArrow].OtherFootPairingsOtherFootCrossoverFront[L][rArrow]
+								    || padData.ArrowData[rArrow].OtherFootPairingsOtherFootCrossoverBehind[R][lArrow]
+								    || padData.ArrowData[rArrow].OtherFootPairingsOtherFootCrossoverFront[R][lArrow])
 								{
 									crossedOver = true;
 								}
@@ -1734,7 +1734,7 @@ namespace ChartGenerator
 			int arrow,
 			MetricPosition[] lastMines,
 			MetricPosition[] lastReleases,
-			ArrowData[] arrowData,
+			PadData padData,
 			GraphNode.FootArrowState[,] previousState,
 			out bool anyHeld,
 			out bool allHeld,
@@ -1757,6 +1757,7 @@ namespace ChartGenerator
 			releasePositionOfPreviousStep = new MetricPosition();
 			previousArrows = new int[NumFootPortions];
 			inBracketPosture = true;
+			var arrowData = padData.ArrowData;
 
 			// TODO: Should this logic include inverted steps too?
 
@@ -1866,7 +1867,7 @@ namespace ChartGenerator
 			ChartSearchNode searchNode,
 			SearchState[] state,
 			int foot,
-			ArrowData[] arrowData,
+			PadData padData,
 			MetricPosition[] lastReleases,
 			out bool couldBeBracketed,
 			out bool holdingAny,
@@ -1883,6 +1884,7 @@ namespace ChartGenerator
 			newArrowIfThisFootSteps = false;
 			bracketableDistanceIfThisFootSteps = false;
 			involvesSwapIfBracketed = false;
+			var arrowData = padData.ArrowData;
 
 			// Determine if any are held by this foot
 			if (parentSearchNode != null)

@@ -61,16 +61,6 @@ namespace ChartGenerator
 		/// Supported file formats for reading and writing.
 		/// </summary>
 		private static readonly List<FileFormatType> SupportedFileFormats = new List<FileFormatType> { FileFormatType.SM, FileFormatType.SSC };
-		/// <summary>
-		/// Supported stepmania chart types for input.
-		/// Only singles is supported as input.
-		/// </summary>
-		private static readonly List<string> SupportedInputTypes = new List<string> { ChartTypeString(ChartType.dance_single) };
-		/// <summary>
-		/// Supported stepmania chart types for output.
-		/// Singles and doubles are support as output.
-		/// </summary>
-		private static readonly List<string> SupportedOutputTypes = new List<string> { ChartTypeString(ChartType.dance_single), ChartTypeString(ChartType.dance_double) };
 
 		/// <summary>
 		/// Time of the start of the export.
@@ -82,6 +72,8 @@ namespace ChartGenerator
 		/// Export visualization directories are based on the ExportTime.
 		/// </summary>
 		private static string VisualizationDir;
+
+		private static bool CanOutputVisualizations;
 
 		/// <summary>
 		/// HashSet for keeping track of which song directories have had their non-chart files copied.
@@ -130,7 +122,7 @@ namespace ChartGenerator
 			var loggerSuccess = CreateLogger();
 
 			// Validate Config, even if creating the logger failed. This will still log errors to the console.
-			if (!config.Validate(SupportedInputTypes, SupportedOutputTypes))
+			if (!config.Validate())
 			{
 				Logger.Shutdown();
 				return;
@@ -141,6 +133,8 @@ namespace ChartGenerator
 				return;
 			}
 
+			// Set whether we can output visualizations based on the configured StepsTypes.
+			SetCanOutputVisualizations();
 			// Create a directory for outputting visualizations.
 			if (!CreateVisualizationOutputDirectory())
 			{
@@ -149,75 +143,134 @@ namespace ChartGenerator
 			}
 
 			// Create StepGraphs.
-			await CreateStepGraphs();
+			var stepGraphCreationSuccess = await LoadPadDataAndCreateStepGraphs();
+			if (!stepGraphCreationSuccess)
+			{
+				Logger.Shutdown();
+				return;
+			}
 
 			// Cache the replacement GraphLinks from the OutputStepGraph.
 			PerformedChart.CacheGraphLinks(OutputStepGraph.FindAllGraphLinks());
 
 			// Find and process all charts.
 			await FindAndProcessCharts();
-			
+
 			LogInfo("Done.");
 			Logger.Shutdown();
 			Console.ReadLine();
 		}
 
 		/// <summary>
-		/// Creates the InputStepGraph and OutputStepGraph.
+		/// Loads PadData and creates the InputStepGraph and OutputStepGraph.
 		/// </summary>
-		private static async Task CreateStepGraphs()
+		/// <returns>
+		/// True if no errors were generated and false otherwise.
+		/// </returns>
+		private static async Task<bool> LoadPadDataAndCreateStepGraphs()
 		{
-			// If the types are the same, just create one graph.
+			// If the types are the same, just create one StepGraph.
 			if (Config.Instance.InputChartType == Config.Instance.OutputChartType)
 			{
+				// Load the input PadData.
+				var padData = await LoadPadData(Config.Instance.InputChartType);
+				if (padData == null)
+					return false;
+
+				// Create the StepGraph and use it for both the InputStepGraph and the OutputStepGraph.
 				LogInfo("Creating StepGraph.");
-				InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R);
+				InputStepGraph = StepGraph.CreateStepGraph(padData, padData.StartingPositions[0][0][L], padData.StartingPositions[0][0][R]);
 				OutputStepGraph = InputStepGraph;
-				OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
+				if (!CreateOutputStartNodes())
+					return false;
 				LogInfo("Finished creating StepGraph.");
 			}
 
 			// If the types are separate, create two graphs.
 			else
 			{
+				// Load the PadData for both the input and output type.
+				var inputPadDataTask = LoadPadData(Config.Instance.InputChartType);
+				var outputPadDataTask = LoadPadData(Config.Instance.OutputChartType);
+				await Task.WhenAll(inputPadDataTask, outputPadDataTask);
+				var inputPadData = await inputPadDataTask;
+				var outputPadData = await outputPadDataTask;
+				if (inputPadData == null || outputPadData == null)
+					return false;
+
 				LogInfo("Creating StepGraphs.");
 
 				// Create each graph on their own thread as these can take a few seconds.
-				var tasks = new Task[2];
-				tasks[0] = Task.Factory.StartNew(() => { InputStepGraph = StepGraph.CreateStepGraph(ArrowData.SPArrowData, P1L, P1R); });
-				tasks[1] = Task.Factory.StartNew(() => { OutputStepGraph = StepGraph.CreateStepGraph(ArrowData.DPArrowData, P1R, P2L); });
-				await Task.WhenAll(tasks);
-
-				// The first start node we should try is the root, centered on the middles.
-				OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
-
-				// Failing that, try nodes with one foot moved outward.
-				OutputStartNodes.Add(new List<GraphNode>
+				var inputGraphTask = Task.Factory.StartNew(() =>
 				{
-					OutputStepGraph.FindGraphNode(P1U, GraphArrowState.Resting, P2L, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P1D, GraphArrowState.Resting, P2L, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P1R, GraphArrowState.Resting, P2U, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P1R, GraphArrowState.Resting, P2D, GraphArrowState.Resting)
+					InputStepGraph = StepGraph.CreateStepGraph(
+						inputPadData,
+						inputPadData.StartingPositions[0][0][L],
+						inputPadData.StartingPositions[0][0][R]);
 				});
-
-				// Failing that, try nodes close to the middle.
-				OutputStartNodes.Add(new List<GraphNode>
+				var outputGraphTask = Task.Factory.StartNew(() =>
 				{
-					OutputStepGraph.FindGraphNode(P1U, GraphArrowState.Resting, P1R, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P1D, GraphArrowState.Resting, P1R, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P2L, GraphArrowState.Resting, P2U, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P2L, GraphArrowState.Resting, P2D, GraphArrowState.Resting)
+					OutputStepGraph = StepGraph.CreateStepGraph(
+						outputPadData,
+						outputPadData.StartingPositions[0][0][L],
+						outputPadData.StartingPositions[0][0][R]);
 				});
+				await Task.WhenAll(inputGraphTask, outputGraphTask);
 
-				// Last resort, try the SP start nodes. This is guaranteed to catch any SP chart start.
-				OutputStartNodes.Add(new List<GraphNode>
-				{
-					OutputStepGraph.FindGraphNode(P1L, GraphArrowState.Resting, P1R, GraphArrowState.Resting),
-					OutputStepGraph.FindGraphNode(P2L, GraphArrowState.Resting, P2R, GraphArrowState.Resting),
-				});
+				if (!CreateOutputStartNodes())
+					return false;
 
 				LogInfo("Finished creating StepGraphs.");
 			}
+
+			return true;
+		}
+
+		/// <summary>
+		/// Loads PadData for the given stepsType.
+		/// </summary>
+		/// <param name="stepsType">Stepmania StepsType to load PadData for.</param>
+		/// <returns>Loaded PadData or null if any errors were generated.</returns>
+		private static async Task<PadData> LoadPadData(string stepsType)
+		{
+			var fileName = $"{stepsType}.json";
+			LogInfo($"Loading PadData from {fileName}.");
+			var padData = await PadData.LoadPadData(stepsType, fileName);
+			if (padData == null)
+				return null;
+			LogInfo($"Finished loading {stepsType} PadData.");
+			return padData;
+		}
+
+		/// <summary>
+		/// Creates the output start nodes and stores them in OutputStartNodes.
+		/// </summary>
+		/// <returns>
+		/// True if all output start nodes were added successfully and false otherwise.
+		/// </returns>
+		private static bool CreateOutputStartNodes()
+		{
+			// Add the root node as the first tier.
+			OutputStartNodes.Add(new List<GraphNode> { OutputStepGraph.Root });
+
+			// Loop over the remaining tiers.
+			for (var tier = 1; tier < OutputStepGraph.PadData.StartingPositions.Length; tier++)
+			{
+				var nodesAtTier = new List<GraphNode>();
+				foreach (var pos in OutputStepGraph.PadData.StartingPositions[tier])
+				{
+					var node = OutputStepGraph.FindGraphNode(pos[L], GraphArrowState.Resting, pos[R], GraphArrowState.Resting);
+					if (node == null)
+					{
+						LogError($"Could not find a node in the {Config.Instance.OutputChartType} StepGraph for StartingPosition with"
+								 + $" left on {pos[L]} and right on {pos[R]}.");
+						return false;
+					}
+					nodesAtTier.Add(node);
+				}
+				OutputStartNodes.Add(nodesAtTier);
+			}
+			return true;
 		}
 
 		/// <summary>
@@ -255,12 +308,37 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
+		/// Sets CanOutputVisualizations based on whether OutputVisualizations is configured and
+		/// the configured StepsTypes are supported.
+		/// </summary>
+		private static void SetCanOutputVisualizations()
+		{
+			if (Config.Instance.OutputVisualizations)
+			{
+				CanOutputVisualizations = true;
+				if (!Renderer.IsStepsTypeSupported(Config.Instance.InputChartType))
+				{
+					LogWarn($"{Config.Instance.InputChartType} is not currently supported for outputting visualizations."
+					        + " Visualization output will be skipped.");
+					CanOutputVisualizations = false;
+				}
+				else if (Config.Instance.OutputChartType != Config.Instance.InputChartType
+				         && !Renderer.IsStepsTypeSupported(Config.Instance.OutputChartType))
+				{
+					LogWarn($"{Config.Instance.InputChartType} is not currently supported for outputting visualizations."
+						+ " Visualization output will be skipped.");
+					CanOutputVisualizations = false;
+				}
+			}
+		}
+
+		/// <summary>
 		/// Creates the output directory for visualizations if configured to do so.
 		/// </summary>
 		/// <returns>True if no errors and false otherwise.</returns>
 		private static bool CreateVisualizationOutputDirectory()
 		{
-			if (Config.Instance.OutputVisualizations)
+			if (Config.Instance.OutputVisualizations && CanOutputVisualizations)
 			{
 				try
 				{
@@ -617,7 +695,7 @@ namespace ChartGenerator
 						songArgs.FileInfo, songArgs.RelativePath, song, newChart);
 
 					// Write a visualization.
-					if (Config.Instance.OutputVisualizations)
+					if (Config.Instance.OutputVisualizations && CanOutputVisualizations)
 					{
 						var visualizationDirectory = Fumen.Path.Combine(VisualizationDir, songArgs.RelativePath);
 						Directory.CreateDirectory(visualizationDirectory);

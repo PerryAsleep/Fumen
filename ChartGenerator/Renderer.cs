@@ -125,7 +125,13 @@ namespace ChartGenerator
 			x += ExpressionColumnInfo[(int)ExpressionColumns.LeftFoot].Width;
 			ExpressionColumnInfo[(int)ExpressionColumns.RightFoot] = new ColumnInfo { Name = "Right Foot", Width = ExpressionColW, X = x };
 		}
-		
+
+		// TODO: Support more StepsTypes for visualizations.
+		public static bool IsStepsTypeSupported(string stepsType)
+		{
+			return !string.IsNullOrEmpty(stepsType) && stepsType == "dance-single" || stepsType == "dance-double";
+		}
+
 		public Renderer(
 			string songPath,
 			string saveFile,

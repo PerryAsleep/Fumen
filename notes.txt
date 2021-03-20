@@ -4,6 +4,11 @@ PerformedChart Issues:
 
 Document new bracket parsing config.
 
+Performed Chart bug:
+	Applause measure 47 beat 2 - ambiguous step
+
+Annoying that the tightening bpm cutoff doesn't include the bounds.
+
 Charts with Bugs?
 	Involve expressed chart costs:
 		Oh! (measure 44)
@@ -13,6 +18,8 @@ Charts with Bugs?
 			lots of little problems because of the holds
 		Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
 			This is extremely complicated with lots of swaps into brackets and intentional double stepping.
+
+	Twilight (pas lam)
 
 Tests:
 	SM/SSC Reader unit Tests
@@ -24,6 +31,9 @@ Tests:
 	Chords / Quad
 
 Bugs:
+	In charts with double steps, the expression will prefer a swap with long inverted patterns to avoid the double step.
+	See HoodStar Challenge from Enjoy Stamina
+
 	Chart Bugs:
 		Don't You Want Me:
 			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
@@ -34,7 +44,6 @@ Bugs:
 
 Misc:
 	Document how it works.
-	Load arrowdata from json so we can easily add piu charts without recompiling
 	public / private pass
 	comment / cost cleanup
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.

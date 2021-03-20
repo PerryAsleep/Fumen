@@ -51,14 +51,19 @@ namespace ChartGenerator
 		public readonly int NumArrows;
 
 		/// <summary>
+		/// Identifier for logs.
+		/// </summary>
+		private readonly string LogIdentifier;
+
+		/// <summary>
 		/// The root GraphNode for this StepGraph.
 		/// </summary>
 		public readonly GraphNode Root;
 
 		/// <summary>
-		/// ArrowData associated with this StepGraph.
+		/// PadData associated with this StepGraph.
 		/// </summary>
-		public readonly ArrowData[] ArrowData;
+		public readonly PadData PadData;
 
 		/// <summary>
 		/// Static initializer.
@@ -86,13 +91,14 @@ namespace ChartGenerator
 		/// Private constructor.
 		/// StepGraphs are publicly created using CreateStepGraph.
 		/// </summary>
-		/// <param name="arrowData">ArrowData this StepGraph is for.</param>
+		/// <param name="padData">PadData this StepGraph is for.</param>
 		/// <param name="root">Root GraphNode.</param>
-		private StepGraph(ArrowData[] arrowData, GraphNode root)
+		private StepGraph(PadData padData, GraphNode root)
 		{
 			Root = root;
-			ArrowData = arrowData;
-			NumArrows = ArrowData.Length;
+			PadData = padData;
+			NumArrows = PadData.NumArrows;
+			LogIdentifier = PadData.StepsType;
 
 			AllArrows = new int[NumArrows];
 			for (var i = 0; i < NumArrows; i++)
@@ -127,14 +133,14 @@ namespace ChartGenerator
 		/// Creates a new StepGraph satisfying all movements for the given ArrowData with
 		/// a root position at the given starting arrows.
 		/// </summary>
-		/// <param name="arrowData">ArrowData for the set of arrows to create a StepGraph for.</param>
+		/// <param name="padData">PadData for the set of arrows to create a StepGraph for.</param>
 		/// <param name="leftStartingArrow">Starting arrow for the left foot.</param>
 		/// <param name="rightStartingArrow">Starting arrow for the right foot.</param>
 		/// <returns>
 		/// StepGraph satisfying all movements for the given ArrowData with a root position
 		/// at the given starting arrows.
 		/// </returns>
-		public static StepGraph CreateStepGraph(ArrowData[] arrowData, int leftStartingArrow, int rightStartingArrow)
+		public static StepGraph CreateStepGraph(PadData padData, int leftStartingArrow, int rightStartingArrow)
 		{
 			// Set up state for root node.
 			var state = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
@@ -153,7 +159,7 @@ namespace ChartGenerator
 			}
 
 			var root = new GraphNode(state, BodyOrientation.Normal);
-			var stepGraph = new StepGraph(arrowData, root);
+			var stepGraph = new StepGraph(padData, root);
 			stepGraph.Fill();
 			return stepGraph;
 		}
@@ -278,7 +284,7 @@ namespace ChartGenerator
 			var currentNodes = new List<GraphNode> { Root };
 			var level = 0;
 
-			var allArrows = new int[ArrowData.Length];
+			var allArrows = new int[NumArrows];
 			for (var i = 0; i < allArrows.Length; i++)
 				allArrows[i] = i;
 
@@ -575,9 +581,9 @@ namespace ChartGenerator
 			if (bracket)
 			{
 				// Skip if the new arrow is not a valid bracketable pairing.
-				if (destinationFootPortion == Heel && !ArrowData[currentArrow].BracketablePairingsOtherHeel[foot][newArrow])
+				if (destinationFootPortion == Heel && !PadData.ArrowData[currentArrow].BracketablePairingsOtherHeel[foot][newArrow])
 					return null;
-				if (destinationFootPortion == Toe && !ArrowData[currentArrow].BracketablePairingsOtherToe[foot][newArrow])
+				if (destinationFootPortion == Toe && !PadData.ArrowData[currentArrow].BracketablePairingsOtherToe[foot][newArrow])
 					return null;
 
 				var numHeld = NumHeld(currentState, foot);
@@ -593,7 +599,7 @@ namespace ChartGenerator
 			else
 			{
 				// Skip if the new arrow isn't a valid next arrow for the current placement.
-				if (!ArrowData[currentArrow].ValidNextArrows[newArrow])
+				if (!PadData.ArrowData[currentArrow].ValidNextArrows[newArrow])
 					return null;
 
 				// Cannot step on a new arrow if already holding.
@@ -893,7 +899,7 @@ namespace ChartGenerator
 			if (AnyHeld(currentState, foot))
 				return null;
 			// Skip if this isn't a valid next arrow for the current placement.
-			if (!ArrowData[currentArrow].ValidNextArrows[newArrow])
+			if (!PadData.ArrowData[currentArrow].ValidNextArrows[newArrow])
 				return null;
 			// Skip if the new arrow is occupied.
 			if (!IsFree(currentState, newArrow))
@@ -989,7 +995,7 @@ namespace ChartGenerator
 			if (AnyHeld(currentState, foot))
 				return null;
 			// Skip if this isn't a valid next arrow for the current placement.
-			if (!ArrowData[currentArrow].ValidNextArrows[newArrow])
+			if (!PadData.ArrowData[currentArrow].ValidNextArrows[newArrow])
 				return null;
 			// Skip if the new arrow is occupied.
 			if (!IsFree(currentState, newArrow))
@@ -1433,7 +1439,7 @@ namespace ChartGenerator
 			if (otherFootValidPairings.Count == 0)
 				return false;
 
-			validNextArrow = ArrowData[currentNode.State[foot, currentFootPortion].Arrow].ValidNextArrows[firstNewArrow];
+			validNextArrow = PadData.ArrowData[currentNode.State[foot, currentFootPortion].Arrow].ValidNextArrows[firstNewArrow];
 			return true;
 		}
 
@@ -1452,13 +1458,13 @@ namespace ChartGenerator
 			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
 
 			var results = new List<GraphNode>();
-			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
+			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + PadData.MaxBracketSeparation);
 			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
 			{
 				// Skip if this is not a valid bracketable pairing.
-				if (newFootPortions[1] == Heel && !ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
+				if (newFootPortions[1] == Heel && !PadData.ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
 					continue;
-				if (newFootPortions[1] == Toe && !ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
+				if (newFootPortions[1] == Toe && !PadData.ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
 					continue;
 				// Skip if this next arrow is not a valid new arrow for this step.
 				if (!IsValidNewArrowForBracket(currentState, foot, newFootPortions[1], secondNewArrow))
@@ -1472,7 +1478,7 @@ namespace ChartGenerator
 					continue;
 
 				// One of the pair must be a valid next placement
-				var secondNewArrowIsValidPlacement = ArrowData[currentArrow].ValidNextArrows[secondNewArrow];
+				var secondNewArrowIsValidPlacement = PadData.ArrowData[currentArrow].ValidNextArrows[secondNewArrow];
 				if (!firstNewArrowIsValidPlacement && !secondNewArrowIsValidPlacement)
 					continue;
 
@@ -1584,7 +1590,7 @@ namespace ChartGenerator
 			if (!releasing && IsResting(currentState, firstNewArrow, otherFoot))
 				return null;
 
-			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
+			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + PadData.MaxBracketSeparation);
 			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
 			{
 				// Check for state at the second new arrow matching expected state for whether releasing or placing.
@@ -1635,7 +1641,7 @@ namespace ChartGenerator
 				return false;
 
 			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
-			validNextArrow = ArrowData[currentArrow].ValidNextArrows[firstNewArrow];
+			validNextArrow = PadData.ArrowData[currentArrow].ValidNextArrows[firstNewArrow];
 			return true;
 		}
 
@@ -1654,13 +1660,13 @@ namespace ChartGenerator
 			var currentArrow = currentNode.State[foot, currentFootPortion].Arrow;
 
 			var results = new List<GraphNode>();
-			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
+			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + PadData.MaxBracketSeparation);
 			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
 			{
 				// Skip if this is not a valid bracketable pairing.
-				if (newFootPortions[1] == Heel && !ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
+				if (newFootPortions[1] == Heel && !PadData.ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
 					continue;
-				if (newFootPortions[1] == Toe && !ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
+				if (newFootPortions[1] == Toe && !PadData.ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
 					continue;
 				// The second new arrow must be a step on the same arrow.
 				if (!IsResting(currentState, secondNewArrow, foot))
@@ -1673,7 +1679,7 @@ namespace ChartGenerator
 				if (secondOtherFootValidPairings.Count == 0)
 					continue;
 				// One of the pair must be a valid next placement.
-				if (!firstNewArrowIsValidPlacement && !ArrowData[currentArrow].ValidNextArrows[secondNewArrow])
+				if (!firstNewArrowIsValidPlacement && !PadData.ArrowData[currentArrow].ValidNextArrows[secondNewArrow])
 					continue;
 				// Both feet on the bracket must be reachable from at least one of the other foot's arrows.
 				// If the first arrow is a swap then the bracket is considered reachable and this list will be null.
@@ -1743,13 +1749,13 @@ namespace ChartGenerator
 				return null;
 
 			var results = new List<GraphNode>();
-			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + ChartGenerator.ArrowData.MaxBracketSeparation);
+			var lastSecondArrowIndexToCheck = Math.Min(NumArrows - 1, firstNewArrow + PadData.MaxBracketSeparation);
 			for (var secondNewArrow = firstNewArrow + 1; secondNewArrow <= lastSecondArrowIndexToCheck; secondNewArrow++)
 			{
 				// Skip if this is not a valid bracketable pairing.
-				if (newFootPortions[1] == Heel && !ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
+				if (newFootPortions[1] == Heel && !PadData.ArrowData[firstNewArrow].BracketablePairingsOtherHeel[foot][secondNewArrow])
 					continue;
-				if (newFootPortions[1] == Toe && !ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
+				if (newFootPortions[1] == Toe && !PadData.ArrowData[firstNewArrow].BracketablePairingsOtherToe[foot][secondNewArrow])
 					continue;
 
 				// Must be new arrow.
@@ -1853,7 +1859,7 @@ namespace ChartGenerator
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
 					return true;
 			}
 			return false;
@@ -1867,7 +1873,7 @@ namespace ChartGenerator
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
 					result.Add(otherFootArrowIndex);
 			}
 			return result;
@@ -1904,8 +1910,8 @@ namespace ChartGenerator
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && (ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow]
-				    || ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow]))
+				    && (PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow]
+				        || PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow]))
 					return true;
 			}
 
@@ -1919,7 +1925,7 @@ namespace ChartGenerator
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow])
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow])
 					return true;
 			}
 
@@ -1933,7 +1939,7 @@ namespace ChartGenerator
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow])
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow])
 					return true;
 			}
 
@@ -1947,7 +1953,7 @@ namespace ChartGenerator
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-				    && ArrowData[otherFootArrowIndex].OtherFootPairingsInverted[otherFoot][arrow])
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsInverted[otherFoot][arrow])
 					return true;
 			}
 
@@ -2022,7 +2028,7 @@ namespace ChartGenerator
 		#region Logging
 		private void LogInfo(string message)
 		{
-			Logger.Info($"[StepGraph ({NumArrows})] {message}");
+			Logger.Info($"[StepGraph] [{LogIdentifier} ({NumArrows})] {message}");
 		}
 		#endregion Logging
 	}
