@@ -8,6 +8,7 @@ namespace ChartGenerator
 	/// of one or more pads. This data informs how the other arrows are associated with
 	/// this arrow. For example, per arrow, it is useful to know which other arrows
 	/// are bracketable with it, are steppable to from it, form crossovers with it, etc.
+	/// Deserialized from json.
 	/// </summary>
 	public class ArrowData
 	{

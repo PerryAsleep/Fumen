@@ -8,6 +8,10 @@ using static ChartGenerator.Constants;
 
 namespace ChartGenerator
 {
+	/// <summary>
+	/// Information about how a pad or set of pads is laid out.
+	/// Deserialized from json.
+	/// </summary>
 	public class PadData
 	{
 		/// <summary>
@@ -25,6 +29,13 @@ namespace ChartGenerator
 		/// Set after deserialization.
 		/// </summary>
 		public int NumArrows;
+
+		/// <summary>
+		/// Maximum difference in indices between arrows of a bracket in any ArrowData[] array.
+		/// Used to improve scans over ArrowData for bracketable pairings.
+		/// Set after deserialization.
+		/// </summary>
+		public int MaxBracketSeparation;
 
 		/// <summary>
 		/// Valid starting positions.
@@ -46,13 +57,6 @@ namespace ChartGenerator
 		/// values.
 		/// </summary>
 		[JsonInclude] public double YTravelDistanceCompensation = 0.5;
-
-		/// <summary>
-		/// Maximum difference in indices between arrows of a bracket in any ArrowData[] array.
-		/// Used to improve scans over ArrowData for bracketable pairings.
-		/// Set after deserialization.
-		/// </summary>
-		public int MaxBracketSeparation;
 
 		/// <summary>
 		/// Loads the PadData from the given file.
