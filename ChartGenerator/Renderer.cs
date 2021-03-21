@@ -795,7 +795,7 @@ $@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - Arr
 				img = foot == L ? "l.png" : "r.png";
 				img = SrcDir + img;
 				StreamWriter.Write(
-$@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
+$@"			<img src=""{img}""style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
 ");
 			}
 		}

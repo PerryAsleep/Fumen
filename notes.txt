@@ -54,10 +54,8 @@ Misc:
 
 Renderer Improvements:
 	css to minimize log size
-	Render note count distribution.
 	Render Fakes and Lifts differently.
 	Render negative Stops (fakes) differently.
-	Fix the terrible orange and pink circle graphics.
 	Render performed chart starting position.
 	Render when the performed chart uses different StepTypes.
 
