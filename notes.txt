@@ -53,7 +53,6 @@ Misc:
 	time remaining on export?
 
 Renderer Improvements:
-	css to minimize log size
 	Render Fakes and Lifts differently.
 	Render negative Stops (fakes) differently.
 	Render performed chart starting position.

@@ -57,7 +57,7 @@ namespace ChartGenerator
 		private static readonly ColumnInfo[] ChartColumnInfo;
 		private static readonly ColumnInfo[] ExpressionColumnInfo;
 		private static string[] ArrowNames = { "L", "D", "U", "R" };
-		private static string[] ArrowClassStrings = { @" class=""left""", "", @" class=""up""", @" class=""right""" };
+		private static string[] ArrowClassStrings = { "left", null, "up", "right" };
 
 		private static string[] StepTypeStrings =
 		{
@@ -103,6 +103,7 @@ namespace ChartGenerator
 		{
 			SrcDir = AppDomain.CurrentDomain.BaseDirectory;
 			SrcDir = SrcDir.Replace('\\', '/');
+			SrcDir = SrcDir.TrimEnd('/');
 			SrcDir += "/html/src/";
 
 			var x = 0;
@@ -227,14 +228,127 @@ p {{
 	-o-transform: rotate(270deg);
 	transform: rotate(270deg);
 }}
+.leftfoot {{
+	content:url(""{SrcDir}l.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.rightfoot {{
+	content:url(""{SrcDir}r.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.quarter {{
+	content:url(""{SrcDir}1_4.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.eighth {{
+	content:url(""{SrcDir}1_8.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.twelfth {{
+	content:url(""{SrcDir}1_12.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.sixteenth {{
+	content:url(""{SrcDir}1_12.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.twentyfourth {{
+	content:url(""{SrcDir}1_24.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.thirtysecond {{
+	content:url(""{SrcDir}1_32.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.fourtyeighth {{
+	content:url(""{SrcDir}1_48.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.sixtyfourth {{
+	content:url(""{SrcDir}1_64.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.holdcap {{
+	content:url(""{SrcDir}hold_cap.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{HoldCapH}px;
+	border:none;
+}}
+.rollcap {{
+	content:url(""{SrcDir}roll_cap.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{HoldCapH}px;
+	border:none;
+}}
+.mine {{
+	content:url(""{SrcDir}mine.png"");
+	position:absolute;
+	width:{ArrowW}px;
+	height:{ArrowW}px;
+	border:none;
+}}
+.exp_text {{
+	position:absolute;
+	height:{ChartTextH}px;
+	border:none;
+	z-index:10
+}}
+.m_mark {{
+	position:absolute;
+	height:10px;
+	border:none;
+	background: #929292;
+}}
+.b_mark {{
+	position:absolute;
+	height:6px;
+	border:none;
+	background: #929292;
+}}
 #holdbody {{
 	border: none;
+	position:absolute;
+	width:{ArrowW}px;
 	padding: none;
 	background: url(""{SrcDir}hold.png"");
 	background-repeat: repeat;
 }}
 #rollbody {{
 	border: none;
+	position:absolute;
+	width:{ArrowW}px;
 	padding: none;
 	background: url(""{SrcDir}roll.png"");
 	background-repeat: repeat;
@@ -458,7 +572,6 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 				var colX = chartXPosition;
 				var colW = ChartColumnInfo[(int)ChartColumns.TimeSignature].Width;
 				var colY = (int)(eventY - ChartTextH * .5);
-				var colH = ChartTextH;
 				string colVal = null;
 				if (chartEvent is TimeSignature tse)
 				{
@@ -478,7 +591,7 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 				if (colVal != null)
 				{
 					StreamWriter.Write(
-$@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px; height:{colH}px; z-index:10;"">{colVal}</p>
+$@"			<p class=""exp_text"" style=""top:{colY}px; left:{colX}px; width:{colW}px;"">{colVal}</p>
 ");
 				}
 
@@ -600,7 +713,7 @@ $@"			<p style=""position:absolute; top:{colY}px; left:{colX}px; width:{colW}px;
 			var x = ExpressedChartX + ExpressionColumnInfo[(int)ExpressionColumns.Mines].X;
 			var h = ChartTextH * mines.Count;
 			StreamWriter.Write(
-$@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width:{MinesColW}px; height:{h}px; z-index:10;"">{minesStr}</p>
+$@"			<p class=""exp_text"" style=""top:{(int)(y - h * .5)}px; left:{x}px; width:{MinesColW}px; height:{h}px;"">{minesStr}</p>
 ");
 		}
 
@@ -647,7 +760,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - h * .5)}px; left:{x}px; width
 							if (node.PreviousLink.GraphLink.IsJump())
 								stepStr = "[Jump] " + stepStr;
 							StreamWriter.Write(
-$@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{leftX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
+$@"			<p class=""exp_text"" style=""top:{(int)(y - ChartTextH * .5)}px; left:{leftX}px; width:{ExpressionColW}px;"">{stepStr}</p>
 ");
 							writeCost = true;
 							LastExpressionPosition[L] = y;
@@ -661,7 +774,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{le
 							if (node.PreviousLink.GraphLink.IsJump())
 								stepStr = "[Jump] " + stepStr;
 							StreamWriter.Write(
-$@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{rightX}px; width:{ExpressionColW}px; height:{ChartTextH}px; z-index:10;"">{stepStr}</p>
+$@"			<p class=""exp_text"" style=""top:{(int)(y - ChartTextH * .5)}px; left:{rightX}px; width:{ExpressionColW}px;"">{stepStr}</p>
 ");
 							writeCost = true;
 							LastExpressionPosition[R] = y;
@@ -673,7 +786,7 @@ $@"			<p style=""position:absolute; top:{(int)(y - ChartTextH * .5)}px; left:{ri
 					{
 						var costX = ExpressedChartX + ExpressionColumnInfo[(int) ExpressionColumns.Cost].X;
 						StreamWriter.Write(
-$@"			<p style=""position:absolute; top:{(int) (y - ChartTextH * .5)}px; left:{costX}px; width:{CostColW}px; height:{ChartTextH}px; z-index:10;"">{node.Cost}</p>
+$@"			<p class=""exp_text"" style=""top:{(int) (y - ChartTextH * .5)}px; left:{costX}px; width:{CostColW}px;"">{node.Cost}</p>
 ");
 					}
 				}
@@ -685,10 +798,9 @@ $@"			<p style=""position:absolute; top:{(int) (y - ChartTextH * .5)}px; left:{c
 		private void WriteMine(int arrow, int firstLaneX, double y, MetricPosition position)
 		{
 			var x = firstLaneX + (arrow * ArrowW);
-			var img = SrcDir + "mine.png";
 
 			StreamWriter.Write(
-$@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
+$@"			<img class=""mine"" style=""top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; z-index:{(int)y};""/>
 ");
 		}
 
@@ -758,36 +870,40 @@ $@"			<img src=""{img}"" style=""position:absolute; top:{(int)(y - ArrowW * 0.5)
 
 		private void WriteArrow(int arrow, int foot, int firstLaneX, double y, MetricPosition position)
 		{
-			var classStr = ArrowClassStrings[arrow % 4];
+			var rotClass = ArrowClassStrings[arrow % 4];
 			var x = firstLaneX + arrow * ArrowW;
 			var fraction = position.SubDivision.Reduce();
 
-			string img;
+			string imgClass;
 			switch (fraction.Denominator)
 			{
 				case 0:
-				case 1: img = "1_4.png"; break;
-				case 2: img = "1_8.png"; break;
-				case 3: img = "1_12.png"; break;
-				case 4: img = "1_16.png"; break;
-				case 6: img = "1_24.png"; break;
-				case 8: img = "1_32.png"; break;
-				case 12: img = "1_48.png"; break;
-				default: img = "1_64.png"; break;
+				case 1: imgClass = "quarter"; break;
+				case 2: imgClass = "eighth"; break;
+				case 3: imgClass = "twelfth"; break;
+				case 4: imgClass = "sixteenth"; break;
+				case 6: imgClass = "twentyfourth"; break;
+				case 8: imgClass = "thirtysecond"; break;
+				case 12: imgClass = "fourtyeighth"; break;
+				default: imgClass = "sixtyfourth"; break;
 			}
-			img = SrcDir + img;
+
+			string classStr;
+			if (rotClass != null)
+				classStr = $"{imgClass} {rotClass}";
+			else
+				classStr = $"{imgClass}";
 
 			// Arrow
 			StreamWriter.Write(
-$@"			<img src=""{img}""{classStr} style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
+$@"			<img class=""{classStr}"" style=""top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; z-index:{(int)y};""/>
 ");
 			// Foot indicator
 			if (foot != InvalidFoot)
 			{
-				img = foot == L ? "l.png" : "r.png";
-				img = SrcDir + img;
+				var footClass = foot == L ? "leftfoot" : "rightfoot";
 				StreamWriter.Write(
-$@"			<img src=""{img}""style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; width:{ArrowW}px; height:{ArrowW}px; z-index:{(int)y}; border:none;""/>
+$@"			<img class=""{footClass}"" style=""top:{(int)(y - ArrowW * 0.5)}px; left:{x}px; z-index:{(int)y};""/>
 ");
 			}
 		}
@@ -795,16 +911,15 @@ $@"			<img src=""{img}""style=""position:absolute; top:{(int)(y - ArrowW * 0.5)}
 		private void WriteHold(int arrow, int firstLaneX, double startY, double endY, bool roll)
 		{
 			var id = roll ? "rollbody" : "holdbody";
-			var cap = roll ? "roll_cap.png" : "hold_cap.png";
-			cap = SrcDir + cap;
+			var cap = roll ? "rollcap" : "holdcap";
 			var x = firstLaneX + arrow * ArrowW;
 
 			StreamWriter.Write(
-$@"			<div id=""{id}"" style=""position:absolute; top:{(int)startY}px; left:{x}px; width:{ArrowW}px; height:{(int)(endY - startY)}px; z-index:{(int)startY - 1}; border:none;""></div>
+$@"			<div id=""{id}"" style=""top:{(int)startY}px; left:{x}px; height:{(int)(endY - startY)}px; z-index:{(int)startY - 1};""></div>
 ");
 
 			StreamWriter.Write(
-$@"			<img src=""{cap}"" style=""position:absolute; top:{(int)endY}px; left:{x}px; width:{ArrowW}px; height:{HoldCapH}px; z-index:{(int)startY - 1}; border:none;""/>
+$@"			<img class=""{cap}"" style=""top:{(int)endY}px; left:{x}px; z-index:{(int)startY - 1};""/>
 ");
 		}
 
@@ -824,25 +939,25 @@ $@"			<img src=""{cap}"" style=""position:absolute; top:{(int)endY}px; left:{x}p
 				for (var b = 0; b < timeSignature.Numerator; b++)
 				{
 					var y = startY + (m * timeSignature.Numerator + b) * yPerBeat;
-					int barH;
+					string classStr;
 					if (b == 0)
 					{
 						// Write measure number
 						StreamWriter.Write(
-$@"			<p style=""position:absolute; top:{(int)(y - mmH * .5)}px; left:{mmX}px; width:{mmW}px; height:{mmH}px; z-index:10;"">{currentMeasure + m}</p>
+$@"			<p class=""exp_text"" style=""top:{(int)(y - mmH * .5)}px; left:{mmX}px; width:{mmW}px;"">{currentMeasure + m}</p>
 ");
-						barH = MeasureMarkerH;
 						y -= MeasureMarkerH * 0.5;
+						classStr = "m_mark";
 					}
 					else
 					{
-						barH = BeatMarkerH;
 						y -= BeatMarkerH * 0.5;
+						classStr = "b_mark";
 					}
 
 					// Write measure / beat marker
 					StreamWriter.Write(
-$@"			<div style=""position:absolute; top:{(int)y}px; left:{barX}px; width:{barW}px; height:{barH}px; background: #929292""></div>
+$@"			<div class=""{classStr}"" style=""top:{(int)y}px; left:{barX}px; width:{barW}px;""></div>
 ");
 				}
 			}
