@@ -1470,8 +1470,15 @@ namespace ChartGenerator
 									}
 
 									// Swapping after a bracket. Usually this means the previous bracket should have been a jump,
-									// but if it is mine indicated then lower the cost to prefer the bracket.
-									if (otherFootInBracketPosture && !thisAnyHeld && !mineIndicatedOnThisFootsArrow && !mineIndicatedOnFreeLaneArrow)
+									// but if it is mine indicated then lower the cost to prefer the bracket. We want to avoid
+									// this cost when using aggressive bracket parsing though because it can result in choosing
+									// awkward paths in order to set up the jump/bracket to be only jump eligible (e.g. crossover
+									// into a jump).
+									if (otherFootInBracketPosture
+										&& !thisAnyHeld
+										&& !mineIndicatedOnThisFootsArrow
+										&& !mineIndicatedOnFreeLaneArrow
+										&& BracketParsingMethod != BracketParsingMethod.Aggressive)
 										return CostNewArrow_FootSwap_OtherInBracketPosture;
 
 									// Mine indicated
