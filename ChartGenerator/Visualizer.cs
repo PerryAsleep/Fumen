@@ -11,7 +11,7 @@ using static ChartGenerator.Constants;
 namespace ChartGenerator
 {
 	// TODO: Major cleanup. This class is quick and dirty.
-	public class Renderer
+	public class Visualizer
 	{
 		private const int BannerW = 418;
 		private const int BannerH = 164;
@@ -99,7 +99,7 @@ namespace ChartGenerator
 
 		private double[] LastExpressionPosition = new double[NumFeet];
 
-		static Renderer()
+		static Visualizer()
 		{
 			SrcDir = AppDomain.CurrentDomain.BaseDirectory;
 			SrcDir = SrcDir.Replace('\\', '/');
@@ -132,7 +132,7 @@ namespace ChartGenerator
 			return !string.IsNullOrEmpty(stepsType) && stepsType == "dance-single" || stepsType == "dance-double";
 		}
 
-		public Renderer(
+		public Visualizer(
 			string songPath,
 			string saveFile,
 			Song song,
@@ -205,14 +205,6 @@ p {{
 	margin-block-end: 0.0em;
 	border: none;
 	text-align: center;
-}}
-.sticky {{
-	position: fixed;
-	top: 0;
-	width: 100%;
-}}
-.sticky + .content {{
-	padding-top: {BannerH}px;
 }}
 .left {{
 	-webkit-transform:rotate(90deg);
@@ -866,12 +858,14 @@ $@"		<script>
 			{{
 				if (window.pageYOffset >= {BannerH})
 				{{
-					chartHeaders.classList.add(""sticky"");
+					chartHeaders.style.position = ""fixed"";
 				}}
 				else
 				{{
-					chartHeaders.classList.remove(""sticky"");
+					chartHeaders.style.position = ""static"";
 				}}
+				chartHeaders.style.top = ""0px"";
+				chartHeaders.style.left = `${{-window.pageXOffset}}px`;
 			}}
 		</script>
 ");

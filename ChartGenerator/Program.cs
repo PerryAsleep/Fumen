@@ -316,14 +316,14 @@ namespace ChartGenerator
 			if (Config.Instance.OutputVisualizations)
 			{
 				CanOutputVisualizations = true;
-				if (!Renderer.IsStepsTypeSupported(Config.Instance.InputChartType))
+				if (!Visualizer.IsStepsTypeSupported(Config.Instance.InputChartType))
 				{
 					LogWarn($"{Config.Instance.InputChartType} is not currently supported for outputting visualizations."
 					        + " Visualization output will be skipped.");
 					CanOutputVisualizations = false;
 				}
 				else if (Config.Instance.OutputChartType != Config.Instance.InputChartType
-				         && !Renderer.IsStepsTypeSupported(Config.Instance.OutputChartType))
+				         && !Visualizer.IsStepsTypeSupported(Config.Instance.OutputChartType))
 				{
 					LogWarn($"{Config.Instance.InputChartType} is not currently supported for outputting visualizations."
 						+ " Visualization output will be skipped.");
@@ -705,7 +705,7 @@ namespace ChartGenerator
 
 						try
 						{
-							var renderer = new Renderer(
+							var renderer = new Visualizer(
 								songArgs.CurrentDir,
 								saveFile,
 								song,
