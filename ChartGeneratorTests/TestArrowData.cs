@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ChartGenerator;
-using static ChartGenerator.Constants;
+using StepManiaChartGenerator;
+using static StepManiaChartGenerator.Constants;
 
 namespace ChartGeneratorTests
 {

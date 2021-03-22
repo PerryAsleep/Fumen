@@ -5,9 +5,9 @@ using System.Threading;
 using Fumen;
 using Fumen.ChartDefinition;
 using Fumen.Converters;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// A PerformedChart is a series of events which describe how a Chart is played.

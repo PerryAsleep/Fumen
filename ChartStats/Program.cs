@@ -15,7 +15,7 @@ namespace ChartStats
 	/// Quick and dirty.
 	/// Some hardcoded assumptions that doubles charts will be used as the input.
 	/// Some hardcoded assumptions that the time signature will be 4/4.
-	/// Some copy-paste file system parsing from ChartGenerator.
+	/// Some copy-paste file system parsing from StepManiaChartGenerator.
 	/// </summary>
 	class Program
 	{

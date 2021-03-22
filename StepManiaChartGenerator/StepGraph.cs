@@ -3,14 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 using Fumen;
 
 #if DEBUG_STEPGRAPH
 using System.Diagnostics;
 #endif // DEBUG_STEPGRAPH
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// A graph of GraphNodes connected by GraphLinks representing all the positions on a set

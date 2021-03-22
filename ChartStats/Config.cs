@@ -13,7 +13,7 @@ namespace ChartStats
 	/// Configuration for ChartStats.
 	/// Deserialized from json config file.
 	/// Quick and dirty.
-	/// Copy-paste from ChartGenerator.
+	/// Copy-paste from StepManiaChartGenerator.
 	/// </summary>
 	public class Config
 	{

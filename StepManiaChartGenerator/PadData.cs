@@ -4,9 +4,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Fumen;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Information about how a pad or set of pads is laid out.

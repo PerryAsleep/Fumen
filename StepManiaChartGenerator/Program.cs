@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 using static Fumen.Converters.SMCommon;
 using Fumen;
 using Fumen.Converters;
@@ -11,10 +11,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
-	/// ChartGenerator Program.
+	/// StepManiaChartGenerator Program.
 	/// Generates charts for stepmania files based on Config settings.
 	/// See Config for configuring Program behavior.
 	/// </summary>

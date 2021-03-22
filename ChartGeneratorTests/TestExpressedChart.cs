@@ -1,8 +1,8 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ChartGenerator;
+using StepManiaChartGenerator;
 using Fumen.Converters;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
 

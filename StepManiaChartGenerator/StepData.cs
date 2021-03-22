@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using Fumen;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Types of steps which can be performed with one foot.

@@ -1,7 +1,7 @@
 ﻿using System;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Step types that can be applied to a GraphLinkInstance or a GraphNodeInstance

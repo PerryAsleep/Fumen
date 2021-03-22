@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Fumen;
 using Fumen.ChartDefinition;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Enumeration of ways to express a MineEvent.

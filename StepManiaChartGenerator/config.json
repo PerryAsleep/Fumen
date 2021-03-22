@@ -33,7 +33,7 @@
 	//"NonChartFileCopyBehavior":	"DoNotCopy",
 
 	// Test Pack Settings.
-	"InputDirectory":			"C:\\Games\\StepMania 5\\Songs\\FumenRealCharts\\",
+	"InputDirectory":			"C:\\Games\\StepMania 5\\Songs\\FumenRealCharts",
 	"OutputDirectory":			"C:\\Users\\perry\\Projects\\Fumen\\Exports\\",
 	"VisualizationsDirectory":	"C:\\Users\\perry\\Projects\\Fumen\\Visualizations\\",
 	"LogDirectory":				"C:\\Users\\perry\\Projects\\Fumen\\Logs\\",

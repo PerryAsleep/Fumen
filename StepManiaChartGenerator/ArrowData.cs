@@ -1,7 +1,7 @@
-﻿using static ChartGenerator.Constants;
+﻿using static StepManiaChartGenerator.Constants;
 using System.Text.Json.Serialization;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Information about an arrow in an array of arrows representing the layout

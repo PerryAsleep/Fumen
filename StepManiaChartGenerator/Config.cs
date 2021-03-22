@@ -9,7 +9,7 @@ using Fumen;
 using System.Text.RegularExpressions;
 using Fumen.Converters;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Enumeration of methods for overwriting charts.
@@ -214,7 +214,7 @@ namespace ChartGenerator
 	}
 
 	/// <summary>
-	/// Configuration for ChartGenerator.
+	/// Configuration for StepManiaChartGenerator.
 	/// Deserialized from json config file.
 	/// Use Load to load Config.
 	/// See Config.md for detailed descriptions and examples of Config values.

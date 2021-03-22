@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 using ChartGeneratorTests;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
 namespace ExpressedChartTestGenerator
 {
@@ -50,7 +50,7 @@ namespace ExpressedChartTestGenerator
 			if (fullFile)
 			{
 				sb.AppendLine("using Microsoft.VisualStudio.TestTools.UnitTesting;");
-				sb.AppendLine("using ChartGenerator;");
+				sb.AppendLine("using StepManiaChartGenerator;");
 				sb.AppendLine("using static ChartGeneratorTests.TestExpressedChart;");
 				sb.AppendLine("");
 				sb.AppendLine("namespace ChartGeneratorTests");

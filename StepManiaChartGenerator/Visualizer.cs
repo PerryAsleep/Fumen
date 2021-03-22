@@ -6,9 +6,9 @@ using System.Text;
 using Fumen;
 using Fumen.ChartDefinition;
 using Fumen.Converters;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	// TODO: Major cleanup. This class is quick and dirty.
 	public class Visualizer

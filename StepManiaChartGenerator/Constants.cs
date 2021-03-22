@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	public static class Constants
 	{

@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29123.88
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fumen", "Fumen\Fumen.csproj", "{3829BAAD-4CD4-45D0-812F-EFDF3B733AE9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChartGenerator", "ChartGenerator\ChartGenerator.csproj", "{E9C2B7DC-E05D-4930-A36F-33637D726456}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepManiaChartGenerator", "StepManiaChartGenerator\StepManiaChartGenerator.csproj", "{E9C2B7DC-E05D-4930-A36F-33637D726456}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChartGeneratorTests", "ChartGeneratorTests\ChartGeneratorTests.csproj", "{00AA6F20-87CE-4699-B52E-4E52ECF3EB07}"
 EndProject

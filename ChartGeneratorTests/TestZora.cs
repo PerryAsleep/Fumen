@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ChartGenerator;
+using StepManiaChartGenerator;
 using static ChartGeneratorTests.TestExpressedChart;
 
 namespace ChartGeneratorTests

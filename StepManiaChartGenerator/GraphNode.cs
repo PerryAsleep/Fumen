@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using static ChartGenerator.Constants;
+using static StepManiaChartGenerator.Constants;
 
-namespace ChartGenerator
+namespace StepManiaChartGenerator
 {
 	/// <summary>
 	/// Node in a StepGraph.
