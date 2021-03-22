@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace Fumen
 {
 	/// <summary>
@@ -6,6 +7,8 @@ namespace Fumen
 	/// </summary>
 	public static class Path
 	{
+		private const string Win32DeviceNamespace = @"\\?\";
+
 		/// <summary>
 		/// Combines two paths and returns the result.
 		/// Unlike System.IO.Path.Combine, this does not ignore the first path component
@@ -61,8 +64,9 @@ namespace Fumen
 		}
 
 		/// <summary>
-		/// Gets the full path, prepended with \\?\ to allows paths longer than 260 characters
-		/// in some .NetFramework API calls which are still restricted by MAX_PATH.
+		/// Gets the full path, prepended with the Win32 device namespace to allows
+		/// paths longer than 260 characters in some .NetFramework API calls which are
+		/// still restricted by MAX_PATH.
 		/// </summary>
 		/// <remarks>
 		/// See https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#win32-file-namespaces
@@ -71,7 +75,30 @@ namespace Fumen
 		/// <returns>Full formatted path.</returns>
 		public static string GetWin32FileSystemFullPath(string path)
 		{
-			return @"\\?\" + System.IO.Path.GetFullPath(path);
+			return Win32DeviceNamespace + System.IO.Path.GetFullPath(path);
+		}
+
+		/// <summary>
+		/// Gets the relative path between the two given paths.
+		/// Accepts paths beginning with the Win32 device namespace.
+		/// </summary>
+		/// <param name="fromPath">The path to get the relative path from.</param>
+		/// <param name="toPath">The path to get the relative path to.</param>
+		/// <returns>The relative path between the two given paths.</returns>
+		public static string GetRelativePath(string fromPath, string toPath)
+		{
+			if (fromPath.StartsWith(Win32DeviceNamespace))
+				fromPath = fromPath.Substring(Win32DeviceNamespace.Length);
+			fromPath = fromPath.Replace(System.IO.Path.AltDirectorySeparatorChar, System.IO.Path.DirectorySeparatorChar);
+			if (toPath.StartsWith(Win32DeviceNamespace))
+				toPath = toPath.Substring(Win32DeviceNamespace.Length);
+			toPath = toPath.Replace(System.IO.Path.AltDirectorySeparatorChar, System.IO.Path.DirectorySeparatorChar);
+
+			var fromUri = new Uri(fromPath);
+			var toUri = new Uri(toPath);
+			var relativeUri = fromUri.MakeRelativeUri(toUri);
+			var relativePath = relativeUri.ToString();
+			return relativePath;
 		}
 	}
 }

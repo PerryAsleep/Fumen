@@ -28,8 +28,8 @@ namespace ChartGenerator
 		private const int MeasureMarkerH = 10;
 		private const int BeatMarkerH = 6;
 		private const int ChartTextH = 20;
-
-		private static string SrcDir;
+		
+		private static string VisualizationDir;
 
 		private enum ChartColumns
 		{
@@ -83,15 +83,16 @@ namespace ChartGenerator
 		};
 
 		private StreamWriter StreamWriter;
-		private Song Song;
-		private Chart OriginalChart;
-		private ExpressedChart ExpressedChart;
-		private string ExpressedChartConfigName;
-		private Chart GeneratedChart;
-		private PerformedChart GeneratedPerformedChart;
-		private string PerformedChartConfigName;
-		private string SongPath;
-		private string SaveFile;
+		private readonly Song Song;
+		private readonly Chart OriginalChart;
+		private readonly ExpressedChart ExpressedChart;
+		private readonly string ExpressedChartConfigName;
+		private readonly Chart GeneratedChart;
+		private readonly PerformedChart PerformedChart;
+		private readonly string PerformedChartConfigName;
+		private readonly string SongPath;
+		private readonly string SaveFile;
+		private readonly string SrcPath;
 
 		private readonly int OriginalChartX = 0;
 		private readonly int ExpressedChartX;
@@ -101,11 +102,6 @@ namespace ChartGenerator
 
 		static Visualizer()
 		{
-			SrcDir = AppDomain.CurrentDomain.BaseDirectory;
-			SrcDir = SrcDir.Replace('\\', '/');
-			SrcDir = SrcDir.TrimEnd('/');
-			SrcDir += "/html/src/";
-
 			var x = 0;
 			ChartColumnInfo = new ColumnInfo[Enum.GetNames(typeof(ChartColumns)).Length];
 			ChartColumnInfo[(int)ChartColumns.TimeSignature] = new ColumnInfo {Name = "Time", Width = ChartColW, X = x };
@@ -133,6 +129,32 @@ namespace ChartGenerator
 			return !string.IsNullOrEmpty(stepsType) && stepsType == "dance-single" || stepsType == "dance-double";
 		}
 
+		/// <summary>
+		/// Creates the directory for writing visualizations and copies source assets to it.
+		/// </summary>
+		/// <param name="visualizationDir">The directory to use for writing visualizations.</param>
+		public static void InitializeVisualizationDir(string visualizationDir)
+		{
+			VisualizationDir = visualizationDir;
+
+			// Create the directory for writing visualization files.
+			Directory.CreateDirectory(VisualizationDir);
+
+			// Copy the src assets to the new directory.
+			var sourceDir = Fumen.Path.Combine(new [] {AppDomain.CurrentDomain.BaseDirectory, "html", "src"});
+			var targetDir = GetSrcDir();
+			Directory.CreateDirectory(targetDir);
+			foreach (var file in Directory.GetFiles(sourceDir))
+			{
+				File.Copy(file, Fumen.Path.Combine(targetDir, System.IO.Path.GetFileName(file)));
+			}
+		}
+
+		private static string GetSrcDir()
+		{
+			return Fumen.Path.Combine(VisualizationDir, "src");
+		}
+
 		public Visualizer(
 			string songPath,
 			string saveFile,
@@ -140,7 +162,7 @@ namespace ChartGenerator
 			Chart originalChart,
 			ExpressedChart expressedChart,
 			string expressedChartConfigName,
-			PerformedChart generatedPerformedChart,
+			PerformedChart performedChart,
 			string performedChartConfigName,
 			Chart generatedChart)
 		{
@@ -150,7 +172,7 @@ namespace ChartGenerator
 			OriginalChart = originalChart;
 			ExpressedChart = expressedChart;
 			ExpressedChartConfigName = expressedChartConfigName;
-			GeneratedPerformedChart = generatedPerformedChart;
+			PerformedChart = performedChart;
 			PerformedChartConfigName = performedChartConfigName;
 			GeneratedChart = generatedChart;
 
@@ -165,6 +187,14 @@ namespace ChartGenerator
 
 			if (!SongPath.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString()))
 				SongPath += System.IO.Path.DirectorySeparatorChar.ToString();
+
+			// Determine the relative src path.
+			if (string.IsNullOrEmpty(VisualizationDir))
+				throw new Exception("VisualizationDir is not set. Set with InitializeVisualizationDir.");
+			SrcPath = Fumen.Path.GetRelativePath(SaveFile, GetSrcDir());
+			SrcPath = SrcPath.Replace('\\', '/');
+			if (!SrcPath.EndsWith("/"))
+				SrcPath += "/";
 		}
 
 		public void Write()
@@ -189,6 +219,7 @@ namespace ChartGenerator
 
 		private void WriteHead()
 		{
+
 			StreamWriter.Write(
 $@"<head>
 	<style>
@@ -229,91 +260,91 @@ p {{
 	transform: rotate(270deg);
 }}
 .leftfoot {{
-	content:url(""{SrcDir}l.png"");
+	content:url(""{SrcPath}l.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .rightfoot {{
-	content:url(""{SrcDir}r.png"");
+	content:url(""{SrcPath}r.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .quarter {{
-	content:url(""{SrcDir}1_4.png"");
+	content:url(""{SrcPath}1_4.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .eighth {{
-	content:url(""{SrcDir}1_8.png"");
+	content:url(""{SrcPath}1_8.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .twelfth {{
-	content:url(""{SrcDir}1_12.png"");
+	content:url(""{SrcPath}1_12.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .sixteenth {{
-	content:url(""{SrcDir}1_12.png"");
+	content:url(""{SrcPath}1_16.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .twentyfourth {{
-	content:url(""{SrcDir}1_24.png"");
+	content:url(""{SrcPath}1_24.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .thirtysecond {{
-	content:url(""{SrcDir}1_32.png"");
+	content:url(""{SrcPath}1_32.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .fourtyeighth {{
-	content:url(""{SrcDir}1_48.png"");
+	content:url(""{SrcPath}1_48.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .sixtyfourth {{
-	content:url(""{SrcDir}1_64.png"");
+	content:url(""{SrcPath}1_64.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
 	border:none;
 }}
 .holdcap {{
-	content:url(""{SrcDir}hold_cap.png"");
+	content:url(""{SrcPath}hold_cap.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{HoldCapH}px;
 	border:none;
 }}
 .rollcap {{
-	content:url(""{SrcDir}roll_cap.png"");
+	content:url(""{SrcPath}roll_cap.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{HoldCapH}px;
 	border:none;
 }}
 .mine {{
-	content:url(""{SrcDir}mine.png"");
+	content:url(""{SrcPath}mine.png"");
 	position:absolute;
 	width:{ArrowW}px;
 	height:{ArrowW}px;
@@ -342,7 +373,7 @@ p {{
 	position:absolute;
 	width:{ArrowW}px;
 	padding: none;
-	background: url(""{SrcDir}hold.png"");
+	background: url(""{SrcPath}hold.png"");
 	background-repeat: repeat;
 }}
 #rollbody {{
@@ -350,7 +381,7 @@ p {{
 	position:absolute;
 	width:{ArrowW}px;
 	padding: none;
-	background: url(""{SrcDir}roll.png"");
+	background: url(""{SrcPath}roll.png"");
 	background-repeat: repeat;
 }}
 	</style>
@@ -530,7 +561,7 @@ $@"					<th style=""table-layout: fixed; width: {ArrowW - TableBorderW}px; heigh
 			var lastHoldWasRoll = new bool[chart.NumInputs];
 
 			var currentExpressedChartSearchNode = ExpressedChart.GetRootSearchNode();
-			var currentPerformedChartNode = GeneratedPerformedChart.GetRootPerformanceNode();
+			var currentPerformedChartNode = PerformedChart.GetRootPerformanceNode();
 			var currentExpressedMineIndex = 0;
 
 			foreach (var chartEvent in chart.Layers[0].Events)

@@ -73,6 +73,11 @@ namespace ChartGenerator
 		/// </summary>
 		private static string VisualizationDir;
 
+		/// <summary>
+		/// Whether or not the application can output visualizations.
+		/// True if Config specifies to output visualizations and the StepsTypes are supported by
+		/// the Visualizer.
+		/// </summary>
 		private static bool CanOutputVisualizations;
 
 		/// <summary>
@@ -136,7 +141,7 @@ namespace ChartGenerator
 			// Set whether we can output visualizations based on the configured StepsTypes.
 			SetCanOutputVisualizations();
 			// Create a directory for outputting visualizations.
-			if (!CreateVisualizationOutputDirectory())
+			if (!InitializeVisualizationDir())
 			{
 				Logger.Shutdown();
 				return;
@@ -333,10 +338,11 @@ namespace ChartGenerator
 		}
 
 		/// <summary>
-		/// Creates the output directory for visualizations if configured to do so.
+		/// If configured to write visualizations, initializes the configured directory.
+		/// Creates the directory if it does not exist, and copies src assets to it.
 		/// </summary>
 		/// <returns>True if no errors and false otherwise.</returns>
-		private static bool CreateVisualizationOutputDirectory()
+		private static bool InitializeVisualizationDir()
 		{
 			if (Config.Instance.OutputVisualizations && CanOutputVisualizations)
 			{
@@ -345,12 +351,12 @@ namespace ChartGenerator
 					var visualizationSubDir = ExportTime.ToString("yyyy-MM-dd HH-mm-ss");
 					VisualizationDir = Config.Instance.VisualizationsDirectory;
 					VisualizationDir = Fumen.Path.Combine(VisualizationDir, visualizationSubDir);
-					LogInfo($"Creating directory for outputting visualizations: {VisualizationDir}.");
-					Directory.CreateDirectory(VisualizationDir);
+					LogInfo($"Initializing directory for outputting visualizations: {VisualizationDir}.");
+					Visualizer.InitializeVisualizationDir(VisualizationDir);
 				}
 				catch (Exception e)
 				{
-					LogError($"Failed to find or create directory for outputting visualizations. {e}");
+					LogError($"Failed to initialize directory for outputting visualizations. {e}");
 					return false;
 				}
 			}
