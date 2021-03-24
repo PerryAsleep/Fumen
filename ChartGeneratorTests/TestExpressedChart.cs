@@ -90,7 +90,7 @@ namespace ChartGeneratorTests
 				DefaultBracketParsingMethod = BracketParsingMethod.Balanced,
 				BracketParsingDetermination = BracketParsingDetermination.ChooseMethodDynamically,
 				MinLevelForBrackets = 0,
-				UseAggressiveBracketsWhenMoreSimultaneousNotesThanOneFootCanCover = true,
+				UseAggressiveBracketsWhenMoreSimultaneousNotesThanCanBeCoveredWithoutBrackets = true,
 				BalancedBracketsPerMinuteForAggressiveBrackets = 3.0,
 				BalancedBracketsPerMinuteForNoBrackets = 0.571
 			};
