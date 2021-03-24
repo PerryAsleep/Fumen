@@ -212,6 +212,7 @@ namespace Fumen
 		private Logger()
 		{
 			LogQueue = new BlockingCollection<string>(QueueCapacity);
+			WriteToConsole = true;
 			WriteQueueTask = Task.Factory.StartNew(
 				WriteQueue,
 				CancellationToken.None,
@@ -224,7 +225,7 @@ namespace Fumen
 		/// </summary>
 		public void Dispose()
 		{
-			Timer.Dispose();
+			Timer?.Dispose();
 			LogQueue?.CompleteAdding();
 			WriteQueueTask?.Wait();
 			StreamWriter?.Dispose();
