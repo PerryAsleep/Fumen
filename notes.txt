@@ -1,13 +1,13 @@
+Before release:
+	make sure config.json is good for shipping
+	include link in file to guide?
+
+videos
+
 PerformedChart Issues:
 	Additional FootSwap tightening
 	Choosing odd NewArrow NewArrow jumps that involve a swap. e.g. UD to DR with left moving from U to D.
 
-Document new bracket parsing config.
-
-Performed Chart bug:
-	Applause measure 47 beat 2 - ambiguous step
-
-Annoying that the tightening bpm cutoff doesn't include the bounds.
 
 Charts with Bugs?
 	Involve expressed chart costs:
@@ -18,6 +18,8 @@ Charts with Bugs?
 			lots of little problems because of the holds
 		Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
 			This is extremely complicated with lots of swaps into brackets and intentional double stepping.
+	Performed Chart bug:
+		Applause measure 47 beat 2 - ambiguous step
 
 	Twilight (pas lam)
 
@@ -43,14 +45,14 @@ Bugs:
 			61: mine indicated foot swaps - questionable
 
 Misc:
-	Document how it works.
+	ExpressedChart should also search through other tiers of roots.
 	public / private pass
 	comment / cost cleanup
-	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
 	Copy song pack files (pack art)
 	if all 4 notes are full in sp and there is at least one mine, add mines so it is a whole row of mines in dp? or at least, 4 mines = 8 mines?
 	Preserving patters
-	time remaining on export?
+	Annoying that the tightening bpm cutoff doesn't include the bounds.
+	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
 
 Renderer Improvements:
 	Render Fakes and Lifts differently.
