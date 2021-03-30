@@ -9,6 +9,6 @@
 	],
 	"InputChartType": "dance-double",
 	"DifficultyRegex": ".",
-	"OutputFileStats": "C:\\Users\\perry\\Projects\\Fumen\\DoublesSongStats.csv",
-	"OutputFileStepsPerSide": "C:\\Users\\perry\\Projects\\Fumen\\DoublesStepsPerSide.csv",
+	"OutputFileStats": "C:\\Fumen\\DoublesSongStats.csv",
+	"OutputFileStepsPerSide": "C:\\Fumen\\DoublesStepsPerSide.csv",
 }
