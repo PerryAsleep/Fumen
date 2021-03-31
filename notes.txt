@@ -1,16 +1,8 @@
 Before release:
-	make sure config.json is good for shipping
-	include link in file to guide?
+	final version number?
 
-videos
-
-PerformedChart Issues:
-	Additional FootSwap tightening
-	Choosing odd NewArrow NewArrow jumps that involve a swap. e.g. UD to DR with left moving from U to D.
-
-
-Charts with Bugs?
-	Involve expressed chart costs:
+Charts with Bugs:
+	Expressed Chart bugs:
 		Oh! (measure 44)
 			chose a bracket over a jump. this results in a really ambiguous pattern on dp
 		Hold it against me (measyure 42)
@@ -18,45 +10,28 @@ Charts with Bugs?
 			lots of little problems because of the holds
 		Technical Showcase 4\Get Your Wish (DJ NOT PORTER ROBINSON Remix)
 			This is extremely complicated with lots of swaps into brackets and intentional double stepping.
-	Performed Chart bug:
-		Applause measure 47 beat 2 - ambiguous step
-
-	Twilight (pas lam)
-
-Tests:
-	SM/SSC Reader unit Tests
-	Foot swap mine indication on wrong mine.
-	Jump v Bracket
-		JumpBothSame
-		JumpBothNew
-		Jump
-	Chords / Quad
-
-Bugs:
-	In charts with double steps, the expression will prefer a swap with long inverted patterns to avoid the double step.
-	See HoodStar Challenge from Enjoy Stamina
-
-	Chart Bugs:
 		Don't You Want Me:
 			45: the intent here is a mine indicated double step, but if you ignore the mine the program did it better
+		Twilight (pas lam) (ECFA 6 H S 3)
+			swpas into brackets which are interpreted as jacks into jump
 		Echidna:
 			7: Supposed to be swap instead of 3 jack?
 				same in 11, 13, 21
 			61: mine indicated foot swaps - questionable
+		HoodStar Challenge from Enjoy Stamina:
+			In charts with double steps, the expression will prefer a swap with long inverted patterns to avoid the double step.
 
 Misc:
 	ExpressedChart should also search through other tiers of roots.
-	public / private pass
-	comment / cost cleanup
+	Additional FootSwap tightening?
+	Should a swap be a distinct move in a jump? (NewArrow NewArrow that involves a swap)
 	Copy song pack files (pack art)
 	if all 4 notes are full in sp and there is at least one mine, add mines so it is a whole row of mines in dp? or at least, 4 mines = 8 mines?
-	Preserving patters
 	Annoying that the tightening bpm cutoff doesn't include the bounds.
 	Some way to preserve formatting / ordering / comments / etc better when loading and saving sm/ssc chart.
 
-Renderer Improvements:
+Visualization Improvements:
 	Render Fakes and Lifts differently.
 	Render negative Stops (fakes) differently.
 	Render performed chart starting position.
 	Render when the performed chart uses different StepTypes.
-
