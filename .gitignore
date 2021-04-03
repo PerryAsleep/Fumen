@@ -9,6 +9,7 @@
 /Exports/
 DoublesSongStats.csv
 DoublesStepsPerSide.csv
+notes.txt
 
 # User-specific files
 *.rsuser
@@ -24,7 +25,7 @@ DoublesStepsPerSide.csv
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
+#[Rr]eleases/
 x64/
 x86/
 [Aa][Rr][Mm]/
