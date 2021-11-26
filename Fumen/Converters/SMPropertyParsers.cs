@@ -378,8 +378,12 @@ namespace Fumen.Converters
 		{
 			if (chart.NumInputs < 1)
 			{
+				var loggedType = chart.Type;
+				if (string.IsNullOrEmpty(loggedType))
+					loggedType = "<unknown type>";
+
 				Logger?.Warn(
-					$"Cannot parse notes for {chart.Type} {chart.DifficultyType} Chart. Unknown number of inputs. This Chart will be ignored.");
+					$"Cannot parse notes for {loggedType} {chart.DifficultyType} Chart. Unknown number of inputs. This Chart will be ignored.");
 				return false;
 			}
 
@@ -725,8 +729,8 @@ namespace Fumen.Converters
 			// Parse chart type and set number of players and inputs.
 			if (!SMCommon.TryGetChartType(Chart.Type, out var smChartType))
 			{
+				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{Chart.Type}'. This chart will be ignored.");
 				Chart.Type = null;
-				Logger?.Error($"{PropertyName}: Failed to parse {SMCommon.TagStepsType} value '{smChartType}'. This chart will be ignored.");
 				return true;
 			}
 			Chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;

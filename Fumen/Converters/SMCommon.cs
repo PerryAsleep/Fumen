@@ -526,7 +526,7 @@ namespace Fumen.Converters
 				typeof(Stop),	// Stops occur after other notes at the same time.
 			};
 
-			int IComparer<Event>.Compare(Event e1, Event e2)
+			public int Compare(Event e1, Event e2)
 			{
 				if (null == e1 && null == e2)
 					return 0;
@@ -553,6 +553,11 @@ namespace Fumen.Converters
 					return comparison;
 
 				return comparison;
+			}
+
+			int IComparer<Event>.Compare(Event e1, Event e2)
+			{
+				return Compare(e1, e2);
 			}
 		}
 	}

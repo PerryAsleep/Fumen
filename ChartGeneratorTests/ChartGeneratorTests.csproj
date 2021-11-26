@@ -72,6 +72,10 @@
       <Project>{3829baad-4cd4-45d0-812f-efdf3b733ae9}</Project>
       <Name>Fumen</Name>
     </ProjectReference>
+    <ProjectReference Include="..\StepManiaLibrary\StepManiaLibrary.csproj">
+      <Project>{0442a9a8-0ad1-4275-9575-b30e71f2a57e}</Project>
+      <Name>StepManiaLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

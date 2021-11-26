@@ -1,0 +1,272 @@
+{
+	// Logger configuration.
+	"LoggerConfig":
+	{
+		"LogLevel": "Info",
+		"LogToFile": true,
+		"LogFlushIntervalSeconds": 20,
+		"LogBufferSizeBytes": 10240,
+		"LogToConsole": true,
+		"LogDirectory": "C:\\Users\\perry\\Projects\\Logs",
+	},
+
+	"SeedRandomNumbersFromFile": true,
+	"CloseAutomaticallyWhenComplete": false,
+
+	"InputFile":				"C:\\Games\\StepMania 5\\Songs\\Customs\\Acid Wall\\Acid Wall.ssc",
+	"InputChartType":			"dance-double",
+	"InputChartDifficulty":		"Challenge",
+
+	"Sections":
+	[
+		{
+			"StartMeasure": 16,
+			"EndMeasure": 30,
+			"FootToStartOn": 1,
+			"LeftFootStartLane": 3,
+			"RightFootStartLane": 4,
+			"LeftFootEndLane": 5,
+			"RightFootEndLane": 6,
+
+			"SameArrowStepWeight": 30,
+			"NewArrowStepWeight": 70,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+			
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				// Low threshold for lateral tightening
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 1.0,
+			},
+		},
+
+		{
+			"StartMeasure": 32,
+			"EndMeasure": 63,
+			"FootToStartOn": 1,
+			"LeftFootStartLane": 3,
+			"RightFootStartLane": 4,
+			"LeftFootEndLane": 4,
+			"RightFootEndLane": 5,
+
+			"SameArrowStepWeight": 25,
+			"NewArrowStepWeight": 75,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				// Low threshold for lateral tightening
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 1.0,
+			},
+		},
+
+		{
+			"StartMeasure": 72,
+			"EndMeasure": 95, "EndBeat": 3, "EndSubDivisionNumerator": 2, "EndSubDivisionDenominator": 4,
+			"FootToStartOn": 0,
+			"LeftFootStartLane": 3,
+			"RightFootStartLane": 4,
+			"LeftFootEndLane": 3,
+			"RightFootEndLane": 4,
+
+			"MaxSameArrowsInARowPerFoot": 2,
+
+			"SameArrowStepWeight": 25,
+			"NewArrowStepWeight": 75,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				// Low threshold for lateral tightening
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 2.0,
+			},
+		},
+
+		// Easier
+		{
+			"StartMeasure": 112, "StartBeat": 0, "StartSubDivisionNumerator": 2, "StartSubDivisionDenominator": 4,
+			"EndMeasure": 119, "EndBeat": 1, "EndSubDivisionNumerator": 1, "EndSubDivisionDenominator": 2,
+
+			"FootToStartOn": 1,
+			"LeftFootStartLane": 3,
+			"RightFootStartLane": 4,
+			"LeftFootEndLane": 2,
+			"RightFootEndLane": 3,
+
+			"MaxSameArrowsInARowPerFoot": 2,
+
+			"SameArrowStepWeight": 30,
+			"NewArrowStepWeight": 70,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				// Low threshold for lateral tightening
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 1.0,
+			},
+		},
+		// Medium
+		{
+			"StartMeasure": 120,
+			"EndMeasure": 128,
+
+			"FootToStartOn": 0,
+			"LeftFootStartLane": 1,
+			"RightFootStartLane": 3,
+
+			"SameArrowStepWeight": 30,
+			"NewArrowStepWeight": 70,
+
+			"MaxSameArrowsInARowPerFoot": 2,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				// Low threshold for lateral tightening
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 2.0,
+			},
+		},
+		// Medium 2
+		{
+			"StartMeasure": 128,
+			"EndMeasure": 136,
+
+			"SameArrowStepWeight": 25,
+			"NewArrowStepWeight": 75,
+
+			"MaxSameArrowsInARowPerFoot": 2,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				// Low threshold for lateral tightening
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 2.0,
+			},
+		},
+		// Hard
+		{
+			"StartMeasure": 136,
+			"EndMeasure": 143,
+
+			"LeftFootEndLane": 3,
+			"RightFootEndLane": 4,
+
+			"MaxSameArrowsInARowPerFoot": 2,
+
+			"SameArrowStepWeight": 25,
+			"NewArrowStepWeight": 75,
+			"NewArrowBracketableWeight": 1,
+			"NewArrowNonBracketableWeight": 0,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 4.0,
+			},
+		},
+
+		// Ending 1
+		{
+			"StartMeasure": 144,
+			"EndMeasure": 176,
+
+			"FootToStartOn": 1,
+			"LeftFootStartLane": 3,
+			"RightFootStartLane": 4,
+
+			"MaxSameArrowsInARowPerFoot": 2,
+
+			"SameArrowStepWeight": 28,
+			"NewArrowStepWeight": 72,
+			"NewArrowBracketableWeight": 1,
+			"NewArrowNonBracketableWeight": 0,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 1.5,
+			},
+		},
+		// Ending 2
+		{
+			"StartMeasure": 176,
+			"EndMeasure": 192,
+
+			"SameArrowStepWeight": 30,
+			"NewArrowStepWeight": 70,
+			"NewArrowBracketableWeight": 1,
+			"NewArrowNonBracketableWeight": 0,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				
+				"LateralTighteningAbsoluteNPS": 1.0,
+				"LateralTighteningSpeed": 1.0,
+			},
+		},
+
+		// Ending 8ths
+		{
+			"BeatSubDivisionToFill": 2,
+
+			"StartMeasure": 192,
+			"EndMeasure": 204,
+
+			"LeftFootEndLane": 5,
+			"RightFootEndLane": 6,
+
+			"SameArrowStepWeight": 30,
+			"NewArrowStepWeight": 70,
+			"NewArrowBracketableWeight": 80,
+			"NewArrowNonBracketableWeight": 20,
+
+			"PerformedChartConfig":
+			{
+				"DesiredArrowWeights": { "dance-double": [6, 12, 10, 22, 22, 12, 10, 6] },
+ 
+				"LateralTighteningPatternLength": 5,
+				"LateralTighteningRelativeNPS": 1.65,
+				
+				"LateralTighteningAbsoluteNPS": 12.0,
+				"LateralTighteningSpeed": 12.0,
+			},
+		},
+	],
+}

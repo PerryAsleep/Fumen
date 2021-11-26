@@ -12,7 +12,7 @@ if exist Releases\StepManiaChartGenerator.zip (
 )
 
 @REM Copy the config for shipping into the bin directory before packaging.
-echo F|xcopy /Y /F /I .\StepManiaChartGenerator\config-ship.json .\StepManiaChartGenerator\bin\Release\config.json
+echo F|xcopy /Y /F /I .\StepManiaChartGenerator\StepManiaChartGeneratorConfig-ship.json .\StepManiaChartGenerator\bin\Release\StepManiaChartGeneratorConfig.json
 echo F|xcopy /Y /F /I .\StepManiaChartGenerator\README-ship.md .\StepManiaChartGenerator\bin\Release\README.md
 
 @REM Zip the contents of the bin directory into a new package.

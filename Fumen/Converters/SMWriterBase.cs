@@ -589,9 +589,12 @@ namespace Fumen.Converters
 					while (measures.Count <= measure)
 						measures.Add(new MeasureData());
 
+					var denom = note.Position.SubDivision.Reduce().Denominator;
+					if (denom == 0)
+						denom = 1;
 					measures[measure].Notes.Add(note);
 					measures[measure].LCM = Fraction.LeastCommonMultiple(
-						note.Position.SubDivision.Reduce().Denominator,
+						denom,
 						measures[measure].LCM);
 				}
 

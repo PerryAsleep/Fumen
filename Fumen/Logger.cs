@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -15,7 +16,6 @@ namespace Fumen
 		Info,
 		Warn,
 		Error,
-		None
 	}
 
 	/// <summary>
@@ -49,10 +49,53 @@ namespace Fumen
 		/// </summary>
 		private static LogLevel LogLevel = LogLevel.Info;
 
+		public class LogMessage
+		{
+			public readonly string Message;
+			public readonly LogLevel Level;
+			public readonly DateTime Time;
+
+			public LogMessage(string message, LogLevel level, DateTime time)
+			{
+				Message = message;
+				Level = level;
+				Time = time;
+			}
+
+			public override string ToString()
+			{
+				string levelStr = null;
+				switch (Level)
+				{
+					case LogLevel.Info: levelStr = " [INFO]"; break;
+					case LogLevel.Warn: levelStr = " [WARN]"; break;
+					case LogLevel.Error: levelStr = " [ERROR]"; break;
+				}
+				return $"{Time:yyyy-MM-dd HH:mm:ss.fff}{levelStr} {Message}";
+			}
+		}
+
+		public class Config
+		{
+			public LogLevel LogLevel = LogLevel.Info;
+
+			public bool WriteToFile;
+			public string LogFilePath;
+			public int LogFileFlushIntervalSeconds;
+			public int LogFileBufferSizeBytes;
+
+			public bool WriteToConsole;
+
+			public bool WriteToBuffer;
+			public object BufferLock;
+			public LinkedList<LogMessage> Buffer;
+			public int BufferSize;
+		}
+
 		/// <summary>
 		/// Queue of messages to write to the StreamWriter.
 		/// </summary>
-		private readonly BlockingCollection<string> LogQueue;
+		private readonly BlockingCollection<LogMessage> LogQueue;
 		/// <summary>
 		/// StreamWriter for writing messages to the FileStream.
 		/// </summary>
@@ -73,44 +116,26 @@ namespace Fumen
 		/// Object for locking the StreamWriter.
 		/// </summary>
 		private readonly object StreamWriterLock = new object();
+		
 		/// <summary>
 		/// Whether or not to write to the console when logging.
 		/// </summary>
 		private readonly bool WriteToConsole;
 
-		/// <summary>
-		/// Start up the logger.
-		/// The logger will log to the console and stream messages to disk.
-		/// </summary>
-		/// <param name="logLevel">Log level. Messages of lower priority will not be logged.</param>
-		/// <param name="logFilePath">Path to the log file to stream to. Will be created if it does not exist.</param>
-		/// <param name="flushIntervalSeconds">Interval in seconds to flush the log to disk.</param>
-		/// <param name="bufferSizeBytes">Buffer size. Buffer will flush to disk when it is full.</param>
-		/// <param name="writeToConsole">Whether or not to write the console in addition to the log file.</param>
-		public static void StartUp(
-			LogLevel logLevel,
-			string logFilePath,
-			int flushIntervalSeconds,
-			int bufferSizeBytes,
-			bool writeToConsole)
-		{
-			LogLevel = logLevel;
-
-			Instance?.Dispose();
-			Instance = new Logger(logFilePath, flushIntervalSeconds, bufferSizeBytes, writeToConsole);
-		}
+		private readonly object BufferLock;
+		private readonly LinkedList<LogMessage> Buffer;
+		private readonly int BufferSize;
 
 		/// <summary>
 		/// Start up the logger.
-		/// The logger will only log to the console.
 		/// </summary>
-		/// <param name="logLevel">Log level. Messages of lower priority will not be logged.</param>
-		public static void StartUp(LogLevel logLevel)
+		/// <param name="config">Config object for configuring the logger.</param>
+		public static void StartUp(Config config)
 		{
-			LogLevel = logLevel;
+			LogLevel = config.LogLevel;
 
 			Instance?.Dispose();
-			Instance = new Logger();
+			Instance = new Logger(config);
 		}
 
 		/// <summary>
@@ -131,8 +156,7 @@ namespace Fumen
 		{
 			if (LogLevel > LogLevel.Info)
 				return;
-			var formattedMessage = FormatMessage("[INFO]", message);
-			Instance?.Log(formattedMessage);
+			Instance?.Log(new LogMessage(message, LogLevel.Info, DateTime.Now));
 		}
 
 		/// <summary>
@@ -144,8 +168,7 @@ namespace Fumen
 		{
 			if (LogLevel > LogLevel.Warn)
 				return;
-			var formattedMessage = FormatMessage("[WARNING]", message);
-			Instance?.Log(formattedMessage);
+			Instance?.Log(new LogMessage(message, LogLevel.Warn, DateTime.Now));
 		}
 
 		/// <summary>
@@ -157,38 +180,28 @@ namespace Fumen
 		{
 			if (LogLevel > LogLevel.Error)
 				return;
-			var formattedMessage = FormatMessage("[ERROR]", message);
-			Instance?.Log(formattedMessage);
-		}
-
-		/// <summary>
-		/// Formats the given message for writing to the log.
-		/// </summary>
-		/// <param name="logLevel">Log level string.</param>
-		/// <param name="message">Message string.</param>
-		/// <returns>Formatted string.</returns>
-		private static string FormatMessage(string logLevel, string message)
-		{
-			return $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {logLevel} {message}";
+			Instance?.Log(new LogMessage(message, LogLevel.Error, DateTime.Now));
 		}
 
 		/// <summary>
 		/// Private Constructor.
 		/// </summary>
-		/// <remarks>The logger will write to a log file and optionally to the console.</remarks>
-		/// <param name="logFilePath">Path to the log file to stream to. Will be created if it does not exist.</param>
-		/// <param name="flushIntervalSeconds">Interval in seconds to flush the log to disk.</param>
-		/// <param name="bufferSizeBytes">Buffer size. Buffer will flush to disk when it is full.</param>
-		/// <param name="writeToConsole">Whether or not to write the console in addition to the log file.</param>
-		private Logger(string logFilePath, int flushIntervalSeconds, int bufferSizeBytes, bool writeToConsole)
+		/// <param name="config">Config object for configuring the logger.</param>
+		private Logger(Config config)
 		{
-			FileStream = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-			StreamWriter = new StreamWriter(FileStream, Encoding.UTF8, bufferSizeBytes)
+			if (config.WriteToFile)
 			{
-				AutoFlush = false
-			};
-			LogQueue = new BlockingCollection<string>(QueueCapacity);
-			WriteToConsole = writeToConsole;
+				FileStream = new FileStream(config.LogFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+				StreamWriter = new StreamWriter(FileStream, Encoding.UTF8, config.LogFileBufferSizeBytes)
+				{
+					AutoFlush = false
+				};
+				LogQueue = new BlockingCollection<LogMessage>(QueueCapacity);
+			}
+
+			Buffer = config.Buffer;
+			BufferLock = config.BufferLock;
+			BufferSize = config.BufferSize;
 
 			// Start a Task to write enqueued messages to the StreamWriter.
 			WriteQueueTask = Task.Factory.StartNew(
@@ -198,26 +211,14 @@ namespace Fumen
 				TaskScheduler.Default);
 
 			// Start a timer to flush the StreamWriter to disk periodically.
-			if (flushIntervalSeconds > 0)
+			if (config.WriteToFile)
 			{
-				var periodMillis = flushIntervalSeconds * 1000;
-				Timer = new Timer(FlushTimerCallback, null, periodMillis, periodMillis);
+				if (config.LogFileFlushIntervalSeconds > 0)
+				{
+					var periodMillis = config.LogFileFlushIntervalSeconds * 1000;
+					Timer = new Timer(FlushTimerCallback, null, periodMillis, periodMillis);
+				}
 			}
-		}
-
-		/// <summary>
-		/// Private Constructor.
-		/// </summary>
-		/// <remarks>The logger will write to the console.</remarks>
-		private Logger()
-		{
-			LogQueue = new BlockingCollection<string>(QueueCapacity);
-			WriteToConsole = true;
-			WriteQueueTask = Task.Factory.StartNew(
-				WriteQueue,
-				CancellationToken.None,
-				TaskCreationOptions.LongRunning,
-				TaskScheduler.Default);
 		}
 
 		/// <summary>
@@ -237,15 +238,15 @@ namespace Fumen
 		/// Logs a message by enqueueing it for write to the underlying stream.
 		/// </summary>
 		/// <param name="message">Message to log.</param>
-		private void Log(string message)
+		private void Log(LogMessage message)
 		{
 			try
 			{
 				LogQueue.Add(message);
 			}
-			catch (Exception e)
+			catch (Exception)
 			{
-				Console.WriteLine(FormatMessage("[ERROR]", $"Failed to log message: \"{message}\". {e}"));
+				Console.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [ERROR] Failed to log message: \"{message}\"");
 			}
 		}
 
@@ -262,21 +263,37 @@ namespace Fumen
 		}
 
 		/// <summary>
-		/// Method called via a Task to write enqueued messages to the StreamWriter.
+		/// Method called via a Task to write enqueued messages.
 		/// </summary>
 		private void WriteQueue()
 		{
 			foreach (var message in LogQueue.GetConsumingEnumerable())
 			{
+				// Write to the console, if configured to do so.
 				if (WriteToConsole)
 				{
 					Console.WriteLine(message);
 				}
+
+				// Write to the StreamWriter for writing to a file, if configured to do so.
 				if (StreamWriter != null)
 				{
 					lock (StreamWriterLock)
 					{
 						StreamWriter?.WriteLine(message);
+					}
+				}
+
+				// Write to the provided Buffer, if configured to do so.
+				if (Buffer != null)
+				{
+					lock (BufferLock)
+					{
+						while (Buffer.Count >= BufferSize)
+						{
+							Buffer.RemoveLast();
+						}
+						Buffer.AddFirst(message);
 					}
 				}
 			}
