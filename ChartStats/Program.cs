@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Fumen;
 using Fumen.ChartDefinition;
@@ -36,7 +37,11 @@ namespace ChartStats
 				return;
 
 			// Set the Log Level before validating Config.
-			Logger.StartUp(config.LogLevel);
+			Logger.StartUp(new Logger.Config
+			{
+				WriteToConsole = true,
+				LogLevel = config.LogLevel
+			});
 
 			// Write headers.
 			// Assumption that charts are doubles.
@@ -139,7 +144,7 @@ namespace ChartStats
 			Logger.Info($"Processing {fileInfo.Name}.");
 
 			var reader = Reader.CreateReader(fileInfo);
-			var song = await reader.Load();
+			var song = await reader.LoadAsync(CancellationToken.None);
 			foreach (var chart in song.Charts)
 			{
 				if (chart.Layers.Count == 1

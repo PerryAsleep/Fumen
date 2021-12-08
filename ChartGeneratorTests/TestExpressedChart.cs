@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StepManiaLibrary;
 using Fumen.Converters;
@@ -62,7 +63,7 @@ namespace ChartGeneratorTests
 		public static ExpressedChart Load(string smFile, string chartDifficultyType = null)
 		{
 			Song song = null;
-			Task.Run(async () => { song = await new SMReader(smFile).Load(); }).Wait();
+			Task.Run(async () => { song = await new SMReader(smFile).LoadAsync(CancellationToken.None); }).Wait();
 
 			// Default to the first chart.
 			var events = song.Charts[0].Layers[0].Events;
