@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fumen.Converters
@@ -55,8 +56,9 @@ namespace Fumen.Converters
 		/// Asynchronously load and parse the given msd file.
 		/// </summary>
 		/// <param name="filePath">Path to the msd file.</param>
+		/// <param name="token">CancellationToken to cancel task.</param>
 		/// <returns>Whether the file was loaded and parsed successfully or not.</returns>
-		public async Task<bool> Load(string filePath)
+		public async Task<bool> LoadAsync(string filePath, CancellationToken token)
 		{
 			Values.Clear();
 
@@ -72,112 +74,117 @@ namespace Fumen.Converters
 			catch (Exception e)
 			{
 				Logger.Error($"[MSD] Failed to open {filePath}.");
-				Logger.Error($"[MSD] {e.ToString()}");
+				Logger.Error($"[MSD] {e}");
 				return false;
 			}
 
-			// Parse the buffer.
-			var i = 0;
-			var bufferLen = buffer.Length;
-			var parsingValue = false;
-			var currentValueSB = new StringBuilder();
-			while (i < bufferLen)
-			{
-				// Parse comments.
-				if (i + CommentMarker.Length - 1 < bufferLen && buffer.Substring(i, CommentMarker.Length) == CommentMarker)
-				{
-					while (i < bufferLen && buffer[i] != '\n')
-						i++;
-				}
+			token.ThrowIfCancellationRequested();
 
-				// Handle missing ValueEndMarkers when encountering a ValueStartMarker while parsing a value.
-				if (parsingValue && buffer[i] == ValueStartMarker)
+			// Parse the buffer.
+			await Task.Run(() =>
+			{
+				var i = 0;
+				var bufferLen = buffer.Length;
+				var parsingValue = false;
+				var currentValueSB = new StringBuilder();
+				while (i < bufferLen)
 				{
-					// The ValueStartMarker must be the first non-whitespace character on the line to be
-					// considered as an intentional start to a new value after a missing ValueEndMarker.
-					var valueStartMarkerFirstCharOnLine = false; 
-					var j = currentValueSB.Length - 1;
-					if (j > 0)
+					// Parse comments.
+					if (i + CommentMarker.Length - 1 < bufferLen && buffer.Substring(i, CommentMarker.Length) == CommentMarker)
 					{
-						valueStartMarkerFirstCharOnLine = true;
-						var c = currentValueSB[j];
-						while (j > 0 && c != '\r' && c != '\n')
-						{
-							if (c == ' ' || c == '\t')
-							{
-								c = currentValueSB[--j];
-							}
-							else
-							{
-								valueStartMarkerFirstCharOnLine = false;
-								break;
-							}
-						}
+						while (i < bufferLen && buffer[i] != '\n')
+							i++;
 					}
 
-					if (!valueStartMarkerFirstCharOnLine)
+					// Handle missing ValueEndMarkers when encountering a ValueStartMarker while parsing a value.
+					if (parsingValue && buffer[i] == ValueStartMarker)
 					{
-						currentValueSB.Append(buffer[i++]);
+						// The ValueStartMarker must be the first non-whitespace character on the line to be
+						// considered as an intentional start to a new value after a missing ValueEndMarker.
+						var valueStartMarkerFirstCharOnLine = false;
+						var j = currentValueSB.Length - 1;
+						if (j > 0)
+						{
+							valueStartMarkerFirstCharOnLine = true;
+							var c = currentValueSB[j];
+							while (j > 0 && c != '\r' && c != '\n')
+							{
+								if (c == ' ' || c == '\t')
+								{
+									c = currentValueSB[--j];
+								}
+								else
+								{
+									valueStartMarkerFirstCharOnLine = false;
+									break;
+								}
+							}
+						}
+
+						if (!valueStartMarkerFirstCharOnLine)
+						{
+							currentValueSB.Append(buffer[i++]);
+							continue;
+						}
+
+						// Add the final param for the current value, trimming all whitespace that preceded
+						// the ValueEndMarker.
+						Values[Values.Count - 1].Params.Add(currentValueSB.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
+						// Finish parsing the value, but continue to start parsing the new value below.
+						parsingValue = false;
+					}
+
+					// Normal ValueStartMarker handing, start parsing a value.
+					if (!parsingValue && buffer[i] == ValueStartMarker)
+					{
+						Values.Add(new Value());
+						parsingValue = true;
+					}
+
+					// Not parsing a value, skip the current character.
+					if (!parsingValue)
+					{
+						// Skip two if escaping.
+						i += buffer[i] == EscapeMarker ? 2 : 1;
 						continue;
 					}
 
-					// Add the final param for the current value, trimming all whitespace that preceded
-					// the ValueEndMarker.
-					Values[Values.Count - 1].Params.Add(currentValueSB.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
-					// Finish parsing the value, but continue to start parsing the new value below.
-					parsingValue = false;
+					// Handle parsing characters within a value.
+
+					// Handle ending a parameter.
+					if (buffer[i] == ParamMarker || buffer[i] == ValueEndMarker)
+					{
+						Values[Values.Count - 1].Params.Add(currentValueSB.Length > 0 ? currentValueSB.ToString() : "");
+						// Continue to start parsing a new parameter below.
+					}
+
+					// Handle starting a parameter.
+					if (buffer[i] == ParamMarker || buffer[i] == ValueStartMarker)
+					{
+						i++;
+						currentValueSB.Clear();
+						continue;
+					}
+
+					// Handle ending a value. Last parameter capture above.
+					if (buffer[i] == ValueEndMarker)
+					{
+						i++;
+						parsingValue = false;
+						continue;
+					}
+
+					// Normal character within a parameter.
+					if (buffer[i] == EscapeMarker)
+						i++;
+					if (i < bufferLen)
+						currentValueSB.Append(buffer[i++]);
 				}
 
-				// Normal ValueStartMarker handing, start parsing a value.
-				if (!parsingValue && buffer[i] == ValueStartMarker)
-				{
-					Values.Add(new Value());
-					parsingValue = true;
-				}
-
-				// Not parsing a value, skip the current character.
-				if (!parsingValue)
-				{
-					// Skip two if escaping.
-					i += buffer[i] == EscapeMarker ? 2 : 1;
-					continue;
-				}
-
-				// Handle parsing characters within a value.
-
-				// Handle ending a parameter.
-				if (buffer[i] == ParamMarker || buffer[i] == ValueEndMarker)
-				{
-					Values[Values.Count - 1].Params.Add(currentValueSB.Length > 0 ? currentValueSB.ToString() : "");
-					// Continue to start parsing a new parameter below.
-				}
-
-				// Handle starting a parameter.
-				if (buffer[i] == ParamMarker || buffer[i] == ValueStartMarker)
-				{
-					i++;
-					currentValueSB.Clear();
-					continue;
-				}
-
-				// Handle ending a value. Last parameter capture above.
-				if (buffer[i] == ValueEndMarker)
-				{
-					i++;
-					parsingValue = false;
-					continue;
-				}
-
-				// Normal character within a parameter.
-				if (buffer[i] == EscapeMarker)
-					i++;
-				if (i < bufferLen)
-					currentValueSB.Append(buffer[i++]);
-			}
-
-			// Add final parameter.
-			if (parsingValue)
-				Values[Values.Count - 1].Params.Add(currentValueSB.ToString());
+				// Add final parameter.
+				if (parsingValue)
+					Values[Values.Count - 1].Params.Add(currentValueSB.ToString());
+			}, token);
 
 			return true;
 		}

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
 
@@ -50,100 +51,109 @@ namespace Fumen.Converters
 		/// <summary>
 		/// Load the ssc file specified by the provided file path.
 		/// </summary>
-		public override async Task<Song> Load()
+		/// <param name="token">CancellationToken to cancel task.</param>
+		public override async Task<Song> LoadAsync(CancellationToken token)
 		{
 			// Load the file as an MSDFile.
 			var msdFile = new MSDFile();
-			var result = await msdFile.Load(FilePath);
+			var result = await msdFile.LoadAsync(FilePath, token);
 			if (!result)
 			{
 				Logger.Error("Failed to load MSD File.");
 				return null;
 			}
 
+			token.ThrowIfCancellationRequested();
+
 			var song = new Song();
-			song.SourceType = FileFormatType.SSC;
-			var songTempos = new Dictionary<double, double>();
-			var songStops = new Dictionary<double, double>();
-			var songPropertyParsers = GetSongPropertyParsers(song, songTempos, songStops);
-
-			Dictionary<string, PropertyParser> chartPropertyParsers = null;
-			Chart activeChart = null;
-			Dictionary<double, double> activeChartTempos = null;
-			Dictionary<double, double> activeChartStops = null;
-
-			// Parse all Values from the MSDFile.
-			foreach (var value in msdFile.Values)
+			await Task.Run(() =>
 			{
-				var valueStr = value.Params[0]?.ToUpper() ?? "";
+				song.SourceType = FileFormatType.SSC;
+				var songTempos = new Dictionary<double, double>();
+				var songStops = new Dictionary<double, double>();
+				var songPropertyParsers = GetSongPropertyParsers(song, songTempos, songStops);
 
-				// Starting a new Chart.
-				if (valueStr == SMCommon.TagNoteData)
+				Dictionary<string, PropertyParser> chartPropertyParsers = null;
+				Chart activeChart = null;
+				Dictionary<double, double> activeChartTempos = null;
+				Dictionary<double, double> activeChartStops = null;
+
+				// Parse all Values from the MSDFile.
+				foreach (var value in msdFile.Values)
 				{
-					// Final cleanup on the Song
-					if (activeChart == null)
+					var valueStr = value.Params[0]?.ToUpper() ?? "";
+
+					// Starting a new Chart.
+					if (valueStr == SMCommon.TagNoteData)
 					{
-						song.GenreTransliteration = song.Genre;
+						token.ThrowIfCancellationRequested();
+
+						// Final cleanup on the Song
+						if (activeChart == null)
+						{
+							song.GenreTransliteration = song.Genre;
+						}
+
+						// Add the previous Chart.
+						if (activeChart != null)
+						{
+							FinalizeChartAndAddToSong(
+								activeChart,
+								activeChartTempos,
+								activeChartStops,
+								song,
+								songTempos,
+								songStops);
+						}
+
+						// Set up a new Chart.
+						activeChart = new Chart();
+						activeChart.Layers.Add(new Layer());
+						// Add a 4/4 Time Signature.
+						activeChart.Layers[0].Events.Add(
+							new TimeSignature(new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure))
+							{
+								Position = new MetricPosition()
+							});
+
+						activeChartTempos = new Dictionary<double, double>();
+						activeChartStops = new Dictionary<double, double>();
+						chartPropertyParsers = GetChartPropertyParsers(activeChart, activeChartTempos, activeChartStops);
+						continue;
 					}
 
-					// Add the previous Chart.
+					// Parse as a Chart property.
 					if (activeChart != null)
 					{
-						FinalizeChartAndAddToSong(
-							activeChart,
-							activeChartTempos,
-							activeChartStops,
-							song,
-							songTempos,
-							songStops);
+						// Matches Stepmania logic. If any timing value is present, assume all timing values must be from the
+						// Chart and not the Song.
+						if (ChartTimingDataTags.Contains(valueStr))
+							activeChart.Extras.AddSourceExtra(SMCommon.TagFumenChartUsesOwnTimingData, true, true);
+
+						if (chartPropertyParsers.TryGetValue(valueStr, out var propertyParser))
+							propertyParser.Parse(value);
 					}
 
-					// Set up a new Chart.
-					activeChart = new Chart();
-					activeChart.Layers.Add(new Layer());
-					// Add a 4/4 Time Signature.
-					activeChart.Layers[0].Events.Add(new TimeSignature(new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure))
+					// Parse as a Song property.
+					else
 					{
-						Position = new MetricPosition()
-					});
-
-					activeChartTempos = new Dictionary<double, double>();
-					activeChartStops = new Dictionary<double, double>();
-					chartPropertyParsers = GetChartPropertyParsers(activeChart, activeChartTempos, activeChartStops);
-					continue;
+						if (songPropertyParsers.TryGetValue(valueStr, out var propertyParser))
+							propertyParser.Parse(value);
+					}
 				}
 
-				// Parse as a Chart property.
+				// Add the final Chart.
 				if (activeChart != null)
 				{
-					// Matches Stepmania logic. If any timing value is present, assume all timing values must be from the
-					// Chart and not the Song.
-					if (ChartTimingDataTags.Contains(valueStr))
-						activeChart.Extras.AddSourceExtra(SMCommon.TagFumenChartUsesOwnTimingData, true, true);
-
-					if (chartPropertyParsers.TryGetValue(valueStr, out var propertyParser))
-						propertyParser.Parse(value);
+					FinalizeChartAndAddToSong(
+						activeChart,
+						activeChartTempos,
+						activeChartStops,
+						song,
+						songTempos,
+						songStops);
 				}
-
-				// Parse as a Song property.
-				else
-				{
-					if (songPropertyParsers.TryGetValue(valueStr, out var propertyParser))
-						propertyParser.Parse(value);
-				}
-			}
-
-			// Add the final Chart.
-			if (activeChart != null)
-			{
-				FinalizeChartAndAddToSong(
-					activeChart,
-					activeChartTempos,
-					activeChartStops,
-					song,
-					songTempos,
-					songStops);
-			}
+			}, token);
 
 			return song;
 		}
