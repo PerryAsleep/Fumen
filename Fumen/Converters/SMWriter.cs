@@ -24,13 +24,6 @@ namespace Fumen.Converters
 		public bool Save()
 		{
 			// TODO: Async
-			// TODO: Handle non 4/4 time signatures correctly.
-
-			// If Song data is missing that is normally defined on the Chart level, use the first
-			// Chart for writing the values.
-			Chart fallbackChartMissingSongProperties = null;
-			if (Config.Song.Charts.Count > 0)
-				fallbackChartMissingSongProperties = Config.Song.Charts[0];
 
 			using (StreamWriter = new StreamWriter(Config.FilePath))
 			{
@@ -46,8 +39,8 @@ namespace Fumen.Converters
 				WriteSongPropertyFromExtras(SMCommon.TagBackground);
 				WriteSongPropertyFromExtras(SMCommon.TagLyricsPath);
 				WriteSongPropertyFromExtras(SMCommon.TagCDTitle);
-				WriteSongPropertyMusic(fallbackChartMissingSongProperties);
-				WriteSongPropertyOffset(fallbackChartMissingSongProperties);
+				WriteSongPropertyMusic();
+				WriteSongPropertyOffset();
 				WriteSongProperty(SMCommon.TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMCommon.SMDoubleFormat));
 				WriteSongProperty(SMCommon.TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMCommon.SMDoubleFormat));
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagLastBeatHint, out object _, MatchesSourceFileFormatType()))
@@ -55,11 +48,11 @@ namespace Fumen.Converters
 				WriteSongPropertyFromExtras(SMCommon.TagSelectable);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM);
-				WriteSongPropertyBPMs(fallbackChartMissingSongProperties);
-				WriteSongPropertyStops(fallbackChartMissingSongProperties);
+				WriteSongPropertyBPMs();
+				WriteSongPropertyStops();
 				WriteSongPropertyFromExtras(SMCommon.TagFreezes, true);
 				WriteSongPropertyFromExtras(SMCommon.TagDelays, true);
-				WriteSongPropertyFromExtras(SMCommon.TagTimeSignatures, true);
+				WriteSongPropertyTimeSignatures(true);
 				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, true);
 				WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack, true);
 				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true);

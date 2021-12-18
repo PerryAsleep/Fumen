@@ -248,7 +248,7 @@ namespace StepManiaLibrary
 		/// Normalized DesiredArrowWeights.
 		/// Values sum to 1.0.
 		/// </summary>
-		public Dictionary<string, List<double>> DesiredArrowWeightsNormalized;
+		[JsonIgnore] public Dictionary<string, List<double>> DesiredArrowWeightsNormalized;
 
 		/// <summary>
 		/// Gets the desired arrow weights for the given chart type.
@@ -432,12 +432,12 @@ namespace StepManiaLibrary
 
 		[JsonInclude] public PerformedChartConfig PerformedChartConfig;
 
-		public MetricPosition StartPosition;
-		public MetricPosition EndPosition;
+		[JsonIgnore] public int StartPosition;
+		[JsonIgnore] public int EndPosition;
 
-		public double SameArrowStepWeightNormalized;
-		public double NewArrowStepWeightNormalized;
-		public double NewArrowBracketableWeightNormalized;
+		[JsonIgnore] public double SameArrowStepWeightNormalized;
+		[JsonIgnore] public double NewArrowStepWeightNormalized;
+		[JsonIgnore] public double NewArrowBracketableWeightNormalized;
 
 		public bool Validate()
 		{
@@ -451,8 +451,12 @@ namespace StepManiaLibrary
 
 		public void Init()
 		{
-			StartPosition = new MetricPosition(StartMeasure, StartBeat, StartSubDivisionNumerator, StartSubDivisionDenominator);
-			EndPosition = new MetricPosition(EndMeasure, EndBeat, EndSubDivisionNumerator, EndSubDivisionDenominator);
+			// This assumes 4/4
+			// TODO: Remove this entire class. We're going to be configuring this through the editor.
+			StartPosition = (StartMeasure * SMCommon.NumBeatsPerMeasure + StartBeat) * SMCommon.MaxValidDenominator
+			                + (SMCommon.MaxValidDenominator / StartSubDivisionDenominator) * StartSubDivisionNumerator;
+			EndPosition = (EndMeasure * SMCommon.NumBeatsPerMeasure + EndBeat) * SMCommon.MaxValidDenominator
+			              + (SMCommon.MaxValidDenominator / EndSubDivisionDenominator) * EndSubDivisionNumerator;
 
 			double totalStepTypeWeight = SameArrowStepWeight + NewArrowStepWeight;
 			SameArrowStepWeightNormalized = SameArrowStepWeight / totalStepTypeWeight;

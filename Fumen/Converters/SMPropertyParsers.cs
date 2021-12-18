@@ -279,6 +279,88 @@ namespace Fumen.Converters
 	}
 
 	/// <summary>
+	/// Parses a value with multiple parameters separated by the MSDFile ParamMarker
+	/// into a List of Fractions.
+	/// Parses these into a Dictionary of Fractions.
+	/// Will also store the raw value on the Extras if given raw string property name.
+	/// Example:
+	/// #TIMESIGNATURES:0.000=7=8,3.500=3=4;
+	/// </summary>
+	public class ListFractionPropertyParser : PropertyParser
+	{
+		private readonly Dictionary<double, Fraction> Values;
+		private readonly Extras Extras;
+		private readonly string RawStringPropertyName;
+
+		public ListFractionPropertyParser(
+			string smPropertyName,
+			Dictionary<double, Fraction> values,
+			Extras extras = null,
+			string rawStringPropertyName = null)
+			: base(smPropertyName)
+		{
+			Values = values;
+			Extras = extras;
+			RawStringPropertyName = rawStringPropertyName;
+		}
+
+		public override bool Parse(MSDFile.Value value)
+		{
+			// Only consider this line if it matches this property name.
+			if (!ParseFirstParameter(value, out var rawStr))
+				return false;
+
+			// Record the raw string to preserve formatting when writing.
+			if (!string.IsNullOrEmpty(RawStringPropertyName))
+				Extras?.AddSourceExtra(RawStringPropertyName, rawStr);
+
+			if (!string.IsNullOrEmpty(rawStr))
+			{
+				var fractionEntries = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var fractionEntry in fractionEntries)
+				{
+					var fractionParts = fractionEntry.Split('=');
+					if (fractionParts.Length != 3)
+					{
+						Logger?.Warn($"{PropertyName}: Malformed Fraction entry '{fractionEntry}'. This value will be ignored.");
+						continue;
+					}
+
+					if (!double.TryParse(fractionParts[0], out var time))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{fractionParts[0]}'. Expected double. This value will be ignored.");
+						continue;
+					}
+
+					var numeratorString = fractionParts[1];
+					var denominatorString = fractionParts[2];
+					if (denominatorString.IndexOf(';') >= 0)
+					{
+						denominatorString = denominatorString.Substring(0, denominatorString.IndexOf(';'));
+					}
+
+					if (!int.TryParse(numeratorString, out var numerator) || numerator <= 0)
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{numeratorString}'. Expected positive integer. This value will be ignored.");
+						continue;
+					}
+					if (!int.TryParse(denominatorString, out var denominator) || denominator <= 0)
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{denominatorString}'. Expected positive integer. This value will be ignored.");
+						continue;
+					}
+					
+					Values[time] = new Fraction(numerator, denominator);
+				}
+			}
+
+			Extras?.AddSourceExtra(PropertyName, Values);
+
+			return true;
+		}
+	}
+
+	/// <summary>
 	/// Parses a value with one parameter that is a string of comma-separated times to values.
 	/// Parses these into a Dictionary of doubles to values of type T.
 	/// Will also store the raw value on the Extras if given raw string property name.
@@ -544,12 +626,11 @@ namespace Fumen.Converters
 								continue;
 
 							// Configure common parameters on the note and add it.
-							var beat = (lineInMeasure * SMCommon.NumBeatsPerMeasure) / linesInMeasure;
-							var subDivisionNumerator = lineInMeasure * SMCommon.NumBeatsPerMeasure - linesInMeasure * beat;
-							var subDivisionDenominator = linesInMeasure;
 							note.Lane = laneIndex;
 							note.Player = player;
-							note.Position = new MetricPosition(measure, beat, subDivisionNumerator, subDivisionDenominator);
+							note.IntegerPosition = (measure * SMCommon.NumBeatsPerMeasure * SMCommon.MaxValidDenominator)
+								+ Convert.ToInt32(((double)(SMCommon.NumBeatsPerMeasure * SMCommon.MaxValidDenominator) / linesInMeasure) * lineInMeasure);
+							note.Extras.AddSourceExtra(SMCommon.TagFumenNoteOriginalMeasurePosition, new Fraction(lineInMeasure, linesInMeasure));
 							currentMeasureEvents.Add(note);
 						}
 
@@ -660,12 +741,6 @@ namespace Fumen.Converters
 			}
 			chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
 			chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
-
-			// Add a 4/4 time signature
-			chart.Layers[0].Events.Add(new TimeSignature(new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure))
-			{
-				Position = new MetricPosition()
-			});
 
 			// Parse the notes.
 			if (!ParseNotes(chart, value.Params[6] ?? ""))

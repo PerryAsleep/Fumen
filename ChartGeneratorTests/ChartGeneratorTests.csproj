@@ -56,8 +56,10 @@
     <Compile Include="TestExpressedChart.cs" />
     <Compile Include="Testfire.cs" />
     <Compile Include="TestGIGAVIOLATE.cs" />
+    <Compile Include="TestSSC.cs" />
     <Compile Include="TestTheLoveBug.cs" />
     <Compile Include="TestZora.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

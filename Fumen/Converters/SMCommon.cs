@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
@@ -90,8 +91,21 @@ namespace Fumen.Converters
 			public int NumPlayers { get; set; }
 		}
 
+		/// <summary>
+		/// StepMania always uses 4/4 for representing notes in measures in sm and ssc files.
+		/// Even if the time signature changes, notes are still represented in 4/4. Any time
+		/// signature is just used for rendering.
+		/// </summary>
 		public const int NumBeatsPerMeasure = 4;
-
+		/// <summary>
+		/// In StepMania's representation there are a maximum of 48 rows per beat.
+		/// </summary>
+		public const int MaxValidDenominator = 48;
+		/// <summary>
+		/// In sm or ssc files notes can only subdivide beats by fractions with these
+		/// denominators. For example, StepMania cannot handle a beat subdivided 24 times,
+		/// though it can handle 16 and 48 times.
+		/// </summary>
 		public static readonly int[] ValidDenominators =
 		{
 			1,	// Quarter note
@@ -190,7 +204,9 @@ namespace Fumen.Converters
 		public const string TagFumenNotesType = "FumenNotesType";
 		public const string TagFumenRawStopsStr = "FumenRawStopsStr";
 		public const string TagFumenRawBpmsStr = "FumenRawBpmsStr";
+		public const string TagFumenRawTimeSignaturesStr = "FumenRawTimeSignaturesStr";
 		public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
+		public const string TagFumenNoteOriginalMeasurePosition = "FumenNoteOriginalMeasurePosition";
 
 		public const string SMDoubleFormat = "N6";
 
@@ -200,7 +216,7 @@ namespace Fumen.Converters
 		static SMCommon()
 		{
 			// Initialize valid SM SubDivisions.
-			SubDivisions.Add(new Fraction(0, 0));
+			SubDivisions.Add(new Fraction(0, 1));
 			foreach (var denominator in ValidDenominators)
 			{
 				if (denominator <= 1)
@@ -357,6 +373,30 @@ namespace Fumen.Converters
 			return false;
 		}
 
+
+		/// <summary>
+		/// Converts a double value representing absolute beats into the closest IntegerPosition
+		/// that matches valid StepMania beat subdivisions.
+		/// </summary>
+		/// <param name="absoluteBeat">Absolute beat as a double</param>
+		/// <returns>Closes IntegerPosition to use.</returns>
+		public static int ConvertAbsoluteBeatToIntegerPosition(double absoluteBeat)
+		{
+			var beatInt = (int)absoluteBeat;
+			var lowEstimateSubDivision = FindClosestSMSubDivision(absoluteBeat - beatInt);
+			var highEstimateSubDivision = lowEstimateSubDivision + new Fraction(1, MaxValidDenominator);
+
+			var lowerEstimatedPosition = beatInt + lowEstimateSubDivision.ToDouble();
+			var higherEstimatedPosition = beatInt + highEstimateSubDivision.ToDouble();
+
+			var subDivisionToUse =
+				Math.Abs(absoluteBeat - lowerEstimatedPosition) <= Math.Abs(absoluteBeat - higherEstimatedPosition)
+					? lowEstimateSubDivision : highEstimateSubDivision;
+
+			var subDivisionAsRow = subDivisionToUse.Numerator * (MaxValidDenominator / subDivisionToUse.Denominator);
+			return beatInt * MaxValidDenominator + subDivisionAsRow;
+		}
+
 		/// <summary>
 		/// Adds TempoChange Events to the given Chart from the given Dictionary of
 		/// position to tempo values parsed from the Chart or Song.
@@ -372,10 +412,7 @@ namespace Fumen.Converters
 			{
 				var tempoChangeEvent = new TempoChange(tempo.Value)
 				{
-					Position = new MetricPosition(
-						(int)tempo.Key / NumBeatsPerMeasure,
-						(int)tempo.Key % NumBeatsPerMeasure,
-						FindClosestSMSubDivision(tempo.Key - (int)tempo.Key))
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tempo.Key)
 				};
 
 				// Record the actual doubles.
@@ -398,10 +435,7 @@ namespace Fumen.Converters
 			{
 				var stopEvent = new Stop((long)(stop.Value * 1000000.0))
 				{
-					Position = new MetricPosition(
-						(int)stop.Key / NumBeatsPerMeasure,
-						(int)stop.Key % NumBeatsPerMeasure,
-						FindClosestSMSubDivision(stop.Key - (int)stop.Key))
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(stop.Key)
 				};
 
 				// Record the actual doubles.
@@ -409,6 +443,136 @@ namespace Fumen.Converters
 				stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, stop.Value);
 
 				chart.Layers[0].Events.Add(stopEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds Time Signature Events to the given Chart from the given Dictionary of
+		/// beat position to time signatures as Fractions parsed from the Song.
+		/// </summary>
+		/// <param name="timeSignatures">
+		/// Dictionary of time in beats to time signatures as Fractions parsed from the Song.
+		/// </param>
+		/// <param name="chart">Chart to add Time Signature events to.</param>
+		/// <param name="logger">Logger for logging errors or warnings.</param>
+		/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+		public static void AddTimeSignatures(Dictionary<double, Fraction> timeSignatures,
+			Chart chart,
+			ILogger logger,
+			bool logOnErrors)
+		{
+			var useDefaultTimeSignature = false;
+
+			// If there are no time signatures defined, use a default 4/4 signature.
+			if (timeSignatures.Count == 0)
+				useDefaultTimeSignature = true;
+
+			// Otherwise, try to parse the time signatures and ensure they are valid.
+			else
+			{
+				var first = true;
+				var lastTimeSignatureIntegerPosition = 0;
+				var lastTimeSignatureRowsPerMeasure = 0;
+				var tsEvents = new List<TimeSignature>();
+				foreach (var kvp in timeSignatures.OrderBy(t => t.Key))
+				{
+					var beatDouble = kvp.Key;
+					var ts = kvp.Value;
+
+					if (ts.Denominator != 4 || ts.Numerator != 4)
+					{
+						logger.Error($"Chart uses {ts.Numerator}/{ts.Denominator} Time Signature.");
+					}
+
+					// The first time signature must be at the start of the song.
+					if (first && beatDouble != 0.0)
+					{
+						if (logOnErrors)
+						{
+							logger.Warn(
+								$"First time signature occurs at {beatDouble:SMDoubleFormat}." 
+								+ $" If explicit time signatures are defined the first must be at {0.0:SMDoubleFormat}."
+								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
+						}
+						useDefaultTimeSignature = true;
+						break;
+					}
+
+					if (ts.Numerator < 1 || ts.Denominator < 1)
+					{
+						if (logOnErrors)
+						{
+							logger.Warn(
+								$"Time signature at {beatDouble:SMDoubleFormat} ({ts.Numerator}/{ts.Denominator}) is invalid."
+								+ " Both values must be greater than 0."
+								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
+						}
+						useDefaultTimeSignature = true;
+						break;
+					}
+
+					var integerPosition = ConvertAbsoluteBeatToIntegerPosition(beatDouble);
+
+					// Make sure this new time signature actually falls at the start of a measure.
+					var relativePosition = integerPosition - lastTimeSignatureIntegerPosition;
+					if (lastTimeSignatureRowsPerMeasure != 0 && relativePosition % lastTimeSignatureRowsPerMeasure != 0)
+					{
+						if (logOnErrors)
+						{
+							logger.Warn(
+								$"Time signature at {beatDouble:SMDoubleFormat} ({ts.Numerator}/{ts.Denominator}) does not fall on a measure boundary."
+								+ " Time signatures can only change at the start of a measure."
+								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
+						}
+						useDefaultTimeSignature = true;
+						break;
+					}
+
+					// Make sure this time signature can be represented by StepMania's integer positions.
+					if ((MaxValidDenominator * NumBeatsPerMeasure) % ts.Denominator != 0)
+					{
+						if (logOnErrors)
+						{
+							logger.Warn(
+								$"Time signature at {beatDouble:SMDoubleFormat} ({ts.Numerator}/{ts.Denominator}) cannot be represented by StepMania."
+								+ $" The beat ({ts.Denominator}) must evenly divide {MaxValidDenominator * NumBeatsPerMeasure}."
+								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
+						}
+						useDefaultTimeSignature = true;
+						break;
+					}
+
+					// Record measure boundaries so we can check the next time signature.
+					var rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / ts.Denominator;
+					var rowsPerMeasure = rowsPerBeat * ts.Numerator;
+					lastTimeSignatureRowsPerMeasure = rowsPerMeasure;
+					lastTimeSignatureIntegerPosition = integerPosition;
+
+					tsEvents.Add(new TimeSignature(ts)
+					{
+						IntegerPosition = integerPosition
+					});
+
+					first = false;
+				}
+
+				// All time signatures are valid, record them.
+				if (!useDefaultTimeSignature)
+				{
+					foreach (var tsEvent in tsEvents)
+					{
+						chart.Layers[0].Events.Add(tsEvent);
+					}
+				}
+			}
+
+			// Add a 4/4 time signature by default.
+			if (useDefaultTimeSignature)
+			{
+				chart.Layers[0].Events.Add(new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
+				{
+					IntegerPosition = 0
+				});
 			}
 		}
 
@@ -455,60 +619,111 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
-		/// Sets the TimeMicros on the given Chart Events based on the
-		/// Tempo, TimeSignatures, and MetricPositions of Events in the Chart.
+		/// Sets the TimeMicros and MetricPositions on the given Chart Events based
+		/// on the Tempo, TimeSignatures, and Stop Events in the Chart.
 		/// </summary>
-		/// <param name="chart">Chart to set TimeMicros on the Events.</param>
-		public static void SetEventTimeMicros(Chart chart)
+		/// <param name="chart">Chart to set TimeMicros and MetricPosition on the Events.</param>
+		public static void SetEventTimeMicrosAndMetricPositionsFromRows(Chart chart)
 		{
 			var bpm = 0.0;
-			var timeSignature = new Fraction(4, 4);
-			double beatTime = 0.0;
-			double currentTime = 0.0;
+			var lastBeatTimeChangeRow = 0;
+			var lastBeatTimeChangeTime = 0.0;
+			var lastTimeSigChangeMeasure = 0;
+			var lastTimeSigChangeRow= 0;
+			var lastTimeSigChangeDenominator = NumBeatsPerMeasure;
+			var rowsPerBeat = MaxValidDenominator;
+			var beatsPerMeasure = NumBeatsPerMeasure;
+			var totalStopTime = 0.0;
 
-			var previousPosition = new MetricPosition();
 			foreach (var chartEvent in chart.Layers[0].Events)
 			{
-				if (chartEvent.Position > previousPosition)
-				{
-					var currentBeats =
-						chartEvent.Position.Measure * timeSignature.Numerator
-						+ chartEvent.Position.Beat
-						+ (chartEvent.Position.SubDivision.Denominator == 0 ? 0 : chartEvent.Position.SubDivision.ToDouble());
-					var previousBeats =
-						previousPosition.Measure * timeSignature.Numerator
-						+ previousPosition.Beat
-						+ (previousPosition.SubDivision.Denominator == 0 ? 0 : previousPosition.SubDivision.ToDouble());
-					currentTime += (currentBeats - previousBeats) * beatTime;
-				}
+				var beatRelativeToLastTimeSigChange = (chartEvent.IntegerPosition - lastTimeSigChangeRow) / rowsPerBeat;
+				var measureRelativeToLastTimeSigChange = beatRelativeToLastTimeSigChange / beatsPerMeasure;
 
-				chartEvent.TimeMicros = (long)(currentTime * 1000000);
+				var absoluteMeasure = lastTimeSigChangeMeasure + measureRelativeToLastTimeSigChange;
+				var beatInMeasure = beatRelativeToLastTimeSigChange - (measureRelativeToLastTimeSigChange * beatsPerMeasure);
+				var beatSubDivision = new Fraction((chartEvent.IntegerPosition - lastTimeSigChangeRow) % rowsPerBeat, rowsPerBeat).Reduce();
 
-				var beatTimeDirty = false;
+				var timeRelativeToLastTimeChange = bpm == 0.0 ? 0.0 :
+					((double)(chartEvent.IntegerPosition - lastBeatTimeChangeRow) / rowsPerBeat) / bpm * 60.0
+					* ((double)NumBeatsPerMeasure / lastTimeSigChangeDenominator);
+				var absoluteTime = lastBeatTimeChangeTime + timeRelativeToLastTimeChange;
+
+				chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
+				chartEvent.TimeMicros = Convert.ToInt64((absoluteTime + totalStopTime) * 1000000.0);
+
 				if (chartEvent is Stop stop)
-					currentTime += (double)stop.LengthMicros / 1000000;
+					totalStopTime += (double)stop.LengthMicros / 1000000;
 				else if (chartEvent is TimeSignature ts)
 				{
-					timeSignature = ts.Signature;
-					beatTimeDirty = true;
+					var timeSignature = ts.Signature;
+
+					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
+					lastBeatTimeChangeTime = absoluteTime;
+
+					lastTimeSigChangeRow = chartEvent.IntegerPosition;
+					lastTimeSigChangeMeasure = absoluteMeasure;
+					lastTimeSigChangeDenominator = timeSignature.Denominator;
+					beatsPerMeasure = timeSignature.Numerator;
+					rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / timeSignature.Denominator;
 				}
 				else if (chartEvent is TempoChange tc)
 				{
 					bpm = tc.TempoBPM;
-					beatTimeDirty = true;
-				}
 
-				if (beatTimeDirty)
-				{
-					if (bpm == 0.0 || timeSignature.Denominator == 0.0)
-						beatTime = 0.0;
-					else
-						beatTime = (60 / bpm) * (4.0 / timeSignature.Denominator);
+					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
+					lastBeatTimeChangeTime = absoluteTime;
 				}
-
-				previousPosition = chartEvent.Position;
 			}
+		}
 
+		/// <summary>
+		/// Sets the Event IntegerPosition values based on their MetricPosition values
+		/// for all Events in the given Chart.
+		/// </summary>
+		/// <param name="chart">Chart to update Events.</param>
+		public static void SetEventRowsFromMetricPosition(Chart chart)
+		{
+			var lastBeatTimeChangeRow = 0;
+			var lastBeatTimeChangeMeasure = 0;
+			var rowsPerBeat = MaxValidDenominator;
+			var beatsPerMeasure = NumBeatsPerMeasure;
+
+			foreach (var chartEvent in chart.Layers[0].Events)
+			{
+				var pos = chartEvent.MetricPosition;
+				var relativeMeasure = pos.Measure - lastBeatTimeChangeMeasure;
+				var relativeBeat = relativeMeasure * beatsPerMeasure + pos.Beat;
+				var subDivision = pos.SubDivision.Reduce();
+				var subDivisionRows = (subDivision.Numerator * rowsPerBeat) / subDivision.Denominator;
+				var relativeRow = relativeBeat * rowsPerBeat + subDivisionRows;
+				var absoluteRow = lastBeatTimeChangeRow + relativeRow;
+				chartEvent.IntegerPosition = absoluteRow;
+
+				if (chartEvent is TimeSignature ts)
+				{
+					var timeSignature = ts.Signature;
+					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
+					lastBeatTimeChangeMeasure = pos.Measure;
+					beatsPerMeasure = timeSignature.Numerator;
+					rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / timeSignature.Denominator;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Helper method for logging position information for a row.
+		/// Assumes the StepMania 4/4 time signature and determines a MetricPosition from the row.
+		/// </summary>
+		/// <param name="row">Row / IntegerPosition value.</param>
+		/// <returns>Formatting string for logging.</returns>
+		public static string GetPositionForLogging(int row)
+		{
+			var measure = row / (MaxValidDenominator * NumBeatsPerMeasure);
+			var beat = row / MaxValidDenominator - measure * NumBeatsPerMeasure;
+			var subDivisionRow = row - (beat * MaxValidDenominator);
+			var subDivision = new Fraction(subDivisionRow, MaxValidDenominator).Reduce();
+			return $"Row {row} (File Measure {measure} Beat {beat} SubDivision {subDivision})";
 		}
 
 		/// <summary>
@@ -536,7 +751,7 @@ namespace Fumen.Converters
 					return 1;
 
 				// Order by time / position
-				var comparison = e1.CompareTo(e2);
+				var comparison = e1.IntegerPosition.CompareTo(e2.IntegerPosition);
 				if (comparison != 0)
 					return comparison;
 

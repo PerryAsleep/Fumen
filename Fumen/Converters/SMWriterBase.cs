@@ -21,11 +21,11 @@ namespace Fumen.Converters
 		public enum MeasureSpacingBehavior
 		{
 			/// <summary>
-			/// Use the raw measure positions from the Note extra data.
+			/// Use the SourceExtra FumenNoteOriginalMeasurePosition fraction per note.
 			/// This option should be used when loading an sm file and writing it back out
 			/// as it will preserve the spacing.
 			/// </summary>
-			UseSubDivisionDenominatorAsMeasureSpacing,
+			UseSourceExtraOriginalMeasurePosition,
 			/// <summary>
 			/// Use the least common multiple of the sub-divisions. This will write the
 			/// least number of lines for the notes in the measure. This may write sub-divisions
@@ -50,7 +50,7 @@ namespace Fumen.Converters
 			/// When writing properties, follow stepmania's rules to generate a chart that roughly
 			/// matches what stepmania would export. This means even if the source chart has a property
 			/// that stepmania understands but stepmania does not save (like the deprecated ANIMATIONS
-			/// property) that hose properties will be ignored when exporting. This option should be
+			/// property) that those properties will be ignored when exporting. This option should be
 			/// used when creating a Song manually or from a non-stepmania source.
 			/// </summary>
 			Stepmania,
@@ -82,9 +82,37 @@ namespace Fumen.Converters
 			/// </summary>
 			public Song Song;
 			/// <summary>
+			/// The Chart to use when writing properties that are defined at the Song level in an sm or ssc
+			/// file which need to be derived from a Chart. This includes, for example, stops and tempo changes
+			/// in an sm file and time signatures in both sm and ssc files.
+			/// </summary>
+			public Chart FallbackChart;
+			/// <summary>
 			/// The path of the file to write to.
 			/// </summary>
 			public string FilePath;
+			/// <summary>
+			/// When writing files, the Event IntegerPosition will be used to determine positioning.
+			/// Setting this variable to true will update every Event IntegerPosition based off of it's
+			/// MetricPosition prior to writing.
+			/// Use this if the Rows have not been set but accurate MetricPositions are available.
+			/// </summary>
+			public bool UpdateEventRowsFromMetricPosition = false;
+			/// <summary>
+			/// If true, write BPMs from the Song or Chart's Extras.
+			/// If false, write from the Chart's TempoChange Events.
+			/// </summary>
+			public bool WriteBPMsFromExtras = false;
+			/// <summary>
+			/// If true, write Stops from the Song or Chart's Extras.
+			/// If false, write from the Chart's Stop Events.
+			/// </summary>
+			public bool WriteStopsFromExtras = false;
+			/// <summary>
+			/// If true, write BPMs from the Song or Chart's Extras.
+			/// If false, write from the Chart's TimeSignature Events.
+			/// </summary>
+			public bool WriteTimeSignaturesFromExtras = false;
 		}
 
 		/// <summary>
@@ -160,6 +188,12 @@ namespace Fumen.Converters
 
 			PerformStartupChecks();
 			DetermineChartDifficultyTypes();
+
+			if (Config.UpdateEventRowsFromMetricPosition)
+			{
+				foreach (var chart in Config.Song.Charts)
+					SMCommon.SetEventRowsFromMetricPosition(chart);
+			}
 		}
 
 		/// <summary>
@@ -346,37 +380,38 @@ namespace Fumen.Converters
 				WritePropertyInternal(smPropertyName, value);
 		}
 
-		protected void WriteSongPropertyMusic(Chart fallbackChart = null, bool stepmaniaOmitted = false)
+		protected void WriteSongPropertyMusic(bool stepmaniaOmitted = false)
 		{
 			if (!Config.Song.Extras.TryGetExtra(SMCommon.TagMusic, out object value, MatchesSourceFileFormatType())
-			    && fallbackChart != null)
-				value = fallbackChart.MusicFile;
+			    && Config.FallbackChart != null)
+				value = Config.FallbackChart.MusicFile;
 			WriteSongProperty(SMCommon.TagMusic, value?.ToString() ?? "", stepmaniaOmitted);
 		}
 
-		protected void WriteSongPropertyOffset(Chart fallbackChart = null, bool stepmaniaOmitted = false)
+		protected void WriteSongPropertyOffset(bool stepmaniaOmitted = false)
 		{
 			if (!Config.Song.Extras.TryGetExtra(SMCommon.TagOffset, out object value, MatchesSourceFileFormatType())
-			    && fallbackChart != null)
-				value = fallbackChart.ChartOffsetFromMusic.ToString(SMCommon.SMDoubleFormat);
+			    && Config.FallbackChart != null)
+				value = Config.FallbackChart.ChartOffsetFromMusic.ToString(SMCommon.SMDoubleFormat);
 			WriteSongProperty(SMCommon.TagOffset, value?.ToString() ?? "", stepmaniaOmitted);
 		}
 
-		protected void WriteSongPropertyBPMs(Chart fallbackChart = null, bool stepmaniaOmitted = false)
+		protected void WriteSongPropertyBPMs(bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
 			// Stepmania files have changed how they format BPMs and Stops over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
+				&& Config.WriteBPMsFromExtras
 			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
 				return;
 			}
 
-			if (fallbackChart != null)
+			if (Config.FallbackChart != null)
 			{
-				WriteChartPropertyBPMs(fallbackChart, stepmaniaOmitted);
+				WriteChartPropertyBPMs(Config.FallbackChart, stepmaniaOmitted);
 				return;
 			}
 
@@ -386,7 +421,8 @@ namespace Fumen.Converters
 		protected void WriteChartPropertyBPMs(Chart chart, bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			if (chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
+			if (Config.WriteBPMsFromExtras 
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
 				return;
@@ -397,8 +433,6 @@ namespace Fumen.Converters
 
 		private string CreateBPMStringFromChartEvents(Chart chart)
 		{
-			var tempoChangeBeats = GetTempoChangeBeatsForChart(chart);
-
 			var numTempoChangeEvents = 0;
 			var sb = new StringBuilder();
 			foreach (var e in chart.Layers[0].Events)
@@ -411,8 +445,12 @@ namespace Fumen.Converters
 
 				// If present, use the original double value from the source chart so as not to lose
 				// or alter the precision.
-				if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats, MatchesSourceFileFormatType()))
-					timeInBeats = tempoChangeBeats[tc];
+				if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+					    MatchesSourceFileFormatType()))
+				{
+					timeInBeats = (double)tc.IntegerPosition / SMCommon.MaxValidDenominator;
+				}
+
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				var tempoStr = tc.TempoBPM.ToString(SMCommon.SMDoubleFormat);
@@ -422,55 +460,22 @@ namespace Fumen.Converters
 			return sb.ToString();
 		}
 
-		private Dictionary<TempoChange, double> GetTempoChangeBeatsForChart(Chart chart)
-		{
-			var tempoChangeBeats = new Dictionary<TempoChange, double>();
-			var beatAtCurrentMeasureStart = 0;
-			var currentMeasure = 0;
-			var currentTimeSignature = new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure);
-			if (chart.Layers.Count > 0)
-			{
-				foreach (var chartEvent in chart.Layers[0].Events)
-				{
-					if (chartEvent.Position.Measure > currentMeasure)
-					{
-						beatAtCurrentMeasureStart +=
-							currentTimeSignature.Numerator * (chartEvent.Position.Measure - currentMeasure);
-						currentMeasure = chartEvent.Position.Measure;
-					}
-
-					switch (chartEvent)
-					{
-						case TempoChange tempoChange:
-							tempoChangeBeats[tempoChange] =
-								beatAtCurrentMeasureStart + tempoChange.Position.Beat +
-								tempoChange.Position.SubDivision.ToDouble();
-							break;
-						case TimeSignature timeSignature:
-							currentTimeSignature = timeSignature.Signature;
-							break;
-					}
-				}
-			}
-
-			return tempoChangeBeats;
-		}
-
-		protected void WriteSongPropertyStops(Chart fallbackChart = null, bool stepmaniaOmitted = false)
+		protected void WriteSongPropertyStops(bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
 			// Stepmania files have changed how they format BPMs and Stops over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
+			    && Config.WriteStopsFromExtras
+				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagStops, rawStr, stepmaniaOmitted);
 				return;
 			}
 
-			if (fallbackChart != null)
+			if (Config.FallbackChart != null)
 			{
-				WriteChartPropertyStops(fallbackChart, stepmaniaOmitted);
+				WriteChartPropertyStops(Config.FallbackChart, stepmaniaOmitted);
 				return;
 			}
 
@@ -480,7 +485,8 @@ namespace Fumen.Converters
 		protected void WriteChartPropertyStops(Chart chart, bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			if (chart.Extras.TryGetExtra(SMCommon.TagFumenRawStopsStr, out string rawStr, MatchesSourceFileFormatType()))
+			if (Config.WriteStopsFromExtras
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawStopsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagStops, rawStr, stepmaniaOmitted);
 				return;
@@ -491,8 +497,6 @@ namespace Fumen.Converters
 
 		private string CreateStopStringFromChartEvents(Chart chart)
 		{
-			var stopBeats = GetStopBeatsForChart(chart);
-
 			var numStopEvents = 0;
 			var sb = new StringBuilder();
 			foreach (var e in chart.Layers[0].Events)
@@ -505,8 +509,11 @@ namespace Fumen.Converters
 
 				// If present, use the original double values from the source chart so as not to lose
 				// or alter the precision.
-				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats, MatchesSourceFileFormatType()))
-					timeInBeats = stopBeats[stop];
+				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+					    MatchesSourceFileFormatType()))
+				{
+					timeInBeats = (double)stop.IntegerPosition / SMCommon.MaxValidDenominator;
+				}
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
@@ -519,43 +526,66 @@ namespace Fumen.Converters
 			return sb.ToString();
 		}
 
-		/// <summary>
-		/// Stops need to be written using number of beats as position instead of a full metric position.
-		/// Compute the beat values.
-		/// </summary>
-		/// <param name="chart"></param>
-		/// <returns></returns>
-		private Dictionary<Stop, double> GetStopBeatsForChart(Chart chart)
+		protected void WriteSongPropertyTimeSignatures(bool stepmaniaOmitted = false)
 		{
-			var stopBeats = new Dictionary<Stop, double>();
-			var beatAtCurrentMeasureStart = 0;
-			var currentMeasure = 0;
-			var currentTimeSignature = new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure);
-			if (chart.Layers.Count > 0)
+			// If we have a raw string from the source file, use it.
+			// This is to cut down on unnecessary diffs when exporting files.
+			if (MatchesSourceFileFormatType()
+				&& Config.WriteTimeSignaturesFromExtras
+				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr))
 			{
-				foreach (var chartEvent in chart.Layers[0].Events)
-				{
-					if (chartEvent.Position.Measure > currentMeasure)
-					{
-						beatAtCurrentMeasureStart +=
-							currentTimeSignature.Numerator * (chartEvent.Position.Measure - currentMeasure);
-						currentMeasure = chartEvent.Position.Measure;
-					}
-
-					switch (chartEvent)
-					{
-						case Stop stop:
-							stopBeats[stop] =
-								beatAtCurrentMeasureStart + stop.Position.Beat + stop.Position.SubDivision.ToDouble();
-							break;
-						case TimeSignature timeSignature:
-							currentTimeSignature = timeSignature.Signature;
-							break;
-					}
-				}
+				WriteSongProperty(SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted);
+				return;
 			}
 
-			return stopBeats;
+			if (Config.FallbackChart != null)
+			{
+				WriteChartPropertyTimeSignatures(Config.FallbackChart, stepmaniaOmitted);
+				return;
+			}
+
+			// Default to 4/4.
+			WriteSongProperty(SMCommon.TagTimeSignatures, "0.000=4=4;", stepmaniaOmitted);
+		}
+
+		protected void WriteChartPropertyTimeSignatures(Chart chart, bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			if (Config.WriteTimeSignaturesFromExtras
+				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr, MatchesSourceFileFormatType()))
+			{
+				WriteChartProperty(chart, SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			WriteChartProperty(chart, SMCommon.TagStops, CreateTimeSignaturesStringFromChartEvents(chart), stepmaniaOmitted);
+		}
+
+		private string CreateTimeSignaturesStringFromChartEvents(Chart chart)
+		{
+			var numTimeSignatureEvents = 0;
+			var sb = new StringBuilder();
+			foreach (var e in chart.Layers[0].Events)
+			{
+				if (!(e is TimeSignature ts))
+					continue;
+				numTimeSignatureEvents++;
+				if (numTimeSignatureEvents > 1)
+					sb.Append(",\r\n");
+
+				// If present, use the original double values from the source chart so as not to lose
+				// or alter the precision.
+				if (!ts.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+						MatchesSourceFileFormatType()))
+				{
+					timeInBeats = (double)ts.IntegerPosition / SMCommon.MaxValidDenominator;
+				}
+				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+
+				sb.Append($"{timeInBeatsStr}={ts.Signature.Numerator}={ts.Signature.Denominator}");
+			}
+
+			return sb.ToString();
 		}
 
 		protected void WriteChartNotesValueStart(Chart chart)
@@ -579,22 +609,28 @@ namespace Fumen.Converters
 				measures.Add(new MeasureData { FirstMeasure = true });
 
 				// Accumulate data about each measure.
+				// Each measure here is forced 4/4.
 				foreach (var chartEvent in chart.Layers[0].Events)
 				{
 					var note = chartEvent as LaneNote;
 					if (note == null || note.Player != playerIndex)
 						continue;
 
-					var measure = note.Position.Measure;
+					var measure = note.IntegerPosition / (SMCommon.MaxValidDenominator * SMCommon.NumBeatsPerMeasure);
 					while (measures.Count <= measure)
 						measures.Add(new MeasureData());
 
-					var denom = note.Position.SubDivision.Reduce().Denominator;
-					if (denom == 0)
-						denom = 1;
 					measures[measure].Notes.Add(note);
+
+					// Store least common multiple of all notes in this measure.
+					var subDivisionFraction = new Fraction(
+						note.IntegerPosition % SMCommon.MaxValidDenominator,
+						SMCommon.MaxValidDenominator);
+					var subDivisionDenom = subDivisionFraction.Reduce().Denominator;
+					if (subDivisionDenom == 0)
+						subDivisionDenom = 1;
 					measures[measure].LCM = Fraction.LeastCommonMultiple(
-						denom,
+						subDivisionDenom,
 						measures[measure].LCM);
 				}
 
@@ -618,21 +654,32 @@ namespace Fumen.Converters
 			var measureCharsDY = 0;
 			switch (Config.MeasureSpacingBehavior)
 			{
-				case MeasureSpacingBehavior.UseSubDivisionDenominatorAsMeasureSpacing:
+				case MeasureSpacingBehavior.UseSourceExtraOriginalMeasurePosition:
 				{
 					if (measureData.Notes.Count > 0)
 					{
 						foreach (var measureNote in measureData.Notes)
 						{
+							if (!measureNote.Extras.TryGetExtra(
+								    SMCommon.TagFumenNoteOriginalMeasurePosition,
+								    out Fraction f,
+								    true))
+							{
+								Logger.Error($"Notes in measure {measureIndex} are missing Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition}."
+								             + $" Fractions must be present in the Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition} when using"
+								             + " UseSourceExtraOriginalMeasurePosition MeasureSpacingBehavior.");
+								return;
+							}
+
 							// Every note must also have the same denominator (number of lines in the measure).
 							if (measureCharsDY == 0)
 							{
-								measureCharsDY = measureNote.Position.SubDivision.Denominator;
+								measureCharsDY = f.Denominator;
 							}
-							else if (measureCharsDY != measureNote.Position.SubDivision.Denominator)
+							else if (measureCharsDY != f.Denominator)
 							{
 								Logger.Error($"Notes in measure {measureIndex} have inconsistent SubDivision denominators."
-								             + " These must all be equal when using UseSubDivisionDenominatorAsMeasureSpacing MeasureSpacingBehavior.");
+								             + " These must all be equal when using UseSourceExtraOriginalMeasurePosition MeasureSpacingBehavior.");
 								return;
 							}
 						}
@@ -676,39 +723,39 @@ namespace Fumen.Converters
 				var c = GetSMCharForNote(measureNote);
 
 				// Determine the position to record the note.
-				var reducedSubDivision = measureNote.Position.SubDivision.Reduce();
 				int measureEventPositionInMeasure;
 
-				// When using UseSubDivisionDenominatorAsMeasureSpacing, get the y position directly from the extra data.
-				if (Config.MeasureSpacingBehavior == MeasureSpacingBehavior.UseSubDivisionDenominatorAsMeasureSpacing)
+				// When using UseSourceExtraOriginalMeasurePosition, get the y position directly from the extra data.
+				if (Config.MeasureSpacingBehavior == MeasureSpacingBehavior.UseSourceExtraOriginalMeasurePosition)
 				{
-					var n = measureNote.Position.Beat * measureCharsDY + measureNote.Position.SubDivision.Numerator;
-					if (n % SMCommon.NumBeatsPerMeasure != 0)
-					{
-						Logger.Error($"Note at position {measureNote.Position} has a position which cannot be mapped to {measureCharsDY} lines."
-						             + " When using UseSubDivisionDenominatorAsMeasureSpacing MeasureSpacingBehavior the notes in one measure must"
-						             + " all share the same SubDivision denominator and that denominator must be the number of lines for the measure.");
-						return;
-					}
-					measureEventPositionInMeasure = n / SMCommon.NumBeatsPerMeasure;
+					measureNote.Extras.TryGetExtra(
+						SMCommon.TagFumenNoteOriginalMeasurePosition,
+						out Fraction f,
+						true);
+					measureEventPositionInMeasure = f.Numerator;
 				}
+
 				// Otherwise calculate the position based on the lines per beat.
 				else
 				{
-					measureEventPositionInMeasure = measureNote.Position.Beat * linesPerBeat
-						+ (linesPerBeat / Math.Max(1, reducedSubDivision.Denominator))
-						* reducedSubDivision.Numerator;
+					var totalBeat = measureNote.IntegerPosition / SMCommon.MaxValidDenominator;
+					var relativeBeat = totalBeat % SMCommon.NumBeatsPerMeasure;
+					var subDivision = new Fraction(measureNote.IntegerPosition % SMCommon.MaxValidDenominator, SMCommon.MaxValidDenominator);
+					var reducedSubDivision = subDivision.Reduce();
+					measureEventPositionInMeasure = relativeBeat * linesPerBeat
+					                                + (linesPerBeat / Math.Max(1, reducedSubDivision.Denominator))
+					                                * reducedSubDivision.Numerator;
 				}
 
 				// Bounds checks.
 				if (measureNote.Lane < 0 || measureNote.Lane >= chart.NumInputs)
 				{
-					Logger.Error($"Note at position {measureNote.Position} has invalid lane {measureNote.Lane}.");
+					Logger.Error($"Note at {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)} has invalid lane {measureNote.Lane}.");
 					return;
 				}
 				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
 				{
-					Logger.Error($"Note has invalid position {measureNote.Position}.");
+					Logger.Error($"Note has invalid position {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)}.");
 					return;
 				}
 

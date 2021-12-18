@@ -209,7 +209,7 @@ namespace ChartStats
 						do
 						{
 							var chartEvent = chart.Layers[0].Events[i];
-							currentPosition = chartEvent.Position;
+							currentPosition = chartEvent.MetricPosition;
 							currentTime = chartEvent.TimeMicros / 1000000.0;
 
 							// Record data about the step.
@@ -255,14 +255,14 @@ namespace ChartStats
 								numStepsAtThisPosition++;
 								currentStepsBetweenSideGreatestDenominator = Math.Max(
 									currentStepsBetweenSideGreatestDenominator,
-									chartEvent.Position.SubDivision.Reduce().Denominator);
+									chartEvent.MetricPosition.SubDivision.Reduce().Denominator);
 							}
 
 							i++;
 						}
 						// Continue looping if the next event is at the same position.
 						while (i < chart.Layers[0].Events.Count
-						       && chart.Layers[0].Events[i].Position == chart.Layers[0].Events[i - 1].Position);
+						       && chart.Layers[0].Events[i].MetricPosition == chart.Layers[0].Events[i - 1].MetricPosition);
 
 						if (wasAStep)
 						{

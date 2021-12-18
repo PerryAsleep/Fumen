@@ -5,16 +5,21 @@ namespace Fumen.ChartDefinition
 	/// <summary>
 	/// Event within a Chart Layer.
 	/// </summary>
-	public abstract class Event : IComparable<Event>
+	public abstract class Event
 	{
 		/// <summary>
-		/// Time in microseconds of this Event.
+		/// Position of this Event represented as time in microseconds.
 		/// </summary>
 		public long TimeMicros { get; set; }
 		/// <summary>
-		/// MetricPosition for this Event.
+		/// Position of this Event represented as a MetricPosition.
 		/// </summary>
-		public MetricPosition Position { get; set; }
+		public MetricPosition MetricPosition { get; set; }
+		/// <summary>
+		/// Position of this Event represented as an integer value.
+		/// </summary>
+		public int IntegerPosition { get; set; }
+
 		/// <summary>
 		/// Arbitrary string for storing the type of this Event from the source file.
 		/// </summary>
@@ -36,21 +41,13 @@ namespace Fumen.ChartDefinition
 		protected Event(Event other)
 		{
 			TimeMicros = other.TimeMicros;
-			if (other.Position != null)
-				Position = new MetricPosition(other.Position);
+			if (other.MetricPosition != null)
+				MetricPosition = new MetricPosition(other.MetricPosition);
+			IntegerPosition = other.IntegerPosition;
 			SourceType = other.SourceType;
 			DestType = other.DestType;
 			Extras = new Extras(other.Extras);
 		}
-
-		#region IComparable Implementation
-		public int CompareTo(Event other)
-		{
-			if (null != Position && null != other.Position)
-				return Position.CompareTo(other.Position);
-			return TimeMicros.CompareTo(other.TimeMicros);
-		}
-		#endregion IComparable Implementation
 	}
 
 	/// <summary>

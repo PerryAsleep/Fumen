@@ -27,10 +27,25 @@ namespace Fumen
 			return (double)Numerator / Denominator;
 		}
 
+		public static Fraction operator +(Fraction a, Fraction b)
+		{
+			return new Fraction(
+				a.Numerator * b.Denominator + b.Numerator * a.Denominator,
+				a.Denominator * b.Denominator).Reduce();
+		}
+		public static Fraction operator -(Fraction a, Fraction b)
+		{
+			return new Fraction(
+				a.Numerator * b.Denominator - b.Numerator * a.Denominator,
+				a.Denominator * b.Denominator).Reduce();
+		}
+
 		public int CompareTo(object obj)
 		{
 			var other = (Fraction)obj;
 			if (Denominator == 0 && other.Denominator == 0)
+				return 0;
+			if (Numerator == 0 && other.Numerator == 0)
 				return 0;
 			if (Denominator == 0)
 				return -1;

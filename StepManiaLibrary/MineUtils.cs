@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Fumen;
 using Fumen.ChartDefinition;
 using static StepManiaLibrary.Constants;
 
@@ -53,7 +52,7 @@ namespace StepManiaLibrary
 		/// </summary>
 		public class FootActionEvent
 		{
-			public MetricPosition Position;
+			public int Position;
 			public int Arrow;
 			public int Foot;
 		}
@@ -68,7 +67,7 @@ namespace StepManiaLibrary
 		{
 			GraphNode GetGraphNode();
 			GraphLink GetGraphLinkToNode();
-			MetricPosition GetPosition();
+			int GetPosition();
 		}
 
 		/// <summary>
@@ -243,7 +242,7 @@ namespace StepManiaLibrary
 			var (n, f) = GetHowRecentIsNeighboringArrow(true, releaseIndex, numArrows, releases, mine.Lane);
 			if (n >= 0)
 			{
-				return new ExpressedChart.MineEvent(mine.Position, mine.TimeMicros, mine.Lane)
+				return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeMicros, mine.Lane)
 				{
 					Type = MineType.AfterArrow,
 					ArrowIsNthClosest = n,
@@ -256,7 +255,7 @@ namespace StepManiaLibrary
 			(n, f) = GetHowRecentIsNeighboringArrow(false, stepIndex, numArrows, steps, mine.Lane);
 			if (n >= 0)
 			{
-				return new ExpressedChart.MineEvent(mine.Position, mine.TimeMicros, mine.Lane)
+				return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeMicros, mine.Lane)
 				{
 					Type = MineType.BeforeArrow,
 					ArrowIsNthClosest = n,
@@ -265,7 +264,7 @@ namespace StepManiaLibrary
 			}
 
 			// The mine could not be associated with an arrow, use the default NoArrow type.
-			return new ExpressedChart.MineEvent(mine.Position, mine.TimeMicros, mine.Lane);
+			return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeMicros, mine.Lane);
 		}
 
 		/// <summary>
@@ -300,12 +299,12 @@ namespace StepManiaLibrary
 		{
 			var currentN = 0;
 			var consideredArrows = new bool[numArrows];
-			MetricPosition currentNPosition = null;
+			int currentNPosition = -1;
 			while (searchBackwards ? searchIndex >= 0 : searchIndex < events.Count)
 			{
 				if (!consideredArrows[events[searchIndex].Arrow])
 				{
-					var newN = !(currentNPosition == null || currentNPosition == events[searchIndex].Position);
+					var newN = !(currentNPosition < 0 || currentNPosition == events[searchIndex].Position);
 					if (newN)
 						currentN++;
 					currentNPosition = events[searchIndex].Position;
@@ -376,7 +375,7 @@ namespace StepManiaLibrary
 		/// Array of booleans representing if the lane at that index is occupied by a mine
 		/// at the position of the mine in question. Tracked externally.
 		/// </param>
-		/// <param name="minePosition">Position of the mine in question.</param>
+		/// <param name="minePosition">MetricPosition of the mine in question.</param>
 		/// <param name="randomLaneOrder">Randomly ordered lane indices for fallback random lane choices.</param>
 		/// <returns>The Nth most recent arrow or InvalidArrowIndex if none could be found.</returns>
 		public static int FindBestNthMostRecentArrow(
@@ -389,7 +388,7 @@ namespace StepManiaLibrary
 			List<FootActionEvent> steps,
 			int stepIndex,
 			bool[] arrowsOccupiedByMines,
-			MetricPosition minePosition,
+			int minePosition,
 			int[] randomLaneOrder)
 		{
 			var events = searchBackwards ? releases : steps;
@@ -398,7 +397,7 @@ namespace StepManiaLibrary
 			var bestArrow = InvalidArrowIndex;
 			var consideredArrows = new bool[numArrows];
 			var numArrowsConsidered = 0;
-			MetricPosition currentNPosition = null;
+			var currentNPosition = -1;
 
 			// Search
 			while (searchBackwards ? searchIndex >= 0 : searchIndex < events.Count)
@@ -410,7 +409,7 @@ namespace StepManiaLibrary
 				if (!consideredArrows[arrow])
 				{
 					// Check to see if we have already considered an arrow at this depth before.
-					var newN = !(currentNPosition == null || currentNPosition == pos);
+					var newN = !(currentNPosition < 0 || currentNPosition == pos);
 
 					// If we have advanced positions but we found a possible arrow a the last position
 					// then use that and stop.
@@ -509,7 +508,7 @@ namespace StepManiaLibrary
 		/// <returns>True if the arrow is free and false otherwise.</returns>
 		private static bool IsArrowFreeAtPosition(
 			int arrow,
-			MetricPosition position,
+			int position,
 			List<FootActionEvent> releases,
 			int startingReleaseIndex,
 			List<FootActionEvent> steps,
@@ -522,7 +521,7 @@ namespace StepManiaLibrary
 
 			// Find the step for this arrow at or before this position.
 			var precedingStepIndex = System.Math.Min(startingStepIndex, steps.Count - 1);
-			MetricPosition precedingStepPosition = null;
+			var precedingStepPosition = -1;
 			while (precedingStepIndex >= 0)
 			{
 				if (steps[precedingStepIndex].Position <= position
@@ -536,7 +535,7 @@ namespace StepManiaLibrary
 			}
 
 			// If there is no step at or before the desired position, it is free.
-			if (precedingStepPosition == null)
+			if (precedingStepPosition < 0)
 				return true;
 			// If the preceding step is at the same position then it is not free.
 			if (precedingStepPosition == position)
@@ -555,7 +554,7 @@ namespace StepManiaLibrary
 			}
 
 			// Now advance the release index to the following release.
-			MetricPosition followingReleasePosition = null;
+			var followingReleasePosition = -1;
 			while (followingReleaseIndex < releases.Count)
 			{
 				if (releases[followingReleaseIndex].Position >= precedingStepPosition
@@ -569,7 +568,7 @@ namespace StepManiaLibrary
 			}
 
 			// If there is no release at or after the desired position, it is free.
-			if (followingReleasePosition == null)
+			if (followingReleasePosition < 0)
 				return true;
 			// If the following release is at the same position then it is not free.
 			if (followingReleasePosition == position)

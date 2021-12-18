@@ -72,7 +72,7 @@ namespace Fumen.Converters
 				WriteSongPropertyStops();
 				WriteSongPropertyFromExtras(SMCommon.TagDelays);
 				WriteSongPropertyFromExtras(SMCommon.TagWarps);
-				WriteSongPropertyFromExtras(SMCommon.TagTimeSignatures);
+				WriteSongPropertyTimeSignatures();
 				WriteSongPropertyFromExtras(SMCommon.TagTickCounts);
 				WriteSongPropertyFromExtras(SMCommon.TagCombos);
 				WriteSongPropertyFromExtras(SMCommon.TagSpeeds);

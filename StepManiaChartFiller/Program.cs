@@ -247,12 +247,14 @@ namespace StepManiaChartFiller
 				    && chart.NumInputs == StepGraph.NumArrows
 				    && chart.DifficultyType == Config.Instance.InputChartDifficulty)
 				{
-					var performedChart = PerformedChart.CreateByFilling(
-						StepGraph,
-						Config.Instance.Sections,
-						chart,
-						GeneratePerformedChartRandomSeed(fi.Name),
-						null);
+					// TODO: Remove this class.
+					PerformedChart performedChart = null;
+					//var performedChart = PerformedChart.CreateByFilling(
+					//	StepGraph,
+					//	Config.Instance.Sections,
+					//	chart,
+					//	GeneratePerformedChartRandomSeed(fi.Name),
+					//	null);
 					if (performedChart == null)
 					{
 						LogError("Failed to create PerformedChart.");
@@ -300,8 +302,8 @@ namespace StepManiaChartFiller
 				var overlapsFill = false;
 				foreach (var sectionConfig in fillSections)
 				{
-					if (sourceEvent.Position >= sectionConfig.StartPosition
-					    && sourceEvent.Position < sectionConfig.EndPosition)
+					if (sourceEvent.IntegerPosition >= sectionConfig.StartPosition
+					    && sourceEvent.IntegerPosition < sectionConfig.EndPosition)
 					{
 						overlapsFill = true;
 						// Add events which would not conflict with fill arrows.
@@ -338,8 +340,8 @@ namespace StepManiaChartFiller
 							var holdOverlapsFill = false;
 							foreach (var sectionConfig in fillSections)
 							{
-								if (holdStartEvents[lhen.Lane].Position < sectionConfig.EndPosition
-								    && lhen.Position >= sectionConfig.StartPosition)
+								if (holdStartEvents[lhen.Lane].IntegerPosition < sectionConfig.EndPosition
+								    && lhen.IntegerPosition >= sectionConfig.StartPosition)
 								{
 									holdOverlapsFill = true;
 									break;

@@ -57,16 +57,16 @@ namespace StepManiaLibrary
 		/// </summary>
 		public abstract class ChartEvent
 		{
-			protected ChartEvent(MetricPosition position, long timeMicros)
+			protected ChartEvent(int position, long timeMicros)
 			{
 				Position = position;
 				TimeMicros = timeMicros;
 			}
 
 			/// <summary>
-			/// MetricPosition of this event.
+			/// IntegerPosition of this event.
 			/// </summary>
-			public MetricPosition Position;
+			public int Position = -1;
 
 			/// <summary>
 			/// Time in microseconds of this event.
@@ -75,18 +75,18 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Event representing all the steps occurring at a single Metric position in the chart.
+		/// Event representing all the steps occurring at a single position in the chart.
 		/// </summary>
 		public class StepEvent : ChartEvent
 		{
-			public StepEvent(MetricPosition position, long timeMicros, GraphLinkInstance linkInstance)
+			public StepEvent(int position, long timeMicros, GraphLinkInstance linkInstance)
 				: base(position, timeMicros)
 			{
 				LinkInstance = linkInstance;
 			}
 
 			/// <summary>
-			/// GraphLinkInstance representing the all steps occurring at a single Metric position.
+			/// GraphLinkInstance representing the all steps occurring at a single position.
 			/// This GraphLink is the Link to this Event as opposed to the link from this Event.
 			/// This represents how the player got to this position.
 			/// </summary>
@@ -98,7 +98,7 @@ namespace StepManiaLibrary
 		/// </summary>
 		public class MineEvent : ChartEvent
 		{
-			public MineEvent(MetricPosition position, long timeMicros, int arrow)
+			public MineEvent(int position, long timeMicros, int arrow)
 				: base(position, timeMicros)
 			{
 				OriginalArrow = arrow;
@@ -164,9 +164,9 @@ namespace StepManiaLibrary
 			public readonly InstanceStepType[] InstanceTypes;
 
 			/// <summary>
-			/// Position in the Chart of this ChartSearchNode.
+			/// IntegerPosition in the Chart of this ChartSearchNode.
 			/// </summary>
-			public readonly MetricPosition Position;
+			public readonly int Position;
 
 			/// <summary>
 			/// Time in microseconds in the Chart of this ChartSearchNode.
@@ -209,7 +209,7 @@ namespace StepManiaLibrary
 
 			public ChartSearchNode(
 				GraphNode graphNode,
-				MetricPosition position,
+				int position,
 				long timeMicros,
 				ChartSearchNode previousNode,
 				GraphLinkInstance previousLink,
@@ -338,7 +338,7 @@ namespace StepManiaLibrary
 				return PreviousLink?.GraphLink;
 			}
 
-			public MetricPosition GetPosition()
+			public int GetPosition()
 			{
 				return Position;
 			}
@@ -586,7 +586,7 @@ namespace StepManiaLibrary
 		{
 			Root = new ChartSearchNode(
 				StepGraph.Root,
-				new MetricPosition(),
+				0,
 				0L,
 				null,
 				null,
@@ -594,13 +594,13 @@ namespace StepManiaLibrary
 
 			var numArrows = StepGraph.NumArrows;
 			var currentState = new SearchState[numArrows];
-			var lastMines = new MetricPosition[numArrows];
-			var lastReleases = new MetricPosition[numArrows];
+			var lastMines = new int[numArrows];
+			var lastReleases = new int[numArrows];
 			for (var a = 0; a < numArrows; a++)
 			{
 				currentState[a] = SearchState.Empty;
-				lastMines[a] = new MetricPosition();
-				lastReleases[a] = new MetricPosition();
+				lastMines[a] = 0;
+				lastReleases[a] = 0;
 			}
 
 			MineNotes = new List<LaneNote>();
@@ -655,12 +655,12 @@ namespace StepManiaLibrary
 					{
 						var releaseEvent = releases[r];
 						currentState[releaseEvent.Lane] = SearchState.Empty;
-						lastReleases[releaseEvent.Lane] = releaseEvent.Position;
+						lastReleases[releaseEvent.Lane] = releaseEvent.IntegerPosition;
 					}
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						releases[0].Position, timeMicros, lastMines, lastReleases);
+						releases[0].IntegerPosition, timeMicros, lastMines, lastReleases);
 				}
 
 				// Get mines and record them for processing after the search is complete.
@@ -668,7 +668,7 @@ namespace StepManiaLibrary
 				{
 					MineNotes.AddRange(mines);
 					for (var m = 0; m < mines.Count; m++)
-						lastMines[mines[m].Lane] = mines[m].Position;
+						lastMines[mines[m].Lane] = mines[m].IntegerPosition;
 				}
 
 				// Get taps, holds, and rolls.
@@ -698,7 +698,7 @@ namespace StepManiaLibrary
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						steps[0].Position, timeMicros, lastMines, lastReleases);
+						steps[0].IntegerPosition, timeMicros, lastMines, lastReleases);
 				}
 
 				// Update the current state now that the events at this position have been processed.
@@ -709,7 +709,7 @@ namespace StepManiaLibrary
 					    || currentState[a] == SearchState.Lift)
 					{
 						currentState[a] = SearchState.Empty;
-						lastReleases[a] = steps[0].Position;
+						lastReleases[a] = steps[0].IntegerPosition;
 					}
 					else if (currentState[a] == SearchState.Hold)
 					{
@@ -787,7 +787,7 @@ namespace StepManiaLibrary
 					i++;
 				}
 				// Continue looping if the next event is at the same position.
-				while (i < Events.Count && Events[i].Position == Events[i - 1].Position);
+				while (i < Events.Count && Events[i].IntegerPosition == Events[i - 1].IntegerPosition);
 
 				var numHeld = 0;
 				for (var l = 0; l < StepGraph.NumArrows; l++)
@@ -850,9 +850,9 @@ namespace StepManiaLibrary
 			if (eventIndex >= Events.Count)
 				return;
 
-			var pos = Events[eventIndex].Position;
+			var pos = Events[eventIndex].IntegerPosition;
 			timeMicros = Events[eventIndex].TimeMicros;
-			while (eventIndex < Events.Count && Events[eventIndex].Position == pos)
+			while (eventIndex < Events.Count && Events[eventIndex].IntegerPosition == pos)
 			{
 				if (Events[eventIndex] is LaneHoldEndNote lhen)
 					releases.Add(lhen);
@@ -874,19 +874,19 @@ namespace StepManiaLibrary
 		/// <param name="currentSearchNodes">All lowest-cost current ChartSearchNodes from previous state.</param>
 		/// <param name="currentState">Current state to search for paths into.</param>
 		/// <param name="generatedStateBuffer">Buffer to hold State when comparing in GetLinkInstanceIfStateMatches.</param>
-		/// <param name="position">Position of the state.</param>
+		/// <param name="position">IntegerPosition of the state.</param>
 		/// <param name="timeMicros">Time in microseconds of the state.</param>
-		/// <param name="lastMines">Position of last mines per arrow. Needed for cost determination.</param>
-		/// <param name="lastReleases">Position of last releases per arrow. Needed for cost determination.</param>
+		/// <param name="lastMines">IntegerPosition of last mines per arrow. Needed for cost determination.</param>
+		/// <param name="lastReleases">IntegerPosition of last releases per arrow. Needed for cost determination.</param>
 		/// <returns>HashSet of all lowest cost ChartSearchNodes satisfying this state.</returns>
 		private HashSet<ChartSearchNode> AddChildrenAndPrune(
 			HashSet<ChartSearchNode> currentSearchNodes,
 			SearchState[] currentState,
 			SearchState[] generatedStateBuffer,
-			MetricPosition position,
+			int position,
 			long timeMicros,
-			MetricPosition[] lastMines,
-			MetricPosition[] lastReleases)
+			int[] lastMines,
+			int[] lastReleases)
 		{
 			var childSearchNodes = new HashSet<ChartSearchNode>();
 
@@ -1178,18 +1178,18 @@ namespace StepManiaLibrary
 		/// <param name="searchNode">ChartSearchNode to get the cost of.</param>
 		/// <param name="state"></param>
 		/// <param name="lastMines">
-		/// MetricPosition of the last Mines encountered up to this point, per lane.
+		/// IntegerPosition of the last Mines encountered up to this point, per lane.
 		/// </param>
 		/// <param name="lastReleases">
-		/// MetricPosition of the last time there was a release on each lane.
+		/// IntegerPosition of the last time there was a release on each lane.
 		/// </param>
 		/// <param name="padData">PadData for the Chart.</param>
 		/// <returns>Cost to the given ChartSearchNode from its parent.</returns>
 		private int GetCost(
 			ChartSearchNode searchNode,
 			SearchState[] state,
-			MetricPosition[] lastMines,
-			MetricPosition[] lastReleases,
+			int[] lastMines,
+			int[] lastReleases,
 			PadData padData)
 		{
 			var position = searchNode.Position;
@@ -1268,15 +1268,15 @@ namespace StepManiaLibrary
 					var tripleStep = doubleStep && previousPreviousStepLink != null &&
 					                 previousPreviousStepLink.IsStepWithFoot(thisFoot);
 					var mostRecentRelease = thisReleasePositionOfPreviousStep;
-					if ((mostRecentRelease == null && otherReleasePositionOfPreviousStep != null)
-					    || (mostRecentRelease != null
-					        && otherReleasePositionOfPreviousStep != null
-					        && otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep))
+					if ((mostRecentRelease < 0 && otherReleasePositionOfPreviousStep >= 0)
+					    || (mostRecentRelease >= 0
+							&& otherReleasePositionOfPreviousStep >= 0
+							&& otherReleasePositionOfPreviousStep > thisReleasePositionOfPreviousStep))
 						mostRecentRelease = otherReleasePositionOfPreviousStep;
 
 					// I think in all cases we should consider an arrow held if it released at this time.
-					thisAnyHeld |= thisReleasePositionOfPreviousStep == position;
-					otherAnyHeld |= otherReleasePositionOfPreviousStep == position;
+					thisAnyHeld |= position > 0 && thisReleasePositionOfPreviousStep == position;
+					otherAnyHeld |= position > 0 && otherReleasePositionOfPreviousStep == position;
 
 					if (BracketParsingMethod == BracketParsingMethod.NoBrackets
 					    && (step == StepType.BracketOneArrowHeelSame
@@ -1402,7 +1402,7 @@ namespace StepManiaLibrary
 									return CostNewArrow_TripleStep;
 
 								// Mine indicated
-								if (thisMinePositionFollowingPreviousStep != null)
+								if (thisMinePositionFollowingPreviousStep >= 0)
 									return CostNewArrow_DoubleStepMineIndicated;
 
 								// No indication
@@ -1462,7 +1462,7 @@ namespace StepManiaLibrary
 							if (doubleStep)
 							{
 								// Mine indicated
-								if (thisMinePositionFollowingPreviousStep != null)
+								if (thisMinePositionFollowingPreviousStep >= 0)
 									return CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated;
 
 								// No indication
@@ -1473,7 +1473,7 @@ namespace StepManiaLibrary
 						}
 						case StepType.FootSwap:
 						{
-							var mineIndicatedOnThisFootsArrow = thisMinePositionFollowingPreviousStep != null;
+							var mineIndicatedOnThisFootsArrow = thisMinePositionFollowingPreviousStep >= 0;
 
 							if (doubleStep)
 							{
@@ -1508,7 +1508,7 @@ namespace StepManiaLibrary
 
 								// Check if the last mine for this arrow was at or after the last
 								// release.
-								if (lastMines[arrow] == null)
+								if (lastMines[arrow] < 0)
 									continue;
 								if (lastMines[arrow] >= mostRecentRelease)
 								{
@@ -1559,7 +1559,7 @@ namespace StepManiaLibrary
 							if (doubleStep)
 							{
 								// Mine indicated
-								if (thisMinePositionFollowingPreviousStep != null)
+								if (thisMinePositionFollowingPreviousStep >= 0)
 									return CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated;
 
 								// No indication
@@ -1789,8 +1789,8 @@ namespace StepManiaLibrary
 		private static void GetOneArrowStepInfo(
 			int foot,
 			int arrow,
-			MetricPosition[] lastMines,
-			MetricPosition[] lastReleases,
+			int[] lastMines,
+			int[] lastReleases,
 			PadData padData,
 			GraphNode.FootArrowState[,] previousState,
 			out bool anyHeld,
@@ -1799,8 +1799,8 @@ namespace StepManiaLibrary
 			out bool canStepToNewArrowWithoutCrossover,
 			out bool canBracketToNewArrow,
 			out bool canCrossoverToNewArrow,
-			out MetricPosition minePositionFollowingPreviousStep,
-			out MetricPosition releasePositionOfPreviousStep,
+			out int minePositionFollowingPreviousStep,
+			out int releasePositionOfPreviousStep,
 			out int[] previousArrows,
 			out bool inBracketPosture)
 		{
@@ -1809,9 +1809,9 @@ namespace StepManiaLibrary
 			canStepToNewArrow = false;
 			canStepToNewArrowWithoutCrossover = false;
 			canBracketToNewArrow = false;
-			minePositionFollowingPreviousStep = null;
+			minePositionFollowingPreviousStep = -1;
 			canCrossoverToNewArrow = false;
-			releasePositionOfPreviousStep = new MetricPosition();
+			releasePositionOfPreviousStep = 0;
 			previousArrows = new int[NumFootPortions];
 			inBracketPosture = true;
 			var arrowData = padData.ArrowData;
@@ -1854,7 +1854,7 @@ namespace StepManiaLibrary
 									|| arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherToe[foot][arrow];
 							}
 
-							if (lastMines[previousState[foot, p].Arrow] != null
+							if (lastMines[previousState[foot, p].Arrow] >= 0
 							    && lastMines[previousState[foot, p].Arrow] > lastReleases[previousState[foot, p].Arrow])
 								minePositionFollowingPreviousStep = lastMines[previousState[foot, p].Arrow];
 
@@ -1930,7 +1930,7 @@ namespace StepManiaLibrary
 			SearchState[] state,
 			int foot,
 			PadData padData,
-			MetricPosition[] lastReleases,
+			int[] lastReleases,
 			out bool couldBeBracketed,
 			out bool holdingAny,
 			out bool holdingAll,
@@ -1953,7 +1953,7 @@ namespace StepManiaLibrary
 			{
 				// Get the last release position so that we can consider an arrow still held if it released at the same
 				// position.
-				var releasePositionOfPreviousStep = new MetricPosition();
+				var releasePositionOfPreviousStep = 0;
 				var previousState = parentSearchNode.GraphNode.State;
 				for (var p = 0; p < NumFootPortions; p++)
 				{
@@ -2073,10 +2073,10 @@ namespace StepManiaLibrary
 			bool otherCanBracketToNewArrow,
 			bool thisCanCrossoverToNewArrow,
 			bool thisCanBracketToNewArrow,
-			MetricPosition otherMinePositionFollowingPreviousStep,
-			MetricPosition thisMinePositionFollowingPreviousStep,
-			MetricPosition otherReleasePositionOfPreviousStep,
-			MetricPosition thisReleasePositionOfPreviousStep)
+			int otherMinePositionFollowingPreviousStep,
+			int thisMinePositionFollowingPreviousStep,
+			int otherReleasePositionOfPreviousStep,
+			int thisReleasePositionOfPreviousStep)
 		{
 			if (!otherCanStepToNewArrow)
 				return CostNewArrow_StepFromJump_OtherCannotStep;
@@ -2088,23 +2088,23 @@ namespace StepManiaLibrary
 				return CostNewArrow_StepFromJump_ThisCrossover;
 
 			// Mine indication for only other foot to make this step.
-			if (otherMinePositionFollowingPreviousStep != null && thisMinePositionFollowingPreviousStep == null)
+			if (otherMinePositionFollowingPreviousStep >= 0 && thisMinePositionFollowingPreviousStep < 0)
 				return CostNewArrow_StepFromJump_OtherMineIndicated_ThisNotMineIndicated;
 
 			// Mine indication for both but other foot is sooner
-			if (otherMinePositionFollowingPreviousStep != null
-			    && thisMinePositionFollowingPreviousStep != null
-			    && otherMinePositionFollowingPreviousStep > thisMinePositionFollowingPreviousStep)
+			if (otherMinePositionFollowingPreviousStep >= 0
+				&& thisMinePositionFollowingPreviousStep >= 0
+				&& otherMinePositionFollowingPreviousStep > thisMinePositionFollowingPreviousStep)
 				return CostNewArrow_StepFromJump_BothMineIndicated_ThisSooner;
 
 			// Mine indication for both but this foot is sooner
-			if (otherMinePositionFollowingPreviousStep != null
-			    && thisMinePositionFollowingPreviousStep != null
-			    && thisMinePositionFollowingPreviousStep > otherMinePositionFollowingPreviousStep)
+			if (otherMinePositionFollowingPreviousStep >= 0
+				&& thisMinePositionFollowingPreviousStep >= 0
+				&& thisMinePositionFollowingPreviousStep > otherMinePositionFollowingPreviousStep)
 				return CostNewArrow_StepFromJump_BothMineIndicated_OtherSooner;
 
 			// Mine indication for only this foot to make this step.
-			if (thisMinePositionFollowingPreviousStep != null && otherMinePositionFollowingPreviousStep == null)
+			if (thisMinePositionFollowingPreviousStep >= 0 && otherMinePositionFollowingPreviousStep < 0)
 				return CostNewArrow_StepFromJump_OtherNotMineIndicated_ThisMineIndicated;
 
 			// Release indication for this foot (other released later)
@@ -2182,9 +2182,9 @@ namespace StepManiaLibrary
 			{
 				var smMineEvent = MineNotes[i];
 				// Advance the step and release indices to follow and precede the event respectively.
-				while (stepIndex < steps.Count && steps[stepIndex].Position <= smMineEvent.Position)
+				while (stepIndex < steps.Count && steps[stepIndex].Position <= smMineEvent.IntegerPosition)
 					stepIndex++;
-				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < smMineEvent.Position)
+				while (releaseIndex + 1 < releases.Count && releases[releaseIndex + 1].Position < smMineEvent.IntegerPosition)
 					releaseIndex++;
 
 				// Create and add a new MineEvent.

@@ -50,6 +50,7 @@ namespace Fumen.Converters
 			{
 				var tempos = new Dictionary<double, double>();
 				var stops = new Dictionary<double, double>();
+				var timeSignatures = new Dictionary<double, Fraction>();
 				song.SourceType = FileFormatType.SM;
 
 				var propertyParsers = new Dictionary<string, PropertyParser>()
@@ -73,7 +74,9 @@ namespace Fumen.Converters
 					[SMCommon.TagFreezes] = new CSVListAtTimePropertyParser<double>(SMCommon.TagFreezes, stops),
 					[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, song.Extras),
 					// Removed, see https://github.com/stepmania/stepmania/issues/9
-					[SMCommon.TagTimeSignatures] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTimeSignatures, song.Extras),
+					// SM files are forced 4/4 time signatures. Other time signatures can be provided but they are only
+					// suggestions to a renderer for how to draw measure markers.
+					[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, timeSignatures, song.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
 					[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.Extras),
 					[SMCommon.TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(SMCommon.TagInstrumentTrack, song.Extras),
 					[SMCommon.TagSampleStart] = new PropertyToSongPropertyParser(SMCommon.TagSampleStart, nameof(Song.PreviewSampleStart), song),
@@ -105,10 +108,13 @@ namespace Fumen.Converters
 				token.ThrowIfCancellationRequested();
 
 				// Insert stop and tempo change events.
+				var firstChart = true;
 				foreach (var chart in song.Charts)
 				{
 					SMCommon.AddStops(stops, chart);
 					SMCommon.AddTempos(tempos, chart);
+					SMCommon.AddTimeSignatures(timeSignatures, chart, Logger, firstChart);
+					firstChart = false;
 				}
 
 				// Sort events.
@@ -141,7 +147,7 @@ namespace Fumen.Converters
 					chart.Genre = song.Genre;
 					chart.GenreTransliteration = song.GenreTransliteration;
 					chart.Author = chartAuthor;
-					SMCommon.SetEventTimeMicros(chart);
+					SMCommon.SetEventTimeMicrosAndMetricPositionsFromRows(chart);
 				}
 			}, token);
 

@@ -71,10 +71,12 @@ namespace Fumen.Converters
 				song.SourceType = FileFormatType.SSC;
 				var songTempos = new Dictionary<double, double>();
 				var songStops = new Dictionary<double, double>();
-				var songPropertyParsers = GetSongPropertyParsers(song, songTempos, songStops);
+				var songTimeSignatures = new Dictionary<double, Fraction>();
+				var songPropertyParsers = GetSongPropertyParsers(song, songTempos, songStops, songTimeSignatures);
 
 				Dictionary<string, PropertyParser> chartPropertyParsers = null;
 				Chart activeChart = null;
+				var firstChart = true;
 				Dictionary<double, double> activeChartTempos = null;
 				Dictionary<double, double> activeChartStops = null;
 
@@ -103,19 +105,15 @@ namespace Fumen.Converters
 								activeChartStops,
 								song,
 								songTempos,
-								songStops);
+								songStops,
+								songTimeSignatures,
+								firstChart);
+							firstChart = false;
 						}
 
 						// Set up a new Chart.
 						activeChart = new Chart();
 						activeChart.Layers.Add(new Layer());
-						// Add a 4/4 Time Signature.
-						activeChart.Layers[0].Events.Add(
-							new TimeSignature(new Fraction(SMCommon.NumBeatsPerMeasure, SMCommon.NumBeatsPerMeasure))
-							{
-								Position = new MetricPosition()
-							});
-
 						activeChartTempos = new Dictionary<double, double>();
 						activeChartStops = new Dictionary<double, double>();
 						chartPropertyParsers = GetChartPropertyParsers(activeChart, activeChartTempos, activeChartStops);
@@ -151,7 +149,9 @@ namespace Fumen.Converters
 						activeChartStops,
 						song,
 						songTempos,
-						songStops);
+						songStops,
+						songTimeSignatures, firstChart);
+					firstChart = false;
 				}
 			}, token);
 
@@ -164,7 +164,9 @@ namespace Fumen.Converters
 			Dictionary<double, double> chartStops,
 			Song song,
 			Dictionary<double, double> songTempos,
-			Dictionary<double, double> songStops)
+			Dictionary<double, double> songStops,
+			Dictionary<double, Fraction> songTimeSignatures,
+			bool firstChart)
 		{
 			// Do not add this Chart if we failed to parse the type.
 			if (string.IsNullOrEmpty(chart.Type))
@@ -179,9 +181,10 @@ namespace Fumen.Converters
 					useChartTimingData = b;
 			}
 
-			// Insert stop and tempo change events.
+			// Insert stops, tempos, and time signatures.
 			SMCommon.AddStops(useChartTimingData ? chartStops : songStops, chart);
 			SMCommon.AddTempos(useChartTimingData ? chartTempos : songTempos, chart);
+			SMCommon.AddTimeSignatures(songTimeSignatures, chart, Logger, firstChart);
 
 			// Sort events.
 			chart.Layers[0].Events.Sort(new SMCommon.SMEventComparer());
@@ -224,7 +227,7 @@ namespace Fumen.Converters
 					song.Extras,
 					useChartTimingData ? chartTempos : songTempos);
 
-			SMCommon.SetEventTimeMicros(chart);
+			SMCommon.SetEventTimeMicrosAndMetricPositionsFromRows(chart);
 
 			// Add the Chart.
 			song.Charts.Add(chart);
@@ -233,7 +236,8 @@ namespace Fumen.Converters
 		private Dictionary<string, PropertyParser> GetSongPropertyParsers(
 			Song song,
 			Dictionary<double, double> songTempos,
-			Dictionary<double, double> songStops)
+			Dictionary<double, double> songStops,
+			Dictionary<double, Fraction> songTimeSignatures)
 		{
 			var parsers = new Dictionary<string, PropertyParser>()
 			{
@@ -282,7 +286,9 @@ namespace Fumen.Converters
 				[SMCommon.TagWarps] = new PropertyToSourceExtrasParser<string>(SMCommon.TagWarps, song.Extras),
 				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, song.Extras),
 				// Removed, see https://github.com/stepmania/stepmania/issues/9
-				[SMCommon.TagTimeSignatures] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTimeSignatures, song.Extras),
+				// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
+				// suggestions to a renderer for how to draw measure markers.
+				[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, songTimeSignatures, song.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
 				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.Extras),
 				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, song.Extras),
 				[SMCommon.TagSpeeds] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSpeeds, song.Extras),

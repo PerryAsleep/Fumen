@@ -62,26 +62,12 @@ namespace ChartGeneratorTests
 		/// <returns></returns>
 		public static ExpressedChart Load(string smFile, string chartDifficultyType = null)
 		{
-			Song song = null;
-			Task.Run(async () => { song = await new SMReader(smFile).LoadAsync(CancellationToken.None); }).Wait();
-
-			// Default to the first chart.
-			var events = song.Charts[0].Layers[0].Events;
-			var difficultyRating = song.Charts[0].DifficultyRating;
-
-			// Use the specified chart, if present.
-			if (chartDifficultyType != null)
-			{
-				foreach (var chart in song.Charts)
-				{
-					if (chart.DifficultyType == chartDifficultyType)
-					{
-						events = chart.Layers[0].Events;
-						difficultyRating = chart.DifficultyRating;
-						break;
-					}
-				}
-			}
+			var chart = Utils.LoadSMChart(smFile, chartDifficultyType);
+			
+			Task.Run(async () => { await new SMReader(smFile).LoadAsync(CancellationToken.None); }).Wait();
+			
+			var events = chart.Layers[0].Events;
+			var difficultyRating = chart.DifficultyRating;
 
 			// Create the expressed chart.
 			// PKL - I am not wild about this config living here. Ideally it should live
