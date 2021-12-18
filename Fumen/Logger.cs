@@ -196,12 +196,17 @@ namespace Fumen
 				{
 					AutoFlush = false
 				};
-				LogQueue = new BlockingCollection<LogMessage>(QueueCapacity);
 			}
 
-			Buffer = config.Buffer;
-			BufferLock = config.BufferLock;
-			BufferSize = config.BufferSize;
+			WriteToConsole = config.WriteToConsole;
+			LogQueue = new BlockingCollection<LogMessage>(QueueCapacity);
+
+			if (config.WriteToBuffer)
+			{
+				Buffer = config.Buffer;
+				BufferLock = config.BufferLock;
+				BufferSize = config.BufferSize;
+			}
 
 			// Start a Task to write enqueued messages to the StreamWriter.
 			WriteQueueTask = Task.Factory.StartNew(
