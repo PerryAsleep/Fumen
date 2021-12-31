@@ -102,6 +102,10 @@ namespace Fumen.Converters
 		/// </summary>
 		public const int MaxValidDenominator = 48;
 		/// <summary>
+		/// The number of rows in a StepMania 4/4 measure.
+		/// </summary>
+		public const int RowsPerMeasure = NumBeatsPerMeasure * MaxValidDenominator;
+		/// <summary>
 		/// In sm or ssc files notes can only subdivide beats by fractions with these
 		/// denominators. For example, StepMania cannot handle a beat subdivided 24 times,
 		/// though it can handle 16 and 48 times.
@@ -741,7 +745,7 @@ namespace Fumen.Converters
 				typeof(Stop),	// Stops occur after other notes at the same time.
 			};
 
-			public int Compare(Event e1, Event e2)
+			public static int Compare(Event e1, Event e2)
 			{
 				if (null == e1 && null == e2)
 					return 0;
