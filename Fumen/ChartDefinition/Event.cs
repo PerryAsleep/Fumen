@@ -57,38 +57,128 @@ namespace Fumen.ChartDefinition
 	public class Stop : Event
 	{
 		/// <summary>
-		/// Length of the stop at this Stop Event in microseconds.
+		/// Length of the stop at this Stop Event as time in microseconds.
 		/// </summary>
 		public readonly long LengthMicros;
+		/// <summary>
+		/// Delays are Stops which occur before other Events at the same time.
+		/// </summary>
+		public readonly bool IsDelay;
 
-		public Stop(long lengthMicros)
+		public Stop(long lengthMicros, bool isDelay = false)
 		{
 			LengthMicros = lengthMicros;
+			IsDelay = isDelay;
 		}
 
 		public Stop(Stop other)
 			: base(other)
 		{
 			LengthMicros = other.LengthMicros;
+			IsDelay = other.IsDelay;
 		}
 	}
 
 	/// <summary>
-	/// Event representing a change in tempo.
+	/// Event representing a warp.
+	/// Warps are instantaneous jumps ahead to a different time in the song.
 	/// </summary>
-	public class TempoChange : Event
+	/// <remarks>
+	/// This is extremely StepMania-specific.
+	/// </remarks>
+	public class Warp : Event
 	{
 		/// <summary>
-		/// Tempo at this TempoChange Event in beats per minute.
+		/// Length of the stop at this Warp Event in microseconds.
+		/// </summary>
+		public readonly int LengthIntegerPosition;
+
+		public Warp(int lengthIntegerPosition)
+		{
+			LengthIntegerPosition = lengthIntegerPosition;
+		}
+
+		public Warp(Warp other)
+			: base(other)
+		{
+			LengthIntegerPosition = other.LengthIntegerPosition;
+		}
+	}
+
+	/// <summary>
+	/// Change in ScrollRate for all Events on this Layer.
+	/// </summary>
+	public class ScrollRate : Event
+	{
+		/// <summary>
+		/// New Scroll Rate.
+		/// </summary>
+		public readonly float Rate;
+
+		public ScrollRate(float rate)
+		{
+			Rate = rate;
+		}
+
+		public ScrollRate(ScrollRate other)
+			: base(other)
+		{
+			Rate = other.Rate;
+		}
+	}
+
+	/// <summary>
+	/// Change in ScrollRate for all Events on this Layer.
+	/// </summary>
+	/// <remarks>
+	/// This is extremely StepMania-specific.
+	/// </remarks>
+	public class ScrollRateInterpolation : Event
+	{
+		/// <summary>
+		/// New Scroll Rate.
+		/// </summary>
+		public readonly float Rate;
+
+		public readonly int PeriodLengthIntegerPosition;
+		public readonly long PeriodTimeMicros;
+		public readonly bool PreferPeriodAsTimeMicros;
+
+		public ScrollRateInterpolation(
+			float rate,
+			int periodLengthIntegerPosition,
+			long periodTimeMicros,
+			bool preferPeriodAsTimeMicros)
+		{
+			Rate = rate;
+			PeriodLengthIntegerPosition = periodLengthIntegerPosition;
+			PeriodTimeMicros = periodTimeMicros;
+			PreferPeriodAsTimeMicros = preferPeriodAsTimeMicros;
+		}
+
+		public ScrollRateInterpolation(ScrollRateInterpolation other)
+			: base(other)
+		{
+			Rate = other.Rate;
+		}
+	}
+
+	/// <summary>
+	/// Event representing a tempo.
+	/// </summary>
+	public class Tempo : Event
+	{
+		/// <summary>
+		/// Tempo at this Tempo Event in beats per minute.
 		/// </summary>
 		public readonly double TempoBPM;
 
-		public TempoChange(double tempoBPM)
+		public Tempo(double tempoBPM)
 		{
 			TempoBPM = tempoBPM;
 		}
 
-		public TempoChange(TempoChange other)
+		public Tempo(Tempo other)
 			: base(other)
 		{
 			TempoBPM = other.TempoBPM;

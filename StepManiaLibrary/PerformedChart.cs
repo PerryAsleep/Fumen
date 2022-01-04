@@ -1734,7 +1734,7 @@ namespace StepManiaLibrary
 		//				timeSignature = ts.Signature;
 		//				beatTimeDirty = true;
 		//			}
-		//			else if (chartEvent is TempoChange tc)
+		//			else if (chartEvent is Tempo tc)
 		//			{
 		//				bpm = tc.TempoBPM;
 		//				beatTimeDirty = true;

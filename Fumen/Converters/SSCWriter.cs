@@ -70,13 +70,13 @@ namespace Fumen.Converters
 				// Timing data.
 				WriteSongPropertyBPMs();
 				WriteSongPropertyStops();
-				WriteSongPropertyFromExtras(SMCommon.TagDelays);
-				WriteSongPropertyFromExtras(SMCommon.TagWarps);
+				WriteSongPropertyDelays();
+				WriteSongPropertyWarps();
 				WriteSongPropertyTimeSignatures();
 				WriteSongPropertyFromExtras(SMCommon.TagTickCounts);
 				WriteSongPropertyFromExtras(SMCommon.TagCombos);
-				WriteSongPropertyFromExtras(SMCommon.TagSpeeds);
-				WriteSongPropertyFromExtras(SMCommon.TagScrolls);
+				WriteSongPropertySpeeds();
+				WriteSongPropertyScrolls();
 				WriteSongPropertyFromExtras(SMCommon.TagFakes);
 				WriteSongPropertyFromExtras(SMCommon.TagLabels);
 
@@ -171,13 +171,13 @@ namespace Fumen.Converters
 				WriteChartProperty(chart, SMCommon.TagOffset, chart.ChartOffsetFromMusic);
 				WriteChartPropertyBPMs(chart);
 				WriteChartPropertyStops(chart);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagDelays);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagWarps);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagTimeSignatures);
+				WriteChartPropertyDelays(chart);
+				WriteChartPropertyWarps(chart);
+				WriteChartPropertyTimeSignatures(chart);
 				WriteChartPropertyFromExtras(chart, SMCommon.TagTickCounts);
 				WriteChartPropertyFromExtras(chart, SMCommon.TagCombos);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagSpeeds);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagScrolls);
+				WriteChartPropertySpeeds(chart);
+				WriteChartPropertyScrolls(chart);
 				WriteChartPropertyFromExtras(chart, SMCommon.TagFakes);
 				WriteChartPropertyFromExtras(chart, SMCommon.TagLabels);
 			}

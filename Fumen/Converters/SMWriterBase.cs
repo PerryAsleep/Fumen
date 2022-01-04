@@ -98,16 +98,37 @@ namespace Fumen.Converters
 			/// Use this if the Rows have not been set but accurate MetricPositions are available.
 			/// </summary>
 			public bool UpdateEventRowsFromMetricPosition = false;
+
 			/// <summary>
-			/// If true, write BPMs from the Song or Chart's Extras.
-			/// If false, write from the Chart's TempoChange Events.
+			/// If true, write Tempos from the Song or Chart's Extras.
+			/// If false, write from the Chart's Tempo Events.
 			/// </summary>
-			public bool WriteBPMsFromExtras = false;
+			public bool WriteTemposFromExtras = false;
 			/// <summary>
 			/// If true, write Stops from the Song or Chart's Extras.
 			/// If false, write from the Chart's Stop Events.
 			/// </summary>
 			public bool WriteStopsFromExtras = false;
+			/// <summary>
+			/// If true, write Delays from the Song or Chart's Extras.
+			/// If false, write from the Chart's Stop Events.
+			/// </summary>
+			public bool WriteDelaysFromExtras = false;
+			/// <summary>
+			/// If true, write Warps from the Song or Chart's Extras.
+			/// If false, write from the Chart's Warp Events.
+			/// </summary>
+			public bool WriteWarpsFromExtras = false;
+			/// <summary>
+			/// If true, write Scrolls from the Song or Chart's Extras.
+			/// If false, write from the Chart's ScrollRate Events.
+			/// </summary>
+			public bool WriteScrollsFromExtras = false;
+			/// <summary>
+			/// If true, write Speeds from the Song or Chart's Extras.
+			/// If false, write from the Chart's ScrollRateInterpolation Events.
+			/// </summary>
+			public bool WriteSpeedsFromExtras = false;
 			/// <summary>
 			/// If true, write BPMs from the Song or Chart's Extras.
 			/// If false, write from the Chart's TimeSignature Events.
@@ -402,7 +423,7 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format BPMs and Stops over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteBPMsFromExtras
+				&& Config.WriteTemposFromExtras
 			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
@@ -421,7 +442,7 @@ namespace Fumen.Converters
 		protected void WriteChartPropertyBPMs(Chart chart, bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			if (Config.WriteBPMsFromExtras 
+			if (Config.WriteTemposFromExtras 
 			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
@@ -437,7 +458,7 @@ namespace Fumen.Converters
 			var sb = new StringBuilder();
 			foreach (var e in chart.Layers[0].Events)
 			{
-				if (!(e is TempoChange tc))
+				if (!(e is Tempo tc))
 					continue;
 				numTempoChangeEvents++;
 				if (numTempoChangeEvents > 1)
@@ -448,7 +469,7 @@ namespace Fumen.Converters
 				if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
 					    MatchesSourceFileFormatType()))
 				{
-					timeInBeats = (double)tc.IntegerPosition / SMCommon.MaxValidDenominator;
+					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(tc.IntegerPosition);
 				}
 
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
@@ -463,7 +484,7 @@ namespace Fumen.Converters
 		protected void WriteSongPropertyStops(bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			// Stepmania files have changed how they format BPMs and Stops over the years
+			// Stepmania files have changed how they format these values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
 			    && Config.WriteStopsFromExtras
@@ -492,16 +513,18 @@ namespace Fumen.Converters
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagStops, CreateStopStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagStops, CreateStopStringFromChartEvents(chart, false), stepmaniaOmitted);
 		}
 
-		private string CreateStopStringFromChartEvents(Chart chart)
+		private string CreateStopStringFromChartEvents(Chart chart, bool delays)
 		{
 			var numStopEvents = 0;
 			var sb = new StringBuilder();
 			foreach (var e in chart.Layers[0].Events)
 			{
 				if (!(e is Stop stop))
+					continue;
+				if (stop.IsDelay != delays)
 					continue;
 				numStopEvents++;
 				if (numStopEvents > 1)
@@ -512,7 +535,7 @@ namespace Fumen.Converters
 				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
 					    MatchesSourceFileFormatType()))
 				{
-					timeInBeats = (double)stop.IntegerPosition / SMCommon.MaxValidDenominator;
+					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(stop.IntegerPosition);
 				}
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
@@ -521,6 +544,252 @@ namespace Fumen.Converters
 				var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
 
 				sb.Append($"{timeInBeatsStr}={lengthStr}");
+			}
+
+			return sb.ToString();
+		}
+
+		protected void WriteSongPropertyDelays(bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			// Stepmania files have changed how they format these values over the years
+			// and this is to cut down on unnecessary diffs when exporting files.
+			if (MatchesSourceFileFormatType()
+				&& Config.WriteDelaysFromExtras
+				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr))
+			{
+				WriteSongProperty(SMCommon.TagDelays, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			if (Config.FallbackChart != null)
+			{
+				WriteChartPropertyDelays(Config.FallbackChart, stepmaniaOmitted);
+				return;
+			}
+
+			WriteSongProperty(SMCommon.TagDelays, "", stepmaniaOmitted);
+		}
+
+		protected void WriteChartPropertyDelays(Chart chart, bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			if (Config.WriteDelaysFromExtras
+				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr, MatchesSourceFileFormatType()))
+			{
+				WriteChartProperty(chart, SMCommon.TagDelays, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			WriteChartProperty(chart, SMCommon.TagDelays, CreateStopStringFromChartEvents(chart, true), stepmaniaOmitted);
+		}
+
+		protected void WriteSongPropertyWarps(bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			// Stepmania files have changed how they format these values over the years
+			// and this is to cut down on unnecessary diffs when exporting files.
+			if (MatchesSourceFileFormatType()
+				&& Config.WriteWarpsFromExtras
+				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr))
+			{
+				WriteSongProperty(SMCommon.TagWarps, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			if (Config.FallbackChart != null)
+			{
+				WriteChartPropertyWarps(Config.FallbackChart, stepmaniaOmitted);
+				return;
+			}
+
+			WriteSongProperty(SMCommon.TagWarps, "", stepmaniaOmitted);
+		}
+
+		protected void WriteChartPropertyWarps(Chart chart, bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			if (Config.WriteWarpsFromExtras
+				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr, MatchesSourceFileFormatType()))
+			{
+				WriteChartProperty(chart, SMCommon.TagWarps, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			WriteChartProperty(chart, SMCommon.TagWarps, CreateWarpStringFromChartEvents(chart), stepmaniaOmitted);
+		}
+
+		private string CreateWarpStringFromChartEvents(Chart chart)
+		{
+			var numWarpEvents = 0;
+			var sb = new StringBuilder();
+			foreach (var e in chart.Layers[0].Events)
+			{
+				if (!(e is Warp warp))
+					continue;
+				numWarpEvents++;
+				if (numWarpEvents > 1)
+					sb.Append(",\r\n");
+
+				// If present, use the original double values from the source chart so as not to lose
+				// or alter the precision.
+				if (!warp.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+						MatchesSourceFileFormatType()))
+				{
+					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(warp.IntegerPosition);
+				}
+				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+
+				if (!warp.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+				{
+					// Convert the warp rows to beats.
+					length = SMCommon.ConvertIntegerPositionToBeat(warp.LengthIntegerPosition);
+				}
+
+				var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
+
+				sb.Append($"{timeInBeatsStr}={lengthStr}");
+			}
+
+			return sb.ToString();
+		}
+
+		protected void WriteSongPropertyScrolls(bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			// Stepmania files have changed how they format these values over the years
+			// and this is to cut down on unnecessary diffs when exporting files.
+			if (MatchesSourceFileFormatType()
+				&& Config.WriteScrollsFromExtras
+				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr))
+			{
+				WriteSongProperty(SMCommon.TagScrolls, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			if (Config.FallbackChart != null)
+			{
+				WriteChartPropertyScrolls(Config.FallbackChart, stepmaniaOmitted);
+				return;
+			}
+
+			WriteSongProperty(SMCommon.TagScrolls, "", stepmaniaOmitted);
+		}
+
+		protected void WriteChartPropertyScrolls(Chart chart, bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			if (Config.WriteScrollsFromExtras
+				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr, MatchesSourceFileFormatType()))
+			{
+				WriteChartProperty(chart, SMCommon.TagScrolls, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			WriteChartProperty(chart, SMCommon.TagScrolls, CreateScrollStringFromChartEvents(chart), stepmaniaOmitted);
+		}
+
+		private string CreateScrollStringFromChartEvents(Chart chart)
+		{
+			var numScrollEvents = 0;
+			var sb = new StringBuilder();
+			foreach (var e in chart.Layers[0].Events)
+			{
+				if (!(e is ScrollRate scroll))
+					continue;
+				numScrollEvents++;
+				if (numScrollEvents > 1)
+					sb.Append(",\r\n");
+
+				// If present, use the original double values from the source chart so as not to lose
+				// or alter the precision.
+				if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+						MatchesSourceFileFormatType()))
+				{
+					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(scroll.IntegerPosition);
+				}
+				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+
+				if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+					length = scroll.Rate;
+				var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
+
+				sb.Append($"{timeInBeatsStr}={lengthStr}");
+			}
+
+			return sb.ToString();
+		}
+
+		protected void WriteSongPropertySpeeds(bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			// Stepmania files have changed how they format these values over the years
+			// and this is to cut down on unnecessary diffs when exporting files.
+			if (MatchesSourceFileFormatType()
+				&& Config.WriteSpeedsFromExtras
+				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr))
+			{
+				WriteSongProperty(SMCommon.TagSpeeds, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			if (Config.FallbackChart != null)
+			{
+				WriteChartPropertySpeeds(Config.FallbackChart, stepmaniaOmitted);
+				return;
+			}
+
+			WriteSongProperty(SMCommon.TagSpeeds, "", stepmaniaOmitted);
+		}
+
+		protected void WriteChartPropertySpeeds(Chart chart, bool stepmaniaOmitted = false)
+		{
+			// If we have a raw string from the source file, use it.
+			if (Config.WriteSpeedsFromExtras
+				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr, MatchesSourceFileFormatType()))
+			{
+				WriteChartProperty(chart, SMCommon.TagSpeeds, rawStr, stepmaniaOmitted);
+				return;
+			}
+
+			WriteChartProperty(chart, SMCommon.TagSpeeds, CreateSpeedStringFromChartEvents(chart), stepmaniaOmitted);
+		}
+
+		private string CreateSpeedStringFromChartEvents(Chart chart)
+		{
+			var numSpeedEvents = 0;
+			var sb = new StringBuilder();
+			foreach (var e in chart.Layers[0].Events)
+			{
+				if (!(e is ScrollRateInterpolation scroll))
+					continue;
+				numSpeedEvents++;
+				if (numSpeedEvents > 1)
+					sb.Append(",\r\n");
+
+				// If present, use the original double values from the source chart so as not to lose
+				// or alter the precision.
+				if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+						MatchesSourceFileFormatType()))
+				{
+					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(scroll.IntegerPosition);
+				}
+				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+
+				var modeStr = scroll.PreferPeriodAsTimeMicros ? "1" : "0";
+				var speedStr = scroll.Rate.ToString(SMCommon.SMDoubleFormat);
+				var lengthStr = "";
+				if (scroll.PreferPeriodAsTimeMicros)
+				{
+					lengthStr = (scroll.PeriodTimeMicros / 1000000.0).ToString(SMCommon.SMDoubleFormat);
+				}
+				else
+				{
+					lengthStr = SMCommon.ConvertIntegerPositionToBeat(scroll.PeriodLengthIntegerPosition)
+						.ToString(SMCommon.SMDoubleFormat);
+				}
+
+				sb.Append($"{timeInBeatsStr}={speedStr}={lengthStr}={modeStr}");
 			}
 
 			return sb.ToString();
@@ -578,7 +847,7 @@ namespace Fumen.Converters
 				if (!ts.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
 						MatchesSourceFileFormatType()))
 				{
-					timeInBeats = (double)ts.IntegerPosition / SMCommon.MaxValidDenominator;
+					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(ts.IntegerPosition);
 				}
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 

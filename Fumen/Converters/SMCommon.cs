@@ -207,6 +207,10 @@ namespace Fumen.Converters
 		public const string TagFumenDoubleValue = "FumenDoubleVal";
 		public const string TagFumenNotesType = "FumenNotesType";
 		public const string TagFumenRawStopsStr = "FumenRawStopsStr";
+		public const string TagFumenRawDelaysStr = "FumenRawDelaysStr";
+		public const string TagFumenRawWarpsStr = "FumenRawWarpsStr";
+		public const string TagFumenRawScrollsStr = "FumenRawScrollsStr";
+		public const string TagFumenRawSpeedsStr = "FumenRawSpeedsStr";
 		public const string TagFumenRawBpmsStr = "FumenRawBpmsStr";
 		public const string TagFumenRawTimeSignaturesStr = "FumenRawTimeSignaturesStr";
 		public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
@@ -383,7 +387,7 @@ namespace Fumen.Converters
 		/// that matches valid StepMania beat subdivisions.
 		/// </summary>
 		/// <param name="absoluteBeat">Absolute beat as a double</param>
-		/// <returns>Closes IntegerPosition to use.</returns>
+		/// <returns>Closest IntegerPosition to use.</returns>
 		public static int ConvertAbsoluteBeatToIntegerPosition(double absoluteBeat)
 		{
 			var beatInt = (int)absoluteBeat;
@@ -402,19 +406,29 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
-		/// Adds TempoChange Events to the given Chart from the given Dictionary of
+		/// Converts an integer position (rows) to a beat value as a double.
+		/// </summary>
+		/// <param name="integerPosition">Integer position of an Event.</param>
+		/// <returns>Beat value as double to use.</returns>
+		public static double ConvertIntegerPositionToBeat(int integerPosition)
+		{
+			return (double)integerPosition / MaxValidDenominator;
+		}
+
+		/// <summary>
+		/// Adds Tempo Events to the given Chart from the given Dictionary of
 		/// position to tempo values parsed from the Chart or Song.
 		/// </summary>
 		/// <param name="tempos">
 		/// Dictionary of time to value of tempos parsed from the Song or Chart.
 		/// </param>
-		/// <param name="chart">Chart to add TempoChange Events to.</param>
+		/// <param name="chart">Chart to add Tempo Events to.</param>
 		public static void AddTempos(Dictionary<double, double> tempos, Chart chart)
 		{
 			// Insert tempo change events.
 			foreach (var tempo in tempos)
 			{
-				var tempoChangeEvent = new TempoChange(tempo.Value)
+				var tempoChangeEvent = new Tempo(tempo.Value)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tempo.Key)
 				};
@@ -447,6 +461,123 @@ namespace Fumen.Converters
 				stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, stop.Value);
 
 				chart.Layers[0].Events.Add(stopEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds Delay Stop Events to the given Chart from the given Dictionary of
+		/// position to delay values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="delays">
+		/// Dictionary of time to value of delay lengths parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add Stop Events to.</param>
+		public static void AddDelays(Dictionary<double, double> delays, Chart chart)
+		{
+			foreach (var delay in delays)
+			{
+				var stopEvent = new Stop((long)(delay.Value * 1000000.0), true)
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(delay.Key)
+				};
+
+				// Record the actual doubles.
+				stopEvent.Extras.AddSourceExtra(TagFumenDoublePosition, delay.Key);
+				stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, delay.Value);
+
+				chart.Layers[0].Events.Add(stopEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds Warp Events to the given Chart from the given Dictionary of
+		/// position to warp length values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="warps">
+		/// Dictionary of time to value of warp lengths parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add Warp Events to.</param>
+		public static void AddWarps(Dictionary<double, double> warps, Chart chart)
+		{
+			foreach (var warp in warps)
+			{
+				// Convert warp beats to number of rows
+				var warpEvent = new Warp(ConvertAbsoluteBeatToIntegerPosition(warp.Value))
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(warp.Key)
+				};
+
+				// Record the actual doubles.
+				warpEvent.Extras.AddSourceExtra(TagFumenDoublePosition, warp.Key);
+				warpEvent.Extras.AddSourceExtra(TagFumenDoubleValue, warp.Value);
+
+				chart.Layers[0].Events.Add(warpEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds ScrollRate Events to the given Chart from the given Dictionary of
+		/// position to rate values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="scrollRateEvents">
+		/// Dictionary of time to value of scroll rates parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add ScrollRate Events to.</param>
+		public static void AddScrollRateEvents(Dictionary<double, double> scrollRateEvents, Chart chart)
+		{
+			foreach (var scrollRate in scrollRateEvents)
+			{
+				var scrollRateEvent = new ScrollRate((float)scrollRate.Value)
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
+				};
+
+				// Record the actual doubles.
+				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Key);
+				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Value);
+
+				chart.Layers[0].Events.Add(scrollRateEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds ScrollRateInterpolation Events to the given Chart from the given Dictionary of
+		/// position to rate values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="scrollRateEvents">
+		/// Dictionary of time to value of scroll rates parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add ScrollRateInterpolation Events to.</param>
+		public static void AddScrollRateInterpolationEvents(Dictionary<double, Tuple<double, double, int>> scrollRateEvents, Chart chart)
+		{
+			foreach (var scrollRate in scrollRateEvents)
+			{
+				var parameters = scrollRate.Value;
+				var speed = parameters.Item1;
+				var length = parameters.Item2;
+
+				var lengthIsTimeInSeconds = parameters.Item3 != 0;
+				var periodAsTimeMicros = 0L;
+				var periodAsIntegerPosition = 0;
+				if (lengthIsTimeInSeconds)
+				{
+					periodAsTimeMicros = (long)(length * 1000000);
+				}
+				else
+				{
+					periodAsIntegerPosition = ConvertAbsoluteBeatToIntegerPosition(length);
+				}
+
+				var scrollRateEvent = new ScrollRateInterpolation((float)speed, periodAsIntegerPosition, periodAsTimeMicros, lengthIsTimeInSeconds)
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
+				};
+
+				// Record the actual doubles.
+				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Key);
+				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Value);
+
+				chart.Layers[0].Events.Add(scrollRateEvent);
 			}
 		}
 
@@ -624,7 +755,7 @@ namespace Fumen.Converters
 
 		/// <summary>
 		/// Sets the TimeMicros and MetricPositions on the given Chart Events based
-		/// on the Tempo, TimeSignatures, and Stop Events in the Chart.
+		/// on the rate altering Events in the Chart.
 		/// </summary>
 		/// <param name="chart">Chart to set TimeMicros and MetricPosition on the Events.</param>
 		public static void SetEventTimeMicrosAndMetricPositionsFromRows(Chart chart)
@@ -637,7 +768,34 @@ namespace Fumen.Converters
 			var lastTimeSigChangeDenominator = NumBeatsPerMeasure;
 			var rowsPerBeat = MaxValidDenominator;
 			var beatsPerMeasure = NumBeatsPerMeasure;
-			var totalStopTime = 0.0;
+			var totalStopTimeMicros = 0L;
+			var previousEventTimeMicros = 0L;
+
+			// Warps are unfortunately complicated.
+			// Overlapping warps do not stack.
+			// Warps are represented as rows / IntegerPosition, not like Stops which use time.
+			// We need to figure out how much time warps account for to update Event TimeMicros.
+			// But we cannot just do a pass to compute the time for all Warps and then sum them up
+			// in a second pass since overlapping warps do not stack. We also can't just sum the time
+			// between each event during a warp per loop since that would accrue rounding error.
+			// So we need to use the logic of determining the time that has elapsed since the last
+			// event which has altered the rate of beats that occurred during the warp. This time
+			// is tracked in currentWarpTime below. When the rate changes, we commit currentWarpTime
+			// to totalWarpTime.
+			var warpingEndPosition = -1;
+			var totalWarpTime = 0.0;
+			var lastWarpBeatTimeChangeRow = -1;
+
+			// Note that overlapping negative Stops DO stack, even though Warps do not.
+			// This means that a Chart with overlapping Warps when saved by StepMania will produce
+			// a ssc and sm file that are not the same. The ssc file will have a shorter skipped range
+			// and the two charts will be out of sync.
+
+			// TODO: Check handling of negative Tempo warps.
+			// Negative BPM changes could have been used for Warps before Warps were implemented,
+			// though it seems like negative Stops were preferred. StepMania 5 saves Warps in sm
+			// files as negative Stops and not negative Tempos.
+			// Need to check that the logic below handles this in the same way StepMania would.
 
 			foreach (var chartEvent in chart.Layers[0].Events)
 			{
@@ -653,11 +811,55 @@ namespace Fumen.Converters
 					* ((double)NumBeatsPerMeasure / lastTimeSigChangeDenominator);
 				var absoluteTime = lastBeatTimeChangeTime + timeRelativeToLastTimeChange;
 
-				chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
-				chartEvent.TimeMicros = Convert.ToInt64((absoluteTime + totalStopTime) * 1000000.0);
+				// Handle a currently running warp.
+				var currentWarpTime = 0.0;
+				if (warpingEndPosition != -1)
+				{
+					// Figure out the amount of time elapsed during the current warp since the last event
+					// which altered the rate of time during this warp.
+					var endPosition = Math.Min(chartEvent.IntegerPosition, warpingEndPosition);
+					currentWarpTime = bpm == 0.0 ? 0.0 :
+						((double)(endPosition - lastWarpBeatTimeChangeRow) / rowsPerBeat) / bpm * 60.0
+						* ((double)NumBeatsPerMeasure / lastTimeSigChangeDenominator);
 
+					// Warp section is complete.
+					if (chartEvent.IntegerPosition >= warpingEndPosition)
+					{
+						// Clear variables used to track warp time.
+						warpingEndPosition = -1;
+						lastWarpBeatTimeChangeRow = -1;
+
+						// Commit the current running warp time to the total warp time.
+						totalWarpTime += currentWarpTime;
+						currentWarpTime = 0.0;
+					}
+				}
+
+				chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
+				chartEvent.TimeMicros = Convert.ToInt64((absoluteTime - currentWarpTime - totalWarpTime) * 1000000.0) + totalStopTimeMicros;
+
+				// In the case of negative stop / bpm warps, we need to clamp the time of an event so it does not precede events which
+				// have lower IntegerPositions
+				if (chartEvent.TimeMicros < previousEventTimeMicros)
+					chartEvent.TimeMicros = previousEventTimeMicros;
+				previousEventTimeMicros = chartEvent.TimeMicros;
+
+				// Stop handling. Just accrue more stop time in microseconds.
 				if (chartEvent is Stop stop)
-					totalStopTime += (double)stop.LengthMicros / 1000000;
+				{
+					// Accrue Stop time whether it is positive or negative.
+					// Do not worry about overlapping negative stops as they stack in StepMania.
+					totalStopTimeMicros += stop.LengthMicros;
+				}
+				// Warp handling. Update warp start and stop rows so we can compute the warp time.
+				else if (chartEvent is Warp warp)
+				{
+					// If there is a currently running warp, just extend the Warp.
+					warpingEndPosition = Math.Max(warpingEndPosition, warp.IntegerPosition + warp.LengthIntegerPosition);
+					if (lastWarpBeatTimeChangeRow == -1)
+						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
+				}
+				// Time Signature change. Update time signature and beat time tracking.
 				else if (chartEvent is TimeSignature ts)
 				{
 					var timeSignature = ts.Signature;
@@ -670,13 +872,28 @@ namespace Fumen.Converters
 					lastTimeSigChangeDenominator = timeSignature.Denominator;
 					beatsPerMeasure = timeSignature.Numerator;
 					rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / timeSignature.Denominator;
+
+					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
+					if (warpingEndPosition != -1)
+					{
+						totalWarpTime += currentWarpTime;
+						lastWarpBeatTimeChangeRow = lastBeatTimeChangeRow;
+					}
 				}
-				else if (chartEvent is TempoChange tc)
+				// Tempo change. Update beat time tracking.
+				else if (chartEvent is Tempo tc)
 				{
 					bpm = tc.TempoBPM;
 
 					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
 					lastBeatTimeChangeTime = absoluteTime;
+
+					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
+					if (warpingEndPosition != -1)
+					{
+						totalWarpTime += currentWarpTime;
+						lastWarpBeatTimeChangeRow = lastBeatTimeChangeRow;
+					}
 				}
 			}
 		}
@@ -735,14 +952,23 @@ namespace Fumen.Converters
 		/// </summary>
 		public class SMEventComparer : IComparer<Event>
 		{
-			private static readonly List<Type> SMEventOrder = new List<Type>
+			// Compare by string instead of Type Name in order to sort Delays separately from Stops.
+			private const string DelayString = "Delay";
+			private const string NegativeStopString = "NegativeStop";
+			private static readonly Dictionary<string, int> SMEventOrder = new Dictionary<string, int>
 			{
-				typeof(TimeSignature),
-				typeof(TempoChange),
-				typeof(LaneTapNote),
-				typeof(LaneHoldStartNote),
-				typeof(LaneHoldEndNote),
-				typeof(Stop),	// Stops occur after other notes at the same time.
+				{"TimeSignature", 0},
+				{"Tempo", 1},
+				{"ScrollRate", 2},
+				{"ScrollRateInterpolation", 3},
+				{"Delay", 4},					// Delays occur before notes.
+				{"NegativeStop", 5},			// Negative Stops (like Warps) occur before notes.
+				{"Warp", 6},					// Warps occur before notes.
+				{"LaneTapNote", 7},
+				{"LaneHoldStartNote", 8},
+				{"LaneHoldEndNote", 9},
+				{"LaneNote", 10},
+				{"Stop", 11},					// Stops occur after notes.
 			};
 
 			public static int Compare(Event e1, Event e2)
@@ -764,8 +990,24 @@ namespace Fumen.Converters
 					comparison = note1.Lane.CompareTo(note2.Lane);
 
 				// Order by type
-				var e1Index = SMEventOrder.IndexOf(e1.GetType());
-				var e2Index = SMEventOrder.IndexOf(e2.GetType());
+				var typeStr1 = e1.GetType().Name;
+				if (e1 is Stop s1)
+				{
+					if (s1.IsDelay)
+						typeStr1 = DelayString;
+					else if (s1.LengthMicros < 0)
+						typeStr1 = NegativeStopString;
+				}
+				var typeStr2 = e2.GetType().Name;
+				if (e2 is Stop s2)
+				{
+					if (s2.IsDelay)
+						typeStr2 = DelayString;
+					else if (s2.LengthMicros < 0)
+						typeStr2 = NegativeStopString;
+				}
+				var e1Index = SMEventOrder[typeStr1];
+				var e2Index = SMEventOrder[typeStr2];
 				if (e1Index >= 0 && e2Index >= 0)
 					comparison = e1Index.CompareTo(e2Index);
 				if (comparison != 0)

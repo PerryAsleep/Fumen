@@ -50,7 +50,8 @@ namespace Fumen.Converters
 					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM);
 				WriteSongPropertyBPMs();
 				WriteSongPropertyStops();
-				WriteSongPropertyFromExtras(SMCommon.TagFreezes, true);
+				// Skipping writing of Freezes as they are read as Stops and will be written back out as Stops.
+				// WriteSongPropertyFromExtras(SMCommon.TagFreezes, true);
 				WriteSongPropertyFromExtras(SMCommon.TagDelays, true);
 				WriteSongPropertyTimeSignatures(true);
 				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, true);

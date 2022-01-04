@@ -307,7 +307,7 @@ namespace StepManiaChartFiller
 					{
 						overlapsFill = true;
 						// Add events which would not conflict with fill arrows.
-						if (sourceEvent is TimeSignature || sourceEvent is TempoChange || sourceEvent is Stop)
+						if (sourceEvent is TimeSignature || sourceEvent is Tempo || sourceEvent is Stop)
 						{
 							resultEvents.Add(sourceEvent);
 						}

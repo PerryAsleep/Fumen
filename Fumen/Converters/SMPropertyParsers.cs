@@ -442,6 +442,85 @@ namespace Fumen.Converters
 	}
 
 	/// <summary>
+	/// Parses an interpolated scroll change (a "speed" event) into a Tuple of values
+	/// containing the speed, length, and length mode (0 = beats, 1 = seconds).
+	/// Will also store the raw value on the Extras if given raw string property name.
+	/// Example:
+	/// #SPEEDS:0.000=1.000=0.000=0;
+	/// </summary>
+	public class ScrollRateInterpolationPropertyParser : PropertyParser
+	{
+		private readonly Dictionary<double, Tuple<double, double, int>> Values;
+		private readonly Extras Extras;
+		private readonly string RawStringPropertyName;
+
+		public ScrollRateInterpolationPropertyParser(
+			string smPropertyName,
+			Dictionary<double, Tuple<double, double, int>> values,
+			Extras extras = null,
+			string rawStringPropertyName = null)
+			: base(smPropertyName)
+		{
+			Values = values;
+			Extras = extras;
+			RawStringPropertyName = rawStringPropertyName;
+		}
+
+		public override bool Parse(MSDFile.Value value)
+		{
+			// Only consider this line if it matches this property name.
+			if (!ParseFirstParameter(value, out var rawStr))
+				return false;
+
+			// Record the raw string to preserve formatting when writing.
+			if (!string.IsNullOrEmpty(RawStringPropertyName))
+				Extras?.AddSourceExtra(RawStringPropertyName, rawStr);
+
+			if (!string.IsNullOrEmpty(rawStr))
+			{
+				var interpolationDatas = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var interpolationData in interpolationDatas)
+				{
+					var kvp = interpolationData.Split('=');
+					if (kvp.Length != 4)
+					{
+						Logger?.Warn($"{PropertyName}: Malformed {SMCommon.TagSpeeds} '{interpolationData}'. This value will be ignored.");
+						continue;
+					}
+
+					if (!double.TryParse(kvp[0], out var beat))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[0]}'. Expected double. This value will be ignored.");
+						continue;
+					}
+					if (!double.TryParse(kvp[1], out var speed))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[1]}'. Expected double. This value will be ignored.");
+						continue;
+					}
+					if (!double.TryParse(kvp[2], out var length))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[2]}'. Expected double. This value will be ignored.");
+						continue;
+					}
+					if (!int.TryParse(kvp[3], out var mode))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[3]}'. Expected int. This value will be ignored.");
+						continue;
+					}
+
+					Values[beat] = new Tuple<double, double, int>(speed, length, mode);
+				}
+			}
+
+			Extras?.AddSourceExtra(PropertyName, Values);
+
+			return true;
+		}
+	}
+
+
+	/// <summary>
 	/// Abstract PropertyParser with static helper to parse the sm/scc string representation
 	/// if notes data into a Chart.
 	/// </summary>

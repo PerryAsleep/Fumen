@@ -5,8 +5,23 @@ using Fumen.ChartDefinition;
 
 namespace Fumen.Converters
 {
+	/// <summary>
+	/// Reader for StepMania .sm files.
+	/// </summary>
 	public class SMReader : Reader
 	{
+		/// <summary>
+		/// SM properties which affect scroll rate and note timing.
+		/// Grouped in a small class for organization.
+		/// </summary>
+		private class TimingProperties
+		{
+			public readonly Dictionary<double, double> Tempos = new Dictionary<double, double>();
+			public readonly Dictionary<double, double> Stops = new Dictionary<double, double>();
+			public readonly Dictionary<double, double> Delays = new Dictionary<double, double>();
+			public readonly Dictionary<double, Fraction> TimeSignatures = new Dictionary<double, Fraction>();
+		}
+
 		/// <summary>
 		/// Path to the sm file to load.
 		/// </summary>
@@ -48,9 +63,7 @@ namespace Fumen.Converters
 			var song = new Song();
 			await Task.Run(() =>
 			{
-				var tempos = new Dictionary<double, double>();
-				var stops = new Dictionary<double, double>();
-				var timeSignatures = new Dictionary<double, Fraction>();
+				var timingProperties = new TimingProperties();
 				song.SourceType = FileFormatType.SM;
 
 				var propertyParsers = new Dictionary<string, PropertyParser>()
@@ -69,14 +82,14 @@ namespace Fumen.Converters
 					[SMCommon.TagCDTitle] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCDTitle, song.Extras),
 					[SMCommon.TagMusic] = new PropertyToSourceExtrasParser<string>(SMCommon.TagMusic, song.Extras),
 					[SMCommon.TagOffset] = new PropertyToSourceExtrasParser<double>(SMCommon.TagOffset, song.Extras),
-					[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, tempos, song.Extras, SMCommon.TagFumenRawBpmsStr),
-					[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, stops, song.Extras, SMCommon.TagFumenRawStopsStr),
-					[SMCommon.TagFreezes] = new CSVListAtTimePropertyParser<double>(SMCommon.TagFreezes, stops),
-					[SMCommon.TagDelays] = new PropertyToSourceExtrasParser<string>(SMCommon.TagDelays, song.Extras),
+					[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, timingProperties.Tempos, song.Extras, SMCommon.TagFumenRawBpmsStr),
+					[SMCommon.TagStops] = new CSVListAtTimePropertyParser<double>(SMCommon.TagStops, timingProperties.Stops, song.Extras, SMCommon.TagFumenRawStopsStr),
+					[SMCommon.TagFreezes] = new CSVListAtTimePropertyParser<double>(SMCommon.TagFreezes, timingProperties.Stops),
+					[SMCommon.TagDelays] = new CSVListAtTimePropertyParser<double>(SMCommon.TagDelays, timingProperties.Delays, song.Extras, SMCommon.TagFumenRawDelaysStr),
 					// Removed, see https://github.com/stepmania/stepmania/issues/9
 					// SM files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 					// suggestions to a renderer for how to draw measure markers.
-					[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, timeSignatures, song.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
+					[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, timingProperties.TimeSignatures, song.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
 					[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.Extras),
 					[SMCommon.TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(SMCommon.TagInstrumentTrack, song.Extras),
 					[SMCommon.TagSampleStart] = new PropertyToSongPropertyParser(SMCommon.TagSampleStart, nameof(Song.PreviewSampleStart), song),
@@ -111,9 +124,10 @@ namespace Fumen.Converters
 				var firstChart = true;
 				foreach (var chart in song.Charts)
 				{
-					SMCommon.AddStops(stops, chart);
-					SMCommon.AddTempos(tempos, chart);
-					SMCommon.AddTimeSignatures(timeSignatures, chart, Logger, firstChart);
+					SMCommon.AddStops(timingProperties.Stops, chart);
+					SMCommon.AddDelays(timingProperties.Delays, chart);
+					SMCommon.AddTempos(timingProperties.Tempos, chart);
+					SMCommon.AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, firstChart);
 					firstChart = false;
 				}
 
@@ -135,7 +149,7 @@ namespace Fumen.Converters
 				if (song.Extras.TryGetSourceExtra(SMCommon.TagCredit, out object chartAuthorObj))
 					chartAuthor = (string) chartAuthorObj;
 
-				var chartDisplayTempo = SMCommon.GetDisplayBPMStringFromSourceExtrasList(song.Extras, tempos);
+				var chartDisplayTempo = SMCommon.GetDisplayBPMStringFromSourceExtrasList(song.Extras, timingProperties.Tempos);
 
 				foreach (var chart in song.Charts)
 				{
