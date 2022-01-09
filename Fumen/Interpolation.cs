@@ -8,6 +8,8 @@ namespace Fumen
 	{
 		public static double Lerp(double startValue, double endValue, double startTime, double endTime, double currentTime)
 		{
+			if (endTime == startTime)
+				return currentTime >= endTime ? endValue : startValue;
 			var ret = startValue + ((currentTime - startTime) / (endTime - startTime)) * (endValue - startValue);
 			if (startValue < endValue)
 				return Clamp(ret, startValue, endValue);
