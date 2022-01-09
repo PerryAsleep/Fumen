@@ -333,6 +333,38 @@ namespace Fumen
 			return new Enumerator(this, prev);
 		}
 
+		public Enumerator FindGreatestPreceding<U>(U data, Func<U, T, int> comparer)
+		{
+			var p = Nil;
+			var n = Root;
+			Node prev;
+			while (n != Nil)
+			{
+				var c = comparer(data, n.Data);
+				if (c == 0)
+				{
+					prev = Prev(n);
+					if (prev == Nil)
+						return null;
+					return new Enumerator(this, prev);
+				}
+
+				p = n;
+				n = c < 0 ? n.L : n.R;
+			}
+
+			if (p == Nil)
+				return null;
+
+			if (comparer(data, p.Data) > 0)
+				return new Enumerator(this, p);
+
+			prev = Prev(p);
+			if (prev == Nil)
+				return null;
+			return new Enumerator(this, prev);
+		}
+
 		public Enumerator FindLeastFollowing(T data)
 		{
 			var p = Nil;
@@ -357,6 +389,38 @@ namespace Fumen
 				return null;
 
 			if (Compare(data, p.Data) < 0)
+				return new Enumerator(this, p);
+
+			next = Next(p);
+			if (next == Nil)
+				return null;
+			return new Enumerator(this, next);
+		}
+
+		public Enumerator FindLeastFollowing<U>(U data, Func<U, T, int> comparer)
+		{
+			var p = Nil;
+			var n = Root;
+			Node next;
+			while (n != Nil)
+			{
+				var c = comparer(data, n.Data);
+				if (c == 0)
+				{
+					next = Next(n);
+					if (next == Nil)
+						return null;
+					return new Enumerator(this, next);
+				}
+
+				p = n;
+				n = c < 0 ? n.L : n.R;
+			}
+
+			if (p == Nil)
+				return null;
+
+			if (comparer(data, p.Data) < 0)
 				return new Enumerator(this, p);
 
 			next = Next(p);
@@ -499,7 +563,9 @@ namespace Fumen
 		{
 			private readonly RedBlackTree<T> Tree;
 			private Node CurrentNode;
+			private bool IsUnset;
 			private bool BeforeFirst;
+			private bool AfterLast;
 
 			public Enumerator(RedBlackTree<T> tree)
 			{
@@ -511,37 +577,71 @@ namespace Fumen
 			{
 				Tree = tree;
 				CurrentNode = n;
-				BeforeFirst = true;
+				IsUnset = true;
 			}
 
 			public Enumerator(Enumerator e)
 			{
 				Tree = e.Tree;
 				CurrentNode = e.CurrentNode;
+				IsUnset = e.IsUnset;
 				BeforeFirst = e.BeforeFirst;
+				AfterLast = e.AfterLast;
 			}
 
 			public bool MoveNext()
 			{
-				if (BeforeFirst)
-					BeforeFirst = false;
+				if (IsUnset)
+				{
+					IsUnset = false;
+				}
 				else
-					CurrentNode = Tree.Next(CurrentNode);
-				return !Tree.IsNull(CurrentNode);
+				{
+					if (BeforeFirst)
+					{
+						CurrentNode = Tree.GetRoot();
+						while (!Tree.IsNull(CurrentNode.L))
+							CurrentNode = CurrentNode.L;
+					}
+					else
+					{
+						CurrentNode = Tree.Next(CurrentNode);
+					}
+				}
+
+				AfterLast = Tree.IsNull(CurrentNode);
+				return !AfterLast;
 			}
 
 			public bool MovePrev()
 			{
-				if (BeforeFirst)
-					BeforeFirst = false;
+				if (IsUnset)
+				{
+					IsUnset = false;
+				}
 				else
-					CurrentNode = Tree.Prev(CurrentNode);
-				return !Tree.IsNull(CurrentNode);
+				{
+					if (AfterLast)
+					{
+						CurrentNode = Tree.GetRoot();
+						while (!Tree.IsNull(CurrentNode.R))
+							CurrentNode = CurrentNode.R;
+					}
+					else
+					{
+						CurrentNode = Tree.Prev(CurrentNode);
+					}
+				}
+
+				BeforeFirst = Tree.IsNull(CurrentNode);
+				return !BeforeFirst;
 			}
 
 			public void Reset()
 			{
-				BeforeFirst = true;
+				IsUnset = true;
+				BeforeFirst = false;
+				AfterLast = false;
 				CurrentNode = Tree.GetRoot();
 				while (!Tree.IsNull(CurrentNode.L))
 					CurrentNode = CurrentNode.L;
@@ -553,7 +653,7 @@ namespace Fumen
 			{
 				get
 				{
-					if (BeforeFirst)
+					if (IsUnset)
 						throw new InvalidOperationException();
 					return CurrentNode.Data;
 				}
