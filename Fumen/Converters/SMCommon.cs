@@ -980,7 +980,10 @@ namespace Fumen.Converters
 				if (null == e2)
 					return 1;
 
-				// Order by time / position
+				// Order by position.
+				// It is intentional to order by position and not time as due to rate altering events
+				// like warps many events might share the same time but have different positions.
+				// Two events cannot have the same position with different times.
 				var comparison = e1.IntegerPosition.CompareTo(e2.IntegerPosition);
 				if (comparison != 0)
 					return comparison;
