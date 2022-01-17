@@ -614,11 +614,6 @@ namespace Fumen.Converters
 					var beatDouble = kvp.Key;
 					var ts = kvp.Value;
 
-					if (ts.Denominator != 4 || ts.Numerator != 4)
-					{
-						logger.Error($"Chart uses {ts.Numerator}/{ts.Denominator} Time Signature.");
-					}
-
 					// The first time signature must be at the start of the song.
 					if (first && beatDouble != 0.0)
 					{
