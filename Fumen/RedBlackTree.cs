@@ -295,13 +295,24 @@ namespace Fumen
 			return null;
 		}
 
+		/// <summary>
+		/// Finds the given value.
+		/// </summary>
+		/// <param name="data">Value to find.</param>
+		/// <returns>Enumerator to value or null if not found.</returns>
 		public Enumerator Find(T data)
 		{
 			var n = FindNode(data);
 			return n == null ? null : new Enumerator(this, n);
 		}
 
-		public Enumerator FindGreatestPreceding(T data)
+		/// <summary>
+		/// Finds the greatest value preceding the given value.
+		/// </summary>
+		/// <param name="data">Value to use to find the greatest preceding value.</param>
+		/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+		/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
+		public Enumerator FindGreatestPreceding(T data, bool orEqualTo = false)
 		{
 			var p = Nil;
 			var n = Root;
@@ -311,12 +322,13 @@ namespace Fumen
 				var c = Compare(data, n.Data);
 				if (c == 0)
 				{
+					if (orEqualTo)
+						return new Enumerator(this, n);
 					prev = Prev(n);
 					if (prev == Nil)
 						return null;
 					return new Enumerator(this, prev);
 				}
-
 				p = n;
 				n = c < 0 ? n.L : n.R;
 			}
@@ -333,7 +345,14 @@ namespace Fumen
 			return new Enumerator(this, prev);
 		}
 
-		public Enumerator FindGreatestPreceding<U>(U data, Func<U, T, int> comparer)
+		/// <summary>
+		/// Finds the greatest value preceding the given value.
+		/// </summary>
+		/// <param name="data">Value to use to find the greatest preceding value.</param>
+		/// <param name="comparer">Function to compare the given value to the values in the tree.</param>
+		/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+		/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
+		public Enumerator FindGreatestPreceding<U>(U data, Func<U, T, int> comparer, bool orEqualTo = false)
 		{
 			var p = Nil;
 			var n = Root;
@@ -343,6 +362,8 @@ namespace Fumen
 				var c = comparer(data, n.Data);
 				if (c == 0)
 				{
+					if (orEqualTo)
+						return new Enumerator(this, n);
 					prev = Prev(n);
 					if (prev == Nil)
 						return null;
@@ -365,7 +386,13 @@ namespace Fumen
 			return new Enumerator(this, prev);
 		}
 
-		public Enumerator FindLeastFollowing(T data)
+		/// <summary>
+		/// Finds the least value following the given value.
+		/// </summary>
+		/// <param name="data">Value to use to find the least following value.</param>
+		/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+		/// <returns>Enumerator to least following value or null if not found.</returns>
+		public Enumerator FindLeastFollowing(T data, bool orEqualTo = false)
 		{
 			var p = Nil;
 			var n = Root;
@@ -375,6 +402,8 @@ namespace Fumen
 				var c = Compare(data, n.Data);
 				if (c == 0)
 				{
+					if (orEqualTo)
+						return new Enumerator(this, n);
 					next = Next(n);
 					if (next == Nil)
 						return null;
@@ -397,7 +426,14 @@ namespace Fumen
 			return new Enumerator(this, next);
 		}
 
-		public Enumerator FindLeastFollowing<U>(U data, Func<U, T, int> comparer)
+		/// <summary>
+		/// Finds the least value following the given value.
+		/// </summary>
+		/// <param name="data">Value to use to find the least following value.</param>
+		/// <param name="comparer">Function to compare the given value to the values in the tree.</param>
+		/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+		/// <returns>Enumerator to least following value or null if not found.</returns>
+		public Enumerator FindLeastFollowing<U>(U data, Func<U, T, int> comparer, bool orEqualTo = false)
 		{
 			var p = Nil;
 			var n = Root;
@@ -407,6 +443,8 @@ namespace Fumen
 				var c = comparer(data, n.Data);
 				if (c == 0)
 				{
+					if (orEqualTo)
+						return new Enumerator(this, n);
 					next = Next(n);
 					if (next == Nil)
 						return null;
@@ -602,6 +640,7 @@ namespace Fumen
 						CurrentNode = Tree.GetRoot();
 						while (!Tree.IsNull(CurrentNode.L))
 							CurrentNode = CurrentNode.L;
+						BeforeFirst = false;
 					}
 					else
 					{
@@ -626,6 +665,7 @@ namespace Fumen
 						CurrentNode = Tree.GetRoot();
 						while (!Tree.IsNull(CurrentNode.R))
 							CurrentNode = CurrentNode.R;
+						AfterLast = false;
 					}
 					else
 					{

@@ -11,6 +11,9 @@ namespace ChartGeneratorTests
 	{
 		/// <summary>
 		/// Helper method to assert that the given RedBlackTree is structured as expected.
+		/// This doesn't follow some unit test best practices of ignoring implementation details,
+		/// but this data structure is massively complicated and I want assurance that it is
+		/// implemented correctly.
 		/// </summary>
 		/// <typeparam name="T">Type of tree.</typeparam>
 		/// <param name="t">Tree to check.</param>
@@ -359,7 +362,7 @@ namespace ChartGeneratorTests
 		public void TestEnumeratorPrev()
 		{
 			var t = new RedBlackTree<int>();
-			for (var i = 0; i < 10; i ++)
+			for (var i = 0; i < 10; i++)
 				t.Insert(i);
 
 			// Finding an element should return an enumerator that needs to be
@@ -425,19 +428,48 @@ namespace ChartGeneratorTests
 
 			// Finding element less than least element should return null.
 			Assert.IsNull(t.FindGreatestPreceding(-1));
+			Assert.IsNull(t.FindGreatestPreceding(-1, true));
 
-			// Finding least element should return null.
+			// Finding element less than greatest element should return greatest element.
+			var e = t.FindGreatestPreceding(num + 1);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(num - 2, e.Current);
+			e = t.FindGreatestPreceding(num + 1, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(num - 2, e.Current);
+
+			// Finding least element should return null when not using orEqualTo=true.
 			Assert.IsNull(t.FindGreatestPreceding(0));
+			// Finding least element should return that element when using orEqualTo=true.
+			e = t.FindGreatestPreceding(0, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(0, e.Current);
 
 			// Find elements after the least element should return the greatest
 			// preceding element.
-			for (var i = 1; i < num + 1; i ++)
+			for (var i = 1; i < num; i ++)
 			{
+				// Check without equals.
 				var expected = i - 1;
 				if (expected % 2 == 1)
 					expected -= 1;
+				e = t.FindGreatestPreceding(i);
+				Assert.IsNotNull(e);
+				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+				Assert.IsTrue(e.MoveNext());
+				Assert.AreEqual(expected, e.Current);
 
-				var e = t.FindGreatestPreceding(i);
+				// Check with equals.
+				expected = i;
+				if (expected % 2 == 1)
+					expected -= 1;
+				e = t.FindGreatestPreceding(i, true);
 				Assert.IsNotNull(e);
 				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 				Assert.IsTrue(e.MoveNext());
@@ -456,21 +488,50 @@ namespace ChartGeneratorTests
 			for (var i = 0; i < num; i += 2)
 				t.Insert(i);
 
+			// Finding element greater than least element should return least element.
+			var e = t.FindLeastFollowing(-1);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(0, e.Current);
+			e = t.FindLeastFollowing(-1, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(0, e.Current);
+
 			// Finding element greater than greatest element should return null.
 			Assert.IsNull(t.FindLeastFollowing(num));
+			Assert.IsNull(t.FindLeastFollowing(num, true));
 
-			// Finding greatest element should return null.
+			// Finding greatest element should return null when not using orEqualTo=true.
 			Assert.IsNull(t.FindLeastFollowing(num - 2));
+			// Finding greatest element should return that element when using orEqualTo=true.
+			e = t.FindLeastFollowing(num - 2, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(num-2, e.Current);
 
 			// Find elements before the greatest element should return the least
 			// following element.
 			for (var i = 0; i < num - 2; i++)
 			{
+				// Check without equals.
 				var expected = i + 1;
 				if (expected % 2 == 1)
 					expected += 1;
+				e = t.FindLeastFollowing(i);
+				Assert.IsNotNull(e);
+				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+				Assert.IsTrue(e.MoveNext());
+				Assert.AreEqual(expected, e.Current);
 
-				var e = t.FindLeastFollowing(i);
+				// Check with equals.
+				expected = i;
+				if (expected % 2 == 1)
+					expected += 1;
+				e = t.FindLeastFollowing(i, true);
 				Assert.IsNotNull(e);
 				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 				Assert.IsTrue(e.MoveNext());
