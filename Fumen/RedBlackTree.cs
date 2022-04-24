@@ -88,14 +88,14 @@ namespace Fumen
 
 		/// <summary>
 		/// Returns whether the node should be considered null.
-		/// Null nodes, or the Nil sentinel Node will be considered null.
+		/// The Nil sentinel Node will be considered null.
 		/// </summary>
 		/// <remarks>Public for Enumerator and unit tests.</remarks>
 		/// <param name="n">Node to check.</param>
 		/// <returns>Whether or not the Node should be considered null or not.</returns>
 		public bool IsNull(Node n)
 		{
-			return n == null || n == Nil;
+			return n == Nil;
 		}
 
 		private void RotateLeft(Node x)
@@ -292,7 +292,7 @@ namespace Fumen
 				n = c < 0 ? n.L : n.R;
 			}
 
-			return null;
+			return n;
 		}
 
 		/// <summary>
@@ -303,7 +303,7 @@ namespace Fumen
 		public Enumerator Find(T data)
 		{
 			var n = FindNode(data);
-			return n == null ? null : new Enumerator(this, n);
+			return IsNull(n) ? null : new Enumerator(this, n);
 		}
 
 		/// <summary>
@@ -470,7 +470,7 @@ namespace Fumen
 		public void Delete(T data)
 		{
 			var n = FindNode(data);
-			if (n == null)
+			if (IsNull(n))
 				return;
 
 			Count--;
@@ -580,6 +580,21 @@ namespace Fumen
 			x.Red = false;
 		}
 
+		public Enumerator First()
+		{
+			return GetEnumerator();
+		}
+
+		public Enumerator Last()
+		{
+			var currentNode = Root;
+			if (IsNull(currentNode))
+				return new Enumerator(this, currentNode);
+			while (!IsNull(currentNode.R))
+				currentNode = currentNode.R;
+			return new Enumerator(this, currentNode);
+		}
+
 		#region IEnumerable
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -608,6 +623,7 @@ namespace Fumen
 			public Enumerator(RedBlackTree<T> tree)
 			{
 				Tree = tree;
+				CurrentNode = Tree.Nil;
 				Reset();
 			}
 
@@ -638,8 +654,11 @@ namespace Fumen
 					if (BeforeFirst)
 					{
 						CurrentNode = Tree.GetRoot();
-						while (!Tree.IsNull(CurrentNode.L))
-							CurrentNode = CurrentNode.L;
+						if (!Tree.IsNull(CurrentNode))
+						{
+							while (!Tree.IsNull(CurrentNode.L))
+								CurrentNode = CurrentNode.L;
+						}
 						BeforeFirst = false;
 					}
 					else
@@ -663,8 +682,11 @@ namespace Fumen
 					if (AfterLast)
 					{
 						CurrentNode = Tree.GetRoot();
-						while (!Tree.IsNull(CurrentNode.R))
-							CurrentNode = CurrentNode.R;
+						if (!Tree.IsNull(CurrentNode))
+						{
+							while (!Tree.IsNull(CurrentNode.R))
+								CurrentNode = CurrentNode.R;
+						}
 						AfterLast = false;
 					}
 					else
@@ -683,8 +705,11 @@ namespace Fumen
 				BeforeFirst = false;
 				AfterLast = false;
 				CurrentNode = Tree.GetRoot();
-				while (!Tree.IsNull(CurrentNode.L))
-					CurrentNode = CurrentNode.L;
+				if (!Tree.IsNull(CurrentNode))
+				{
+					while (!Tree.IsNull(CurrentNode.L))
+						CurrentNode = CurrentNode.L;
+				}
 			}
 
 			object IEnumerator.Current => Current;
