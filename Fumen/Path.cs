@@ -90,6 +90,9 @@ namespace Fumen
 			if (fromPath.StartsWith(Win32DeviceNamespace))
 				fromPath = fromPath.Substring(Win32DeviceNamespace.Length);
 			fromPath = fromPath.Replace(System.IO.Path.AltDirectorySeparatorChar, System.IO.Path.DirectorySeparatorChar);
+			if (!fromPath.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString()))
+				fromPath = $"{fromPath}{System.IO.Path.DirectorySeparatorChar}";
+
 			if (toPath.StartsWith(Win32DeviceNamespace))
 				toPath = toPath.Substring(Win32DeviceNamespace.Length);
 			toPath = toPath.Replace(System.IO.Path.AltDirectorySeparatorChar, System.IO.Path.DirectorySeparatorChar);
@@ -97,7 +100,7 @@ namespace Fumen
 			var fromUri = new Uri(fromPath);
 			var toUri = new Uri(toPath);
 			var relativeUri = fromUri.MakeRelativeUri(toUri);
-			var relativePath = relativeUri.ToString();
+			var relativePath = Uri.UnescapeDataString(relativeUri.ToString());
 			return relativePath;
 		}
 	}
