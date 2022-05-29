@@ -73,6 +73,15 @@ namespace Fumen.ChartDefinition
 		}
 
 		/// <summary>
+		/// Removes an object in the source extra information.
+		/// </summary>
+		/// <param name="key">Key object to remove.</param>
+		public void RemoveSourceExtra(string key)
+		{
+			SourceExtras?.Remove(key);
+		}
+
+		/// <summary>
 		/// Add an object to the destination extra information.
 		/// </summary>
 		/// <param name="key">Key to identify this object.</param>

@@ -111,7 +111,7 @@ namespace Fumen.Converters
 			public bool WriteStopsFromExtras = false;
 			/// <summary>
 			/// If true, write Delays from the Song or Chart's Extras.
-			/// If false, write from the Chart's Stop Events.
+			/// If false, write from the Chart's Delay Events.
 			/// </summary>
 			public bool WriteDelaysFromExtras = false;
 			/// <summary>
