@@ -743,7 +743,7 @@ namespace Fumen.Converters
 					displayTempo = chartDisplayTempoObj.ToString();
 				}
 			}
-			else if (tempos.ContainsKey(0.0))
+			else if (tempos?.ContainsKey(0.0) ?? false)
 				displayTempo = tempos[0.0].ToString("N3");
 			return displayTempo;
 		}
