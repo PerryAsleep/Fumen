@@ -827,7 +827,7 @@ namespace Fumen.Converters
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagStops, CreateTimeSignaturesStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart), stepmaniaOmitted);
 		}
 
 		private string CreateTimeSignaturesStringFromChartEvents(Chart chart)
