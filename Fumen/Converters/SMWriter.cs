@@ -47,26 +47,29 @@ namespace Fumen.Converters
 					WriteSongPropertyFromExtras(SMCommon.TagLastBeatHint);
 				WriteSongPropertyFromExtras(SMCommon.TagSelectable);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM);
+					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM, false, false);
+
+				// Timing data.
 				WriteSongPropertyBPMs();
 				WriteSongPropertyStops();
 				// Skipping writing of Freezes as they are read as Stops and will be written back out as Stops.
 				// WriteSongPropertyFromExtras(SMCommon.TagFreezes, true);
-				WriteSongPropertyFromExtras(SMCommon.TagDelays, true);
+				WriteSongPropertyFromExtras(SMCommon.TagDelays, true, false);
 				WriteSongPropertyTimeSignatures(true);
-				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, true);
-				WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack, true);
-				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true);
+				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, true, false);
+
+				WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack, true, false);
+				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges);
+					WriteSongPropertyFromExtras(SMCommon.TagBGChanges, false, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges1, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1);
+					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1, false, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges2, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2);
+					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2, false, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFGChanges, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagFGChanges);
-				WriteSongPropertyFromExtras(SMCommon.TagKeySounds);		// TODO: Write keysounds properly
-				WriteSongPropertyFromExtras(SMCommon.TagAttacks);
+					WriteSongPropertyFromExtras(SMCommon.TagFGChanges, false, false);
+				WriteSongPropertyFromExtras(SMCommon.TagKeySounds, false, false);		// TODO: Write keysounds properly
+				WriteSongPropertyFromExtras(SMCommon.TagAttacks, false, false);
 
 				StreamWriter.WriteLine();
 

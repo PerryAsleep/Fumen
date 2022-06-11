@@ -315,21 +315,27 @@ namespace Fumen.Converters
 			return "";
 		}
 
-		private void WritePropertyInternal(string smPropertyName, string value)
+		private void WritePropertyInternal(string smPropertyName, string value, bool escape)
 		{
 			if (string.IsNullOrEmpty(value))
+			{
 				StreamWriter.WriteLine(
 					$"{MSDFile.ValueStartMarker}{smPropertyName}{MSDFile.ParamMarker}{MSDFile.ValueEndMarker}");
+			}
 			else
+			{
+				if (escape)
+					value = MSDFile.Escape(value);
 				StreamWriter.WriteLine(
-					$"{MSDFile.ValueStartMarker}{smPropertyName}{MSDFile.ParamMarker}{MSDFile.Escape(value)}{MSDFile.ValueEndMarker}");
+					$"{MSDFile.ValueStartMarker}{smPropertyName}{MSDFile.ParamMarker}{value}{MSDFile.ValueEndMarker}");
+			}
 		}
 
-		private void WritePropertyInternal(string smPropertyName, object value)
+		private void WritePropertyInternal(string smPropertyName, object value, bool escape)
 		{
 			if (value == null)
 			{
-				WritePropertyInternal(smPropertyName, "");
+				WritePropertyInternal(smPropertyName, "", false);
 			}
 			else if (value is List<string> valAsList)
 			{
@@ -350,11 +356,11 @@ namespace Fumen.Converters
 			}
 			else if (value is double d)
 			{
-				WritePropertyInternal(smPropertyName, d.ToString(SMCommon.SMDoubleFormat));
+				WritePropertyInternal(smPropertyName, d.ToString(SMCommon.SMDoubleFormat), false);
 			}
 			else
 			{
-				WritePropertyInternal(smPropertyName, value.ToString());
+				WritePropertyInternal(smPropertyName, value.ToString(), escape);
 			}
 		}
 
@@ -374,31 +380,31 @@ namespace Fumen.Converters
 			return false;
 		}
 
-		protected void WriteChartProperty(Chart chart, string smPropertyName, object value, bool stepmaniaOmitted = false)
+		protected void WriteChartProperty(Chart chart, string smPropertyName, object value, bool stepmaniaOmitted = false, bool escape = true)
 		{
 			var inSource = chart.Extras.TryGetExtra(smPropertyName, out object _, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
-				WritePropertyInternal(smPropertyName, value);
+				WritePropertyInternal(smPropertyName, value, escape);
 		}
 
-		protected void WriteChartPropertyFromExtras(Chart chart, string smPropertyName, bool stepmaniaOmitted = false)
+		protected void WriteChartPropertyFromExtras(Chart chart, string smPropertyName, bool stepmaniaOmitted = false, bool escape = true)
 		{
 			var inSource = chart.Extras.TryGetExtra(smPropertyName, out object value, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
-				WritePropertyInternal(smPropertyName, value);
+				WritePropertyInternal(smPropertyName, value, escape);
 		}
-		protected void WriteSongProperty(string smPropertyName, object value, bool stepmaniaOmitted = false)
+		protected void WriteSongProperty(string smPropertyName, object value, bool stepmaniaOmitted = false, bool escape = true)
 		{
 			var inSource = Config.Song.Extras.TryGetExtra(smPropertyName, out object _, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
-				WritePropertyInternal(smPropertyName, value);
+				WritePropertyInternal(smPropertyName, value, escape);
 		}
 
-		protected void WriteSongPropertyFromExtras(string smPropertyName, bool stepmaniaOmitted = false)
+		protected void WriteSongPropertyFromExtras(string smPropertyName, bool stepmaniaOmitted = false, bool escape = true)
 		{
 			var inSource = Config.Song.Extras.TryGetExtra(smPropertyName, out object value, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
-				WritePropertyInternal(smPropertyName, value);
+				WritePropertyInternal(smPropertyName, value, escape);
 		}
 
 		protected void WriteSongPropertyMusic(bool stepmaniaOmitted = false)
@@ -414,6 +420,8 @@ namespace Fumen.Converters
 			if (!Config.Song.Extras.TryGetExtra(SMCommon.TagOffset, out object value, MatchesSourceFileFormatType())
 			    && Config.FallbackChart != null)
 				value = Config.FallbackChart.ChartOffsetFromMusic.ToString(SMCommon.SMDoubleFormat);
+			if (value is double d)
+				value = d.ToString(SMCommon.SMDoubleFormat);
 			WriteSongProperty(SMCommon.TagOffset, value?.ToString() ?? "", stepmaniaOmitted);
 		}
 
@@ -426,7 +434,7 @@ namespace Fumen.Converters
 				&& Config.WriteTemposFromExtras
 			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -445,11 +453,11 @@ namespace Fumen.Converters
 			if (Config.WriteTemposFromExtras 
 			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagBPMs, CreateBPMStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagBPMs, CreateBPMStringFromChartEvents(chart), stepmaniaOmitted, false);
 		}
 
 		private string CreateBPMStringFromChartEvents(Chart chart)
@@ -490,7 +498,7 @@ namespace Fumen.Converters
 			    && Config.WriteStopsFromExtras
 				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagStops, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagStops, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -509,11 +517,11 @@ namespace Fumen.Converters
 			if (Config.WriteStopsFromExtras
 			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawStopsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagStops, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagStops, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagStops, CreateStopStringFromChartEvents(chart, false), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagStops, CreateStopStringFromChartEvents(chart, false), stepmaniaOmitted, false);
 		}
 
 		private string CreateStopStringFromChartEvents(Chart chart, bool delays)
@@ -558,7 +566,7 @@ namespace Fumen.Converters
 				&& Config.WriteDelaysFromExtras
 				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagDelays, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagDelays, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -577,11 +585,11 @@ namespace Fumen.Converters
 			if (Config.WriteDelaysFromExtras
 				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagDelays, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagDelays, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagDelays, CreateStopStringFromChartEvents(chart, true), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagDelays, CreateStopStringFromChartEvents(chart, true), stepmaniaOmitted, false);
 		}
 
 		protected void WriteSongPropertyWarps(bool stepmaniaOmitted = false)
@@ -593,7 +601,7 @@ namespace Fumen.Converters
 				&& Config.WriteWarpsFromExtras
 				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagWarps, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagWarps, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -612,11 +620,11 @@ namespace Fumen.Converters
 			if (Config.WriteWarpsFromExtras
 				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagWarps, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagWarps, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagWarps, CreateWarpStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagWarps, CreateWarpStringFromChartEvents(chart), stepmaniaOmitted, false);
 		}
 
 		private string CreateWarpStringFromChartEvents(Chart chart)
@@ -663,7 +671,7 @@ namespace Fumen.Converters
 				&& Config.WriteScrollsFromExtras
 				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagScrolls, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagScrolls, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -682,11 +690,11 @@ namespace Fumen.Converters
 			if (Config.WriteScrollsFromExtras
 				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagScrolls, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagScrolls, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagScrolls, CreateScrollStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagScrolls, CreateScrollStringFromChartEvents(chart), stepmaniaOmitted, false);
 		}
 
 		private string CreateScrollStringFromChartEvents(Chart chart)
@@ -729,7 +737,7 @@ namespace Fumen.Converters
 				&& Config.WriteSpeedsFromExtras
 				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagSpeeds, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagSpeeds, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -748,11 +756,11 @@ namespace Fumen.Converters
 			if (Config.WriteSpeedsFromExtras
 				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagSpeeds, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagSpeeds, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagSpeeds, CreateSpeedStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagSpeeds, CreateSpeedStringFromChartEvents(chart), stepmaniaOmitted, false);
 		}
 
 		private string CreateSpeedStringFromChartEvents(Chart chart)
@@ -803,7 +811,7 @@ namespace Fumen.Converters
 				&& Config.WriteTimeSignaturesFromExtras
 				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr))
 			{
-				WriteSongProperty(SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted);
+				WriteSongProperty(SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
@@ -814,7 +822,7 @@ namespace Fumen.Converters
 			}
 
 			// Default to 4/4.
-			WriteSongProperty(SMCommon.TagTimeSignatures, "0.000=4=4;", stepmaniaOmitted);
+			WriteSongProperty(SMCommon.TagTimeSignatures, $"{0.0.ToString(SMCommon.SMDoubleFormat)}=4=4", stepmaniaOmitted, false);
 		}
 
 		protected void WriteChartPropertyTimeSignatures(Chart chart, bool stepmaniaOmitted = false)
@@ -823,11 +831,11 @@ namespace Fumen.Converters
 			if (Config.WriteTimeSignaturesFromExtras
 				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
-				WriteChartProperty(chart, SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted);
+				WriteChartProperty(chart, SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart), stepmaniaOmitted);
+			WriteChartProperty(chart, SMCommon.TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart), stepmaniaOmitted, false);
 		}
 
 		private string CreateTimeSignaturesStringFromChartEvents(Chart chart)

@@ -65,7 +65,7 @@ namespace Fumen.Converters
 				WriteSongProperty(SMCommon.TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMCommon.SMDoubleFormat));
 				WriteSongPropertyFromExtras(SMCommon.TagSelectable);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM);
+					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM, false, false);
 
 				// Timing data.
 				WriteSongPropertyBPMs();
@@ -73,26 +73,26 @@ namespace Fumen.Converters
 				WriteSongPropertyDelays();
 				WriteSongPropertyWarps();
 				WriteSongPropertyTimeSignatures();
-				WriteSongPropertyFromExtras(SMCommon.TagTickCounts);
-				WriteSongPropertyFromExtras(SMCommon.TagCombos);
+				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, false, false);
+				WriteSongPropertyFromExtras(SMCommon.TagCombos, false, false);
 				WriteSongPropertySpeeds();
 				WriteSongPropertyScrolls();
-				WriteSongPropertyFromExtras(SMCommon.TagFakes);
-				WriteSongPropertyFromExtras(SMCommon.TagLabels);
+				WriteSongPropertyFromExtras(SMCommon.TagFakes, false, false);
+				WriteSongPropertyFromExtras(SMCommon.TagLabels, false, false);
 
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagLastSecondHint, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagLastSecondHint);
-				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true);
+					WriteSongPropertyFromExtras(SMCommon.TagLastSecondHint, false, false);
+				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges);
+					WriteSongPropertyFromExtras(SMCommon.TagBGChanges, false, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges1, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1);
+					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1, false, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges2, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2);
+					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2, false, false);
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFGChanges, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagFGChanges);
-				WriteSongPropertyFromExtras(SMCommon.TagKeySounds);		// TODO: Write keysounds properly
-				WriteSongPropertyFromExtras(SMCommon.TagAttacks);
+					WriteSongPropertyFromExtras(SMCommon.TagFGChanges, false, false);
+				WriteSongPropertyFromExtras(SMCommon.TagKeySounds, false, false);		// TODO: Write keysounds properly
+				WriteSongPropertyFromExtras(SMCommon.TagAttacks, false, false);
 
 				// Cache
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFirstSecond, out object _, MatchesSourceFileFormatType())
@@ -174,19 +174,19 @@ namespace Fumen.Converters
 				WriteChartPropertyDelays(chart);
 				WriteChartPropertyWarps(chart);
 				WriteChartPropertyTimeSignatures(chart);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagTickCounts);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagCombos);
+				WriteChartPropertyFromExtras(chart, SMCommon.TagTickCounts, false, false);
+				WriteChartPropertyFromExtras(chart, SMCommon.TagCombos, false, false);
 				WriteChartPropertySpeeds(chart);
 				WriteChartPropertyScrolls(chart);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagFakes);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagLabels);
+				WriteChartPropertyFromExtras(chart, SMCommon.TagFakes, false, false);
+				WriteChartPropertyFromExtras(chart, SMCommon.TagLabels, false, false);
 			}
 
-			WriteChartPropertyFromExtras(chart, SMCommon.TagSampleStart, true);
-			WriteChartPropertyFromExtras(chart, SMCommon.TagSampleLength, true);
-			WriteChartPropertyFromExtras(chart, SMCommon.TagSelectable, true);
-			WriteChartPropertyFromExtras(chart, SMCommon.TagAttacks, true);
-			WriteChartProperty(chart, SMCommon.TagDisplayBPM, chart.Tempo);
+			WriteChartPropertyFromExtras(chart, SMCommon.TagSampleStart, true, false);
+			WriteChartPropertyFromExtras(chart, SMCommon.TagSampleLength, true, false);
+			WriteChartPropertyFromExtras(chart, SMCommon.TagSelectable, true, false);
+			WriteChartPropertyFromExtras(chart, SMCommon.TagAttacks, true, false);
+			WriteChartProperty(chart, SMCommon.TagDisplayBPM, chart.Tempo, false, false);
 
 			// Write all the notes.
 			WriteChartNotesValueStart(chart);
