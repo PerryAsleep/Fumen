@@ -10,6 +10,20 @@ namespace Fumen
 		public readonly int Numerator;
 		public readonly int Denominator;
 
+		public static Fraction FromString(string s)
+		{
+			if (string.IsNullOrEmpty(s))
+				return null;
+			var parts = s.Split('/');
+			if (parts.Length != 2)
+				return null;
+			if (!int.TryParse(parts[0], out var num))
+				return null;
+			if (!int.TryParse(parts[1], out var denom))
+				return null;
+			return new Fraction(num, denom);
+		}
+
 		public Fraction(Fraction other)
 		{
 			Numerator = other.Numerator;
