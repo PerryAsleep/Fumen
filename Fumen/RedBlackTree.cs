@@ -180,7 +180,7 @@ namespace Fumen
 			return p;
 		}
 
-		public void Insert(T data)
+		public Enumerator Insert(T data)
 		{
 			Count++;
 			var n = new Node
@@ -193,7 +193,7 @@ namespace Fumen
 			if (IsNull(Root))
 			{
 				Root = n;
-				return;
+				return null;
 			}
 
 			var x = Root;
@@ -212,9 +212,11 @@ namespace Fumen
 			n.Red = true;
 
 			if (n.Parent.Parent == Nil)
-				return;
+				return null;
 
 			InsertFix(n);
+
+			return new Enumerator(this, n);
 		}
 
 		private void InsertFix(Node n)
@@ -473,6 +475,11 @@ namespace Fumen
 			if (IsNull(n))
 				return;
 
+			Delete(n);
+		}
+
+		public void Delete(Node n)
+		{
 			Count--;
 
 			Node y;
@@ -710,6 +717,14 @@ namespace Fumen
 					while (!Tree.IsNull(CurrentNode.L))
 						CurrentNode = CurrentNode.L;
 				}
+			}
+
+			public void Delete()
+			{
+				if (IsUnset)
+					throw new InvalidOperationException();
+				Tree.Delete(CurrentNode);
+				Reset();
 			}
 
 			object IEnumerator.Current => Current;
