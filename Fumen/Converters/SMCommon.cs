@@ -748,12 +748,17 @@ namespace Fumen.Converters
 			return displayTempo;
 		}
 
+		public static void SetEventTimeMicrosAndMetricPositionsFromRows(Chart chart)
+		{
+			SetEventTimeMicrosAndMetricPositionsFromRows(chart.Layers[0].Events);
+		}
+
 		/// <summary>
 		/// Sets the TimeMicros and MetricPositions on the given Chart Events based
 		/// on the rate altering Events in the Chart.
 		/// </summary>
 		/// <param name="chart">Chart to set TimeMicros and MetricPosition on the Events.</param>
-		public static void SetEventTimeMicrosAndMetricPositionsFromRows(Chart chart)
+		public static void SetEventTimeMicrosAndMetricPositionsFromRows(IEnumerable<Event> events)
 		{
 			var bpm = 0.0;
 			var lastBeatTimeChangeRow = 0;
@@ -792,7 +797,7 @@ namespace Fumen.Converters
 			// files as negative Stops and not negative Tempos.
 			// Need to check that the logic below handles this in the same way StepMania would.
 
-			foreach (var chartEvent in chart.Layers[0].Events)
+			foreach (var chartEvent in events)
 			{
 				var beatRelativeToLastTimeSigChange = (chartEvent.IntegerPosition - lastTimeSigChangeRow) / rowsPerBeat;
 				var measureRelativeToLastTimeSigChange = beatRelativeToLastTimeSigChange / beatsPerMeasure;
