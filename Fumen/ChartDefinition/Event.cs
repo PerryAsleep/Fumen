@@ -59,11 +59,11 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// Length of the stop at this Stop Event as time in microseconds.
 		/// </summary>
-		public readonly long LengthMicros;
+		public long LengthMicros;
 		/// <summary>
 		/// Delays are Stops which occur before other Events at the same time.
 		/// </summary>
-		public readonly bool IsDelay;
+		public bool IsDelay;
 
 		public Stop(long lengthMicros, bool isDelay = false)
 		{
@@ -113,7 +113,7 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// New Scroll Rate.
 		/// </summary>
-		public readonly float Rate;
+		public float Rate;
 
 		public ScrollRate(float rate)
 		{
@@ -171,7 +171,7 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// Tempo at this Tempo Event in beats per minute.
 		/// </summary>
-		public readonly double TempoBPM;
+		public double TempoBPM;
 
 		public Tempo(double tempoBPM)
 		{
@@ -193,7 +193,7 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// Time signature at this TimeSignature Event.
 		/// </summary>
-		public readonly Fraction Signature;
+		public Fraction Signature;
 
 		public TimeSignature(Fraction signature)
 		{
