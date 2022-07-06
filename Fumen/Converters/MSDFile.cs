@@ -94,6 +94,8 @@ namespace Fumen.Converters
 					{
 						while (i < bufferLen && buffer[i] != '\n')
 							i++;
+						if (i >= bufferLen)
+							break;
 					}
 
 					// Handle missing ValueEndMarkers when encountering a ValueStartMarker while parsing a value.
