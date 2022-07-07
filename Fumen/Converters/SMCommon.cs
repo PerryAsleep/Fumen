@@ -527,7 +527,7 @@ namespace Fumen.Converters
 		{
 			foreach (var scrollRate in scrollRateEvents)
 			{
-				var scrollRateEvent = new ScrollRate((float)scrollRate.Value)
+				var scrollRateEvent = new ScrollRate(scrollRate.Value)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
 				};
@@ -568,7 +568,7 @@ namespace Fumen.Converters
 					periodAsIntegerPosition = ConvertAbsoluteBeatToIntegerPosition(length);
 				}
 
-				var scrollRateEvent = new ScrollRateInterpolation((float)speed, periodAsIntegerPosition, periodAsTimeMicros, lengthIsTimeInSeconds)
+				var scrollRateEvent = new ScrollRateInterpolation(speed, periodAsIntegerPosition, periodAsTimeMicros, lengthIsTimeInSeconds)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
 				};

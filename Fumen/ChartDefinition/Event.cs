@@ -89,9 +89,9 @@ namespace Fumen.ChartDefinition
 	public class Warp : Event
 	{
 		/// <summary>
-		/// Length of the stop at this Warp Event in microseconds.
+		/// Length of the stop at this Warp Event in integer position units.
 		/// </summary>
-		public readonly int LengthIntegerPosition;
+		public int LengthIntegerPosition;
 
 		public Warp(int lengthIntegerPosition)
 		{
@@ -113,9 +113,9 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// New Scroll Rate.
 		/// </summary>
-		public float Rate;
+		public double Rate;
 
-		public ScrollRate(float rate)
+		public ScrollRate(double rate)
 		{
 			Rate = rate;
 		}
@@ -138,14 +138,14 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// New Scroll Rate.
 		/// </summary>
-		public readonly float Rate;
+		public double Rate;
 
-		public readonly int PeriodLengthIntegerPosition;
-		public readonly long PeriodTimeMicros;
-		public readonly bool PreferPeriodAsTimeMicros;
+		public int PeriodLengthIntegerPosition;
+		public long PeriodTimeMicros;
+		public bool PreferPeriodAsTimeMicros;
 
 		public ScrollRateInterpolation(
-			float rate,
+			double rate,
 			int periodLengthIntegerPosition,
 			long periodTimeMicros,
 			bool preferPeriodAsTimeMicros)
@@ -204,6 +204,110 @@ namespace Fumen.ChartDefinition
 			: base(other)
 		{
 			Signature = new Fraction(other.Signature);
+		}
+	}
+
+	/// <summary>
+	/// Event representing a tick count segment.
+	/// Tick count segments define how frequently held notes should increment combo.
+	/// </summary>
+	/// <remarks>
+	/// This is extremely StepMania-specific.
+	/// </remarks>
+	public class TickCount : Event
+	{
+		/// <summary>
+		/// Number of ticks per beat to set for all following notes.
+		/// </summary>
+		public int Ticks;
+
+		public TickCount(int ticks)
+		{
+			Ticks = ticks;
+		}
+
+		public TickCount(TickCount other)
+			: base(other)
+		{
+			Ticks = other.Ticks;
+		}
+	}
+
+	/// <summary>
+	/// Event representing a text label.
+	/// </summary>
+	/// <remarks>
+	/// This is extremely StepMania-specific.
+	/// </remarks>
+	public class Label : Event
+	{
+		/// <summary>
+		/// The text of the label.
+		/// </summary>
+		public string Text;
+
+		public Label(string text)
+		{
+			Text = text;
+		}
+
+		public Label(Label other)
+			: base(other)
+		{
+			Text = other.Text;
+		}
+	}
+
+	/// <summary>
+	/// Event representing a text label.
+	/// </summary>
+	/// <remarks>
+	/// This is extremely StepMania-specific.
+	/// </remarks>
+	public class FakeSegment : Event
+	{
+		/// <summary>
+		/// Length of the fake segment as time in microseconds.
+		/// </summary>
+		public long LengthMicros;
+
+		public FakeSegment(long lengthMicros)
+		{
+			LengthMicros = lengthMicros;
+		}
+
+		public FakeSegment(FakeSegment other)
+			: base(other)
+		{
+			LengthMicros = other.LengthMicros;
+		}
+	}
+
+	/// <summary>
+	/// Event representing multipliers to apply to hits and misses for all following notes.
+	/// </summary>
+	/// <remarks>
+	/// This is extremely StepMania-specific.
+	/// </remarks>
+	public class Multipliers : Event
+	{
+		/// <summary>
+		/// Number of ticks per beat to set for all following notes.
+		/// </summary>
+		public double HitMultiplier;
+		public double MissMultiplier;
+
+		public Multipliers(double hitMultiplier, double missMultiplier)
+		{
+			HitMultiplier = hitMultiplier;
+			MissMultiplier = missMultiplier;
+		}
+
+		public Multipliers(Multipliers other)
+			: base(other)
+		{
+			HitMultiplier = other.HitMultiplier;
+			MissMultiplier = other.MissMultiplier;
 		}
 	}
 }

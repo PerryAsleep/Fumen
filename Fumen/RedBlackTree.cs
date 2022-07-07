@@ -14,7 +14,7 @@ namespace Fumen
 	/// Not thread safe.
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
-	public class RedBlackTree<T> : IEnumerable where T : IComparable<T>
+	public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	{
 		/// <summary>
 		/// Red Black Tree Node.
@@ -589,7 +589,7 @@ namespace Fumen
 
 		public Enumerator First()
 		{
-			return GetEnumerator();
+			return new Enumerator(this);
 		}
 
 		public Enumerator Last()
@@ -609,17 +609,22 @@ namespace Fumen
 			return GetEnumerator();
 		}
 
-		public Enumerator GetEnumerator()
+		public IEnumerator<T> GetEnumerator()
 		{
 			return new Enumerator(this);
 		}
 
 		#endregion IEnumerable
 
+		public Enumerator GetRedBlackTreeEnumerator()
+		{
+			return new Enumerator(this);
+		}
+
 		/// <summary>
 		/// Enumerator for a Red Black Tree.
 		/// </summary>
-		public class Enumerator : IEnumerator
+		public class Enumerator : IEnumerator<T>
 		{
 			private readonly RedBlackTree<T> Tree;
 			private Node CurrentNode;
@@ -648,6 +653,21 @@ namespace Fumen
 				IsUnset = e.IsUnset;
 				BeforeFirst = e.BeforeFirst;
 				AfterLast = e.AfterLast;
+			}
+
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+
+			protected virtual void Dispose(bool disposing)
+			{
+			}
+
+			~Enumerator()
+			{
+				Dispose(false);
 			}
 
 			public bool MoveNext()
