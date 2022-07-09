@@ -174,12 +174,12 @@ namespace Fumen.Converters
 				WriteChartPropertyDelays(chart);
 				WriteChartPropertyWarps(chart);
 				WriteChartPropertyTimeSignatures(chart);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagTickCounts, false, false);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagCombos, false, false);
+				WriteChartPropertyTickCounts(chart);
+				WriteChartPropertyCombos(chart);
 				WriteChartPropertySpeeds(chart);
 				WriteChartPropertyScrolls(chart);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagFakes, false, false);
-				WriteChartPropertyFromExtras(chart, SMCommon.TagLabels, false, false);
+				WriteChartPropertyFakes(chart);
+				WriteChartPropertyLabels(chart);
 			}
 
 			WriteChartPropertyFromExtras(chart, SMCommon.TagSampleStart, true, false);
