@@ -20,6 +20,7 @@ namespace Fumen.Converters
 			public readonly Dictionary<double, double> Stops = new Dictionary<double, double>();
 			public readonly Dictionary<double, double> Delays = new Dictionary<double, double>();
 			public readonly Dictionary<double, Fraction> TimeSignatures = new Dictionary<double, Fraction>();
+			public readonly Dictionary<double, int> TickCounts = new Dictionary<double, int>();
 		}
 
 		/// <summary>
@@ -90,7 +91,7 @@ namespace Fumen.Converters
 					// SM files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 					// suggestions to a renderer for how to draw measure markers.
 					[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, timingProperties.TimeSignatures, song.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
-					[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.Extras),
+					[SMCommon.TagTickCounts] = new CSVListAtTimePropertyParser<int>(SMCommon.TagTickCounts, timingProperties.TickCounts, song.Extras, SMCommon.TagFumenRawTickCountsStr),
 					[SMCommon.TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(SMCommon.TagInstrumentTrack, song.Extras),
 					[SMCommon.TagSampleStart] = new PropertyToSongPropertyParser(SMCommon.TagSampleStart, nameof(Song.PreviewSampleStart), song),
 					[SMCommon.TagSampleLength] = new PropertyToSongPropertyParser(SMCommon.TagSampleLength, nameof(Song.PreviewSampleLength), song),
@@ -128,6 +129,7 @@ namespace Fumen.Converters
 					SMCommon.AddDelays(timingProperties.Delays, chart);
 					SMCommon.AddTempos(timingProperties.Tempos, chart);
 					SMCommon.AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, firstChart);
+					SMCommon.AddTickCountEvents(timingProperties.TickCounts, chart);
 					firstChart = false;
 				}
 

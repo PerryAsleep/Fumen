@@ -6,6 +6,7 @@ using Fumen;
 using Fumen.ChartDefinition;
 using Fumen.Converters;
 using static StepManiaLibrary.Constants;
+using static Fumen.Utils;
 
 namespace StepManiaLibrary
 {
@@ -574,7 +575,7 @@ namespace StepManiaLibrary
 						    && config.IndividualStepTighteningMinTimeSeconds > 0.0)
 						{
 							var arrowBeingSteppedTo = GraphNode.State[f, thisFootPortionSteppingWith].Arrow;
-							var timeBetweenStepsSeconds = (TimeMicros - LastTimeFootStepped[f]) / 1000000.0;
+							var timeBetweenStepsSeconds = ToSeconds(TimeMicros - LastTimeFootStepped[f]);
 
 							for (var p = 0; p < NumFootPortions; p++)
 							{
@@ -697,8 +698,8 @@ namespace StepManiaLibrary
 					// in one direction, then perform the nps and speed checks.
 					if (stepCounter == 0)
 					{
-						var nps = config.LateralTighteningPatternLength * 1000000.0 / (TimeMicros - previousTime);
-						var speed = (Math.Abs(LateralBodyPosition - previousPosition) * 1000000.0) / (TimeMicros - previousTime);
+						var nps = config.LateralTighteningPatternLength / ToSeconds(TimeMicros - previousTime);
+						var speed = Math.Abs(LateralBodyPosition - previousPosition) / ToSeconds(TimeMicros - previousTime);
 						if (((averageNps > 0.0 && nps > averageNps * config.LateralTighteningRelativeNPS)
 						     || nps > config.LateralTighteningAbsoluteNPS)
 						    && speed > config.LateralTighteningSpeed)
@@ -1717,7 +1718,7 @@ namespace StepManiaLibrary
 		//		// Add the timing data.
 		//		if (fillEvent.Event == null)
 		//		{
-		//			var timeMicros = (long)(currentTime * 1000000);
+		//			var timeMicros = ToMicros(currentTime);
 		//			sectionData[fillEvent.SectionIndex][fillEvent.IndexWithinSection] =
 		//				new Tuple<long, int>(timeMicros, fillEvent.Position);
 		//		}
@@ -1728,7 +1729,7 @@ namespace StepManiaLibrary
 		//			var chartEvent = fillEvent.Event;
 		//			var beatTimeDirty = false;
 		//			if (chartEvent is Stop stop)
-		//				currentTime += (double) stop.LengthMicros / 1000000;
+		//				currentTime += ToSeconds(stop.LengthMicros);
 		//			else if (chartEvent is TimeSignature ts)
 		//			{
 		//				timeSignature = ts.Signature;
@@ -1787,7 +1788,7 @@ namespace StepManiaLibrary
 
 			if (endTime > startTime)
 			{
-				nps = (numSteps * 1000000.0) / (endTime - startTime);
+				nps = numSteps / ToSeconds(endTime - startTime);
 			}
 
 			return nps;

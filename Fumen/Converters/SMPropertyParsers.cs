@@ -212,15 +212,18 @@ namespace Fumen.Converters
 			if (!ParseFirstParameter(value, out var valueStr))
 				return false;
 
-			T tValue;
-			try
+			T tValue = default;
+			if (!string.IsNullOrEmpty(valueStr))
 			{
-				tValue = (T)Convert.ChangeType(valueStr, typeof(T));
-			}
-			catch (Exception)
-			{
-				Logger?.Warn($"{PropertyName}: Failed to Convert '{valueStr}' to type '{typeof(T)}'.");
-				return true;
+				try
+				{
+					tValue = (T)Convert.ChangeType(valueStr, typeof(T));
+				}
+				catch (Exception)
+				{
+					Logger?.Warn($"{PropertyName}: Failed to Convert '{valueStr}' to type '{typeof(T)}'.");
+					return true;
+				}
 			}
 
 			Extras.AddSourceExtra(PropertyName, tValue, true);
@@ -519,6 +522,85 @@ namespace Fumen.Converters
 		}
 	}
 
+	/// <summary>
+	/// Parses a combo event into a Dictionary of Tuples of values containing
+	/// the hit multiplier and miss multiplier.
+	/// Will also store the raw value on the Extras if given raw string property name.
+	/// Example:
+	/// #COMBOS:0.000=1,10.000=7=8,11.000=111=0;
+	/// </summary>
+	public class ComboPropertyParser : PropertyParser
+	{
+		private readonly Dictionary<double, Tuple<int, int>> Values;
+		private readonly Extras Extras;
+		private readonly string RawStringPropertyName;
+
+		public ComboPropertyParser(
+			string smPropertyName,
+			Dictionary<double, Tuple<int, int>> values,
+			Extras extras = null,
+			string rawStringPropertyName = null)
+			: base(smPropertyName)
+		{
+			Values = values;
+			Extras = extras;
+			RawStringPropertyName = rawStringPropertyName;
+		}
+
+		public override bool Parse(MSDFile.Value value)
+		{
+			// Only consider this line if it matches this property name.
+			if (!ParseFirstParameter(value, out var rawStr))
+				return false;
+
+			// Record the raw string to preserve formatting when writing.
+			if (!string.IsNullOrEmpty(RawStringPropertyName))
+				Extras?.AddSourceExtra(RawStringPropertyName, rawStr);
+
+			if (!string.IsNullOrEmpty(rawStr))
+			{
+				var comboDatas = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var comboData in comboDatas)
+				{
+					var kvp = comboData.Split('=');
+
+					if (kvp.Length != 3 && kvp.Length != 2)
+					{
+						Logger?.Warn($"{PropertyName}: Malformed {SMCommon.TagCombos} '{comboData}'. This value will be ignored.");
+						continue;
+					}
+
+					if (!double.TryParse(kvp[0], out var beat))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[0]}'. Expected double. This value will be ignored.");
+						continue;
+					}
+					if (!int.TryParse(kvp[1], out var hitMultiplier))
+					{
+						Logger?.Warn($"{PropertyName}: Malformed value '{kvp[0]}'. Expected int. This value will be ignored.");
+						continue;
+					}
+					var missMultiplier = hitMultiplier;
+					
+					// The third value is optional.
+					if (kvp.Length == 3)
+					{
+						if (!int.TryParse(kvp[2], out missMultiplier))
+						{
+							Logger?.Warn($"{PropertyName}: Malformed value '{kvp[0]}'. Expected int. This value will be ignored.");
+							continue;
+						}
+					}
+
+					Values[beat] = new Tuple<int, int>(hitMultiplier, missMultiplier);
+				}
+			}
+
+			Extras?.AddSourceExtra(PropertyName, Values);
+
+			return true;
+		}
+	}
 
 	/// <summary>
 	/// Abstract PropertyParser with static helper to parse the sm/scc string representation

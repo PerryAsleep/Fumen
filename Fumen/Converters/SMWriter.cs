@@ -54,9 +54,9 @@ namespace Fumen.Converters
 				WriteSongPropertyStops();
 				// Skipping writing of Freezes as they are read as Stops and will be written back out as Stops.
 				// WriteSongPropertyFromExtras(SMCommon.TagFreezes, true);
-				WriteSongPropertyFromExtras(SMCommon.TagDelays, true, false);
+				WriteSongPropertyDelays(true);
 				WriteSongPropertyTimeSignatures(true);
-				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, true, false);
+				WriteSongPropertyTickCounts(true);
 
 				WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack, true, false);
 				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true, false);

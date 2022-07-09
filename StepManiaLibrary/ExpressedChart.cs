@@ -538,7 +538,7 @@ namespace StepManiaLibrary
 						{
 							var startTime = expressedChart.Events.First().TimeMicros;
 							var endTime = expressedChart.Events.Last().TimeMicros;
-							var bracketsPerMinute = brackets / (((endTime - startTime) / 1000000.0) / 60.0);
+							var bracketsPerMinute = brackets / (Utils.ToSeconds(endTime - startTime) / 60.0);
 							if (bracketsPerMinute >= config.BalancedBracketsPerMinuteForAggressiveBrackets)
 							{
 								bracketParsingMethod = BracketParsingMethod.Aggressive;

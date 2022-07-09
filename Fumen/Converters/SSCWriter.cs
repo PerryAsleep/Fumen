@@ -73,12 +73,12 @@ namespace Fumen.Converters
 				WriteSongPropertyDelays();
 				WriteSongPropertyWarps();
 				WriteSongPropertyTimeSignatures();
-				WriteSongPropertyFromExtras(SMCommon.TagTickCounts, false, false);
-				WriteSongPropertyFromExtras(SMCommon.TagCombos, false, false);
+				WriteSongPropertyTickCounts();
+				WriteSongPropertyCombos();
 				WriteSongPropertySpeeds();
 				WriteSongPropertyScrolls();
-				WriteSongPropertyFromExtras(SMCommon.TagFakes, false, false);
-				WriteSongPropertyFromExtras(SMCommon.TagLabels, false, false);
+				WriteSongPropertyFakes();
+				WriteSongPropertyLabels();
 
 				if (Config.Song.Extras.TryGetExtra(SMCommon.TagLastSecondHint, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(SMCommon.TagLastSecondHint, false, false);

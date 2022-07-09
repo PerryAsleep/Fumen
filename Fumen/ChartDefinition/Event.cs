@@ -292,12 +292,15 @@ namespace Fumen.ChartDefinition
 	public class Multipliers : Event
 	{
 		/// <summary>
-		/// Number of ticks per beat to set for all following notes.
+		/// Multiplier for hits. This is an int to match StepMania.
 		/// </summary>
-		public double HitMultiplier;
-		public double MissMultiplier;
+		public int HitMultiplier;
+		/// <summary>
+		/// Multiplier for misses. This is an int to match StepMania.
+		/// </summary>
+		public int MissMultiplier;
 
-		public Multipliers(double hitMultiplier, double missMultiplier)
+		public Multipliers(int hitMultiplier, int missMultiplier)
 		{
 			HitMultiplier = hitMultiplier;
 			MissMultiplier = missMultiplier;

@@ -25,6 +25,7 @@ namespace Fumen.Converters
 		public const char ValueStartMarker = '#';
 		public const char ValueEndMarker = ';';
 		public const char ParamMarker = ':';
+		public const char CommentChar = '/';
 		public const string CommentMarker = @"//";
 		public const char EscapeMarker = '\\';
 

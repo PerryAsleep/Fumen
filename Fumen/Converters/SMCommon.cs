@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fumen.ChartDefinition;
+using static Fumen.Utils;
 
 namespace Fumen.Converters
 {
@@ -212,6 +213,10 @@ namespace Fumen.Converters
 		public const string TagFumenRawScrollsStr = "FumenRawScrollsStr";
 		public const string TagFumenRawSpeedsStr = "FumenRawSpeedsStr";
 		public const string TagFumenRawBpmsStr = "FumenRawBpmsStr";
+		public const string TagFumenRawTickCountsStr = "FumenRawTickCountsStr";
+		public const string TagFumenRawLabelsStr = "FumenRawLabelsStr";
+		public const string TagFumenRawCombosStr = "FumenRawCombosStr";
+		public const string TagFumenRawFakesStr = "FumenRawFakesStr";
 		public const string TagFumenRawTimeSignaturesStr = "FumenRawTimeSignaturesStr";
 		public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
 		public const string TagFumenNoteOriginalMeasurePosition = "FumenNoteOriginalMeasurePosition";
@@ -435,6 +440,7 @@ namespace Fumen.Converters
 
 				// Record the actual doubles.
 				tempoChangeEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tempo.Key);
+
 				chart.Layers[0].Events.Add(tempoChangeEvent);
 			}
 		}
@@ -451,7 +457,7 @@ namespace Fumen.Converters
 		{
 			foreach (var stop in stops)
 			{
-				var stopEvent = new Stop((long)(stop.Value * 1000000.0))
+				var stopEvent = new Stop(ToMicros(stop.Value))
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(stop.Key)
 				};
@@ -476,7 +482,7 @@ namespace Fumen.Converters
 		{
 			foreach (var delay in delays)
 			{
-				var stopEvent = new Stop((long)(delay.Value * 1000000.0), true)
+				var stopEvent = new Stop(ToMicros(delay.Value), true)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(delay.Key)
 				};
@@ -561,7 +567,7 @@ namespace Fumen.Converters
 				var periodAsIntegerPosition = 0;
 				if (lengthIsTimeInSeconds)
 				{
-					periodAsTimeMicros = (long)(length * 1000000);
+					periodAsTimeMicros = ToMicros(length);
 				}
 				else
 				{
@@ -575,9 +581,106 @@ namespace Fumen.Converters
 
 				// Record the actual doubles.
 				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Key);
-				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Value);
+				//scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Value);
 
 				chart.Layers[0].Events.Add(scrollRateEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds TickCount Events to the given Chart from the given Dictionary of
+		/// position to tick values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="tickCountEvents">
+		/// Dictionary of time to value of ticks parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add TickCount Events to.</param>
+		public static void AddTickCountEvents(Dictionary<double, int> tickCountEvents, Chart chart)
+		{
+			foreach (var tickCount in tickCountEvents)
+			{
+				var tickCountEvent = new TickCount(tickCount.Value)
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tickCount.Key)
+				};
+
+				// Record the actual doubles.
+				tickCountEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tickCount.Key);
+
+				chart.Layers[0].Events.Add(tickCountEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds Label Events to the given Chart from the given Dictionary of
+		/// position to string values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="labelEvents">
+		/// Dictionary of time to value of strings parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add Label Events to.</param>
+		public static void AddLabelEvents(Dictionary<double, string> labelEvents, Chart chart)
+		{
+			foreach (var label in labelEvents)
+			{
+				var labelEvent = new Label(label.Value)
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(label.Key)
+				};
+
+				// Record the actual doubles.
+				labelEvent.Extras.AddSourceExtra(TagFumenDoublePosition, label.Key);
+
+				chart.Layers[0].Events.Add(labelEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds FakeSegment Events to the given Chart from the given Dictionary of
+		/// position to fake segment length values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="fakeEvents">
+		/// Dictionary of time to value of fake segment lengths parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add FakeSegment Events to.</param>
+		public static void AddFakeSegmentEvents(Dictionary<double, double> fakeEvents, Chart chart)
+		{
+			foreach (var fake in fakeEvents)
+			{
+				var fakeSegmentEvent = new FakeSegment(ToMicros(fake.Value))
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(fake.Key)
+				};
+
+				// Record the actual doubles.
+				fakeSegmentEvent.Extras.AddSourceExtra(TagFumenDoublePosition, fake.Key);
+				fakeSegmentEvent.Extras.AddSourceExtra(TagFumenDoubleValue, fake.Value);
+
+				chart.Layers[0].Events.Add(fakeSegmentEvent);
+			}
+		}
+
+		/// <summary>
+		/// Adds Multipliers Events to the given Chart from the given Dictionary of
+		/// position to hit and miss multiplier values parsed from the Chart or Song.
+		/// </summary>
+		/// <param name="comboEvents">
+		/// Dictionary of time to hit and miss multipliers parsed from the Song or Chart.
+		/// </param>
+		/// <param name="chart">Chart to add Multipliers Events to.</param>
+		public static void AddMultipliersEvents(Dictionary<double, Tuple<int, int>> comboEvents, Chart chart)
+		{
+			foreach (var combo in comboEvents)
+			{
+				var multipliersEvent = new Multipliers(combo.Value.Item1, combo.Value.Item2)
+				{
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(combo.Key)
+				};
+
+				// Record the actual doubles.
+				multipliersEvent.Extras.AddSourceExtra(TagFumenDoublePosition, combo.Key);
+
+				chart.Layers[0].Events.Add(multipliersEvent);
 			}
 		}
 
@@ -836,7 +939,7 @@ namespace Fumen.Converters
 				}
 
 				chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
-				chartEvent.TimeMicros = Convert.ToInt64((absoluteTime - currentWarpTime - totalWarpTime) * 1000000.0) + totalStopTimeMicros;
+				chartEvent.TimeMicros = ToMicrosRounded(absoluteTime - currentWarpTime - totalWarpTime) + totalStopTimeMicros;
 
 				// In the case of negative stop / bpm warps, we need to clamp the time of an event so it does not precede events which
 				// have lower IntegerPositions
@@ -961,14 +1064,18 @@ namespace Fumen.Converters
 				{"Tempo", 1},
 				{"ScrollRate", 2},
 				{"ScrollRateInterpolation", 3},
-				{"Delay", 4},					// Delays occur before notes.
-				{"NegativeStop", 5},			// Negative Stops (like Warps) occur before notes.
-				{"Warp", 6},					// Warps occur before notes.
-				{"LaneTapNote", 7},
-				{"LaneHoldStartNote", 8},
-				{"LaneHoldEndNote", 9},
-				{"LaneNote", 10},
-				{"Stop", 11},					// Stops occur after notes.
+				{"TickCount", 4},
+				{"FakeSegment", 5},
+				{"Multipliers", 6},
+				{"Label", 7},
+				{"Delay", 8},					// Delays occur before notes.
+				{"NegativeStop", 9},			// Negative Stops (like Warps) occur before notes.
+				{"Warp", 10},					// Warps occur before notes.
+				{"LaneTapNote", 11},
+				{"LaneHoldStartNote", 12},
+				{"LaneHoldEndNote", 13},
+				{"LaneNote", 14},
+				{"Stop", 15},					// Stops occur after notes.
 			};
 
 			public static int Compare(Event e1, Event e2)

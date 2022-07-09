@@ -44,6 +44,10 @@ namespace Fumen.Converters
 			public readonly Dictionary<double, double> Scrolls = new Dictionary<double, double>();
 			public readonly Dictionary<double, Tuple<double, double, int>> Speeds = new Dictionary<double, Tuple<double, double, int>>();
 			public readonly Dictionary<double, Fraction> TimeSignatures = new Dictionary<double, Fraction>();
+			public readonly Dictionary<double, int> TickCounts = new Dictionary<double, int>();
+			public readonly Dictionary<double, string> Labels = new Dictionary<double, string>();
+			public readonly Dictionary<double, Tuple<int, int>> Combos = new Dictionary<double, Tuple<int, int>>();
+			public readonly Dictionary<double, double> Fakes = new Dictionary<double, double>();
 		}
 
 		/// <summary>
@@ -196,6 +200,10 @@ namespace Fumen.Converters
 			SMCommon.AddScrollRateInterpolationEvents(timingProperties.Speeds, chart);
 			SMCommon.AddTempos(timingProperties.Tempos, chart);
 			SMCommon.AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, firstChart);
+			SMCommon.AddTickCountEvents(timingProperties.TickCounts, chart);
+			SMCommon.AddLabelEvents(timingProperties.Labels, chart);
+			SMCommon.AddFakeSegmentEvents(timingProperties.Fakes, chart);
+			SMCommon.AddMultipliersEvents(timingProperties.Combos, chart);
 
 			// Sort events.
 			chart.Layers[0].Events.Sort(new SMCommon.SMEventComparer());
@@ -293,16 +301,16 @@ namespace Fumen.Converters
 				[SMCommon.TagDelays] = new CSVListAtTimePropertyParser<double>(SMCommon.TagDelays, songTimingProperties.Delays, song.Extras, SMCommon.TagFumenRawDelaysStr),
 				[SMCommon.TagBPMs] = new CSVListAtTimePropertyParser<double>(SMCommon.TagBPMs, songTimingProperties.Tempos, song.Extras, SMCommon.TagFumenRawBpmsStr),
 				[SMCommon.TagWarps] = new CSVListAtTimePropertyParser<double>(SMCommon.TagWarps, songTimingProperties.Warps, song.Extras, SMCommon.TagFumenRawWarpsStr),
-				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, song.Extras),
+				[SMCommon.TagLabels] = new CSVListAtTimePropertyParser<string>(SMCommon.TagLabels, songTimingProperties.Labels, song.Extras, SMCommon.TagFumenRawLabelsStr),
 				// Removed, see https://github.com/stepmania/stepmania/issues/9
 				// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 				// suggestions to a renderer for how to draw measure markers.
 				[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, songTimingProperties.TimeSignatures, song.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
-				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, song.Extras),
-				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, song.Extras),
+				[SMCommon.TagTickCounts] = new CSVListAtTimePropertyParser<int>(SMCommon.TagTickCounts, songTimingProperties.TickCounts, song.Extras, SMCommon.TagFumenRawTickCountsStr),
+				[SMCommon.TagCombos] = new ComboPropertyParser(SMCommon.TagCombos, songTimingProperties.Combos, song.Extras, SMCommon.TagFumenRawCombosStr),
 				[SMCommon.TagSpeeds] = new ScrollRateInterpolationPropertyParser(SMCommon.TagSpeeds, songTimingProperties.Speeds, song.Extras, SMCommon.TagFumenRawSpeedsStr),
 				[SMCommon.TagScrolls] = new CSVListAtTimePropertyParser<double>(SMCommon.TagScrolls, songTimingProperties.Scrolls, song.Extras, SMCommon.TagFumenRawScrollsStr),
-				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, song.Extras),
+				[SMCommon.TagFakes] = new CSVListAtTimePropertyParser<double>(SMCommon.TagFakes, songTimingProperties.Fakes, song.Extras, SMCommon.TagFumenRawFakesStr),
 				[SMCommon.TagFirstSecond] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFirstSecond, song.Extras),
 				[SMCommon.TagLastSecond] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLastSecond, song.Extras),
 				[SMCommon.TagSongFileName] = new PropertyToSourceExtrasParser<string>(SMCommon.TagSongFileName, song.Extras),
@@ -337,13 +345,13 @@ namespace Fumen.Converters
 				// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 				// suggestions to a renderer for how to draw measure markers.
 				[SMCommon.TagTimeSignatures] = new ListFractionPropertyParser(SMCommon.TagTimeSignatures, chartTimingProperties.TimeSignatures, chart.Extras, SMCommon.TagFumenRawTimeSignaturesStr),
-				[SMCommon.TagTickCounts] = new PropertyToSourceExtrasParser<string>(SMCommon.TagTickCounts, chart.Extras),
-				[SMCommon.TagCombos] = new PropertyToSourceExtrasParser<string>(SMCommon.TagCombos, chart.Extras),
+				[SMCommon.TagTickCounts] = new CSVListAtTimePropertyParser<int>(SMCommon.TagTickCounts, chartTimingProperties.TickCounts, chart.Extras),
+				[SMCommon.TagCombos] = new ComboPropertyParser(SMCommon.TagCombos, chartTimingProperties.Combos, chart.Extras),
 				[SMCommon.TagWarps] = new CSVListAtTimePropertyParser<double>(SMCommon.TagWarps, chartTimingProperties.Warps, chart.Extras, SMCommon.TagFumenRawWarpsStr),
 				[SMCommon.TagSpeeds] = new ScrollRateInterpolationPropertyParser(SMCommon.TagSpeeds, chartTimingProperties.Speeds, chart.Extras, SMCommon.TagFumenRawSpeedsStr),
 				[SMCommon.TagScrolls] = new CSVListAtTimePropertyParser<double>(SMCommon.TagScrolls, chartTimingProperties.Scrolls, chart.Extras, SMCommon.TagFumenRawScrollsStr),
-				[SMCommon.TagFakes] = new PropertyToSourceExtrasParser<string>(SMCommon.TagFakes, chart.Extras),
-				[SMCommon.TagLabels] = new PropertyToSourceExtrasParser<string>(SMCommon.TagLabels, chart.Extras),
+				[SMCommon.TagFakes] = new CSVListAtTimePropertyParser<double>(SMCommon.TagFakes, chartTimingProperties.Fakes, chart.Extras),
+				[SMCommon.TagLabels] = new CSVListAtTimePropertyParser<string>(SMCommon.TagLabels, chartTimingProperties.Labels, chart.Extras),
 				[SMCommon.TagAttacks] = new ListPropertyToSourceExtrasParser<string>(SMCommon.TagAttacks, chart.Extras),
 				[SMCommon.TagOffset] = new PropertyToChartPropertyParser(SMCommon.TagOffset, nameof(Chart.ChartOffsetFromMusic), chart),
 				[SMCommon.TagSampleStart] = new PropertyToSourceExtrasParser<double>(SMCommon.TagSampleStart, chart.Extras),

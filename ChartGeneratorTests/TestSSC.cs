@@ -7,6 +7,7 @@ using Fumen.ChartDefinition;
 using Fumen.Converters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static ChartGeneratorTests.Utils;
+using static Fumen.Utils;
 
 namespace ChartGeneratorTests
 {
@@ -41,10 +42,10 @@ namespace ChartGeneratorTests
 			}
 			i++;
 
-			if (e[i] is Tempo tc)
+			if (e[i] is Tempo t)
 			{
-				Assert.AreEqual(expectedTempo, tc.TempoBPM);
-				AssertPositionMatches(tc, 0, 0L, 0);
+				Assert.AreEqual(expectedTempo, t.TempoBPM);
+				AssertPositionMatches(t, 0, 0L, 0);
 			}
 			else
 			{
@@ -52,7 +53,7 @@ namespace ChartGeneratorTests
 			}
 			i++;
 
-			// SM Files do not have ScrollRate or ScrollRateInterpolation Events.
+			// SM Files do not have the remaining events.
 			if (smFile)
 				return;
 
@@ -79,6 +80,40 @@ namespace ChartGeneratorTests
 				Assert.Fail();
 			}
 			i++;
+
+			if (e[i] is TickCount tc)
+			{
+				Assert.AreEqual(4, tc.Ticks);
+				AssertPositionMatches(tc, 0, 0L, 0);
+			}
+			else
+			{
+				Assert.Fail();
+			}
+			i++;
+
+			if (e[i] is Multipliers m)
+			{
+				Assert.AreEqual(1.0, m.HitMultiplier);
+				Assert.AreEqual(1.0, m.MissMultiplier);
+				AssertPositionMatches(m, 0, 0L, 0);
+			}
+			else
+			{
+				Assert.Fail();
+			}
+			i++;
+
+			if (e[i] is Label l)
+			{
+				AssertPositionMatches(l, 0, 0L, 0);
+			}
+			else
+			{
+				Assert.Fail();
+			}
+			i++;
+
 		}
 
 		/// <summary>
@@ -91,7 +126,7 @@ namespace ChartGeneratorTests
 			var s = LoadSSCSong(GetTestChartPath("TestTimeSignature44", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
-			var numEvents = 36;
+			var numEvents = 39;
 			Assert.AreEqual(numEvents, e.Count);
 			var i = 0;
 			CheckExpectedChartStartingTimingEvents(e, ref i);
@@ -103,7 +138,7 @@ namespace ChartGeneratorTests
 			{
 				var noteIndex = eventIndex - numNonTapEvents;
 				var integerPos = noteIndex * 12;
-				var timeMicros = Convert.ToInt64(noteIndex * secondsBetweenSixteenths * 1000000.0);
+				var timeMicros = ToMicrosRounded(noteIndex * secondsBetweenSixteenths);
 				var measure = noteIndex / 16;
 				var beat = noteIndex / 4 - (measure * 4);
 				var subDivisionNumerator = noteIndex % 4;
@@ -122,7 +157,7 @@ namespace ChartGeneratorTests
 			var s = LoadSSCSong(GetTestChartPath("TestOddTimeSignaturesValid", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
-			Assert.AreEqual(136, e.Count);
+			Assert.AreEqual(139, e.Count);
 			var i = 0;
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
@@ -134,7 +169,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					Convert.ToInt64((li - ln) * secondsBetweenSixteenths * 1000000.0),
+					ToMicrosRounded((li - ln) * secondsBetweenSixteenths),
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -356,7 +391,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					Convert.ToInt64((li - ln) * secondsBetweenSixteenths * 1000000.0),
+					ToMicrosRounded((li - ln) * secondsBetweenSixteenths),
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -394,7 +429,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					Convert.ToInt64((li - ln) * secondsBetweenSixteenths * 1000000.0),
+					ToMicrosRounded((li - ln) * secondsBetweenSixteenths),
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -421,7 +456,7 @@ namespace ChartGeneratorTests
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var i = 0;
-			Assert.AreEqual(39, e.Count);
+			Assert.AreEqual(42, e.Count);
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
@@ -432,7 +467,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					Convert.ToInt64((li - ln) * secondsBetweenSixteenths * 1000000.0) + tst,
+					ToMicrosRounded((li - ln) * secondsBetweenSixteenths) + tst,
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -524,7 +559,7 @@ namespace ChartGeneratorTests
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var i = 0;
-			Assert.AreEqual(39, e.Count);
+			Assert.AreEqual(42, e.Count);
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
@@ -535,7 +570,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					Convert.ToInt64((li - ln) * secondsBetweenSixteenths * 1000000.0) + tst,
+					ToMicrosRounded((li - ln) * secondsBetweenSixteenths) + tst,
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -630,7 +665,7 @@ namespace ChartGeneratorTests
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var i = 0;
-			Assert.AreEqual(39, e.Count);
+			Assert.AreEqual(42, e.Count);
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var numNonTapEvents = i;
@@ -727,7 +762,7 @@ namespace ChartGeneratorTests
 			var s = LoadSSCSong(GetTestChartPath("TestStutterGimmickTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
-			var numEvents = 69;
+			var numEvents = 72;
 			Assert.AreEqual(numEvents, e.Count);
 			var i = 0;
 			CheckExpectedChartStartingTimingEvents(e, ref i, 240.0);
@@ -741,7 +776,7 @@ namespace ChartGeneratorTests
 			{
 				var noteIndex = eventIndex - numNonTapEvents;
 				var integerPos = noteIndex * 12;
-				var timeMicros = Convert.ToInt64(noteIndex * secondsBetweenSixteenths * 1000000.0);
+				var timeMicros = ToMicrosRounded(noteIndex * secondsBetweenSixteenths);
 				var measure = noteIndex / 16;
 				var beat = noteIndex / 4 - (measure * 4);
 				var subDivisionNumerator = noteIndex % 4;
@@ -779,7 +814,7 @@ namespace ChartGeneratorTests
 			var s = LoadSSCSong(GetTestChartPath("TestWarpTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
-			var numEvents = 39;
+			var numEvents = 42;
 			Assert.AreEqual(numEvents, e.Count);
 			var i = 0;
 			CheckExpectedChartStartingTimingEvents(e, ref i);
@@ -996,7 +1031,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.AreEqual(s.Charts.Count, 1);
 				var e = s.Charts[0].Layers[0].Events;
-				var numEvents = 82;
+				var numEvents = 85;
 				Assert.AreEqual(numEvents, e.Count);
 				var i = 0;
 				CheckExpectedChartStartingTimingEvents(e, ref i);
@@ -1015,7 +1050,7 @@ namespace ChartGeneratorTests
 						var integerPosition = rowInMeasure + measure * 192;
 						var beat = (integerPosition - (measure * 192)) / 48;
 						var numerator = integerPosition - (measure * 192) - (beat * 48);
-						var micros = Convert.ToInt64(1000000.0 * integerPosition * (60.0 / bpm) / 48);
+						var micros = ToMicrosRounded(integerPosition * (60.0 / bpm) / 48);
 
 						if (e[i].Extras.TryGetSourceExtra(SMCommon.TagFumenNoteOriginalMeasurePosition, out Fraction f))
 						{
@@ -1060,7 +1095,11 @@ namespace ChartGeneratorTests
 				WriteWarpsFromExtras = true,
 				WriteScrollsFromExtras = true,
 				WriteSpeedsFromExtras = true,
-				WriteTimeSignaturesFromExtras = true
+				WriteTimeSignaturesFromExtras = true,
+				WriteTickCountsFromExtras = true,
+				WriteLabelsFromExtras = true,
+				WriteFakesFromExtras = true,
+				WriteCombosFromExtras = true,
 			};
 			new SSCWriter(config).Save();
 			Task.Run(async () => { song = await new SSCReader(newFile).LoadAsync(CancellationToken.None); }).Wait();
@@ -1080,7 +1119,11 @@ namespace ChartGeneratorTests
 				WriteWarpsFromExtras = true,
 				WriteScrollsFromExtras = true,
 				WriteSpeedsFromExtras = true,
-				WriteTimeSignaturesFromExtras = true
+				WriteTimeSignaturesFromExtras = true,
+				WriteTickCountsFromExtras = true,
+				WriteLabelsFromExtras = true,
+				WriteFakesFromExtras = true,
+				WriteCombosFromExtras = true,
 			};
 			new SSCWriter(config).Save();
 			Task.Run(async () => { song = await new SSCReader(newFile).LoadAsync(CancellationToken.None); }).Wait();

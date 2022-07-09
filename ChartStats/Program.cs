@@ -210,7 +210,7 @@ namespace ChartStats
 						{
 							var chartEvent = chart.Layers[0].Events[i];
 							currentPosition = chartEvent.MetricPosition;
-							currentTime = chartEvent.TimeMicros / 1000000.0;
+							currentTime = Utils.ToSeconds(chartEvent.TimeMicros);
 
 							// Record data about the step.
 							var lane = -1;
@@ -374,7 +374,7 @@ namespace ChartStats
 					if (totalSteps == 0)
 						continue;
 
-					var playTime = (lastNoteTimeMicros - firstNoteTimeMicros) / 1000000.0;
+					var playTime = Utils.ToSeconds(lastNoteTimeMicros - firstNoteTimeMicros);
 					var nps = totalSteps / playTime;
 
 					// Record song stats.
