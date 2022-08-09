@@ -1097,7 +1097,11 @@ namespace Fumen.Converters
 
 				// Order by lane
 				if (e1 is LaneNote note1 && e2 is LaneNote note2)
+				{
 					comparison = note1.Lane.CompareTo(note2.Lane);
+					if (comparison != 0)
+						return comparison;
+				}
 
 				// Order by type
 				var typeStr1 = e1.GetType().Name;
