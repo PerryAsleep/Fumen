@@ -348,47 +348,6 @@ namespace Fumen
 		}
 
 		/// <summary>
-		/// Finds the greatest value preceding the given value.
-		/// </summary>
-		/// <param name="data">Value to use to find the greatest preceding value.</param>
-		/// <param name="comparer">Function to compare the given value to the values in the tree.</param>
-		/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
-		/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
-		public Enumerator FindGreatestPreceding<U>(U data, Func<U, T, int> comparer, bool orEqualTo = false)
-		{
-			var p = Nil;
-			var n = Root;
-			Node prev;
-			while (n != Nil)
-			{
-				var c = comparer(data, n.Data);
-				if (c == 0)
-				{
-					if (orEqualTo)
-						return new Enumerator(this, n);
-					prev = Prev(n);
-					if (prev == Nil)
-						return null;
-					return new Enumerator(this, prev);
-				}
-
-				p = n;
-				n = c < 0 ? n.L : n.R;
-			}
-
-			if (p == Nil)
-				return null;
-
-			if (comparer(data, p.Data) > 0)
-				return new Enumerator(this, p);
-
-			prev = Prev(p);
-			if (prev == Nil)
-				return null;
-			return new Enumerator(this, prev);
-		}
-
-		/// <summary>
 		/// Finds the least value following the given value.
 		/// </summary>
 		/// <param name="data">Value to use to find the least following value.</param>
@@ -420,47 +379,6 @@ namespace Fumen
 				return null;
 
 			if (Compare(data, p.Data) < 0)
-				return new Enumerator(this, p);
-
-			next = Next(p);
-			if (next == Nil)
-				return null;
-			return new Enumerator(this, next);
-		}
-
-		/// <summary>
-		/// Finds the least value following the given value.
-		/// </summary>
-		/// <param name="data">Value to use to find the least following value.</param>
-		/// <param name="comparer">Function to compare the given value to the values in the tree.</param>
-		/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
-		/// <returns>Enumerator to least following value or null if not found.</returns>
-		public Enumerator FindLeastFollowing<U>(U data, Func<U, T, int> comparer, bool orEqualTo = false)
-		{
-			var p = Nil;
-			var n = Root;
-			Node next;
-			while (n != Nil)
-			{
-				var c = comparer(data, n.Data);
-				if (c == 0)
-				{
-					if (orEqualTo)
-						return new Enumerator(this, n);
-					next = Next(n);
-					if (next == Nil)
-						return null;
-					return new Enumerator(this, next);
-				}
-
-				p = n;
-				n = c < 0 ? n.L : n.R;
-			}
-
-			if (p == Nil)
-				return null;
-
-			if (comparer(data, p.Data) < 0)
 				return new Enumerator(this, p);
 
 			next = Next(p);
