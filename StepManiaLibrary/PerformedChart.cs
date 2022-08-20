@@ -307,7 +307,7 @@ namespace StepManiaLibrary
 				double nps,
 				double randomWeight,
 				PerformedChartConfig config,
-				FillSectionConfig fillSectionConfig)
+				FillConfig fillSectionConfig)
 			{
 				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
@@ -460,7 +460,7 @@ namespace StepManiaLibrary
 				return NextNodes.First().Value.First();
 			}
 
-			private double DetermineSectionStepCost(FillSectionConfig config)
+			private double DetermineSectionStepCost(FillConfig config)
 			{
 				if (config == null)
 					return 0.0;

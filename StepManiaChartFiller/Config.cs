@@ -61,7 +61,7 @@ namespace StepManiaChartFiller
 
 		[JsonInclude] public bool SeedRandomNumbersFromFile;
 
-		[JsonInclude] public List<FillSectionConfig> Sections;
+		[JsonInclude] public List<FillConfig> Sections;
 
 		/// <summary>
 		/// Loads the Config from the config json file.

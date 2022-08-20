@@ -403,25 +403,49 @@ namespace StepManiaLibrary
 		#endregion Logging
 	}
 
-	public class FillSectionConfig
+	public enum FillConfigStartFootChoice
 	{
-		// TODO: Find a spot for Fumen structures to specify json deserialization behaviors.
-		[JsonInclude] public int StartMeasure;
-		[JsonInclude] public int StartBeat;
-		[JsonInclude] public int StartSubDivisionNumerator;
-		[JsonInclude] public int StartSubDivisionDenominator;
+		AutomaticSameLane,
+		AutomaticNewLane,
+		SpecifiedLane
+	}
 
-		[JsonInclude] public int EndMeasure;
-		[JsonInclude] public int EndBeat;
-		[JsonInclude] public int EndSubDivisionNumerator;
-		[JsonInclude] public int EndSubDivisionDenominator;
+	public enum FillConfigEndFootChoice
+	{
+		AutomaticIgnoreFollowingSteps,
+		AutomaticSameLaneAsFollowing,
+		AutomaticNewLaneFromFollowing,
+		SpecifiedLane
+	}
+
+	public enum FillConfigStartingFootChoice
+	{
+		Random,
+		Automatic,
+		Specified
+	}
+
+	public class FillConfig
+	{
+		[JsonInclude] public int StartPosition;
+		[JsonInclude] public int EndPosition;
+
+		[JsonInclude] public int RandomSeed;
 
 		[JsonInclude] public int BeatSubDivisionToFill = 4;
-		[JsonInclude] public int FootToStartOn = InvalidFoot;
-		[JsonInclude] public int LeftFootStartLane = InvalidArrowIndex;
-		[JsonInclude] public int RightFootStartLane = InvalidArrowIndex;
-		[JsonInclude] public int LeftFootEndLane = InvalidArrowIndex;
-		[JsonInclude] public int RightFootEndLane = InvalidArrowIndex;
+
+		[JsonInclude] public FillConfigStartingFootChoice StartingFootChoice;
+		[JsonInclude] public int StartingFootSpecified = InvalidArrowIndex;
+
+		[JsonInclude] public FillConfigStartFootChoice LeftFootStartChoice;
+		[JsonInclude] public int LeftFootStartLaneSpecified = InvalidArrowIndex;
+		[JsonInclude] public FillConfigEndFootChoice LeftFootEndChoice;
+		[JsonInclude] public int LeftFootEndLaneSpecified = InvalidArrowIndex;
+
+		[JsonInclude] public FillConfigStartFootChoice RightFootStartChoice;
+		[JsonInclude] public int RightFootStartLaneSpecified = InvalidArrowIndex;
+		[JsonInclude] public FillConfigEndFootChoice RightFootEndChoice;
+		[JsonInclude] public int RightFootEndLaneSpecified = InvalidArrowIndex;
 
 		[JsonInclude] public int SameArrowStepWeight;
 		[JsonInclude] public int NewArrowStepWeight;
@@ -430,10 +454,9 @@ namespace StepManiaLibrary
 
 		[JsonInclude] public int MaxSameArrowsInARowPerFoot = -1;
 
-		[JsonInclude] public PerformedChartConfig PerformedChartConfig;
+		// Facing controls
 
-		[JsonIgnore] public int StartPosition;
-		[JsonIgnore] public int EndPosition;
+		[JsonInclude] public PerformedChartConfig PerformedChartConfig;
 
 		[JsonIgnore] public double SameArrowStepWeightNormalized;
 		[JsonIgnore] public double NewArrowStepWeightNormalized;
@@ -451,13 +474,6 @@ namespace StepManiaLibrary
 
 		public void Init()
 		{
-			// This assumes 4/4
-			// TODO: Remove this entire class. We're going to be configuring this through the editor.
-			StartPosition = (StartMeasure * SMCommon.NumBeatsPerMeasure + StartBeat) * SMCommon.MaxValidDenominator
-			                + (SMCommon.MaxValidDenominator / StartSubDivisionDenominator) * StartSubDivisionNumerator;
-			EndPosition = (EndMeasure * SMCommon.NumBeatsPerMeasure + EndBeat) * SMCommon.MaxValidDenominator
-			              + (SMCommon.MaxValidDenominator / EndSubDivisionDenominator) * EndSubDivisionNumerator;
-
 			double totalStepTypeWeight = SameArrowStepWeight + NewArrowStepWeight;
 			SameArrowStepWeightNormalized = SameArrowStepWeight / totalStepTypeWeight;
 			NewArrowStepWeightNormalized = NewArrowStepWeight / totalStepTypeWeight;
