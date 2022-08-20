@@ -51,6 +51,14 @@ namespace Fumen.Converters
 			kickbox_quadarm,
 			kickbox_insect,
 			kickbox_arachnid,
+
+			// These types are not officially supported in Stepmania.
+			// If Stepmania or a popular fork ever adds support, these names may need to be adjusted.
+			smx_beginner,
+			smx_single,
+			smx_dual,
+			smx_full,
+			smx_team,
 		}
 
 		public static string ChartTypeString(ChartType type)
