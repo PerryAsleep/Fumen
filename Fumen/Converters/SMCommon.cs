@@ -294,6 +294,11 @@ namespace Fumen.Converters
 			Properties[(int)ChartType.kickbox_quadarm] = new ChartProperties { NumInputs = 4, NumPlayers = 1 };
 			Properties[(int)ChartType.kickbox_insect] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
 			Properties[(int)ChartType.kickbox_arachnid] = new ChartProperties { NumInputs = 8, NumPlayers = 1 };
+			Properties[(int)ChartType.smx_beginner] = new ChartProperties { NumInputs = 3, NumPlayers = 1 };
+			Properties[(int)ChartType.smx_single] = new ChartProperties { NumInputs = 5, NumPlayers = 1 };
+			Properties[(int)ChartType.smx_dual] = new ChartProperties { NumInputs = 6, NumPlayers = 1 };
+			Properties[(int)ChartType.smx_full] = new ChartProperties { NumInputs = 10, NumPlayers = 1 };
+			Properties[(int)ChartType.smx_team] = new ChartProperties { NumInputs = 10, NumPlayers = 2 };
 		}
 
 		/// <summary>
