@@ -736,7 +736,7 @@ namespace Fumen.Converters
 						if (logOnErrors)
 						{
 							logger.Warn(
-								$"First time signature occurs at {beatDouble:SMDoubleFormat}." 
+								$"First time signature occurs at {beatDouble.ToString(SMDoubleFormat)}." 
 								+ $" If explicit time signatures are defined the first must be at {0.0:SMDoubleFormat}."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
@@ -749,7 +749,7 @@ namespace Fumen.Converters
 						if (logOnErrors)
 						{
 							logger.Warn(
-								$"Time signature at {beatDouble:SMDoubleFormat} ({ts.Numerator}/{ts.Denominator}) is invalid."
+								$"Time signature at {beatDouble.ToString(SMDoubleFormat)} ({ts.Numerator}/{ts.Denominator}) is invalid."
 								+ " Both values must be greater than 0."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
