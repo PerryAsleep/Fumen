@@ -35,7 +35,7 @@ namespace Fumen.ChartDefinition
 		/// <param name="other">Extras to copy from.</param>
 		public Extras(Extras other)
 		{
-			if (other.SourceExtras != null)
+			if (other?.SourceExtras != null)
 			{
 				SourceExtras = new Dictionary<string, object>();
 				foreach (var entry in other.SourceExtras)
@@ -43,7 +43,7 @@ namespace Fumen.ChartDefinition
 					SourceExtras[entry.Key] = entry.Value;
 				}
 			}
-			if (other.DestExtras != null)
+			if (other?.DestExtras != null)
 			{
 				DestExtras = new Dictionary<string, object>();
 				foreach (var entry in other.DestExtras)
