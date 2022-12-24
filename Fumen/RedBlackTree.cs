@@ -657,6 +657,11 @@ namespace Fumen
 				}
 			}
 
+			public void Unset()
+			{
+				IsUnset = true;
+			}
+
 			public void Delete()
 			{
 				if (IsUnset)

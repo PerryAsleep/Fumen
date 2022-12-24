@@ -864,16 +864,20 @@ namespace Fumen.Converters
 			return displayTempo;
 		}
 
+		/// <summary>
+		/// Sets the TimeMicros and MetricPositions on the given Chart Events based
+		/// on the rate altering Events in the Chart.
+		/// </summary>
+		/// <param name="chart">Chart to set TimeMicros and MetricPosition on the Events.</param>
 		public static void SetEventTimeMicrosAndMetricPositionsFromRows(Chart chart)
 		{
 			SetEventTimeMicrosAndMetricPositionsFromRows(chart.Layers[0].Events);
 		}
 
 		/// <summary>
-		/// Sets the TimeMicros and MetricPositions on the given Chart Events based
-		/// on the rate altering Events in the Chart.
+		/// Sets the TimeMicros and MetricPositions on the given Events based on rate altering Events.
 		/// </summary>
-		/// <param name="chart">Chart to set TimeMicros and MetricPosition on the Events.</param>
+		/// <param name="events">Enumerable set of Events to update.</param>
 		public static void SetEventTimeMicrosAndMetricPositionsFromRows(IEnumerable<Event> events)
 		{
 			var bpm = 0.0;
@@ -1064,6 +1068,21 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
+		/// Creates a dummy Event that will sort to be the first event, or equal to the first event
+		/// for the given row based on the rules from SMEventComparer.
+		/// </summary>
+		/// <param name="integerPosition">Integer position of the event.</param>
+		/// <returns>New Event.</returns>
+		public static Event CreateDummyFirstEventForRow(int integerPosition)
+		{
+			// Time Signarue events are sorted first.
+			return new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
+			{
+				IntegerPosition = integerPosition
+			};
+		}
+
+		/// <summary>
 		/// Custom Comparer for Events in an SM Chart.
 		/// </summary>
 		public class SMEventComparer : IComparer<Event>
@@ -1073,6 +1092,7 @@ namespace Fumen.Converters
 			private const string NegativeStopString = "NegativeStop";
 			private static readonly Dictionary<string, int> SMEventOrder = new Dictionary<string, int>
 			{
+				// If changing this such that TimeSignaure is no longer first, adjust CreateDummyFirstEventForRow.
 				{"TimeSignature", 0},
 				{"Tempo", 1},
 				{"ScrollRate", 2},
