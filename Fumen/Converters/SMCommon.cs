@@ -893,7 +893,7 @@ namespace Fumen.Converters
 
 			// Warps are unfortunately complicated.
 			// Overlapping warps do not stack.
-			// Warps are represented as rows / IntegerPosition, not like Stops which use time.
+			// Warps are represented as rows / IntegerPosition, unlike Stops which use time.
 			// We need to figure out how much time warps account for to update Event TimeMicros.
 			// But we cannot just do a pass to compute the time for all Warps and then sum them up
 			// in a second pass since overlapping warps do not stack. We also can't just sum the time
@@ -919,6 +919,9 @@ namespace Fumen.Converters
 
 			foreach (var chartEvent in events)
 			{
+				if (chartEvent == null)
+					continue;
+
 				var beatRelativeToLastTimeSigChange = (chartEvent.IntegerPosition - lastTimeSigChangeRow) / rowsPerBeat;
 				var measureRelativeToLastTimeSigChange = beatRelativeToLastTimeSigChange / beatsPerMeasure;
 
@@ -1092,7 +1095,7 @@ namespace Fumen.Converters
 			private const string NegativeStopString = "NegativeStop";
 			private static readonly Dictionary<string, int> SMEventOrder = new Dictionary<string, int>
 			{
-				// If changing this such that TimeSignaure is no longer first, adjust CreateDummyFirstEventForRow.
+				// If changing this such that TimeSignature is no longer first, adjust CreateDummyFirstEventForRow.
 				{"TimeSignature", 0},
 				{"Tempo", 1},
 				{"ScrollRate", 2},
@@ -1121,9 +1124,11 @@ namespace Fumen.Converters
 					return 1;
 
 				// Order by position.
-				// It is intentional to order by position and not time as due to rate altering events
-				// like warps many events might share the same time but have different positions.
-				// Two events cannot have the same position with different times.
+				// The order by position or by time is the same.
+				// There may be events at different times that share the same row (due to e.g. Stops).
+				// There may be events at different rows that share the same time (due to e.g. Warps).
+				// Events at a greater time than other events must be at the same row or greater.
+				// Events at a greater row than other events must be at the same time or greater.
 				var comparison = e1.IntegerPosition.CompareTo(e2.IntegerPosition);
 				if (comparison != 0)
 					return comparison;
