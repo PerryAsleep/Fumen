@@ -387,13 +387,14 @@ namespace Fumen
 			return new Enumerator(this, next);
 		}
 
-		public void Delete(T data)
+		public bool Delete(T data)
 		{
 			var n = FindNode(data);
 			if (IsNull(n))
-				return;
+				return false;
 
 			Delete(n);
+			return true;
 		}
 
 		public void Delete(Node n)
@@ -660,6 +661,11 @@ namespace Fumen
 			public void Unset()
 			{
 				IsUnset = true;
+			}
+
+			public bool IsCurrentValid()
+			{
+				return !(IsUnset || BeforeFirst || AfterLast);
 			}
 
 			public void Delete()

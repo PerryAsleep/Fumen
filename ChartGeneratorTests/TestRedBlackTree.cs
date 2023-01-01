@@ -119,7 +119,7 @@ namespace ChartGeneratorTests
 
 			for (var i = 0; i < num; i++)
 			{
-				t.Delete(i);
+				Assert.IsTrue(t.Delete(i));
 				Assert.AreEqual(num - 1 - i, t.Count);
 				CheckTreeValid(t);
 			}
@@ -134,7 +134,7 @@ namespace ChartGeneratorTests
 
 			for (var i = num - 1; i >= 0; i--)
 			{
-				t.Delete(i);
+				Assert.IsTrue(t.Delete(i));
 				Assert.AreEqual(i, t.Count);
 				CheckTreeValid(t);
 			}
@@ -149,7 +149,7 @@ namespace ChartGeneratorTests
 
 			for (var i = 0; i < num; i++)
 			{
-				t.Delete(i);
+				Assert.IsTrue(t.Delete(i));
 				Assert.AreEqual(num - 1 - i, t.Count);
 				CheckTreeValid(t);
 			}
@@ -164,7 +164,7 @@ namespace ChartGeneratorTests
 
 			for (var i = num - 1; i >= 0; i--)
 			{
-				t.Delete(i);
+				Assert.IsTrue(t.Delete(i));
 				Assert.AreEqual(i, t.Count);
 				CheckTreeValid(t);
 			}
@@ -187,10 +187,31 @@ namespace ChartGeneratorTests
 
 			for (var i = 0; i < num; i++)
 			{
-				t.Delete(value);
+				Assert.IsTrue(t.Delete(value));
 				Assert.AreEqual(num - 1 - i, t.Count);
 				CheckTreeValid(t);
 			}
+		}
+
+		[TestMethod]
+		public void TestDeleteReturnValue()
+		{
+			var t = new RedBlackTree<int>();
+
+			t.Insert(1);
+			t.Insert(2);
+			t.Insert(3);
+
+			Assert.IsFalse(t.Delete(0));
+			Assert.IsFalse(t.Delete(4));
+
+			Assert.IsTrue(t.Delete(1));
+			Assert.IsTrue(t.Delete(2));
+			Assert.IsTrue(t.Delete(3));
+
+			Assert.IsFalse(t.Delete(1));
+			Assert.IsFalse(t.Delete(2));
+			Assert.IsFalse(t.Delete(3));
 		}
 
 		[TestMethod]
@@ -224,7 +245,7 @@ namespace ChartGeneratorTests
 
 			foreach (var val in deleteList)
 			{
-				t.Delete(val);
+				Assert.IsTrue(t.Delete(val));
 				expectedCount--;
 				Assert.AreEqual(expectedCount, t.Count);
 				CheckTreeValid(t);
@@ -384,6 +405,32 @@ namespace ChartGeneratorTests
 				Assert.IsTrue(e.MovePrev());
 				Assert.AreEqual(i, e.Current);
 			}
+		}
+
+		[TestMethod]
+		public void TestEnumeratorUnset()
+		{
+			var t = new RedBlackTree<int>();
+			for (var i = 0; i < 10; i++)
+				t.Insert(i);
+
+			var e = t.First();
+			Assert.IsFalse(e.IsCurrentValid());
+			while (e.MoveNext())
+			{
+				Assert.IsTrue(e.IsCurrentValid());
+			}
+			Assert.IsFalse(e.IsCurrentValid());
+
+			e = t.Find(5);
+			Assert.IsFalse(e.IsCurrentValid());
+			e.MoveNext();
+			Assert.IsTrue(e.IsCurrentValid());
+			e.Unset();
+			Assert.IsFalse(e.IsCurrentValid());
+			e.MoveNext();
+			Assert.IsTrue(e.IsCurrentValid());
+			Assert.AreEqual(5, e.Current);
 		}
 
 		[TestMethod]
