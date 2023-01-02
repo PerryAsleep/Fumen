@@ -44,10 +44,6 @@ namespace Fumen
 		/// </remarks>
 		private readonly Node Nil;
 		/// <summary>
-		/// Custom IComparer function to override default IComparable comparisons on T.
-		/// </summary>
-		private readonly IComparer<T> CustomComparer;
-		/// <summary>
 		/// Number of elements in the Red Black Tree.
 		/// </summary>
 		public int Count { get; private set; }
@@ -55,12 +51,8 @@ namespace Fumen
 		/// <summary>
 		/// Constructor.
 		/// </summary>
-		/// <param name="customComparer">
-		/// Optional IComparer. If not null, this IComparer will be used instead of the IComparable methods on T.
-		/// </param>
-		public RedBlackTree(IComparer<T> customComparer = null)
+		public RedBlackTree()
 		{
-			CustomComparer = customComparer;
 			Nil = new Node();
 			Root = Nil;
 			Count = 0;
@@ -74,16 +66,6 @@ namespace Fumen
 		public Node GetRoot()
 		{
 			return Root;
-		}
-
-		private int Compare(Node n1, Node n2)
-		{
-			return CustomComparer?.Compare(n1.Data, n2.Data) ?? n1.Data.CompareTo(n2.Data);
-		}
-
-		private int Compare(T t1, T t2)
-		{
-			return CustomComparer?.Compare(t1, t2) ?? t1.CompareTo(t2);
 		}
 
 		/// <summary>
@@ -201,11 +183,11 @@ namespace Fumen
 			while (x != Nil)
 			{
 				p = x;
-				x = Compare(n, x) < 0 ? x.L : x.R;
+				x = n.Data.CompareTo(x.Data) < 0 ? x.L : x.R;
 			}
 
 			n.Parent = p;
-			if (Compare(n, p) < 0)
+			if (n.Data.CompareTo(p.Data) < 0)
 				p.L = n;
 			else
 				p.R = n;
@@ -288,7 +270,7 @@ namespace Fumen
 			var n = Root;
 			while (n != Nil)
 			{
-				var c = Compare(data, n.Data);
+				var c = data.CompareTo(n.Data);
 				if (c == 0)
 					return n;
 				n = c < 0 ? n.L : n.R;
@@ -321,7 +303,7 @@ namespace Fumen
 			Node prev;
 			while (n != Nil)
 			{
-				var c = Compare(data, n.Data);
+				var c = data.CompareTo(n.Data);
 				if (c == 0)
 				{
 					if (orEqualTo)
@@ -338,7 +320,7 @@ namespace Fumen
 			if (p == Nil)
 				return null;
 
-			if (Compare(data, p.Data) > 0)
+			if (data.CompareTo(p.Data) > 0)
 				return new Enumerator(this, p);
 
 			prev = Prev(p);
@@ -360,7 +342,7 @@ namespace Fumen
 			Node next;
 			while (n != Nil)
 			{
-				var c = Compare(data, n.Data);
+				var c = data.CompareTo(n.Data);
 				if (c == 0)
 				{
 					if (orEqualTo)
@@ -378,7 +360,7 @@ namespace Fumen
 			if (p == Nil)
 				return null;
 
-			if (Compare(data, p.Data) < 0)
+			if (data.CompareTo(p.Data) < 0)
 				return new Enumerator(this, p);
 
 			next = Next(p);
