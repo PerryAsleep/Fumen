@@ -96,6 +96,7 @@ namespace StepManiaLibrary
 					padData.StepsType = stepsType;
 					if (!padData.Validate())
 						return null;
+					padData.SetFlippedAndMirroredPositions();
 					padData.SetTravelDistances();
 					padData.DetermineMaxBracketSeparation();
 				}
@@ -280,6 +281,51 @@ namespace StepManiaLibrary
 						if (ArrowData[a].BracketablePairingsOtherHeel[f][a2]
 						    || ArrowData[a].BracketablePairingsOtherToe[f][a2])
 							MaxBracketSeparation = Math.Max(MaxBracketSeparation, Math.Abs(a2 - a));
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Sets MirroredLane and FlippedLane on the ArrowData based on the individual ArrowData
+		/// X and Y values.
+		/// </summary>
+		private void SetFlippedAndMirroredPositions()
+		{
+			var minX = int.MaxValue;
+			var maxX = int.MinValue;
+			var minY = int.MaxValue;
+			var maxY = int.MinValue;
+			for (var a = 0; a < NumArrows; a++)
+			{
+				minX = Math.Min(minX, ArrowData[a].X);
+				maxX = Math.Max(maxX, ArrowData[a].X);
+				minY = Math.Min(minY, ArrowData[a].Y);
+				maxY = Math.Max(maxY, ArrowData[a].Y);
+			}
+			var numColumns = maxX - minX;
+			var numRows = maxY - minY;
+
+			Func<int, int> mirror = (int x) =>
+			{
+				return minX + (numColumns - x);
+			};
+			Func<int, int> flip = (int y) =>
+			{
+				return minY + (numRows - y);
+			};
+
+			for (var a = 0; a < NumArrows; a++)
+			{
+				for(var a2 = 0; a2 < NumArrows; a2++)
+				{
+					if (mirror(ArrowData[a].X) == ArrowData[a2].X && ArrowData[a].Y == ArrowData[a2].Y)
+					{
+						ArrowData[a].MirroredLane = a2;
+					}
+					if (ArrowData[a].X == ArrowData[a2].X && flip(ArrowData[a].Y) == ArrowData[a2].Y)
+					{
+						ArrowData[a].FlippedLane = a2;
 					}
 				}
 			}

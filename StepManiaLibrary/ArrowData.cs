@@ -16,7 +16,17 @@ namespace StepManiaLibrary
 		/// The lane / index of this arrow.
 		/// Set after deserialization based on index of this ArrowData in the containing array.
 		/// </summary>
-		public int Lane;
+		public int Lane = InvalidArrowIndex;
+		/// <summary>
+		/// The lane / index of this arrow when all arrows are mirrored.
+		/// Set after deserialization.
+		/// </summary>
+		public int MirroredLane = InvalidArrowIndex;
+		/// <summary>
+		/// The lane / index of this arrow when all arrows are flipped.
+		/// Set after deserialization.
+		/// </summary>
+		public int FlippedLane = InvalidArrowIndex;
 
 		/// <summary>
 		/// X position of the center of this arrow on the pads.
