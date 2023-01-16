@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fumen.ChartDefinition;
-using static Fumen.Utils;
 
 namespace Fumen.Converters
 {
@@ -470,7 +469,7 @@ namespace Fumen.Converters
 		{
 			foreach (var stop in stops)
 			{
-				var stopEvent = new Stop(ToMicros(stop.Value))
+				var stopEvent = new Stop(stop.Value)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(stop.Key)
 				};
@@ -495,7 +494,7 @@ namespace Fumen.Converters
 		{
 			foreach (var delay in delays)
 			{
-				var stopEvent = new Stop(ToMicros(delay.Value), true)
+				var stopEvent = new Stop(delay.Value, true)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(delay.Key)
 				};
@@ -576,18 +575,18 @@ namespace Fumen.Converters
 				var length = parameters.Item2;
 
 				var lengthIsTimeInSeconds = parameters.Item3 != 0;
-				var periodAsTimeMicros = 0L;
+				var periodAsTime = 0.0;
 				var periodAsIntegerPosition = 0;
 				if (lengthIsTimeInSeconds)
 				{
-					periodAsTimeMicros = ToMicros(length);
+					periodAsTime = length;
 				}
 				else
 				{
 					periodAsIntegerPosition = ConvertAbsoluteBeatToIntegerPosition(length);
 				}
 
-				var scrollRateEvent = new ScrollRateInterpolation(speed, periodAsIntegerPosition, periodAsTimeMicros, lengthIsTimeInSeconds)
+				var scrollRateEvent = new ScrollRateInterpolation(speed, periodAsIntegerPosition, periodAsTime, lengthIsTimeInSeconds)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
 				};
@@ -660,7 +659,7 @@ namespace Fumen.Converters
 		{
 			foreach (var fake in fakeEvents)
 			{
-				var fakeSegmentEvent = new FakeSegment(ToMicros(fake.Value))
+				var fakeSegmentEvent = new FakeSegment(fake.Value)
 				{
 					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(fake.Key)
 				};
@@ -865,36 +864,35 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
-		/// Sets the TimeMicros and MetricPositions on the given Chart Events based
+		/// Sets the TimeSeconds and MetricPositions on the given Chart Events based
 		/// on the rate altering Events in the Chart.
 		/// </summary>
-		/// <param name="chart">Chart to set TimeMicros and MetricPosition on the Events.</param>
-		public static void SetEventTimeMicrosAndMetricPositionsFromRows(Chart chart)
+		/// <param name="chart">Chart to set TimeSeconds and MetricPosition on the Events.</param>
+		public static void SetEventTimeAndMetricPositionsFromRows(Chart chart)
 		{
-			SetEventTimeMicrosAndMetricPositionsFromRows(chart.Layers[0].Events);
+			SetEventTimeAndMetricPositionsFromRows(chart.Layers[0].Events);
 		}
 
 		/// <summary>
-		/// Sets the TimeMicros and MetricPositions on the given Events based on rate altering Events.
+		/// Sets the TimeSeconds and MetricPositions on the given Events based on rate altering Events.
 		/// </summary>
 		/// <param name="events">Enumerable set of Events to update.</param>
-		public static void SetEventTimeMicrosAndMetricPositionsFromRows(IEnumerable<Event> events)
+		public static void SetEventTimeAndMetricPositionsFromRows(IEnumerable<Event> events)
 		{
-			var bpm = 0.0;
-			var lastBeatTimeChangeRow = 0;
-			var lastBeatTimeChangeTime = 0.0;
+			var lastTempoChangeRow = 0;
+			var lastTempoChangeTime = 0.0;
+			Tempo lastTempo = null;
 			var lastTimeSigChangeMeasure = 0;
-			var lastTimeSigChangeRow= 0;
-			var lastTimeSigChangeDenominator = NumBeatsPerMeasure;
+			var lastTimeSigChangeRow = 0;
 			var rowsPerBeat = MaxValidDenominator;
 			var beatsPerMeasure = NumBeatsPerMeasure;
-			var totalStopTimeMicros = 0L;
-			var previousEventTimeMicros = 0L;
+			var totalStopTimeSeconds = 0.0;
+			var previousEventTimeSeconds = 0.0;
 
 			// Warps are unfortunately complicated.
 			// Overlapping warps do not stack.
 			// Warps are represented as rows / IntegerPosition, unlike Stops which use time.
-			// We need to figure out how much time warps account for to update Event TimeMicros.
+			// We need to figure out how much time warps account for to update Event TimeSeconds.
 			// But we cannot just do a pass to compute the time for all Warps and then sum them up
 			// in a second pass since overlapping warps do not stack. We also can't just sum the time
 			// between each event during a warp per loop since that would accrue rounding error.
@@ -929,10 +927,9 @@ namespace Fumen.Converters
 				var beatInMeasure = beatRelativeToLastTimeSigChange - (measureRelativeToLastTimeSigChange * beatsPerMeasure);
 				var beatSubDivision = new Fraction((chartEvent.IntegerPosition - lastTimeSigChangeRow) % rowsPerBeat, rowsPerBeat).Reduce();
 
-				var timeRelativeToLastTimeChange = bpm == 0.0 ? 0.0 :
-					((double)(chartEvent.IntegerPosition - lastBeatTimeChangeRow) / rowsPerBeat) / bpm * 60.0
-					* ((double)NumBeatsPerMeasure / lastTimeSigChangeDenominator);
-				var absoluteTime = lastBeatTimeChangeTime + timeRelativeToLastTimeChange;
+				var timeRelativeToLastTempoChange = lastTempo == null ? 0.0 :
+					(chartEvent.IntegerPosition - lastTempoChangeRow) * lastTempo.GetSecondsPerRow(MaxValidDenominator);
+				var absoluteTime = lastTempoChangeTime + timeRelativeToLastTempoChange;
 
 				// Handle a currently running warp.
 				var currentWarpTime = 0.0;
@@ -941,9 +938,8 @@ namespace Fumen.Converters
 					// Figure out the amount of time elapsed during the current warp since the last event
 					// which altered the rate of time during this warp.
 					var endPosition = Math.Min(chartEvent.IntegerPosition, warpingEndPosition);
-					currentWarpTime = bpm == 0.0 ? 0.0 :
-						((double)(endPosition - lastWarpBeatTimeChangeRow) / rowsPerBeat) / bpm * 60.0
-						* ((double)NumBeatsPerMeasure / lastTimeSigChangeDenominator);
+					currentWarpTime = lastTempo == null ? 0.0 :
+						(endPosition - lastWarpBeatTimeChangeRow) * lastTempo.GetSecondsPerRow(MaxValidDenominator);
 
 					// Warp section is complete.
 					if (chartEvent.IntegerPosition >= warpingEndPosition)
@@ -959,20 +955,20 @@ namespace Fumen.Converters
 				}
 
 				chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
-				chartEvent.TimeMicros = ToMicrosRounded(absoluteTime - currentWarpTime - totalWarpTime) + totalStopTimeMicros;
+				chartEvent.TimeSeconds = (absoluteTime - currentWarpTime - totalWarpTime + totalStopTimeSeconds);
 
 				// In the case of negative stop / bpm warps, we need to clamp the time of an event so it does not precede events which
 				// have lower IntegerPositions
-				if (chartEvent.TimeMicros < previousEventTimeMicros)
-					chartEvent.TimeMicros = previousEventTimeMicros;
-				previousEventTimeMicros = chartEvent.TimeMicros;
+				if (chartEvent.TimeSeconds < previousEventTimeSeconds)
+					chartEvent.TimeSeconds = previousEventTimeSeconds;
+				previousEventTimeSeconds = chartEvent.TimeSeconds;
 
-				// Stop handling. Just accrue more stop time in microseconds.
+				// Stop handling. Just accrue more stop time.
 				if (chartEvent is Stop stop)
 				{
 					// Accrue Stop time whether it is positive or negative.
 					// Do not worry about overlapping negative stops as they stack in StepMania.
-					totalStopTimeMicros += stop.LengthMicros;
+					totalStopTimeSeconds += stop.LengthSeconds;
 				}
 				// Warp handling. Update warp start and stop rows so we can compute the warp time.
 				else if (chartEvent is Warp warp)
@@ -987,12 +983,8 @@ namespace Fumen.Converters
 				{
 					var timeSignature = ts.Signature;
 
-					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
-					lastBeatTimeChangeTime = absoluteTime;
-
 					lastTimeSigChangeRow = chartEvent.IntegerPosition;
 					lastTimeSigChangeMeasure = absoluteMeasure;
-					lastTimeSigChangeDenominator = timeSignature.Denominator;
 					beatsPerMeasure = timeSignature.Numerator;
 					rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / timeSignature.Denominator;
 
@@ -1000,22 +992,21 @@ namespace Fumen.Converters
 					if (warpingEndPosition != -1)
 					{
 						totalWarpTime += currentWarpTime;
-						lastWarpBeatTimeChangeRow = lastBeatTimeChangeRow;
+						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
 					}
 				}
 				// Tempo change. Update beat time tracking.
 				else if (chartEvent is Tempo tc)
 				{
-					bpm = tc.TempoBPM;
-
-					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
-					lastBeatTimeChangeTime = absoluteTime;
+					lastTempo = tc;
+					lastTempoChangeRow = chartEvent.IntegerPosition;
+					lastTempoChangeTime = absoluteTime;
 
 					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
 					if (warpingEndPosition != -1)
 					{
 						totalWarpTime += currentWarpTime;
-						lastWarpBeatTimeChangeRow = lastBeatTimeChangeRow;
+						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
 					}
 				}
 			}
@@ -1147,7 +1138,7 @@ namespace Fumen.Converters
 				{
 					if (s1.IsDelay)
 						typeStr1 = DelayString;
-					else if (s1.LengthMicros < 0)
+					else if (s1.LengthSeconds < 0.0)
 						typeStr1 = NegativeStopString;
 				}
 				var typeStr2 = e2.GetType().Name;
@@ -1155,7 +1146,7 @@ namespace Fumen.Converters
 				{
 					if (s2.IsDelay)
 						typeStr2 = DelayString;
-					else if (s2.LengthMicros < 0)
+					else if (s2.LengthSeconds < 0.0)
 						typeStr2 = NegativeStopString;
 				}
 				var e1Index = SMEventOrder[typeStr1];

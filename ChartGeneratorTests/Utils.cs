@@ -89,16 +89,16 @@ namespace ChartGeneratorTests
 		/// </summary>
 		/// <param name="chartEvent">Event to check</param>
 		/// <param name="expectedIntegerPosition">Expected IntegerPosition of Event.</param>
-		/// <param name="expectedTimeMicros">Expected TimeMicros of Event.</param>
+		/// <param name="expectedTimeSeconds">Expected TimeSeconds of Event.</param>
 		/// <param name="expectedMeasure">Expected MetricPosition Measure of Event.</param>
 		public static void AssertPositionMatches(
 			Event chartEvent,
 			int expectedIntegerPosition,
-			long expectedTimeMicros,
+			double expectedTimeSeconds,
 			int expectedMeasure)
 		{
 			Assert.AreEqual(chartEvent.IntegerPosition, expectedIntegerPosition);
-			Assert.AreEqual(chartEvent.TimeMicros, expectedTimeMicros);
+			Assert.AreEqual(chartEvent.TimeSeconds, expectedTimeSeconds);
 			Assert.AreEqual(chartEvent.MetricPosition, new MetricPosition(expectedMeasure, 0));
 		}
 
@@ -108,18 +108,18 @@ namespace ChartGeneratorTests
 		/// </summary>
 		/// <param name="chartEvent">Event to check</param>
 		/// <param name="expectedIntegerPosition">Expected IntegerPosition of Event.</param>
-		/// <param name="expectedTimeMicros">Expected TimeMicros of Event.</param>
+		/// <param name="expectedTimeSeconds">Expected TimeSeconds of Event.</param>
 		/// <param name="expectedMeasure">Expected MetricPosition Measure of Event.</param>
 		/// <param name="expectedBeat">Expected MetricPosition Beat of Event.</param>
 		public static void AssertPositionMatches(
 			Event chartEvent,
 			int expectedIntegerPosition,
-			long expectedTimeMicros,
+			double expectedTimeSeconds,
 			int expectedMeasure,
 			int expectedBeat)
 		{
 			Assert.AreEqual(chartEvent.IntegerPosition, expectedIntegerPosition);
-			Assert.AreEqual(chartEvent.TimeMicros, expectedTimeMicros);
+			Assert.AreEqual(chartEvent.TimeSeconds, expectedTimeSeconds);
 			Assert.AreEqual(chartEvent.MetricPosition, new MetricPosition(expectedMeasure, expectedBeat));
 		}
 
@@ -128,7 +128,7 @@ namespace ChartGeneratorTests
 		/// </summary>
 		/// <param name="chartEvent">Event to check</param>
 		/// <param name="expectedIntegerPosition">Expected IntegerPosition of Event.</param>
-		/// <param name="expectedTimeMicros">Expected TimeMicros of Event.</param>
+		/// <param name="expectedTimeSeconds">Expected TimeSeconds of Event.</param>
 		/// <param name="expectedMeasure">Expected MetricPosition Measure of Event.</param>
 		/// <param name="expectedBeat">Expected MetricPosition Beat of Event.</param>
 		/// <param name="expectedSubDivisionNumerator">Expected MetricPosition SubDivision Numerator of Event.</param>
@@ -136,14 +136,14 @@ namespace ChartGeneratorTests
 		public static void AssertPositionMatches(
 			Event chartEvent,
 			int expectedIntegerPosition,
-			long expectedTimeMicros,
+			double expectedTimeSeconds,
 			int expectedMeasure,
 			int expectedBeat,
 			int expectedSubDivisionNumerator,
 			int expectedSubDivisionDenominator)
 		{
 			Assert.AreEqual(chartEvent.IntegerPosition, expectedIntegerPosition);
-			Assert.AreEqual(chartEvent.TimeMicros, expectedTimeMicros);
+			Assert.IsTrue(chartEvent.TimeSeconds.DoubleEquals(expectedTimeSeconds));
 			Assert.AreEqual(chartEvent.MetricPosition, new MetricPosition(expectedMeasure, expectedBeat, expectedSubDivisionNumerator, expectedSubDivisionDenominator));
 		}
 	}

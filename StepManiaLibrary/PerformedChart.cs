@@ -226,9 +226,9 @@ namespace StepManiaLibrary
 			private bool Stepped;
 
 			/// <summary>
-			/// The time in microseconds of the Events represented by this SearchNode.
+			/// The time in seconds of the Events represented by this SearchNode.
 			/// </summary>
-			private readonly long TimeMicros;
+			private readonly double Time;
 
 			/// <summary>
 			/// Lateral position of the body on the pads at this SearchNode.
@@ -237,18 +237,18 @@ namespace StepManiaLibrary
 			private double LateralBodyPosition;
 
 			/// <summary>
-			/// For each foot, the last time in microseconds that it was stepped on.
-			/// During construction, these values will be updated to this SearchNode's TimeMicros
+			/// For each foot, the last time in seconds that it was stepped on.
+			/// During construction, these values will be updated to this SearchNode's Time
 			/// if this SearchNode represents steps on any arrows.
 			/// </summary>
-			private readonly long[] LastTimeFootStepped;
+			private readonly double[] LastTimeFootStepped;
 
 			/// <summary>
-			/// For each foot, the last time in microseconds that it was released.
-			/// During construction, these values will be updated to this SearchNode's TimeMicros
+			/// For each foot, the last time in seconds that it was released.
+			/// During construction, these values will be updated to this SearchNode's Time
 			/// if this SearchNode represents releases on any arrows.
 			/// </summary>
-			private readonly long[] LastTimeFootReleased;
+			private readonly double[] LastTimeFootReleased;
 
 			/// <summary>
 			/// For each Foot and FootPortion, the last arrows that were stepped on by it.
@@ -282,8 +282,8 @@ namespace StepManiaLibrary
 			/// <param name="graphLinkFromPreviousNode">
 			/// The GraphLink to this SearchNode from the previous SearchNode.
 			/// </param>
-			/// <param name="timeMicros">
-			/// Time of the corresponding ExpressedChart event in microseconds.
+			/// <param name="time">
+			/// Time of the corresponding ExpressedChart event in seconds.
 			/// </param>
 			/// <param name="depth"> The 0-based depth of this SearchNode. </param>
 			/// <param name="previousNode"> The previous SearchNode. </param>
@@ -299,7 +299,7 @@ namespace StepManiaLibrary
 				GraphNode graphNode,
 				List<GraphLink> possibleGraphLinksToNextNode,
 				GraphLink graphLinkFromPreviousNode,
-				long timeMicros,
+				double time,
 				int depth,
 				SearchNode previousNode,
 				PerformanceFootAction[] actions,
@@ -315,7 +315,7 @@ namespace StepManiaLibrary
 				GraphLinkFromPreviousNode = graphLinkFromPreviousNode;
 				Depth = depth;
 				PreviousNode = previousNode;
-				TimeMicros = timeMicros;
+				Time = time;
 				RandomWeight = randomWeight;
 				Stepped = false;
 				Actions = actions;
@@ -336,12 +336,12 @@ namespace StepManiaLibrary
 
 				// Copy the previous SearchNode's last step times to this nodes last step times.
 				// We will update them later if this SearchNode represents a step.
-				LastTimeFootStepped = new long[NumFeet];
+				LastTimeFootStepped = new double[NumFeet];
 				for (var f = 0; f < NumFeet; f++)
-					LastTimeFootStepped[f] = previousNode?.LastTimeFootStepped[f] ?? 0L;
-				LastTimeFootReleased = new long[NumFeet];
+					LastTimeFootStepped[f] = previousNode?.LastTimeFootStepped[f] ?? 0.0;
+				LastTimeFootReleased = new double[NumFeet];
 				for (var f = 0; f < NumFeet; f++)
-					LastTimeFootReleased[f] = previousNode?.LastTimeFootReleased[f] ?? 0L;
+					LastTimeFootReleased[f] = previousNode?.LastTimeFootReleased[f] ?? 0.0;
 
 				// Copy the previous SearchNode's LastArrowsSteppedOnByFoot values.
 				// We will update them later if this SearchNode represents a step.
@@ -510,7 +510,7 @@ namespace StepManiaLibrary
 				// Record the previous step time.
 				// This is currently stored in LastTimeFootStepped from initialization.
 				// We will update LastTimeFootStepped for this step later.
-				var previousStepTime = 0L;
+				var previousStepTime = 0.0;
 				for (var f = 0; f < NumFeet; f++)
 				{
 					if (LastTimeFootStepped[f] > previousStepTime)
@@ -551,7 +551,7 @@ namespace StepManiaLibrary
 								if (GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Release
 								    || GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Tap)
 								{
-									LastTimeFootReleased[f] = TimeMicros;
+									LastTimeFootReleased[f] = Time;
 								}
 
 								if (GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
@@ -575,7 +575,7 @@ namespace StepManiaLibrary
 						    && config.IndividualStepTighteningMinTimeSeconds > 0.0)
 						{
 							var arrowBeingSteppedTo = GraphNode.State[f, thisFootPortionSteppingWith].Arrow;
-							var timeBetweenStepsSeconds = ToSeconds(TimeMicros - LastTimeFootStepped[f]);
+							var timeBetweenStepsSeconds = Time - LastTimeFootStepped[f];
 
 							for (var p = 0; p < NumFootPortions; p++)
 							{
@@ -615,7 +615,7 @@ namespace StepManiaLibrary
 						// Update our values for tracking the last steps.
 						if (steppedWithThisFoot)
 						{
-							LastTimeFootStepped[f] = TimeMicros;
+							LastTimeFootStepped[f] = Time;
 							for (var p = 0; p < NumFootPortions; p++)
 							{
 								if (GraphLinkFromPreviousNode.Links[f, p].Valid &&
@@ -646,7 +646,7 @@ namespace StepManiaLibrary
 					var node = PreviousNode;
 					bool? goingLeft = null;
 					var previousPosition = LateralBodyPosition;
-					var previousTime = TimeMicros;
+					var previousTime = Time;
 					while (stepCounter > 0 && node != null)
 					{
 						// Skip SearchNodes which aren't steps.
@@ -687,7 +687,7 @@ namespace StepManiaLibrary
 								goingLeft = node.LateralBodyPosition < previousPosition;
 
 							previousPosition = node.LateralBodyPosition;
-							previousTime = node.TimeMicros;
+							previousTime = node.Time;
 							stepCounter--;
 						}
 
@@ -698,8 +698,8 @@ namespace StepManiaLibrary
 					// in one direction, then perform the nps and speed checks.
 					if (stepCounter == 0)
 					{
-						var nps = config.LateralTighteningPatternLength / ToSeconds(TimeMicros - previousTime);
-						var speed = Math.Abs(LateralBodyPosition - previousPosition) / ToSeconds(TimeMicros - previousTime);
+						var nps = config.LateralTighteningPatternLength / (Time - previousTime);
+						var speed = Math.Abs(LateralBodyPosition - previousPosition) / (Time - previousTime);
 						if (((averageNps > 0.0 && nps > averageNps * config.LateralTighteningRelativeNPS)
 						     || nps > config.LateralTighteningAbsoluteNPS)
 						    && speed > config.LateralTighteningSpeed)
@@ -1225,7 +1225,7 @@ namespace StepManiaLibrary
 											nextGraphNode,
 											graphLinksToNextNode,
 											graphLink,
-											expressedChart.StepEvents[depth].TimeMicros,
+											expressedChart.StepEvents[depth].Time,
 											nextDepth,
 											searchNode,
 											actions,
@@ -1357,7 +1357,7 @@ namespace StepManiaLibrary
 		//	var validStepTypes = new[] {StepType.NewArrow, StepType.SameArrow};
 
 		//	// up front, loop over all the events in the chart and the configs to make a mapping
-		//	// with the cached timemicros and positions by index.
+		//	// with the cached time and positions by index.
 		//	var timingPerSection = DetermineFillSectionTiming(fillSections, chart);
 
 		//	var sectionIndex = 0;
@@ -1439,7 +1439,7 @@ namespace StepManiaLibrary
 		//			rootGraphLink.Links[foot, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
 		//			possibleGraphLinksToNextNode.Add(rootGraphLink);
 		//		}
-				
+
 		//		var rootSearchNode = new SearchNode(
 		//			rootGraphNode,
 		//			possibleGraphLinksToNextNode,
@@ -1459,8 +1459,8 @@ namespace StepManiaLibrary
 
 		//		foreach(var timingInfo in sectionTiming)
 		//		{
-		//			var timeMicros = timingInfo.Item1;
-					
+		//			var timeSeconds = timingInfo.Item1;
+
 		//			// Failed to find a path.
 		//			if (currentSearchNodes.Count == 0)
 		//			{
@@ -1493,7 +1493,7 @@ namespace StepManiaLibrary
 		//						var nextGraphNode = nextNodes[n];
 		//						// Determine new step information.
 		//						var actions = GetActionsForNode(nextGraphNode, graphLink, stepGraph.NumArrows);
-								
+
 		//						possibleGraphLinksToNextNode = new List<GraphLink>();
 		//						foreach (var stepType in validStepTypes)
 		//						{
@@ -1509,7 +1509,7 @@ namespace StepManiaLibrary
 		//							nextGraphNode,
 		//							possibleGraphLinksToNextNode,
 		//							graphLink,
-		//							timeMicros,
+		//							timeSeconds,
 		//							nextDepth,
 		//							searchNode,
 		//							actions,
@@ -1657,7 +1657,7 @@ namespace StepManiaLibrary
 		//}
 
 		// TODO: Rewrite
-		//private static Tuple<long, int>[][] DetermineFillSectionTiming(
+		//private static Tuple<double, int>[][] DetermineFillSectionTiming(
 		//	List<FillSectionConfig> fillSections,
 		//	Chart chart)
 		//{
@@ -1681,7 +1681,7 @@ namespace StepManiaLibrary
 		//				IndexWithinSection = indexWithinSection,
 		//				Position = pos
 		//			});
-					
+
 		//			indexWithinSection++;
 		//			pos += SMCommon.MaxValidDenominator / config.BeatSubDivisionToFill;
 		//		}
@@ -1689,10 +1689,10 @@ namespace StepManiaLibrary
 		//	}
 
 		//	FillEvents.Sort(new FillEventComparer());
-			
-		//	var sectionData = new Tuple<long, int>[numSections][];
+
+		//	var sectionData = new Tuple<double, int>[numSections][];
 		//	for (var si = 0; si < numSections; si++)
-		//		sectionData[si] = new Tuple<long, int>[numEventsInSection[si]];
+		//		sectionData[si] = new Tuple<double, int>[numEventsInSection[si]];
 
 		//	var bpm = 0.0;
 		//	var timeSignature = new Fraction(4, 4);
@@ -1718,9 +1718,8 @@ namespace StepManiaLibrary
 		//		// Add the timing data.
 		//		if (fillEvent.Event == null)
 		//		{
-		//			var timeMicros = ToMicros(currentTime);
 		//			sectionData[fillEvent.SectionIndex][fillEvent.IndexWithinSection] =
-		//				new Tuple<long, int>(timeMicros, fillEvent.Position);
+		//				new Tuple<double, int>(currentTime, fillEvent.Position);
 		//		}
 
 		//		// Process tempo changes and stops.
@@ -1729,7 +1728,7 @@ namespace StepManiaLibrary
 		//			var chartEvent = fillEvent.Event;
 		//			var beatTimeDirty = false;
 		//			if (chartEvent is Stop stop)
-		//				currentTime += ToSeconds(stop.LengthMicros);
+		//				currentTime += stop.LengthSeconds;
 		//			else if (chartEvent is TimeSignature ts)
 		//			{
 		//				timeSignature = ts.Signature;
@@ -1764,8 +1763,8 @@ namespace StepManiaLibrary
 		private static double FindNPS(ExpressedChart expressedChart)
 		{
 			var nps = 0.0;
-			var startTime = long.MaxValue;
-			var endTime = 0L;
+			var startTime = double.MaxValue;
+			var endTime = 0.0;
 			var numSteps = 0;
 			for (var e = 0; e < expressedChart.StepEvents.Count; e++)
 			{
@@ -1777,10 +1776,10 @@ namespace StepManiaLibrary
 						if (stepEvent.LinkInstance.GraphLink.Links[f, p].Valid
 						    && stepEvent.LinkInstance.GraphLink.Links[f, p].Action != FootAction.Release)
 						{
-							if (stepEvent.TimeMicros < startTime)
-								startTime = stepEvent.TimeMicros;
+							if (stepEvent.Time < startTime)
+								startTime = stepEvent.Time;
 							numSteps++;
-							endTime = stepEvent.TimeMicros;
+							endTime = stepEvent.Time;
 						}
 					}
 				}
@@ -1788,7 +1787,7 @@ namespace StepManiaLibrary
 
 			if (endTime > startTime)
 			{
-				nps = numSteps / ToSeconds(endTime - startTime);
+				nps = numSteps / (endTime - startTime);
 			}
 
 			return nps;

@@ -34,7 +34,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.AreEqual(4, ts.Signature.Numerator);
 				Assert.AreEqual(4, ts.Signature.Denominator);
-				AssertPositionMatches(ts, 0, 0L, 0);
+				AssertPositionMatches(ts, 0, 0.0, 0);
 			}
 			else
 			{
@@ -45,7 +45,7 @@ namespace ChartGeneratorTests
 			if (e[i] is Tempo t)
 			{
 				Assert.AreEqual(expectedTempo, t.TempoBPM);
-				AssertPositionMatches(t, 0, 0L, 0);
+				AssertPositionMatches(t, 0, 0.0, 0);
 			}
 			else
 			{
@@ -60,7 +60,7 @@ namespace ChartGeneratorTests
 			if (e[i] is ScrollRate sr)
 			{
 				Assert.AreEqual(1.0, sr.Rate);
-				AssertPositionMatches(sr, 0, 0L, 0);
+				AssertPositionMatches(sr, 0, 0.0, 0);
 			}
 			else
 			{
@@ -72,8 +72,8 @@ namespace ChartGeneratorTests
 			{
 				Assert.AreEqual(1.0, sri.Rate);
 				Assert.AreEqual(0, sri.PeriodLengthIntegerPosition);
-				Assert.AreEqual(0L, sri.PeriodTimeMicros);
-				AssertPositionMatches(sri, 0, 0L, 0);
+				Assert.AreEqual(0.0, sri.PeriodTimeSeconds);
+				AssertPositionMatches(sri, 0, 0.0, 0);
 			}
 			else
 			{
@@ -84,7 +84,7 @@ namespace ChartGeneratorTests
 			if (e[i] is TickCount tc)
 			{
 				Assert.AreEqual(4, tc.Ticks);
-				AssertPositionMatches(tc, 0, 0L, 0);
+				AssertPositionMatches(tc, 0, 0.0, 0);
 			}
 			else
 			{
@@ -96,7 +96,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.AreEqual(1.0, m.HitMultiplier);
 				Assert.AreEqual(1.0, m.MissMultiplier);
-				AssertPositionMatches(m, 0, 0L, 0);
+				AssertPositionMatches(m, 0, 0.0, 0);
 			}
 			else
 			{
@@ -106,7 +106,7 @@ namespace ChartGeneratorTests
 
 			if (e[i] is Label l)
 			{
-				AssertPositionMatches(l, 0, 0L, 0);
+				AssertPositionMatches(l, 0, 0.0, 0);
 			}
 			else
 			{
@@ -138,12 +138,12 @@ namespace ChartGeneratorTests
 			{
 				var noteIndex = eventIndex - numNonTapEvents;
 				var integerPos = noteIndex * 12;
-				var timeMicros = ToMicrosRounded(noteIndex * secondsBetweenSixteenths);
+				var time = noteIndex * secondsBetweenSixteenths;
 				var measure = noteIndex / 16;
 				var beat = noteIndex / 4 - (measure * 4);
 				var subDivisionNumerator = noteIndex % 4;
 				var subDivisionDenominator = 4;
-				AssertPositionMatches(e[eventIndex], integerPos, timeMicros, measure, beat, subDivisionNumerator, subDivisionDenominator);
+				AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator, subDivisionDenominator);
 			}
 		}
 
@@ -169,7 +169,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					ToMicrosRounded((li - ln) * secondsBetweenSixteenths),
+					(li - ln) * secondsBetweenSixteenths,
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -391,7 +391,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					ToMicrosRounded((li - ln) * secondsBetweenSixteenths),
+					(li - ln) * secondsBetweenSixteenths,
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -429,7 +429,7 @@ namespace ChartGeneratorTests
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					ToMicrosRounded((li - ln) * secondsBetweenSixteenths),
+					(li - ln) * secondsBetweenSixteenths,
 					lm, lb, lfn, lfd);
 				li++;
 			}
@@ -447,7 +447,7 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
-		/// Checks that stop timings affect event TimeMicros but not IntegerPosition or MetricPosition.
+		/// Checks that stop timings affect event TimeSeconds but not IntegerPosition or MetricPosition.
 		/// </summary>
 		[TestMethod]
 		public void TestStopTiming()
@@ -462,26 +462,26 @@ namespace ChartGeneratorTests
 			var bpm = 120.0;
 			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
 			var numNonTapEvents = i;
-			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, long tst)
+			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tst)
 			{
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					ToMicrosRounded((li - ln) * secondsBetweenSixteenths) + tst,
+					(li - ln) * secondsBetweenSixteenths + tst,
 					lm, lb, lfn, lfd);
 				li++;
 			}
 
-			var stopTime = 0L;
+			var stopTime = 0.0;
 			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, stopTime);
 			// Stop at 0.000 for 1.111
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(stop.LengthMicros, 1111000);
+					Assert.AreEqual(stop.LengthSeconds, 1.111);
 					numNonTapEvents++;
 					CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, stopTime);
-					stopTime += stop.LengthMicros;
+					stopTime += stop.LengthSeconds;
 				}
 				else
 				{
@@ -494,10 +494,10 @@ namespace ChartGeneratorTests
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(stop.LengthMicros, 666000);
+					Assert.AreEqual(stop.LengthSeconds, 0.666);
 					numNonTapEvents++;
 					CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, stopTime);
-					stopTime += stop.LengthMicros;
+					stopTime += stop.LengthSeconds;
 				}
 				else
 				{
@@ -522,10 +522,10 @@ namespace ChartGeneratorTests
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(stop.LengthMicros, 99999000);
+					Assert.AreEqual(stop.LengthSeconds, 99.999);
 					numNonTapEvents++;
 					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, stopTime);
-					stopTime += stop.LengthMicros;
+					stopTime += stop.LengthSeconds;
 				}
 				else
 				{
@@ -550,7 +550,7 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
-		/// Checks that Delays affect event TimeMicros but not IntegerPosition or MetricPosition.
+		/// Checks that Delays affect event TimeSeconds but not IntegerPosition or MetricPosition.
 		/// </summary>
 		[TestMethod]
 		public void TestDelayTiming()
@@ -565,26 +565,26 @@ namespace ChartGeneratorTests
 			var bpm = 120.0;
 			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
 			var numNonTapEvents = i;
-			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, long tst)
+			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tst)
 			{
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					ToMicrosRounded((li - ln) * secondsBetweenSixteenths) + tst,
+					(li - ln) * secondsBetweenSixteenths + tst,
 					lm, lb, lfn, lfd);
 				li++;
 			}
 
-			var stopTime = 0L;
+			var stopTime = 0.0;
 			// Delay at 0.000 for 1.111
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(stop.LengthMicros, 1111000);
+					Assert.AreEqual(stop.LengthSeconds, 1.111);
 					Assert.IsTrue(stop.IsDelay);
 					CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, stopTime);
 					numNonTapEvents++; 
-					stopTime += stop.LengthMicros;
+					stopTime += stop.LengthSeconds;
 				}
 				else
 				{
@@ -597,11 +597,11 @@ namespace ChartGeneratorTests
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(stop.LengthMicros, 666000);
+					Assert.AreEqual(stop.LengthSeconds, 0.666);
 					Assert.IsTrue(stop.IsDelay);
 					CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, stopTime);
 					numNonTapEvents++;
-					stopTime += stop.LengthMicros;
+					stopTime += stop.LengthSeconds;
 				}
 				else
 				{
@@ -626,11 +626,11 @@ namespace ChartGeneratorTests
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(stop.LengthMicros, 99999000);
+					Assert.AreEqual(stop.LengthSeconds, 99.999);
 					Assert.IsTrue(stop.IsDelay);
 					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, stopTime);
 					numNonTapEvents++;
-					stopTime += stop.LengthMicros;
+					stopTime += stop.LengthSeconds;
 				}
 				else
 				{
@@ -656,7 +656,7 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
-		/// Checks that tempo changes affect event TimeMicros but not IntegerPosition or MetricPosition.
+		/// Checks that tempo changes affect event TimeSeconds but not IntegerPosition or MetricPosition.
 		/// </summary>
 		[TestMethod]
 		public void TestTempoChangeTiming()
@@ -669,7 +669,7 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var numNonTapEvents = i;
-			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, long tm)
+			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tm)
 			{
 				AssertPositionMatches(
 					e[li],
@@ -679,16 +679,16 @@ namespace ChartGeneratorTests
 				li++;
 			}
 			
-			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 125000L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 250000L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 3, 4, 375000L);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0.0);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 0.125000);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 0.250000);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 3, 4, 0.375000);
 			// BPM at 1.000000: 240.000000
 			{
 				if (e[i] is Tempo tc)
 				{
 					Assert.AreEqual(tc.TempoBPM, 240.0);
-					CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 500000L);
+					CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 0.500000);
 					numNonTapEvents++;
 				}
 				else
@@ -696,24 +696,24 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 1, 4, 562500L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 2, 4, 625000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 3, 4, 687500L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 0, 4, 750000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 1, 4, 812500L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 2, 4, 875000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 3, 4, 937500L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 0, 4, 1000000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 1, 4, 1062500L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 2, 4, 1125000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 3, 4, 1187500L);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 0.500000);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 1, 4, 0.562500);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 2, 4, 0.625000);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 3, 4, 0.687500);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 0, 4, 0.750000);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 1, 4, 0.812500);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 2, 4, 0.875000);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 3, 4, 0.937500);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 0, 4, 1.000000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 1, 4, 1.062500);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 2, 4, 1.125000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 3, 4, 1.187500);
 			// BPM at 3.999999 (rounded to 4.0): 60.000000
 			{
 				if (e[i] is Tempo tc)
 				{
 					Assert.AreEqual(tc.TempoBPM, 60.0);
-					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1250000L);
+					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1.250000);
 					numNonTapEvents++;
 				}
 				else
@@ -721,14 +721,14 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1250000L);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1.250000);
 
 			// BPM at 4.251000 (rounded to 4.25): 120.000000
 			{
 				if (e[i] is Tempo tc)
 				{
 					Assert.AreEqual(tc.TempoBPM, 120.0);
-					CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1500000L);
+					CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1.500000);
 					numNonTapEvents++;
 				}
 				else
@@ -736,25 +736,25 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 2, 4, 1625000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 3, 4, 1750000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1875000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 1, 4, 2000000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 2, 4, 2125000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 3, 4, 2250000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 0, 4, 2375000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 1, 4, 2500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 2, 4, 2625000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 3, 4, 2750000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 0, 4, 2875000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 1, 4, 3000000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 2, 4, 3125000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 3, 4, 3250000L);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 2, 4, 1.625000);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 3, 4, 1.750000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1.875000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 1, 4, 2.000000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 2, 4, 2.125000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 3, 4, 2.250000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 0, 4, 2.375000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 1, 4, 2.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 2, 4, 2.625000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 3, 4, 2.750000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 0, 4, 2.875000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 1, 4, 3.000000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 2, 4, 3.125000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 3, 4, 3.250000);
 		}
 
 		/// <summary>
-		/// Checks that stutter gimmicks function as intended without affecting TimeMicros, IntegerPosition, or MetricPosition
+		/// Checks that stutter gimmicks function as intended without affecting TimeSeconds, IntegerPosition, or MetricPosition
 		/// </summary>
 		[TestMethod]
 		public void TestStutterGimmickTiming()
@@ -776,14 +776,14 @@ namespace ChartGeneratorTests
 			{
 				var noteIndex = eventIndex - numNonTapEvents;
 				var integerPos = noteIndex * 12;
-				var timeMicros = ToMicrosRounded(noteIndex * secondsBetweenSixteenths);
+				var time = noteIndex * secondsBetweenSixteenths;
 				var measure = noteIndex / 16;
 				var beat = noteIndex / 4 - (measure * 4);
 				var subDivisionNumerator = noteIndex % 4;
 				var subDivisionDenominator = 4;
 
 				// Tap note
-				AssertPositionMatches(e[eventIndex], integerPos, timeMicros, measure, beat, subDivisionNumerator, subDivisionDenominator);
+				AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator, subDivisionDenominator);
 				eventIndex++;
 
 				// Stop
@@ -791,8 +791,8 @@ namespace ChartGeneratorTests
 				{
 					if (e[eventIndex] is Stop stop)
 					{
-						Assert.AreEqual(stop.LengthMicros, 62500);
-						AssertPositionMatches(e[eventIndex], integerPos, timeMicros, measure, beat, subDivisionNumerator,
+						Assert.AreEqual(stop.LengthSeconds, 0.0625);
+						AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator,
 							subDivisionDenominator);
 						numNonTapEvents++;
 					}
@@ -806,7 +806,7 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
-		/// Checks that Warps affect event TimeMicros but not IntegerPosition or MetricPosition.
+		/// Checks that Warps affect event TimeSeconds but not IntegerPosition or MetricPosition.
 		/// </summary>
 		[TestMethod]
 		public void TestWarpTiming()
@@ -820,7 +820,7 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var numNonTapEvents = i;
-			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, long tm)
+			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tm)
 			{
 				AssertPositionMatches(
 					e[li],
@@ -830,17 +830,17 @@ namespace ChartGeneratorTests
 				li++;
 			}
 
-			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 125000L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 250000L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 3, 4, 375000L);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0.0);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 0.125000);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 0.250000);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 3, 4, 0.375000);
 
 			// Warp at 1.000000 for 1 beat (48 rows)
 			{
 				if (e[i] is Warp warp)
 				{
 					Assert.AreEqual(48, warp.LengthIntegerPosition);
-					CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 500000L);
+					CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 0.500000);
 					numNonTapEvents++;
 				}
 				else
@@ -848,26 +848,26 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 1, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 2, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 3, 4, 500000L);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 0.500000);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 1, 4, 0.500000);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 2, 4, 0.500000);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 3, 4, 0.500000);
 
-			CheckPos(ref i, numNonTapEvents, 0, 2, 0, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 1, 4, 625000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 2, 4, 750000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 3, 4, 875000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 0, 4, 1000000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 1, 4, 1125000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 2, 4, 1250000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 3, 4, 1375000L);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 0, 4, 0.500000);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 1, 4, 0.625000);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 2, 4, 0.750000);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 3, 4, 0.875000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 0, 4, 1.000000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 1, 4, 1.125000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 2, 4, 1.250000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 3, 4, 1.375000);
 
 			// Warp at 4.000000 for 3 beats (144 rows)
 			{
 				if (e[i] is Warp warp)
 				{
 					Assert.AreEqual(144, warp.LengthIntegerPosition);
-					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1500000L);
+					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1.500000);
 					numNonTapEvents++;
 				}
 				else
@@ -875,17 +875,17 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 3, 4, 1500000L);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 2, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 3, 4, 1.500000);
 			// Warp at 5.000000 for 1 beat (48 rows)
 			// This Warp is inside the previous Warp. They should not stack.
 			{
 				if (e[i] is Warp warp)
 				{
 					Assert.AreEqual(48, warp.LengthIntegerPosition);
-					CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1500000L);
+					CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1.500000);
 					numNonTapEvents++;
 				}
 				else
@@ -893,23 +893,23 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 3, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 3, 4, 1500000L);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 1, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 2, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 3, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 0, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 1, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 2, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 3, 4, 1.500000);
 
-			CheckPos(ref i, numNonTapEvents, 1, 3, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 1, 4, 1625000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 2, 4, 1750000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 3, 4, 1875000L);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 0, 4, 1.500000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 1, 4, 1.625000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 2, 4, 1.750000);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 3, 4, 1.875000);
 		}
 
 		/// <summary>
-		/// Checks that negative Stops affect event TimeMicros but not IntegerPosition or MetricPosition.
+		/// Checks that negative Stops affect event TimeSeconds but not IntegerPosition or MetricPosition.
 		/// </summary>
 		[TestMethod]
 		public void TestNegativeStopTiming()
@@ -925,27 +925,27 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i, 120.0, true);
 
 			var numNonTapEvents = i;
-			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, long tm)
+			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double ts)
 			{
 				AssertPositionMatches(
 					e[li],
 					(li - ln) * 12,
-					tm,
+					ts,
 					lm, lb, lfn, lfd);
 				li++;
 			}
 
-			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 125000L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 250000L);
-			CheckPos(ref i, numNonTapEvents, 0, 0, 3, 4, 375000L);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0.0);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 0.125);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 0.250);
+			CheckPos(ref i, numNonTapEvents, 0, 0, 3, 4, 0.375);
 
 			// Negative Stop at 1.000000 for 1 beat (-0.5s)
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(-500000, stop.LengthMicros);
-					CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 500000L);
+					Assert.AreEqual(-0.5, stop.LengthSeconds);
+					CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 0.5);
 					numNonTapEvents++;
 				}
 				else
@@ -953,26 +953,26 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 1, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 2, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 1, 3, 4, 500000L);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 0, 4, 0.5);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 1, 4, 0.5);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 2, 4, 0.5);
+			CheckPos(ref i, numNonTapEvents, 0, 1, 3, 4, 0.5);
 
-			CheckPos(ref i, numNonTapEvents, 0, 2, 0, 4, 500000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 1, 4, 625000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 2, 4, 750000L);
-			CheckPos(ref i, numNonTapEvents, 0, 2, 3, 4, 875000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 0, 4, 1000000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 1, 4, 1125000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 2, 4, 1250000L);
-			CheckPos(ref i, numNonTapEvents, 0, 3, 3, 4, 1375000L);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 0, 4, 0.5);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 1, 4, 0.625);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 2, 4, 0.750);
+			CheckPos(ref i, numNonTapEvents, 0, 2, 3, 4, 0.875);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 0, 4, 1.000);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 1, 4, 1.125);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 2, 4, 1.250);
+			CheckPos(ref i, numNonTapEvents, 0, 3, 3, 4, 1.375);
 
 			// Negative Stop at 4.000000 for 3 beats (-1.5s)
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(-1500000, stop.LengthMicros);
-					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1500000L);
+					Assert.AreEqual(-1.5, stop.LengthSeconds);
+					CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1.5);
 					numNonTapEvents++;
 				}
 				else
@@ -980,17 +980,17 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 0, 3, 4, 1500000L);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 1, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 2, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 0, 3, 4, 1.5);
 			// Negative Stop at 5.000000 for 1 beat (-1.5s)
 			// This negative Stop is inside the previous negative Stop. Unlike Warps, they should stack.
 			{
 				if (e[i] is Stop stop)
 				{
-					Assert.AreEqual(-500000, stop.LengthMicros);
-					CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1500000L);
+					Assert.AreEqual(-0.5, stop.LengthSeconds);
+					CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1.5);
 					numNonTapEvents++;
 				}
 				else
@@ -998,18 +998,18 @@ namespace ChartGeneratorTests
 					Assert.Fail();
 				}
 			}
-			CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 1, 3, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 2, 3, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 0, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 1, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 2, 4, 1500000L);
-			CheckPos(ref i, numNonTapEvents, 1, 3, 3, 4, 1500000L);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 0, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 1, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 2, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 1, 3, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 0, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 1, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 2, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 2, 3, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 0, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 1, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 2, 4, 1.5);
+			CheckPos(ref i, numNonTapEvents, 1, 3, 3, 4, 1.5);
 		}
 
 		[TestMethod]
@@ -1050,7 +1050,7 @@ namespace ChartGeneratorTests
 						var integerPosition = rowInMeasure + measure * 192;
 						var beat = (integerPosition - (measure * 192)) / 48;
 						var numerator = integerPosition - (measure * 192) - (beat * 48);
-						var micros = ToMicrosRounded(integerPosition * (60.0 / bpm) / 48);
+						var time = integerPosition * (60.0 / bpm / 48);
 
 						if (e[i].Extras.TryGetSourceExtra(SMCommon.TagFumenNoteOriginalMeasurePosition, out Fraction f))
 						{
@@ -1071,7 +1071,7 @@ namespace ChartGeneratorTests
 							Assert.Fail();
 						}
 
-						AssertPositionMatches(e[i], integerPosition, micros, measure, beat, numerator, 48);
+						AssertPositionMatches(e[i], integerPosition, time, measure, beat, numerator, 48);
 						i++;
 					}
 				}

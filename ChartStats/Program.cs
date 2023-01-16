@@ -177,8 +177,8 @@ namespace ChartStats
 					var previousStepWasFullyOnRight = false;
 					var currentHolds = new bool[chart.NumInputs];
 					var firstNote = true;
-					var firstNoteTimeMicros = 0L;
-					var lastNoteTimeMicros = 0L;
+					var firstNoteTime = 0.0;
+					var lastNoteTime = 0.0;
 					var previousSteps = new bool[chart.NumInputs];
 					var currentSteps = new bool[chart.NumInputs];
 					var timeOfFirstStepOnCurrentSide = 0.0;
@@ -210,7 +210,7 @@ namespace ChartStats
 						{
 							var chartEvent = chart.Layers[0].Events[i];
 							currentPosition = chartEvent.MetricPosition;
-							currentTime = Utils.ToSeconds(chartEvent.TimeMicros);
+							currentTime = chartEvent.TimeSeconds;
 
 							// Record data about the step.
 							var lane = -1;
@@ -219,8 +219,8 @@ namespace ChartStats
 								lane = lhsn.Lane;
 								currentHolds[lane] = true;
 								if (firstNote)
-									firstNoteTimeMicros = lhsn.TimeMicros;
-								lastNoteTimeMicros = lhsn.TimeMicros;
+									firstNoteTime = lhsn.TimeSeconds;
+								lastNoteTime = lhsn.TimeSeconds;
 								firstNote = false;
 								currentSteps[lane] = true;
 							}
@@ -232,8 +232,8 @@ namespace ChartStats
 							{
 								lane = ltn.Lane;
 								if (firstNote)
-									firstNoteTimeMicros = ltn.TimeMicros;
-								lastNoteTimeMicros = ltn.TimeMicros;
+									firstNoteTime = ltn.TimeSeconds;
+								lastNoteTime = ltn.TimeSeconds;
 								firstNote = false;
 								currentSteps[lane] = true;
 							}
@@ -374,7 +374,7 @@ namespace ChartStats
 					if (totalSteps == 0)
 						continue;
 
-					var playTime = Utils.ToSeconds(lastNoteTimeMicros - firstNoteTimeMicros);
+					var playTime = lastNoteTime - firstNoteTime;
 					var nps = totalSteps / playTime;
 
 					// Record song stats.

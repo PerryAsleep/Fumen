@@ -568,7 +568,7 @@ namespace Fumen.Converters
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
-					length = Utils.ToSeconds(stop.LengthMicros);
+					length = stop.LengthSeconds;
 				var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
 
 				sb.Append($"{timeInBeatsStr}={lengthStr}");
@@ -804,12 +804,12 @@ namespace Fumen.Converters
 				}
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
-				var modeStr = scroll.PreferPeriodAsTimeMicros ? "1" : "0";
+				var modeStr = scroll.PreferPeriodAsTime ? "1" : "0";
 				var speedStr = scroll.Rate.ToString(SMCommon.SMDoubleFormat);
 				var lengthStr = "";
-				if (scroll.PreferPeriodAsTimeMicros)
+				if (scroll.PreferPeriodAsTime)
 				{
-					lengthStr = Utils.ToSeconds(scroll.PeriodTimeMicros).ToString(SMCommon.SMDoubleFormat);
+					lengthStr = scroll.PeriodTimeSeconds.ToString(SMCommon.SMDoubleFormat);
 				}
 				else
 				{
@@ -1070,7 +1070,7 @@ namespace Fumen.Converters
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				if (!f.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
-					length = Utils.ToSeconds(f.LengthMicros);
+					length = f.LengthSeconds;
 				var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
 
 				sb.Append($"{timeInBeatsStr}={lengthStr}");

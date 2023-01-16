@@ -246,7 +246,7 @@ namespace Fumen.Converters
 					song.Extras,
 					timingProperties.Tempos);
 
-			SMCommon.SetEventTimeMicrosAndMetricPositionsFromRows(chart);
+			SMCommon.SetEventTimeAndMetricPositionsFromRows(chart);
 
 			// Add the Chart.
 			song.Charts.Add(chart);

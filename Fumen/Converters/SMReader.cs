@@ -163,7 +163,7 @@ namespace Fumen.Converters
 					chart.Genre = song.Genre;
 					chart.GenreTransliteration = song.GenreTransliteration;
 					chart.Author = chartAuthor;
-					SMCommon.SetEventTimeMicrosAndMetricPositionsFromRows(chart);
+					SMCommon.SetEventTimeAndMetricPositionsFromRows(chart);
 				}
 			}, token);
 

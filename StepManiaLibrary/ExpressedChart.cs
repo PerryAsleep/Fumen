@@ -57,10 +57,10 @@ namespace StepManiaLibrary
 		/// </summary>
 		public abstract class ChartEvent
 		{
-			protected ChartEvent(int position, long timeMicros)
+			protected ChartEvent(int position, double time)
 			{
 				Position = position;
-				TimeMicros = timeMicros;
+				Time = time;
 			}
 
 			/// <summary>
@@ -69,9 +69,9 @@ namespace StepManiaLibrary
 			public int Position = -1;
 
 			/// <summary>
-			/// Time in microseconds of this event.
+			/// Time in seconds of this event.
 			/// </summary>
-			public long TimeMicros;
+			public double Time;
 		}
 
 		/// <summary>
@@ -79,8 +79,8 @@ namespace StepManiaLibrary
 		/// </summary>
 		public class StepEvent : ChartEvent
 		{
-			public StepEvent(int position, long timeMicros, GraphLinkInstance linkInstance)
-				: base(position, timeMicros)
+			public StepEvent(int position, double time, GraphLinkInstance linkInstance)
+				: base(position, time)
 			{
 				LinkInstance = linkInstance;
 			}
@@ -98,8 +98,8 @@ namespace StepManiaLibrary
 		/// </summary>
 		public class MineEvent : ChartEvent
 		{
-			public MineEvent(int position, long timeMicros, int arrow)
-				: base(position, timeMicros)
+			public MineEvent(int position, double time, int arrow)
+				: base(position, time)
 			{
 				OriginalArrow = arrow;
 			}
@@ -171,7 +171,7 @@ namespace StepManiaLibrary
 			/// <summary>
 			/// Time in microseconds in the Chart of this ChartSearchNode.
 			/// </summary>
-			public readonly long TimeMicros;
+			public readonly double TimeSeconds;
 
 			/// <summary>
 			/// Cumulative Cost to reach this ChartSearchNode.
@@ -210,7 +210,7 @@ namespace StepManiaLibrary
 			public ChartSearchNode(
 				GraphNode graphNode,
 				int position,
-				long timeMicros,
+				double timeSeconds,
 				ChartSearchNode previousNode,
 				GraphLinkInstance previousLink,
 				InstanceStepType[] instanceTypes)
@@ -218,7 +218,7 @@ namespace StepManiaLibrary
 				Id = Interlocked.Increment(ref IdCounter);
 				GraphNode = graphNode;
 				Position = position;
-				TimeMicros = timeMicros;
+				TimeSeconds = timeSeconds;
 				PreviousNode = previousNode;
 				PreviousLink = previousLink;
 				InstanceTypes = instanceTypes;
@@ -536,9 +536,9 @@ namespace StepManiaLibrary
 						var brackets = expressedChart.GetBracketCount();
 						if (brackets > 0)
 						{
-							var startTime = expressedChart.Events.First().TimeMicros;
-							var endTime = expressedChart.Events.Last().TimeMicros;
-							var bracketsPerMinute = brackets / (Utils.ToSeconds(endTime - startTime) / 60.0);
+							var startTime = expressedChart.Events.First().TimeSeconds;
+							var endTime = expressedChart.Events.Last().TimeSeconds;
+							var bracketsPerMinute = brackets / ((endTime - startTime) / 60.0);
 							if (bracketsPerMinute >= config.BalancedBracketsPerMinuteForAggressiveBrackets)
 							{
 								bracketParsingMethod = BracketParsingMethod.Aggressive;
@@ -645,7 +645,7 @@ namespace StepManiaLibrary
 				}
 
 				// Parse all the events at the next position.
-				ParseNextEvents(ref eventIndex, out var releases, out var mines, out var steps, out long timeMicros);
+				ParseNextEvents(ref eventIndex, out var releases, out var mines, out var steps, out double timeSeconds);
 
 				// Process Releases.
 				if (releases.Count > 0)
@@ -660,7 +660,7 @@ namespace StepManiaLibrary
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						releases[0].IntegerPosition, timeMicros, lastMines, lastReleases);
+						releases[0].IntegerPosition, timeSeconds, lastMines, lastReleases);
 				}
 
 				// Get mines and record them for processing after the search is complete.
@@ -698,7 +698,7 @@ namespace StepManiaLibrary
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						steps[0].IntegerPosition, timeMicros, lastMines, lastReleases);
+						steps[0].IntegerPosition, timeSeconds, lastMines, lastReleases);
 				}
 
 				// Update the current state now that the events at this position have been processed.
@@ -834,24 +834,24 @@ namespace StepManiaLibrary
 		/// <param name="releases">List of LaneHoldEndNotes to hold all releases.</param>
 		/// <param name="mines">List of LaneNotes to hold all mines.</param>
 		/// <param name="steps">List of LaneNotes to hold all taps, holds, and rolls.</param>
-		/// <param name="timeMicros">Time in microseconds of the events.</param>
+		/// <param name="time">Time in seconds of the events.</param>
 		private void ParseNextEvents(
 			ref int eventIndex,
 			out List<LaneHoldEndNote> releases,
 			out List<LaneNote> mines,
 			out List<LaneNote> steps,
-			out long timeMicros)
+			out double time)
 		{
 			releases = new List<LaneHoldEndNote>();
 			mines = new List<LaneNote>();
 			steps = new List<LaneNote>();
-			timeMicros = 0L;
+			time = 0.0;
 
 			if (eventIndex >= Events.Count)
 				return;
 
 			var pos = Events[eventIndex].IntegerPosition;
-			timeMicros = Events[eventIndex].TimeMicros;
+			time = Events[eventIndex].TimeSeconds;
 			while (eventIndex < Events.Count && Events[eventIndex].IntegerPosition == pos)
 			{
 				if (Events[eventIndex] is LaneHoldEndNote lhen)
@@ -875,7 +875,7 @@ namespace StepManiaLibrary
 		/// <param name="currentState">Current state to search for paths into.</param>
 		/// <param name="generatedStateBuffer">Buffer to hold State when comparing in GetLinkInstanceIfStateMatches.</param>
 		/// <param name="position">IntegerPosition of the state.</param>
-		/// <param name="timeMicros">Time in microseconds of the state.</param>
+		/// <param name="timeSeconds">Time in seconds of the state.</param>
 		/// <param name="lastMines">IntegerPosition of last mines per arrow. Needed for cost determination.</param>
 		/// <param name="lastReleases">IntegerPosition of last releases per arrow. Needed for cost determination.</param>
 		/// <returns>HashSet of all lowest cost ChartSearchNodes satisfying this state.</returns>
@@ -884,7 +884,7 @@ namespace StepManiaLibrary
 			SearchState[] currentState,
 			SearchState[] generatedStateBuffer,
 			int position,
-			long timeMicros,
+			double timeSeconds,
 			int[] lastMines,
 			int[] lastReleases)
 		{
@@ -922,7 +922,7 @@ namespace StepManiaLibrary
 						var childSearchNode = new ChartSearchNode(
 							childNode,
 							position,
-							timeMicros,
+							timeSeconds,
 							searchNode,
 							linkInstance,
 							instanceTypes);
@@ -2145,7 +2145,7 @@ namespace StepManiaLibrary
 			while (searchNode != null)
 			{
 				// Create a new StepEvent for this step ChartSearchNode for adding to the ExpressedChart.
-				var stepEvent = new StepEvent(searchNode.Position, searchNode.TimeMicros, searchNode.PreviousLink);
+				var stepEvent = new StepEvent(searchNode.Position, searchNode.TimeSeconds, searchNode.PreviousLink);
 
 				// Set up the Link for the StepEvent and advance to the next ChartSearchNode.
 				if (searchNode.NextNodes.Count > 0)

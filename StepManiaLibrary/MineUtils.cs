@@ -242,7 +242,7 @@ namespace StepManiaLibrary
 			var (n, f) = GetHowRecentIsNeighboringArrow(true, releaseIndex, numArrows, releases, mine.Lane);
 			if (n >= 0)
 			{
-				return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeMicros, mine.Lane)
+				return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeSeconds, mine.Lane)
 				{
 					Type = MineType.AfterArrow,
 					ArrowIsNthClosest = n,
@@ -255,7 +255,7 @@ namespace StepManiaLibrary
 			(n, f) = GetHowRecentIsNeighboringArrow(false, stepIndex, numArrows, steps, mine.Lane);
 			if (n >= 0)
 			{
-				return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeMicros, mine.Lane)
+				return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeSeconds, mine.Lane)
 				{
 					Type = MineType.BeforeArrow,
 					ArrowIsNthClosest = n,
@@ -264,7 +264,7 @@ namespace StepManiaLibrary
 			}
 
 			// The mine could not be associated with an arrow, use the default NoArrow type.
-			return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeMicros, mine.Lane);
+			return new ExpressedChart.MineEvent(mine.IntegerPosition, mine.TimeSeconds, mine.Lane);
 		}
 
 		/// <summary>

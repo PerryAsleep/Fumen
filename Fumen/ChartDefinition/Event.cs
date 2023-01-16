@@ -8,9 +8,10 @@ namespace Fumen.ChartDefinition
 	public abstract class Event
 	{
 		/// <summary>
-		/// Position of this Event represented as time in microseconds.
+		/// Position of this Event represented as time in seconds.
 		/// </summary>
-		public long TimeMicros { get; set; }
+		public double TimeSeconds { get; set; }
+
 		/// <summary>
 		/// Position of this Event represented as a MetricPosition.
 		/// </summary>
@@ -40,7 +41,7 @@ namespace Fumen.ChartDefinition
 
 		protected Event(Event other)
 		{
-			TimeMicros = other.TimeMicros;
+			TimeSeconds = other.TimeSeconds;
 			if (other.MetricPosition != null)
 				MetricPosition = new MetricPosition(other.MetricPosition);
 			IntegerPosition = other.IntegerPosition;
@@ -57,24 +58,24 @@ namespace Fumen.ChartDefinition
 	public class Stop : Event
 	{
 		/// <summary>
-		/// Length of the stop at this Stop Event as time in microseconds.
+		/// Length of the stop at this Stop Event as time in seconds.
 		/// </summary>
-		public long LengthMicros;
+		public double LengthSeconds;
 		/// <summary>
 		/// Delays are Stops which occur before other Events at the same time.
 		/// </summary>
 		public bool IsDelay;
 
-		public Stop(long lengthMicros, bool isDelay = false)
+		public Stop(double lengthSeconds, bool isDelay = false)
 		{
-			LengthMicros = lengthMicros;
+			LengthSeconds = lengthSeconds;
 			IsDelay = isDelay;
 		}
 
 		public Stop(Stop other)
 			: base(other)
 		{
-			LengthMicros = other.LengthMicros;
+			LengthSeconds = other.LengthSeconds;
 			IsDelay = other.IsDelay;
 		}
 	}
@@ -141,19 +142,19 @@ namespace Fumen.ChartDefinition
 		public double Rate;
 
 		public int PeriodLengthIntegerPosition;
-		public long PeriodTimeMicros;
-		public bool PreferPeriodAsTimeMicros;
+		public double PeriodTimeSeconds;
+		public bool PreferPeriodAsTime;
 
 		public ScrollRateInterpolation(
 			double rate,
 			int periodLengthIntegerPosition,
-			long periodTimeMicros,
-			bool preferPeriodAsTimeMicros)
+			double periodTimeSeconds,
+			bool preferPeriodAsTime)
 		{
 			Rate = rate;
 			PeriodLengthIntegerPosition = periodLengthIntegerPosition;
-			PeriodTimeMicros = periodTimeMicros;
-			PreferPeriodAsTimeMicros = preferPeriodAsTimeMicros;
+			PeriodTimeSeconds = periodTimeSeconds;
+			PreferPeriodAsTime = preferPeriodAsTime;
 		}
 
 		public ScrollRateInterpolation(ScrollRateInterpolation other)
@@ -182,6 +183,15 @@ namespace Fumen.ChartDefinition
 			: base(other)
 		{
 			TempoBPM = other.TempoBPM;
+		}
+
+		public double GetRowsPerSecond(int rowsPerBeat)
+		{
+			return 1.0 / GetSecondsPerRow(rowsPerBeat);
+		}
+		public double GetSecondsPerRow(int rowsPerBeat)
+		{
+			return 60.0 / TempoBPM / rowsPerBeat;
 		}
 	}
 
@@ -267,19 +277,19 @@ namespace Fumen.ChartDefinition
 	public class FakeSegment : Event
 	{
 		/// <summary>
-		/// Length of the fake segment as time in microseconds.
+		/// Length of the fake segment as time in seconds.
 		/// </summary>
-		public long LengthMicros;
+		public double LengthSeconds;
 
-		public FakeSegment(long lengthMicros)
+		public FakeSegment(double lengthSeconds)
 		{
-			LengthMicros = lengthMicros;
+			LengthSeconds = lengthSeconds;
 		}
 
 		public FakeSegment(FakeSegment other)
 			: base(other)
 		{
-			LengthMicros = other.LengthMicros;
+			LengthSeconds = other.LengthSeconds;
 		}
 	}
 
