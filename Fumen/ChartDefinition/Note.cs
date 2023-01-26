@@ -50,6 +50,8 @@
 		{
 			Lane = other.Lane;
 		}
+
+		public override Event Clone() { return new LaneNote(this); }
 	}
 
 	/// <summary>
@@ -120,6 +122,8 @@
 			Width = other.Width;
 			Height = other.Height;
 		}
+
+		public override Event Clone() { return new PositionalNote(this); }
 	}
 
 	/// <summary>

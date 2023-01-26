@@ -49,6 +49,12 @@ namespace Fumen.ChartDefinition
 			DestType = other.DestType;
 			Extras = new Extras(other.Extras);
 		}
+
+		/// <summary>
+		/// Clones the event.
+		/// This is a deep clone except for Extra values.
+		/// </summary>
+		public abstract Event Clone();
 	}
 
 	/// <summary>
@@ -78,6 +84,8 @@ namespace Fumen.ChartDefinition
 			LengthSeconds = other.LengthSeconds;
 			IsDelay = other.IsDelay;
 		}
+
+		public override Event Clone() { return new Stop(this); }
 	}
 
 	/// <summary>
@@ -104,6 +112,8 @@ namespace Fumen.ChartDefinition
 		{
 			LengthIntegerPosition = other.LengthIntegerPosition;
 		}
+
+		public override Event Clone() { return new Warp(this); }
 	}
 
 	/// <summary>
@@ -126,6 +136,8 @@ namespace Fumen.ChartDefinition
 		{
 			Rate = other.Rate;
 		}
+
+		public override Event Clone() { return new ScrollRate(this); }
 	}
 
 	/// <summary>
@@ -161,7 +173,12 @@ namespace Fumen.ChartDefinition
 			: base(other)
 		{
 			Rate = other.Rate;
+			PeriodLengthIntegerPosition = other.PeriodLengthIntegerPosition;
+			PeriodTimeSeconds = other.PeriodTimeSeconds;
+			PreferPeriodAsTime = other.PreferPeriodAsTime;
 		}
+
+		public override Event Clone() { return new ScrollRateInterpolation(this); }
 	}
 
 	/// <summary>
@@ -184,6 +201,8 @@ namespace Fumen.ChartDefinition
 		{
 			TempoBPM = other.TempoBPM;
 		}
+
+		public override Event Clone() { return new Tempo(this); }
 
 		public double GetRowsPerSecond(int rowsPerBeat)
 		{
@@ -215,6 +234,8 @@ namespace Fumen.ChartDefinition
 		{
 			Signature = new Fraction(other.Signature);
 		}
+
+		public override Event Clone() { return new TimeSignature(this); }
 	}
 
 	/// <summary>
@@ -241,6 +262,8 @@ namespace Fumen.ChartDefinition
 		{
 			Ticks = other.Ticks;
 		}
+
+		public override Event Clone() { return new TickCount(this); }
 	}
 
 	/// <summary>
@@ -266,6 +289,8 @@ namespace Fumen.ChartDefinition
 		{
 			Text = other.Text;
 		}
+
+		public override Event Clone() { return new Label(this); }
 	}
 
 	/// <summary>
@@ -291,6 +316,8 @@ namespace Fumen.ChartDefinition
 		{
 			LengthSeconds = other.LengthSeconds;
 		}
+
+		public override Event Clone() { return new FakeSegment(this); }
 	}
 
 	/// <summary>
@@ -322,5 +349,7 @@ namespace Fumen.ChartDefinition
 			HitMultiplier = other.HitMultiplier;
 			MissMultiplier = other.MissMultiplier;
 		}
+
+		public override Event Clone() { return new Multipliers(this); }
 	}
 }
