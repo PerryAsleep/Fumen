@@ -67,6 +67,8 @@
 			: base(other)
 		{
 		}
+
+		public override Event Clone() { return new LaneTapNote(this); }
 	}
 
 	/// <summary>
@@ -82,6 +84,8 @@
 			: base(other)
 		{
 		}
+
+		public override Event Clone() { return new LaneHoldStartNote(this); }
 	}
 
 	/// <summary>
@@ -97,6 +101,8 @@
 			: base(other)
 		{
 		}
+
+		public override Event Clone() { return new LaneHoldEndNote(this); }
 	}
 
 	/// <summary>
@@ -139,6 +145,8 @@
 			: base(other)
 		{
 		}
+
+		public override Event Clone() { return new PositionalTapNote(this); }
 	}
 
 	/// <summary>
@@ -154,6 +162,8 @@
 			: base(other)
 		{
 		}
+
+		public override Event Clone() { return new PositionalHoldStartNote(this); }
 	}
 
 	/// <summary>
@@ -169,5 +179,7 @@
 			: base(other)
 		{
 		}
+
+		public override Event Clone() { return new PositionalHoldEndNote(this); }
 	}
 }
