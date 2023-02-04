@@ -34,9 +34,9 @@ namespace Fumen.Converters
 			if (string.IsNullOrEmpty(input))
 				return input;
 			return input
+				.Replace($"{EscapeMarker}", $"{EscapeMarker}{EscapeMarker}")
 				.Replace($"{ValueEndMarker}", $"{EscapeMarker}{ValueEndMarker}")
 				.Replace($"{ParamMarker}", $"{EscapeMarker}{ParamMarker}")
-				.Replace($"{EscapeMarker}", $"{EscapeMarker}{EscapeMarker}")
 				.Replace($"{CommentMarker}", @"\/\/");
 		}
 
