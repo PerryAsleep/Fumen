@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Fumen.ChartDefinition;
+using static Fumen.Converters.SMCommon;
 
 namespace Fumen.Converters
 {
@@ -27,49 +28,78 @@ namespace Fumen.Converters
 
 			using (StreamWriter = new StreamWriter(Config.FilePath))
 			{
-				WriteSongProperty(SMCommon.TagTitle, Config.Song.Title);
-				WriteSongProperty(SMCommon.TagSubtitle, Config.Song.SubTitle);
-				WriteSongProperty(SMCommon.TagArtist, Config.Song.Artist);
-				WriteSongProperty(SMCommon.TagTitleTranslit, Config.Song.TitleTransliteration);
-				WriteSongProperty(SMCommon.TagSubtitleTranslit, Config.Song.SubTitleTransliteration);
-				WriteSongProperty(SMCommon.TagArtistTranslit, Config.Song.ArtistTransliteration);
-				WriteSongProperty(SMCommon.TagGenre, Config.Song.Genre);
-				WriteSongPropertyFromExtras(SMCommon.TagCredit);
-				WriteSongProperty(SMCommon.TagBanner, Config.Song.SongSelectImage);
-				WriteSongPropertyFromExtras(SMCommon.TagBackground);
-				WriteSongPropertyFromExtras(SMCommon.TagLyricsPath);
-				WriteSongPropertyFromExtras(SMCommon.TagCDTitle);
+				WriteSongProperty(TagTitle, Config.Song.Title);
+				WriteSongProperty(TagSubtitle, Config.Song.SubTitle);
+				WriteSongProperty(TagArtist, Config.Song.Artist);
+				WriteSongProperty(TagTitleTranslit, Config.Song.TitleTransliteration);
+				WriteSongProperty(TagSubtitleTranslit, Config.Song.SubTitleTransliteration);
+				WriteSongProperty(TagArtistTranslit, Config.Song.ArtistTransliteration);
+				WriteSongProperty(TagGenre, Config.Song.Genre);
+				WriteSongPropertyFromExtras(TagCredit);
+				WriteSongProperty(TagBanner, Config.Song.SongSelectImage);
+				WriteSongPropertyFromExtras(TagBackground);
+				WriteSongPropertyFromExtras(TagLyricsPath);
+				WriteSongPropertyFromExtras(TagCDTitle);
 				WriteSongPropertyMusic();
 				WriteSongPropertyOffset();
-				WriteSongProperty(SMCommon.TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMCommon.SMDoubleFormat));
-				WriteSongProperty(SMCommon.TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMCommon.SMDoubleFormat));
-				if (Config.Song.Extras.TryGetExtra(SMCommon.TagLastBeatHint, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagLastBeatHint);
-				WriteSongPropertyFromExtras(SMCommon.TagSelectable);
-				if (Config.Song.Extras.TryGetExtra(SMCommon.TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagDisplayBPM, false, false);
+				WriteSongProperty(TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMDoubleFormat));
+				WriteSongProperty(TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMDoubleFormat));
+				if (Config.Song.Extras.TryGetExtra(TagLastBeatHint, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagLastBeatHint);
+				WriteSongPropertyFromExtras(TagSelectable);
+				if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
+
+				// Custom properties. Always write these if they are present.
+				if (Config.CustomProperties != null)
+				{
+					// Since sm files do not support MSD keys per chart, we need to include
+					// both song and chart properties at the top of the file in the song's section.
+					// In order to differentiate song and chart properties, we need to modify the
+					// keys to identify what they correspond to.
+					// See also SMReader.
+					if (Config.CustomProperties.CustomSongProperties != null)
+					{
+						foreach (var customProperty in Config.CustomProperties.CustomSongProperties)
+						{
+							WriteProperty($"{customProperty.Key}{SMCustomPropertySongMarker}", customProperty.Value, true);
+						}
+					}
+					if (Config.CustomProperties.CustomChartProperties != null)
+					{
+						var chartIndex = 0;
+						foreach (var chartPropertySet in Config.CustomProperties.CustomChartProperties)
+						{
+							foreach (var chartProperty in chartPropertySet)
+							{
+								WriteProperty($"{chartProperty.Key}{SMCustomPropertyChartMarker}{chartIndex.ToString(SMCustomPropertyChartIndexFormat)}", chartProperty.Value, true);
+							}
+							chartIndex++;
+						}
+					}
+				}
 
 				// Timing data.
 				WriteSongPropertyBPMs();
 				WriteSongPropertyStops();
 				// Skipping writing of Freezes as they are read as Stops and will be written back out as Stops.
-				// WriteSongPropertyFromExtras(SMCommon.TagFreezes, true);
+				// WriteSongPropertyFromExtras(TagFreezes, true);
 				WriteSongPropertyDelays(true);
 				WriteSongPropertyTimeSignatures(true);
 				WriteSongPropertyTickCounts(true);
 
-				WriteSongPropertyFromExtras(SMCommon.TagInstrumentTrack, true, false);
-				WriteSongPropertyFromExtras(SMCommon.TagAnimations, true, false);
-				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges, false, false);
-				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges1, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges1, false, false);
-				if (Config.Song.Extras.TryGetExtra(SMCommon.TagBGChanges2, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagBGChanges2, false, false);
-				if (Config.Song.Extras.TryGetExtra(SMCommon.TagFGChanges, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(SMCommon.TagFGChanges, false, false);
-				WriteSongPropertyFromExtras(SMCommon.TagKeySounds, false, false);		// TODO: Write keysounds properly
-				WriteSongPropertyFromExtras(SMCommon.TagAttacks, false, false);
+				WriteSongPropertyFromExtras(TagInstrumentTrack, true, false);
+				WriteSongPropertyFromExtras(TagAnimations, true, false);
+				if (Config.Song.Extras.TryGetExtra(TagBGChanges, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagBGChanges, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagBGChanges1, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagBGChanges1, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagBGChanges2, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagBGChanges2, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagFGChanges, false, false);
+				WriteSongPropertyFromExtras(TagKeySounds, false, false);		// TODO: Write keysounds properly
+				WriteSongPropertyFromExtras(TagAttacks, false, false);
 
 				StreamWriter.WriteLine();
 

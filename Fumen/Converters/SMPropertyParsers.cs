@@ -82,6 +82,27 @@ namespace Fumen.Converters
 	}
 
 	/// <summary>
+	/// Parses a value directly into an Extras value.
+	/// </summary>
+	public class ExtrasPropertyParser : PropertyParser
+	{
+		private readonly Extras Extras;
+		public ExtrasPropertyParser(Extras extras)
+			: base(null)
+		{
+			Extras = extras;
+		}
+
+		public override bool Parse(MSDFile.Value value)
+		{
+			if (value.Params.Count != 2)
+				return false;
+			Extras.AddSourceExtra(value.Params[0], value.Params[1]);
+			return true;
+		}
+	}
+
+	/// <summary>
 	/// Parses a value with one parameter directly into the property specified for the Song.
 	/// Example:
 	/// #ARTIST:Usao;

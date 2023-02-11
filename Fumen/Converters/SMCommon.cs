@@ -230,6 +230,13 @@ namespace Fumen.Converters
 
 		public const string SMDoubleFormat = "N6";
 
+		public const string SMCustomPropertySongMarker = "SONG";
+		public const int SMCustomPropertySongMarkerLength = 4;
+		public const string SMCustomPropertyChartMarker = "CHART";
+		public const string SMCustomPropertyChartIndexFormat = "D4";
+		public const int SMCustomPropertyChartIndexMarkerLength = 9;
+		public const int SMCustomPropertyChartIndexNumberLength = 4;
+
 		/// <summary>
 		/// Static initialization.
 		/// </summary>

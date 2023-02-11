@@ -51,7 +51,8 @@ namespace Fumen.Converters
 			/// matches what stepmania would export. This means even if the source chart has a property
 			/// that stepmania understands but stepmania does not save (like the deprecated ANIMATIONS
 			/// property) that those properties will be ignored when exporting. This option should be
-			/// used when creating a Song manually or from a non-stepmania source.
+			/// used when creating a Song manually or from a non-stepmania source and it is desired to
+			/// have the result match stepmania.
 			/// </summary>
 			Stepmania,
 
@@ -62,6 +63,25 @@ namespace Fumen.Converters
 			/// present in the original file, and writing deprecated properties that were present.
 			/// </summary>
 			MatchSource,
+		}
+
+		/// <summary>
+		/// Custom properties to write to the file.
+		/// </summary>
+		public class SMWriterCustomProperties
+		{
+			/// <summary>
+			/// Custom song properties. These will be written as individual MSD key value pairs in the song's
+			/// section of the MSD file. The values will be escaped.
+			/// </summary>
+			public Dictionary<string, string> CustomSongProperties = new Dictionary<string, string>();
+			/// <summary>
+			/// Custom properties per Chart. These will be written as individual MSD key value pairs.
+			/// If the save file format supports keys at the Chart level then these will be saved per Chart.
+			/// Otherwise they will be saved at the Song level with modified tags to identify which Chart
+			/// they are for.
+			/// </summary>
+			public List<Dictionary<string, string>> CustomChartProperties = new List<Dictionary<string, string>>();
 		}
 
 		/// <summary>
@@ -98,6 +118,11 @@ namespace Fumen.Converters
 			/// Use this if the Rows have not been set but accurate MetricPositions are available.
 			/// </summary>
 			public bool UpdateEventRowsFromMetricPosition = false;
+			/// <summary>
+			/// Custom properties to write into the file as MSD key value pairs regardless of the specified
+			/// PropertyEmissionBehavior.
+			/// </summary>
+			public SMWriterCustomProperties CustomProperties;
 
 			/// <summary>
 			/// If true, write Tempos from the Song or Chart's Extras.
@@ -398,6 +423,11 @@ namespace Fumen.Converters
 					break;
 			}
 			return false;
+		}
+
+		protected void WriteProperty(string smPropertyName, object value, bool escape = true)
+		{
+			WritePropertyInternal(smPropertyName, value, escape);
 		}
 
 		protected void WriteChartProperty(Chart chart, string smPropertyName, object value, bool stepmaniaOmitted = false, bool escape = true)
