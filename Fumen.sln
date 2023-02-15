@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29123.88
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fumen", "Fumen\Fumen.csproj", "{3829BAAD-4CD4-45D0-812F-EFDF3B733AE9}"
 EndProject
@@ -18,6 +18,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepManiaLibrary", "StepManiaLibrary\StepManiaLibrary.csproj", "{0442A9A8-0AD1-4275-9575-B30E71F2A57E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StepManiaEditor", "StepManiaEditor\StepManiaEditor.csproj", "{9D072ADE-2E91-4000-A5B3-9D948FE0428F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FumenTests", "FumenTests\FumenTests.csproj", "{6129C91B-F26B-423F-97EC-B4D4A7ECB631}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,6 +127,18 @@ Global
 		{9D072ADE-2E91-4000-A5B3-9D948FE0428F}.Release|x64.Build.0 = Release|Any CPU
 		{9D072ADE-2E91-4000-A5B3-9D948FE0428F}.Release|x86.ActiveCfg = Release|Any CPU
 		{9D072ADE-2E91-4000-A5B3-9D948FE0428F}.Release|x86.Build.0 = Release|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Debug|x64.Build.0 = Debug|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Debug|x86.Build.0 = Debug|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x64.ActiveCfg = Release|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x64.Build.0 = Release|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x86.ActiveCfg = Release|Any CPU
+		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

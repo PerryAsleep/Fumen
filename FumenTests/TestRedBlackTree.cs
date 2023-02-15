@@ -4,7 +4,7 @@ using System.Linq;
 using Fumen;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace ChartGeneratorTests
+namespace FumenTests
 {
 	[TestClass]
 	public class TestRedBlackTree
