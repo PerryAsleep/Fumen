@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StepManiaEditor", "StepMani
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FumenTests", "FumenTests\FumenTests.csproj", "{6129C91B-F26B-423F-97EC-B4D4A7ECB631}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PadDataGenerator", "PadDataGenerator\PadDataGenerator.csproj", "{F84CC3AB-D06F-4277-A317-20DEBF01E35D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x64.Build.0 = Release|Any CPU
 		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x86.ActiveCfg = Release|Any CPU
 		{6129C91B-F26B-423F-97EC-B4D4A7ECB631}.Release|x86.Build.0 = Release|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Debug|x64.Build.0 = Debug|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Debug|x86.Build.0 = Debug|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Release|x64.ActiveCfg = Release|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Release|x64.Build.0 = Release|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Release|x86.ActiveCfg = Release|Any CPU
+		{F84CC3AB-D06F-4277-A317-20DEBF01E35D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
