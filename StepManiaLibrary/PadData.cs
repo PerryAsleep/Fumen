@@ -22,20 +22,20 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// Stepmania StepsType that this PadData is used for.
 		/// </summary>
-		public string StepsType;
+		[JsonIgnore] public string StepsType;
 
 		/// <summary>
 		/// Number of arrows / lanes for this PadData.
 		/// Set after deserialization.
 		/// </summary>
-		public int NumArrows;
+		[JsonIgnore] public int NumArrows;
 
 		/// <summary>
 		/// Maximum difference in indices between arrows of a bracket in any ArrowData[] array.
 		/// Used to improve scans over ArrowData for bracketable pairings.
 		/// Set after deserialization.
 		/// </summary>
-		public int MaxBracketSeparation;
+		[JsonIgnore] public int MaxBracketSeparation;
 
 		/// <summary>
 		/// Valid starting positions.
