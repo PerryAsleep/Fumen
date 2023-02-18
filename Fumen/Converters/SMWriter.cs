@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using Fumen.ChartDefinition;
 using static Fumen.Converters.SMCommon;
 
@@ -22,10 +23,17 @@ namespace Fumen.Converters
 		/// Save the song using the parameters set in SMWriterConfig.
 		/// </summary>
 		/// <returns>True if saving was successful and false otherwise.</returns>
+		public async Task<bool> SaveAsync()
+		{
+			return await Task.Run(() => Save());
+		}
+
+		/// <summary>
+		/// Save the song using the parameters set in SMWriterConfig.
+		/// </summary>
+		/// <returns>True if saving was successful and false otherwise.</returns>
 		public bool Save()
 		{
-			// TODO: Async
-
 			using (StreamWriter = new StreamWriter(Config.FilePath))
 			{
 				WriteSongProperty(TagTitle, Config.Song.Title);

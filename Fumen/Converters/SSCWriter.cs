@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.IO;
 using Fumen.ChartDefinition;
 using static Fumen.Converters.SMCommon;
@@ -19,6 +20,15 @@ namespace Fumen.Converters
 		public SSCWriter(SMWriterBaseConfig config)
 			: base(config, new SSCWriterLogger(config.FilePath), FileFormatType.SSC)
 		{
+		}
+
+		/// <summary>
+		/// Save the song using the parameters set in SMWriterConfig.
+		/// </summary>
+		/// <returns>True if saving was successful and false otherwise.</returns>
+		public async Task<bool> SaveAsync()
+		{
+			return await Task.Run(() => Save());
 		}
 
 		/// <summary>
