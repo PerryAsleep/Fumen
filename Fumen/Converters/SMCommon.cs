@@ -228,7 +228,7 @@ namespace Fumen.Converters
 		public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
 		public const string TagFumenNoteOriginalMeasurePosition = "FumenNoteOriginalMeasurePosition";
 
-		public const string SMDoubleFormat = "N6";
+		public const string SMDoubleFormat = "F6";
 
 		public const string SMCustomPropertySongMarker = "SONG";
 		public const int SMCustomPropertySongMarkerLength = 4;
