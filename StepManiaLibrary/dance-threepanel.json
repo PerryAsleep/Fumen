@@ -3,7 +3,7 @@
     [
       [
         0,
-        3
+        2
       ]
     ],
     [
@@ -12,48 +12,27 @@
         1
       ],
       [
-        0,
-        2
-      ],
-      [
-        1,
-        3
-      ],
-      [
-        2,
-        3
-      ]
-    ],
-    [
-      [
         1,
         2
-      ],
-      [
-        2,
-        1
       ]
     ]
   ],
   "ArrowData": [
     {
       "X": 0,
-      "Y": 1,
+      "Y": 0,
       "ValidNextArrows": [
         false,
-        true,
         true,
         true
       ],
       "BracketablePairingsOtherHeel": [
         [
           false,
-          true,
           false,
           false
         ],
         [
-          false,
           false,
           false,
           false
@@ -63,11 +42,9 @@
         [
           false,
           false,
-          true,
           false
         ],
         [
-          false,
           false,
           false,
           false
@@ -77,11 +54,9 @@
         [
           false,
           true,
-          true,
           true
         ],
         [
-          false,
           false,
           false,
           false
@@ -91,13 +66,11 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
           false,
           false,
-          true,
           false
         ]
       ],
@@ -105,13 +78,11 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
           false,
           true,
-          false,
           false
         ]
       ],
@@ -119,11 +90,9 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
-          false,
           false,
           false,
           true
@@ -136,18 +105,15 @@
       "ValidNextArrows": [
         true,
         false,
-        true,
         true
       ],
       "BracketablePairingsOtherHeel": [
         [
           false,
           false,
-          false,
           false
         ],
         [
-          false,
           false,
           false,
           false
@@ -155,7 +121,6 @@
       ],
       "BracketablePairingsOtherToe": [
         [
-          true,
           false,
           false,
           false
@@ -163,21 +128,18 @@
         [
           false,
           false,
-          false,
-          true
+          false
         ]
       ],
       "OtherFootPairings": [
         [
           false,
           false,
-          true,
           true
         ],
         [
           true,
           false,
-          true,
           false
         ]
       ],
@@ -185,11 +147,9 @@
         [
           true,
           false,
-          false,
           false
         ],
         [
-          false,
           false,
           false,
           true
@@ -199,11 +159,9 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
-          false,
           false,
           false,
           false
@@ -213,105 +171,9 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
-          false,
-          false,
-          false,
-          false
-        ]
-      ]
-    },
-    {
-      "X": 1,
-      "Y": 0,
-      "ValidNextArrows": [
-        true,
-        true,
-        false,
-        true
-      ],
-      "BracketablePairingsOtherHeel": [
-        [
-          true,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          true
-        ]
-      ],
-      "BracketablePairingsOtherToe": [
-        [
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairings": [
-        [
-          false,
-          true,
-          false,
-          true
-        ],
-        [
-          true,
-          true,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
-        [
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
-        [
-          true,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          true
-        ]
-      ],
-      "OtherFootPairingsInverted": [
-        [
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
           false,
           false,
           false
@@ -320,9 +182,8 @@
     },
     {
       "X": 2,
-      "Y": 1,
+      "Y": 0,
       "ValidNextArrows": [
-        true,
         true,
         true,
         false
@@ -331,12 +192,10 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
           false,
-          true,
           false,
           false
         ]
@@ -345,13 +204,11 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
           false,
           false,
-          true,
           false
         ]
       ],
@@ -359,11 +216,9 @@
         [
           false,
           false,
-          false,
           false
         ],
         [
-          true,
           true,
           true,
           false
@@ -373,11 +228,9 @@
         [
           false,
           false,
-          true,
           false
         ],
         [
-          false,
           false,
           false,
           false
@@ -387,11 +240,9 @@
         [
           false,
           true,
-          false,
           false
         ],
         [
-          false,
           false,
           false,
           false
@@ -401,11 +252,9 @@
         [
           true,
           false,
-          false,
           false
         ],
         [
-          false,
           false,
           false,
           false

@@ -2,26 +2,8 @@
   "StartingPositions": [
     [
       [
-        3,
-        4
-      ]
-    ],
-    [
-      [
-        1,
-        4
-      ],
-      [
         2,
-        4
-      ],
-      [
-        3,
-        5
-      ],
-      [
-        3,
-        6
+        3
       ]
     ],
     [
@@ -30,81 +12,49 @@
         3
       ],
       [
-        4,
-        5
-      ]
-    ],
-    [
-      [
         2,
-        3
-      ],
-      [
-        4,
-        6
+        4
       ]
     ],
     [
-      [
-        0,
-        3
-      ],
-      [
-        4,
-        7
-      ]
-    ],
-    [
-      [
-        6,
-        5
-      ],
       [
         1,
         2
+      ],
+      [
+        3,
+        4
       ]
     ],
     [
-      [
-        2,
-        1
-      ],
-      [
-        5,
-        6
-      ]
-    ],
-    [
-      [
-        6,
-        7
-      ],
       [
         0,
         2
+      ],
+      [
+        3,
+        5
       ]
     ],
     [
       [
-        5,
-        7
-      ],
-      [
         0,
         1
+      ],
+      [
+        4,
+        5
       ]
     ]
   ],
   "ArrowData": [
     {
       "X": 0,
-      "Y": 1,
+      "Y": 0,
       "ValidNextArrows": [
         false,
         true,
         true,
-        true,
-        false,
         false,
         false,
         false
@@ -116,13 +66,9 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -134,17 +80,13 @@
       "BracketablePairingsOtherToe": [
         [
           false,
-          false,
           true,
-          false,
           false,
           false,
           false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -158,15 +100,11 @@
           false,
           true,
           true,
-          true,
-          false,
           false,
           false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -182,14 +120,10 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
           false,
-          false,
-          true,
           false,
           false,
           false,
@@ -204,13 +138,9 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
-          false,
-          true,
           false,
           false,
           false,
@@ -226,162 +156,12 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
           false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false,
-          false
-        ]
-      ]
-    },
-    {
-      "X": 1,
-      "Y": 2,
-      "ValidNextArrows": [
-        true,
-        false,
-        true,
-        true,
-        true,
-        false,
-        false,
-        false
-      ],
-      "BracketablePairingsOtherHeel": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "BracketablePairingsOtherToe": [
-        [
-          true,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairings": [
-        [
-          false,
-          false,
           true,
           true,
-          true,
-          false,
-          false,
-          false
-        ],
-        [
-          true,
-          false,
-          true,
-          false,
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
-        [
-          true,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairingsInverted": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
           false,
           false,
           false
@@ -393,11 +173,9 @@
       "Y": 0,
       "ValidNextArrows": [
         true,
-        true,
         false,
         true,
         true,
-        false,
         false,
         false
       ],
@@ -405,9 +183,7 @@
         [
           true,
           false,
-          false,
           true,
-          false,
           false,
           false,
           false
@@ -415,9 +191,7 @@
         [
           false,
           false,
-          false,
           true,
-          false,
           false,
           false,
           false
@@ -425,11 +199,9 @@
       ],
       "BracketablePairingsOtherToe": [
         [
+          true,
           false,
-          false,
-          false,
-          false,
-          false,
+          true,
           false,
           false,
           false
@@ -437,9 +209,7 @@
         [
           false,
           false,
-          false,
-          false,
-          false,
+          true,
           false,
           false,
           false
@@ -448,18 +218,14 @@
       "OtherFootPairings": [
         [
           false,
-          true,
           false,
           true,
           true,
-          false,
           false,
           false
         ],
         [
           true,
-          true,
-          false,
           false,
           false,
           false,
@@ -474,13 +240,9 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -491,8 +253,6 @@
       ],
       "OtherFootPairingsOtherFootCrossoverBehind": [
         [
-          true,
-          false,
           false,
           false,
           false,
@@ -503,8 +263,6 @@
         [
           false,
           false,
-          false,
-          true,
           false,
           false,
           false,
@@ -513,9 +271,7 @@
       ],
       "OtherFootPairingsInverted": [
         [
-          false,
-          false,
-          false,
+          true,
           false,
           false,
           false,
@@ -525,10 +281,8 @@
         [
           false,
           false,
-          false,
-          false,
-          false,
-          false,
+          true,
+          true,
           false,
           false
         ]
@@ -536,13 +290,11 @@
     },
     {
       "X": 2,
-      "Y": 1,
+      "Y": 0,
       "ValidNextArrows": [
         true,
         true,
-        true,
         false,
-        true,
         true,
         true,
         false
@@ -552,9 +304,7 @@
           false,
           true,
           false,
-          false,
           true,
-          false,
           false,
           false
         ],
@@ -562,9 +312,7 @@
           false,
           true,
           false,
-          false,
           true,
-          false,
           false,
           false
         ]
@@ -572,21 +320,17 @@
       "BracketablePairingsOtherToe": [
         [
           false,
-          false,
           true,
           false,
           true,
-          false,
           false,
           false
         ],
         [
           false,
-          false,
           true,
           false,
           true,
-          false,
           false,
           false
         ]
@@ -596,8 +340,6 @@
           false,
           false,
           false,
-          false,
-          true,
           true,
           true,
           false
@@ -605,8 +347,6 @@
         [
           true,
           true,
-          true,
-          false,
           false,
           false,
           false,
@@ -617,16 +357,12 @@
         [
           false,
           false,
-          true,
-          false,
           false,
           false,
           false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -638,8 +374,6 @@
       "OtherFootPairingsOtherFootCrossoverBehind": [
         [
           false,
-          true,
-          false,
           false,
           false,
           false,
@@ -647,8 +381,6 @@
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -660,9 +392,7 @@
       "OtherFootPairingsInverted": [
         [
           true,
-          false,
-          false,
-          false,
+          true,
           false,
           false,
           false,
@@ -672,24 +402,20 @@
           false,
           false,
           false,
-          false,
           true,
-          false,
-          false,
+          true,
           false
         ]
       ]
     },
     {
       "X": 3,
-      "Y": 1,
+      "Y": 0,
       "ValidNextArrows": [
         false,
         true,
         true,
-        true,
         false,
-        true,
         true,
         true
       ],
@@ -697,21 +423,17 @@
         [
           false,
           false,
-          false,
           true,
           false,
           true,
-          false,
           false
         ],
         [
           false,
           false,
-          false,
           true,
           false,
           true,
-          false,
           false
         ]
       ],
@@ -719,9 +441,7 @@
         [
           false,
           false,
-          false,
           true,
-          false,
           false,
           true,
           false
@@ -729,9 +449,7 @@
         [
           false,
           false,
-          false,
           true,
-          false,
           false,
           true,
           false
@@ -743,8 +461,6 @@
           false,
           false,
           false,
-          false,
-          true,
           true,
           true
         ],
@@ -752,8 +468,6 @@
           false,
           true,
           true,
-          true,
-          false,
           false,
           false,
           false
@@ -766,8 +480,6 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
@@ -776,8 +488,6 @@
           false,
           false,
           false,
-          false,
-          true,
           false
         ]
       ],
@@ -788,159 +498,9 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
-          false,
-          false,
-          false,
-          false,
-          false,
-          true,
-          false,
-          false
-        ]
-      ],
-      "OtherFootPairingsInverted": [
-        [
-          false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          true
-        ]
-      ]
-    },
-    {
-      "X": 4,
-      "Y": 2,
-      "ValidNextArrows": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        false,
-        true,
-        true
-      ],
-      "BracketablePairingsOtherHeel": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ]
-      ],
-      "BracketablePairingsOtherToe": [
-        [
-          false,
-          false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          true
-        ]
-      ],
-      "OtherFootPairings": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          true,
-          true
-        ],
-        [
-          false,
-          false,
-          false,
-          true,
-          true,
-          false,
-          true,
-          false
-        ]
-      ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
-        [
-          false,
-          false,
-          false,
-          false,
-          true,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          true
-        ]
-      ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
           false,
           false,
           false,
@@ -952,10 +512,8 @@
       "OtherFootPairingsInverted": [
         [
           false,
-          false,
-          false,
-          false,
-          false,
+          true,
+          true,
           false,
           false,
           false
@@ -965,10 +523,8 @@
           false,
           false,
           false,
-          false,
-          false,
-          false,
-          false
+          true,
+          true
         ]
       ]
     },
@@ -978,8 +534,6 @@
       "ValidNextArrows": [
         false,
         false,
-        false,
-        true,
         true,
         true,
         false,
@@ -990,9 +544,7 @@
           false,
           false,
           false,
-          false,
           true,
-          false,
           false,
           false
         ],
@@ -1000,9 +552,7 @@
           false,
           false,
           false,
-          false,
           true,
-          false,
           false,
           true
         ]
@@ -1012,9 +562,7 @@
           false,
           false,
           false,
-          false,
-          false,
-          false,
+          true,
           false,
           false
         ],
@@ -1022,11 +570,9 @@
           false,
           false,
           false,
+          true,
           false,
-          false,
-          false,
-          false,
-          false
+          true
         ]
       ],
       "OtherFootPairings": [
@@ -1036,15 +582,11 @@
           false,
           false,
           false,
-          true,
-          false,
           true
         ],
         [
           false,
           false,
-          false,
-          true,
           true,
           true,
           false,
@@ -1058,13 +600,9 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -1079,14 +617,28 @@
           false,
           false,
           false,
-          true,
-          false,
           false,
           false
         ],
         [
           false,
           false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInverted": [
+        [
+          false,
+          false,
+          true,
+          true,
+          false,
+          false
+        ],
+        [
           false,
           false,
           false,
@@ -1094,39 +646,15 @@
           false,
           true
         ]
-      ],
-      "OtherFootPairingsInverted": [
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ],
-        [
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false,
-          false
-        ]
       ]
     },
     {
       "X": 5,
-      "Y": 1,
+      "Y": 0,
       "ValidNextArrows": [
         false,
         false,
         false,
-        false,
-        true,
         true,
         true,
         false
@@ -1138,8 +666,6 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
@@ -1147,9 +673,7 @@
           false,
           false,
           false,
-          false,
           true,
-          false,
           false
         ]
       ],
@@ -1160,13 +684,9 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -1182,16 +702,12 @@
           false,
           false,
           false,
-          false,
-          false,
           false
         ],
         [
           false,
           false,
           false,
-          false,
-          true,
           true,
           true,
           false
@@ -1204,13 +720,9 @@
           false,
           false,
           false,
-          false,
-          true,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -1226,13 +738,9 @@
           false,
           false,
           false,
-          true,
-          false,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,
@@ -1246,15 +754,11 @@
           false,
           false,
           false,
-          false,
           true,
-          false,
-          false,
+          true,
           false
         ],
         [
-          false,
-          false,
           false,
           false,
           false,

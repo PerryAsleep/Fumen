@@ -3,7 +3,35 @@
     [
       [
         0,
+        4
+      ]
+    ],
+    [
+      [
+        0,
+        2
+      ],
+      [
+        2,
+        4
+      ]
+    ],
+    [
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
         3
+      ],
+      [
+        3,
+        2
       ]
     ],
     [
@@ -13,24 +41,24 @@
       ],
       [
         0,
-        2
+        3
       ],
       [
         1,
-        3
+        4
       ],
       [
-        2,
-        3
+        3,
+        4
       ]
     ],
     [
       [
         1,
-        2
+        3
       ],
       [
-        2,
+        3,
         1
       ]
     ]
@@ -43,16 +71,19 @@
         false,
         true,
         true,
+        true,
         true
       ],
       "BracketablePairingsOtherHeel": [
         [
           false,
           true,
+          true,
           false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -64,9 +95,11 @@
           false,
           false,
           true,
+          true,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -78,9 +111,11 @@
           false,
           true,
           true,
+          true,
           true
         ],
         [
+          false,
           false,
           false,
           false,
@@ -92,9 +127,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           true,
@@ -106,11 +143,13 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
           false,
           true,
+          false,
           false,
           false
         ]
@@ -120,11 +159,13 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
           false,
           false,
+          true,
           false,
           true
         ]
@@ -137,6 +178,7 @@
         true,
         false,
         true,
+        true,
         true
       ],
       "BracketablePairingsOtherHeel": [
@@ -144,9 +186,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -157,12 +201,14 @@
         [
           true,
           false,
+          true,
           false,
           false
         ],
         [
           false,
           false,
+          true,
           false,
           true
         ]
@@ -172,11 +218,13 @@
           false,
           false,
           true,
+          true,
           true
         ],
         [
           true,
           false,
+          true,
           true,
           false
         ]
@@ -186,9 +234,11 @@
           true,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -200,9 +250,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -214,9 +266,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -226,8 +280,116 @@
     },
     {
       "X": 1,
+      "Y": 1,
+      "ValidNextArrows": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "BracketablePairingsOtherHeel": [
+        [
+          true,
+          true,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          true,
+          false,
+          false,
+          true
+        ]
+      ],
+      "BracketablePairingsOtherToe": [
+        [
+          true,
+          false,
+          false,
+          true,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          true,
+          true
+        ]
+      ],
+      "OtherFootPairings": [
+        [
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        [
+          true,
+          true,
+          false,
+          true,
+          false
+        ]
+      ],
+      "OtherFootPairingsOtherFootCrossoverFront": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsOtherFootCrossoverBehind": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInverted": [
+        [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          true
+        ]
+      ]
+    },
+    {
+      "X": 1,
       "Y": 0,
       "ValidNextArrows": [
+        true,
         true,
         true,
         false,
@@ -237,12 +399,14 @@
         [
           true,
           false,
+          true,
           false,
           false
         ],
         [
           false,
           false,
+          true,
           false,
           true
         ]
@@ -252,9 +416,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -265,10 +431,12 @@
         [
           false,
           true,
+          true,
           false,
           true
         ],
         [
+          true,
           true,
           true,
           false,
@@ -280,9 +448,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -294,9 +464,11 @@
           true,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -308,9 +480,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -325,6 +499,7 @@
         true,
         true,
         true,
+        true,
         false
       ],
       "BracketablePairingsOtherHeel": [
@@ -332,10 +507,12 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
           false,
+          true,
           true,
           false,
           false
@@ -346,11 +523,13 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
           false,
           false,
+          true,
           true,
           false
         ]
@@ -360,9 +539,11 @@
           false,
           false,
           false,
+          false,
           false
         ],
         [
+          true,
           true,
           true,
           true,
@@ -373,10 +554,12 @@
         [
           false,
           false,
+          false,
           true,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -388,9 +571,11 @@
           false,
           true,
           false,
+          false,
           false
         ],
         [
+          false,
           false,
           false,
           false,
@@ -401,10 +586,12 @@
         [
           true,
           false,
+          true,
           false,
           false
         ],
         [
+          false,
           false,
           false,
           false,

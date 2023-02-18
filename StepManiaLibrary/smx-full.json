@@ -2,66 +2,86 @@
   "StartingPositions": [
     [
       [
-        3,
-        4
-      ]
-    ],
-    [
-      [
-        1,
-        4
-      ],
-      [
-        2,
-        4
-      ],
-      [
-        3,
-        5
-      ],
-      [
-        3,
-        6
-      ]
-    ],
-    [
-      [
-        1,
-        3
-      ],
-      [
         4,
         5
       ]
     ],
     [
       [
+        4,
+        7
+      ],
+      [
         2,
-        3
+        5
+      ]
+    ],
+    [
+      [
+        4,
+        8
       ],
       [
         4,
         6
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        1,
+        5
+      ]
+    ],
+    [
+      [
+        5,
+        7
+      ],
+      [
+        2,
+        4
+      ]
+    ],
+    [
+      [
+        5,
+        6
+      ],
+      [
+        1,
+        4
+      ]
+    ],
+    [
+      [
+        5,
+        8
+      ],
+      [
+        3,
+        4
       ]
     ],
     [
       [
         0,
-        3
+        4
       ],
       [
-        4,
-        7
+        5,
+        9
       ]
     ],
     [
       [
-        6,
-        5
+        2,
+        3
       ],
       [
-        1,
-        2
+        8,
+        7
       ]
     ],
     [
@@ -70,14 +90,54 @@
         1
       ],
       [
-        5,
+        6,
+        7
+      ]
+    ],
+    [
+      [
+        1,
+        2
+      ],
+      [
+        7,
         6
       ]
     ],
     [
       [
+        3,
+        2
+      ],
+      [
+        7,
+        8
+      ]
+    ],
+    [
+      [
+        8,
+        6
+      ],
+      [
+        1,
+        3
+      ]
+    ],
+    [
+      [
+        3,
+        1
+      ],
+      [
         6,
-        7
+        8
+      ]
+    ],
+    [
+      [
+        7,
+        9
       ],
       [
         0,
@@ -86,8 +146,18 @@
     ],
     [
       [
-        5,
-        7
+        8,
+        9
+      ],
+      [
+        0,
+        3
+      ]
+    ],
+    [
+      [
+        6,
+        9
       ],
       [
         0,
@@ -104,6 +174,8 @@
         true,
         true,
         true,
+        true,
+        false,
         false,
         false,
         false,
@@ -113,6 +185,8 @@
         [
           false,
           true,
+          true,
+          false,
           false,
           false,
           false,
@@ -121,6 +195,8 @@
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -136,6 +212,8 @@
           false,
           false,
           true,
+          true,
+          false,
           false,
           false,
           false,
@@ -143,6 +221,8 @@
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -159,12 +239,16 @@
           true,
           true,
           true,
+          true,
+          false,
           false,
           false,
           false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -184,12 +268,16 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
           false,
           false,
+          false,
           true,
+          false,
           false,
           false,
           false,
@@ -206,11 +294,15 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
           false,
           true,
+          false,
+          false,
           false,
           false,
           false,
@@ -228,13 +320,17 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
           false,
           false,
+          true,
           false,
           true,
+          false,
           false,
           false,
           false,
@@ -251,6 +347,8 @@
         true,
         true,
         true,
+        true,
+        false,
         false,
         false,
         false
@@ -264,9 +362,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -281,8 +383,10 @@
         [
           true,
           false,
+          true,
           false,
           true,
+          false,
           false,
           false,
           false,
@@ -291,8 +395,10 @@
         [
           false,
           false,
+          true,
           false,
           true,
+          false,
           false,
           false,
           false,
@@ -306,6 +412,8 @@
           true,
           true,
           true,
+          true,
+          false,
           false,
           false,
           false
@@ -314,6 +422,8 @@
           true,
           false,
           true,
+          true,
+          false,
           false,
           false,
           false,
@@ -330,13 +440,17 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
           false,
           false,
           false,
+          false,
           true,
+          false,
           false,
           false,
           false,
@@ -352,9 +466,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -374,9 +492,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -390,13 +512,15 @@
     },
     {
       "X": 1,
-      "Y": 0,
+      "Y": 1,
       "ValidNextArrows": [
         true,
         true,
         false,
         true,
         true,
+        true,
+        false,
         false,
         false,
         false
@@ -404,9 +528,11 @@
       "BracketablePairingsOtherHeel": [
         [
           true,
+          true,
           false,
           false,
           true,
+          false,
           false,
           false,
           false,
@@ -414,9 +540,11 @@
         ],
         [
           false,
+          true,
           false,
           false,
           true,
+          false,
           false,
           false,
           false,
@@ -425,9 +553,11 @@
       ],
       "BracketablePairingsOtherToe": [
         [
+          true,
           false,
           false,
-          false,
+          true,
+          true,
           false,
           false,
           false,
@@ -438,6 +568,8 @@
           false,
           false,
           false,
+          true,
+          true,
           false,
           false,
           false,
@@ -452,12 +584,16 @@
           false,
           true,
           true,
+          true,
+          false,
           false,
           false,
           false
         ],
         [
           true,
+          true,
+          false,
           true,
           false,
           false,
@@ -476,9 +612,185 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsOtherFootCrossoverBehind": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInverted": [
+        [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false
+        ]
+      ]
+    },
+    {
+      "X": 1,
+      "Y": 0,
+      "ValidNextArrows": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "BracketablePairingsOtherHeel": [
+        [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "BracketablePairingsOtherToe": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairings": [
+        [
+          false,
+          true,
+          true,
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          true,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsOtherFootCrossoverFront": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
           false,
           false,
           false,
@@ -498,13 +810,17 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
           false,
           false,
           false,
+          false,
           true,
+          false,
           false,
           false,
           false,
@@ -520,9 +836,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -541,7 +861,9 @@
         true,
         true,
         true,
+        true,
         false,
+        true,
         true,
         true,
         true,
@@ -551,9 +873,11 @@
         [
           false,
           true,
+          true,
           false,
           false,
           true,
+          false,
           false,
           false,
           false
@@ -561,9 +885,11 @@
         [
           false,
           true,
+          true,
           false,
           false,
           true,
+          false,
           false,
           false,
           false
@@ -574,8 +900,10 @@
           false,
           false,
           true,
+          true,
           false,
           true,
+          false,
           false,
           false,
           false
@@ -584,8 +912,10 @@
           false,
           false,
           true,
+          true,
           false,
           true,
+          false,
           false,
           false,
           false
@@ -597,6 +927,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           true,
           true,
@@ -606,6 +938,8 @@
           true,
           true,
           true,
+          true,
+          false,
           false,
           false,
           false,
@@ -617,7 +951,9 @@
         [
           false,
           false,
+          false,
           true,
+          false,
           false,
           false,
           false,
@@ -625,6 +961,8 @@
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -644,9 +982,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -661,6 +1003,8 @@
         [
           true,
           false,
+          true,
+          false,
           false,
           false,
           false,
@@ -673,8 +1017,10 @@
           false,
           false,
           false,
+          false,
           true,
           false,
+          true,
           false,
           false
         ]
@@ -688,7 +1034,9 @@
         true,
         true,
         true,
+        true,
         false,
+        true,
         true,
         true,
         true
@@ -698,8 +1046,10 @@
           false,
           false,
           false,
+          false,
           true,
           false,
+          true,
           true,
           false,
           false
@@ -708,8 +1058,10 @@
           false,
           false,
           false,
+          false,
           true,
           false,
+          true,
           true,
           false,
           false
@@ -720,9 +1072,11 @@
           false,
           false,
           false,
+          false,
           true,
           false,
           false,
+          true,
           true,
           false
         ],
@@ -730,9 +1084,11 @@
           false,
           false,
           false,
+          false,
           true,
           false,
           false,
+          true,
           true,
           false
         ]
@@ -744,6 +1100,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           true,
           true
@@ -753,6 +1111,8 @@
           true,
           true,
           true,
+          true,
+          false,
           false,
           false,
           false,
@@ -768,9 +1128,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -790,6 +1154,8 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
@@ -798,7 +1164,9 @@
           false,
           false,
           false,
+          false,
           true,
+          false,
           false,
           false
         ]
@@ -807,8 +1175,10 @@
         [
           false,
           false,
+          true,
           false,
           true,
+          false,
           false,
           false,
           false,
@@ -821,6 +1191,8 @@
           false,
           false,
           false,
+          false,
+          true,
           false,
           true
         ]
@@ -833,9 +1205,11 @@
         false,
         false,
         false,
+        false,
         true,
         true,
         false,
+        true,
         true,
         true
       ],
@@ -848,9 +1222,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -867,8 +1245,10 @@
           false,
           false,
           false,
+          false,
           true,
           false,
+          true,
           false,
           false
         ],
@@ -877,8 +1257,10 @@
           false,
           false,
           false,
+          false,
           true,
           false,
+          true,
           false,
           true
         ]
@@ -891,6 +1273,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           true
         ],
@@ -898,9 +1282,11 @@
           false,
           false,
           false,
+          false,
           true,
           true,
           false,
+          true,
           true,
           false
         ]
@@ -911,12 +1297,16 @@
           false,
           false,
           false,
+          false,
           true,
+          false,
           false,
           false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -936,9 +1326,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -958,9 +1352,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -974,15 +1372,17 @@
     },
     {
       "X": 4,
-      "Y": 0,
+      "Y": 1,
       "ValidNextArrows": [
         false,
         false,
         false,
+        false,
         true,
         true,
         true,
         false,
+        true,
         true
       ],
       "BracketablePairingsOtherHeel": [
@@ -991,6 +1391,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           false,
           false,
@@ -1001,6 +1403,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           false,
           false,
@@ -1014,11 +1418,187 @@
           false,
           false,
           false,
+          true,
+          false,
+          false,
+          true,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          true,
+          true
+        ]
+      ],
+      "OtherFootPairings": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          true,
+          false,
+          true,
+          false
+        ]
+      ],
+      "OtherFootPairingsOtherFootCrossoverFront": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
           false,
           false,
           false
         ],
         [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsOtherFootCrossoverBehind": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInverted": [
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true
+        ]
+      ]
+    },
+    {
+      "X": 4,
+      "Y": 0,
+      "ValidNextArrows": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true
+      ],
+      "BracketablePairingsOtherHeel": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true
+        ]
+      ],
+      "BracketablePairingsOtherToe": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
           false,
           false,
           false,
@@ -1036,6 +1616,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           false,
           true
@@ -1044,6 +1626,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           true,
           true,
@@ -1060,9 +1644,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -1079,12 +1667,16 @@
           false,
           false,
           false,
+          false,
           true,
+          false,
           false,
           false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -1104,9 +1696,13 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -1126,6 +1722,8 @@
         false,
         false,
         false,
+        false,
+        true,
         true,
         true,
         true,
@@ -1140,6 +1738,8 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
@@ -1148,6 +1748,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           false,
           false
@@ -1162,6 +1764,8 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
@@ -1171,6 +1775,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           false
         ]
@@ -1184,6 +1790,8 @@
           false,
           false,
           false,
+          false,
+          false,
           false
         ],
         [
@@ -1191,6 +1799,8 @@
           false,
           false,
           false,
+          false,
+          true,
           true,
           true,
           true,
@@ -1205,10 +1815,14 @@
           false,
           false,
           false,
+          false,
+          false,
           true,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -1226,11 +1840,15 @@
           false,
           false,
           false,
+          false,
           true,
+          false,
           false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
@@ -1247,12 +1865,16 @@
           false,
           false,
           false,
+          false,
           true,
           false,
+          true,
           false,
           false
         ],
         [
+          false,
+          false,
           false,
           false,
           false,
