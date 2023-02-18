@@ -421,7 +421,15 @@ namespace PadDataGenerator
 		{
 			public int L;
 			public int R;
-			public double Rating;
+			/// <summary>
+			/// Rating to use for starting position tier.
+			/// Many starting positions may share the same tier rating.
+			/// </summary>
+			public double TierRating;
+			/// <summary>
+			/// Unique overall rating for sorting within tiers.
+			/// </summary>
+			public double OverallRating;
 
 			public override bool Equals(object obj)
 			{
@@ -478,14 +486,15 @@ namespace PadDataGenerator
 						{
 							var l = f == L ? a : a2;
 							var r = f == L ? a2 : a;
-							var rating = GetStartPositionRating(centerX, maxY,
+							var (tierRating, overallRating) = GetStartPositionRating(centerX, maxY,
 								padData.ArrowData[l].X, padData.ArrowData[l].Y, padData.ArrowData[r].X, padData.ArrowData[r].Y,
 								ilx, ily, irx, iry);
 							startingPositions.Add(new StartingPosition
 							{
 								L = l,
 								R = r,
-								Rating = rating,
+								TierRating = tierRating,
+								OverallRating = overallRating,
 							});
 						}
 					}
@@ -494,7 +503,7 @@ namespace PadDataGenerator
 
 			// Convert the starting positions to a list sorted by their rating.
 			var startingPositionsList = startingPositions.ToList();
-			startingPositionsList.Sort((a, b) => CompareRatings(a.Rating, b.Rating));
+			startingPositionsList.Sort((a, b) => CompareRatings(a.OverallRating, b.OverallRating));
 
 			// Convert the sorted list into a list of lists, where the inner lists
 			// share the same rating.
@@ -502,12 +511,26 @@ namespace PadDataGenerator
 			double lastRating = double.MaxValue;
 			foreach (var position in startingPositionsList)
 			{
-				if (position.Rating != lastRating)
+				if (position.TierRating != lastRating)
 				{
 					tieredPositions.Add(new List<StartingPosition>());
 				}
 				tieredPositions[tieredPositions.Count - 1].Add(position);
-				lastRating = position.Rating;
+				lastRating = position.TierRating;
+			}
+
+			// For the first tier ensure there is only one entry by splitting it into two tiers.
+			if (tieredPositions.Count > 0)
+			{
+				if (tieredPositions[0].Count > 1)
+				{
+					var tierOne = tieredPositions[0];
+					var newTierTwo = new List<StartingPosition>(tierOne.Count - 1);
+					for(int i = 1; i < tierOne.Count; i++)
+						newTierTwo.Add(tierOne[i]);
+					tierOne.RemoveRange(1, tierOne.Count - 1);
+					tieredPositions.Insert(1, newTierTwo);
+				}
 			}
 
 			// Copied the tiered lists to the PadData.
@@ -533,9 +556,12 @@ namespace PadDataGenerator
 		}
 
 		/// <summary>
-		/// Computes a rating for a given starting position. Lower ratings are better.
+		/// Computes ratings for a given starting position. Lower ratings are better.
 		/// </summary>
-		private static double GetStartPositionRating(
+		/// <returns>
+		/// Tuple where first value is the tier rating and the second value is the overall rating.
+		/// </returns>
+		private static (double, double) GetStartPositionRating(
 			double centerX, double maxY,
 			int lx, int ly, int rx, int ry,
 			double ilx, double ily, double irx, double iry)
@@ -561,10 +587,27 @@ namespace PadDataGenerator
 				inwardFacingRating = staggeredYRating;
 			}
 
-			return distanceFromIdealRating * 1000
+			// As a tie-breaker, prefer starting positions closer to the back of the pads.
+			var yRating = (maxY - ly) + (maxY - ry);
+
+			// As a tie-breaker, prefer starting positions towards the left.
+			var xRating = (lx + rx);
+
+			var tierRating =
+				distanceFromIdealRating * 1000
 				+ centeredXRating * 100
 				+ staggeredYRating * 10
-				+ inwardFacingRating * 1;
+				+ inwardFacingRating;
+			
+			var overallRating =
+				distanceFromIdealRating * 100000
+				+ centeredXRating * 10000
+				+ staggeredYRating * 1000
+				+ inwardFacingRating * 100
+				+ yRating * 10
+				+ xRating;
+
+			return (tierRating, overallRating);
 		}
 
 		/// <summary>
