@@ -1,0 +1,3 @@
+[submodule "StepManiaEditor/MonoGame"]
+	path = StepManiaEditor/MonoGame
+	url = https://github.com/PerryAsleep/MonoGame.git
