@@ -87,6 +87,10 @@ namespace Fumen
 		/// <returns>The relative path between the two given paths.</returns>
 		public static string GetRelativePath(string fromPath, string toPath)
 		{
+			if (string.IsNullOrEmpty(fromPath))
+				return toPath;
+			if (string.IsNullOrEmpty(toPath))
+				return fromPath;
 			if (fromPath.StartsWith(Win32DeviceNamespace))
 				fromPath = fromPath.Substring(Win32DeviceNamespace.Length);
 			fromPath = fromPath.Replace(System.IO.Path.AltDirectorySeparatorChar, System.IO.Path.DirectorySeparatorChar);
@@ -102,6 +106,74 @@ namespace Fumen
 			var relativeUri = fromUri.MakeRelativeUri(toUri);
 			var relativePath = Uri.UnescapeDataString(relativeUri.ToString());
 			return relativePath;
+		}
+
+		/// <summary>
+		/// Given a file with an absolute path, and relative path to a second file relative to the first,
+		/// return an absolute path to the secod file.
+		/// </summary>
+		/// <param name="fullPathToBaseFile">Full path to a file.</param>
+		/// <param name="relativePath">Path to a second file relative to the first.</param>
+		/// <returns>Absolute path to the second file.</returns>
+		public static string GetFullPathFromRelativePathToFullPath(string fullPathToBaseFile, string relativePath)
+		{
+			var baseDir = System.IO.Path.GetDirectoryName(fullPathToBaseFile);
+			var fullPath = Combine(baseDir, relativePath);
+			return System.IO.Path.GetFullPath(fullPath);
+		}
+
+		/// <summary>
+		/// Gets the extension of a file specified by the given path, with the extension
+		/// separator character. Does not throw an exception. Will return null if no extension
+		/// could be determined.
+		/// </summary>
+		/// <param name="path">File path including potential extension.</param>
+		/// <param name="extension">Extension to set.</param>
+		/// <returns>True if an extension was found and false otherwise.</returns>
+		public static bool GetExtension(string path, out string extension)
+		{
+			extension = null;
+			try
+			{
+				extension = System.IO.Path.GetExtension(path);
+				if (string.IsNullOrEmpty(extension))
+				{
+					extension = null;
+					return false;
+				}
+				return true;
+			}
+			catch (Exception)
+			{ }
+			return false;
+		}
+
+		/// <summary>
+		/// Gets the extension of a file specified by the given path, without the extension
+		/// separator character. Does not throw an exception. Will return null if no extension
+		/// could be determined.
+		/// </summary>
+		/// <param name="path">File path including potential extension.</param>
+		/// <param name="extension">Extension to set.</param>
+		/// <returns>True if an extension was found and false otherwise.</returns>
+		public static bool GetExtensionWithoutSeparator(string path, out string extension)
+		{
+			extension = null;
+			try
+			{
+				extension = System.IO.Path.GetExtension(path);
+				if (string.IsNullOrEmpty(extension))
+				{
+					extension = null;
+					return false;
+				}
+				if (extension.StartsWith("."))
+					extension = extension.Substring(1);
+				return true;
+			}
+			catch (Exception)
+			{ }
+			return false;
 		}
 	}
 }
