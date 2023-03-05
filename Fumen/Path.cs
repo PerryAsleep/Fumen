@@ -21,6 +21,11 @@ namespace Fumen
 		/// <returns>Combined path.</returns>
 		public static string Combine(string path1, string path2)
 		{
+			if (string.IsNullOrEmpty(path1))
+				return path2;
+			if (string.IsNullOrEmpty(path2))
+				return path1;
+
 			// System.IO.Path.Combine will throw out the first path if the second path
 			// appears rooted. It treats a path which starts with the directory separator as rooted.
 			// Clean the second path to work around this behavior, and then combine.
