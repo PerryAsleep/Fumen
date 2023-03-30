@@ -26,8 +26,6 @@
 		{
 			"X": 0,
 			"Y": 1,
-			// A foot on P1L can move next to P1D, P1U, or P1R.
-			"ValidNextArrows": [false, true, true, true, false, false, false, false],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1L is bracketable with the heel on other arrows on P1D.
 				[false, true, false, false, false, false, false, false],
@@ -45,6 +43,12 @@
 				[false, true, true, true, false, false, false, false],
 				// Right foot on P1L is a crossover with no normal left foot pairing.
 				[false, false, false, false, false, false, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P1L supports stretch with right foot on P2L and further.
+				[false, false, false, false, true, true, true, true],
+				// Right foot on P1L is a crossover and does not support stretch.
+				[false, false, false, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P1L is never a crossover position.
@@ -70,8 +74,6 @@
 		{
 			"X": 1,
 			"Y": 2,
-			// A foot on P1D can move next to P1L, P1U, P1R, or P2L.
-			"ValidNextArrows": [true, false, true, true, true, false, false, false],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1D uses the heel.
 				[false, false, false, false, false, false, false, false],
@@ -89,6 +91,12 @@
 				[false, false, true, true, true, false, false, false],
 				// Right foot on P1D supports Left foot on P1L and P1U without crossovers.
 				[true, false, true, false, false, false, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P1D supports stretch with right foot on P2D and further.
+				[false, false, false, false, false, true, true, true],
+				// Right foot on P1D does not support stretch.
+				[false, false, false, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P1D is a crossover with right in front with right is on P1L.
@@ -114,8 +122,6 @@
 		{
 			"X": 1,
 			"Y": 0,
-			// A foot on P1U can move next to P1L, P1D, P1R, or P2L.
-			"ValidNextArrows": [true, true, false, true, true, false, false, false],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1U is bracketable with the heel on other arrows on P1L and P1R.
 				[true, false, false, true, false, false, false, false],
@@ -133,6 +139,12 @@
 				[false, true, false, true, true, false, false, false],
 				// Right foot on P1U supports left foot on P1L and P1D without crossovers.
 				[true, true, false, false, false, false, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P1U supports stretch with right foot on P2U and further.
+				[false, false, false, false, false, true, true, true],
+				// Right foot on P1U does not support stretch.
+				[false, false, false, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// None.
@@ -158,8 +170,6 @@
 		{
 			"X": 2,
 			"Y": 1,
-			// A foot on P1R can move next to P1L, P1D, P1U, P2L, P2D, or P2U.
-			"ValidNextArrows": [true, true, true, false, true, true, true, false],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1R is bracketable with the heel on other arrows on P1D and P2L.
 				[false, true, false, false, true, false, false, false],
@@ -177,6 +187,12 @@
 				[false, false, false, false, true, true, true, false],
 				// Right foot on P1R supports left foot on P1L, P1D, and P1U without crossovers.
 				[true, true, true, false, false, false, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P1R supports stretch with right foot on P2R.
+				[false, false, false, false, false, false, false, true],
+				// Right foot on P1R does not support stretch.
+				[false, false, false, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P1R is a crossover with right in front when right is on P1U.
@@ -202,8 +218,6 @@
 		{
 			"X": 3,
 			"Y": 1,
-			// A foot on P2L can move next to P1D, P1U, P1R, P2D, P2U, or P2R.
-			"ValidNextArrows": [false, true, true, true, false, true, true, true],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P2L is bracketable with the heel on other arrows on P1R and P2D.
 				[false, false, false, true, false, true, false, false],
@@ -221,6 +235,12 @@
 				[false, false, false, false, false, true, true, true],
 				// Right foot on P2L supports left foot on P1D, P1U, and P1R without crossovers.
 				[false, true, true, true, false, false, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P2L does not support stretch.
+				[false, false, false, false, false, false, false, false],
+				// Right foot on P2L supports stretch with left foot on P1L.
+				[true, false, false, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P2L is not a crossover position. Not considering right on P1R, slightly too twisty.
@@ -246,8 +266,6 @@
 		{
 			"X": 4,
 			"Y": 2,
-			// A foot on P2D can move next to P1R, P2L, P2U, and P2R.
-			"ValidNextArrows": [false, false, false, true, true, false, true, true],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P2D uses the heel.
 				[false, false, false, false, false, false, false, false],
@@ -265,6 +283,12 @@
 				[false, false, false, false, false, false, true, true],
 				// Right foot on P2D supports left foot on P1R, P2L, and P2U without crossovers.
 				[false, false, false, true, true, false, true, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P2D does not support stretch.
+				[false, false, false, false, false, false, false, false],
+				// Right foot on P2D supports stretch with left foot on P1D and further.
+				[true, true, true, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P2D is a crossover with right in front when right is on P2L.
@@ -290,8 +314,6 @@
 		{
 			"X": 4,
 			"Y": 0,
-			// A foot on P2U can move next to P1R, P2L, P2D, and P2R.
-			"ValidNextArrows": [false, false, false, true, true, true, false, true],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P2U is bracketable with the heel on other arrows on P2L.
 				[false, false, false, false, true, false, false, false],
@@ -309,6 +331,12 @@
 				[false, false, false, false, false, true, false, true],
 				// Right foot on P2U supports left foot on P1R, P2L, and P2D without crossovers.
 				[false, false, false, true, true, true, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P2U does not support stretch.
+				[false, false, false, false, false, false, false, false],
+				// Right foot on P2U supports stretch with left foot on P1U and further.
+				[true, true, true, false, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// None.
@@ -334,8 +362,6 @@
 		{
 			"X": 5,
 			"Y": 1,
-			// A foot on P2R can move next to P2L, P2D, and P2U.
-			"ValidNextArrows": [false, false, false, false, true, true, true, false],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P2R is a crossover and not bracketable.
 				[false, false, false, false, false, false, false, false],
@@ -353,6 +379,12 @@
 				[false, false, false, false, false, false, false, false],
 				// Right foot on P2R supports left foot on P2L, P2D, and P2U without crossovers.
 				[false, false, false, false, true, true, true, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Left foot on P2R is a crossover and does not support stretch.
+				[false, false, false, false, false, false, false, false],
+				// Right foot on P2R supports stretch with left foot on P1R and further.
+				[true, true, true, true, false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P2R is a crossover with right in front when right is on P2U.

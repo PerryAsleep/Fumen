@@ -1,10 +1,14 @@
 @REM Tools. Hard-coded and not included in repo. Brittle.
-set DEVENV=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.exe
 set ZIP=C:\Program Files\WinRAR\WinRAR.exe
 
+@IF "%FUMEN_DEVENV%"=="" (
+    echo FUMEN_DEVENV is not defined. Please set FUMEN_DEVENV in your environment variables to the path of your devenv.exe executable.
+    exit /b
+)
+
 @REM Clean and build the solution.
-"%DEVENV%" Fumen.sln /Clean
-"%DEVENV%" Fumen.sln /Build Release
+"%FUMEN_DEVENV%" Fumen.sln /Clean
+"%FUMEN_DEVENV%" Fumen.sln /Build Release
 
 @REM Remove any existing package.
 if exist Releases\StepManiaChartGenerator.zip (

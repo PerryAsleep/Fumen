@@ -585,7 +585,7 @@ namespace StepManiaLibrary
 		private bool Search()
 		{
 			Root = new ChartSearchNode(
-				StepGraph.Root,
+				StepGraph.GetRoot(),
 				0,
 				0L,
 				null,
@@ -1001,6 +1001,9 @@ namespace StepManiaLibrary
 									generatedStateBuffer[node.State[f, p].Arrow] = SearchState.Tap;
 								break;
 							}
+							case GraphArrowState.Lifted:
+								generatedStateBuffer[node.State[f, p].Arrow] = SearchState.Empty;
+								break;
 						}
 					}
 					else
@@ -1167,6 +1170,15 @@ namespace StepManiaLibrary
 			}
 		}
 
+		private static bool IsStep(SearchState state)
+		{
+			return (state == SearchState.Tap
+					|| state == SearchState.Fake
+					|| state == SearchState.Lift
+					|| state == SearchState.Hold
+					|| state == SearchState.Roll);
+		}
+
 		#region Cost Evaluation
 
 		/// <summary>
@@ -1206,11 +1218,7 @@ namespace StepManiaLibrary
 			var lastArrowStep = 0;
 			for (var a = 0; a < state.Length; a++)
 			{
-				if (state[a] == SearchState.Tap
-				    || state[a] == SearchState.Fake
-				    || state[a] == SearchState.Lift
-				    || state[a] == SearchState.Hold
-				    || state[a] == SearchState.Roll)
+				if (IsStep(state[a]))
 				{
 					numSteps++;
 					lastArrowStep = a;
@@ -1278,11 +1286,9 @@ namespace StepManiaLibrary
 					thisAnyHeld |= position > 0 && thisReleasePositionOfPreviousStep == position;
 					otherAnyHeld |= position > 0 && otherReleasePositionOfPreviousStep == position;
 
-					if (BracketParsingMethod == BracketParsingMethod.NoBrackets
-					    && (step == StepType.BracketOneArrowHeelSame
-					        || step == StepType.BracketOneArrowToeSame
-					        || step == StepType.BracketOneArrowHeelNew
-					        || step == StepType.BracketOneArrowToeNew))
+					var bracket = StepData.Steps[(int)step].IsOneArrowBracket;
+
+					if (BracketParsingMethod == BracketParsingMethod.NoBrackets && bracket)
 					{
 						return NoBrackets_CostBracket;
 					}
@@ -1298,8 +1304,11 @@ namespace StepManiaLibrary
 							return CostSameArrow;
 						}
 						case StepType.NewArrow:
+						case StepType.NewArrowStretch:
 						case StepType.BracketOneArrowHeelNew:
 						case StepType.BracketOneArrowToeNew:
+						case StepType.BracketStretchOneArrowHeelNew:
+						case StepType.BracketStretchOneArrowToeNew:
 						{
 							// TODO: give preference to alternating in long patters
 							// For example,		LR, U, LR, D, LR, U, LR D
@@ -1452,26 +1461,33 @@ namespace StepManiaLibrary
 						}
 						case StepType.CrossoverFront:
 						case StepType.CrossoverBehind:
+						case StepType.BracketCrossoverFrontOneArrowHeelNew:
+						case StepType.BracketCrossoverFrontOneArrowToeNew:
+						case StepType.BracketCrossoverBackOneArrowHeelNew:
+						case StepType.BracketCrossoverBackOneArrowToeNew:
 						{
 							if ((previousStepLink?.IsJump() ?? false) && !otherAnyHeld)
-								return CostNewArrow_Crossover_AfterJump;
+								return bracket ? CostNewArrow_Bracket_Crossover_AfterJump: CostNewArrow_Crossover_AfterJump;
 
 							if (otherAnyHeld)
-								return CostNewArrow_Crossover_OtherHeld;
+								return bracket ? CostNewArrow_Bracket_Crossover_OtherHeld : CostNewArrow_Crossover_OtherHeld;
 
 							if (doubleStep)
 							{
 								// Mine indicated
 								if (thisMinePositionFollowingPreviousStep >= 0)
-									return CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated;
+									return bracket ? CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_MineIndicated : CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated;
 
 								// No indication
-								return CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication;
+								return bracket ? CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_NoIndication : CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication;
 							}
 
-							return CostNewArrow_Crossover;
+							return bracket ? CostNewArrow_Bracket_Crossover : CostNewArrow_Crossover;
 						}
+
 						case StepType.FootSwap:
+						case StepType.BracketOneArrowHeelSwap:
+						case StepType.BracketOneArrowToeSwap:
 						{
 							var mineIndicatedOnThisFootsArrow = thisMinePositionFollowingPreviousStep >= 0;
 
@@ -1548,25 +1564,31 @@ namespace StepManiaLibrary
 						}
 						case StepType.InvertFront:
 						case StepType.InvertBehind:
+						case StepType.BracketInvertFrontOneArrowHeelNew:
+						case StepType.BracketInvertFrontOneArrowToeNew:
+						case StepType.BracketInvertBackOneArrowHeelNew:
+						case StepType.BracketInvertBackOneArrowToeNew:
 						{
 							// Inversion from a foot swap
 							if (previousStepLink?.IsFootSwap(out _, out _) ?? false)
-								return CostNewArrow_Invert_FromSwap;
+								return bracket ? CostNewArrow_Bracket_Invert : CostNewArrow_Invert_FromSwap;
 
 							if (otherAnyHeld)
-								return CostNewArrow_Invert_OtherHeld;
+								return bracket ? CostNewArrow_Bracket_Invert : CostNewArrow_Invert_OtherHeld;
 
 							if (doubleStep)
 							{
 								// Mine indicated
 								if (thisMinePositionFollowingPreviousStep >= 0)
-									return CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated;
+									return bracket ? CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_MineIndicated :
+												CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated;
 
 								// No indication
-								return CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication;
+								return bracket ? CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_NoIndication :
+											CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication;
 							}
 
-							return CostNewArrow_Invert;
+							return bracket ? CostNewArrow_Bracket_Invert : CostNewArrow_Invert;
 						}
 						default:
 						{
@@ -1585,6 +1607,8 @@ namespace StepManiaLibrary
 					var newArrowIfThisFootSteps = new bool[NumFeet];
 					var bracketableDistanceIfThisFootSteps = new bool[NumFeet];
 					var involvesSwapIfBracketed = new bool[NumFeet];
+					var involvesCrossoverIfBracketed = new bool[NumFeet];
+					var involvesInvertIfBracketed = new bool[NumFeet];
 					for (var f = 0; f < NumFeet; f++)
 					{
 						GetTwoArrowStepInfo(
@@ -1598,7 +1622,9 @@ namespace StepManiaLibrary
 							out holdingAll[f],
 							out newArrowIfThisFootSteps[f],
 							out bracketableDistanceIfThisFootSteps[f],
-							out involvesSwapIfBracketed[f]);
+							out involvesSwapIfBracketed[f],
+							out involvesCrossoverIfBracketed[f],
+							out involvesInvertIfBracketed[f]);
 					}
 
 					// If previous was step with other foot and that other foot would need to move to reach one
@@ -1627,6 +1653,11 @@ namespace StepManiaLibrary
 						{
 							return NoBrackets_CostBracket;
 						}
+
+						if (StepData.Steps[(int)step].IsInvert)
+							return CostTwoArrows_Bracket_Invert;
+						if (StepData.Steps[(int)step].IsCrossover)
+							return CostTwoArrows_Bracket_Crossover;
 
 						var otherFoot = OtherFoot(foot);
 
@@ -1670,7 +1701,10 @@ namespace StepManiaLibrary
 						{
 							for (var f = 0; f < NumFeet; f++)
 							{
-								if (preferBracketDueToAmountOfMovement[f] && !involvesSwapIfBracketed[f])
+								if (preferBracketDueToAmountOfMovement[f]
+									&& !involvesSwapIfBracketed[f]
+									&& !involvesCrossoverIfBracketed[f]
+									&& !involvesInvertIfBracketed[f])
 								{
 									return AggressiveBrackets_CostJump_BracketPreferredDueToMovement;
 								}
@@ -1775,9 +1809,45 @@ namespace StepManiaLibrary
 				}
 
 				case 3:
-					return CostThreeArrows;
 				case 4:
-					return CostFourArrows;
+				{
+					// Prefer combinations with the simplest patterns
+					var numCrossovers = 0;
+					var numInverts = 0;
+					var numSwaps = 0;
+					var numNewArrows = 0;
+					if (previousStepLink != null)
+					{
+						for (var f = 0; f < NumFeet; f++)
+						{
+							var portionAccountedFor = false;
+							for (var p = 0; p < NumFootPortions; p++)
+							{
+								if (previousStepLink.Links[f, p].Valid)
+								{
+									if (!portionAccountedFor)
+									{
+										var sd = StepData.Steps[(int)previousStepLink.Links[f, p].Step];
+										numNewArrows += sd.NumNewArrows;
+										if (sd.IsFootSwapWithAnyPortion)
+											numSwaps++;
+										if (sd.IsInvert)
+											numInverts++;
+										if (sd.IsCrossover)
+											numCrossovers++;
+									}
+									portionAccountedFor = true;
+								}
+							}
+						}
+					}
+
+					return CostBracketJump
+						+ CostBracketJump_Invert_Penalty * numInverts
+						+ CostBracketJump_Crossover_Penalty * numCrossovers
+						+ CostBracketJump_Swap_Penalty * numSwaps
+						+ CostBracketJump_NewArrow_Penalty * numNewArrows;
+				}
 				default:
 				{
 					LogError($"[Cost Determination] Unexpected number of steps ({numSteps}) at {position}.", LogIdentifier);
@@ -1845,7 +1915,7 @@ namespace StepManiaLibrary
 					else
 					{
 						allHeld = false;
-						if (previousState[foot, p].State == GraphArrowState.Resting)
+						if (previousState[foot, p].State == GraphArrowState.Resting || previousState[foot, p].State == GraphArrowState.Lifted)
 						{
 							if (!anyHeld)
 							{
@@ -1936,7 +2006,9 @@ namespace StepManiaLibrary
 			out bool holdingAll,
 			out bool newArrowIfThisFootSteps,
 			out bool bracketableDistanceIfThisFootSteps,
-			out bool involvesSwapIfBracketed)
+			out bool involvesSwapIfBracketed,
+			out bool involvesCrossoverIfBracketed,
+			out bool involvesInvertIfBracketed)
 		{
 			var parentSearchNode = searchNode.PreviousNode;
 
@@ -1946,6 +2018,8 @@ namespace StepManiaLibrary
 			newArrowIfThisFootSteps = false;
 			bracketableDistanceIfThisFootSteps = false;
 			involvesSwapIfBracketed = false;
+			involvesCrossoverIfBracketed = false;
+			involvesInvertIfBracketed = false;
 			var arrowData = padData.ArrowData;
 
 			// Determine if any are held by this foot
@@ -1958,7 +2032,7 @@ namespace StepManiaLibrary
 				for (var p = 0; p < NumFootPortions; p++)
 				{
 					if (previousState[foot, p].Arrow != InvalidArrowIndex
-					    && previousState[foot, p].State == GraphArrowState.Resting)
+					    && (previousState[foot, p].State == GraphArrowState.Resting || previousState[foot, p].State == GraphArrowState.Lifted))
 					{
 						// A foot could be coming from a bracket with multiple releases. In this case we want to
 						// choose the latest.
@@ -1989,8 +2063,9 @@ namespace StepManiaLibrary
 							holdingAll = false;
 						}
 
-						if (parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Resting
-						    && state[previousArrow] == SearchState.Empty)
+						if ((parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Resting
+							|| parentSearchNode.GraphNode.State[foot, p].State == GraphArrowState.Lifted)
+							&& state[previousArrow] == SearchState.Empty)
 						{
 							newArrowIfThisFootSteps = true;
 						}
@@ -2028,11 +2103,7 @@ namespace StepManiaLibrary
 				var otherFoot = OtherFoot(foot);
 				for (var a = 0; a < state.Length; a++)
 				{
-					if (state[a] == SearchState.Tap
-					    || state[a] == SearchState.Fake
-					    || state[a] == SearchState.Lift
-					    || state[a] == SearchState.Hold
-					    || state[a] == SearchState.Roll)
+					if (IsStep(state[a]))
 					{
 						numSteps++;
 						if (steppedArrow != InvalidArrowIndex)
@@ -2046,14 +2117,29 @@ namespace StepManiaLibrary
 								couldBeBracketed = false;
 						}
 
-						if (!involvesSwapIfBracketed && parentSearchNode != null)
+						if (parentSearchNode != null)
 						{
 							for (var p = 0; p < NumFootPortions; p++)
 							{
-								if (parentSearchNode.GraphNode.State[otherFoot, p].Arrow == a)
+								var otherA = parentSearchNode.GraphNode.State[otherFoot, p].Arrow;
+								if (otherA == InvalidArrowIndex)
+									continue;
+
+								if (otherA == a)
 								{
 									involvesSwapIfBracketed = true;
-									break;
+								}
+
+								var ad = arrowData[otherA];
+								if (ad.OtherFootPairingsOtherFootCrossoverBehind[otherFoot][a]
+									|| ad.OtherFootPairingsOtherFootCrossoverBehind[otherFoot][a])
+								{
+									involvesCrossoverIfBracketed = true;
+								}
+
+								if (ad.OtherFootPairingsInverted[otherFoot][a])
+								{
+									involvesInvertIfBracketed = true;
 								}
 							}
 						}

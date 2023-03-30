@@ -51,14 +51,6 @@
     {
       "X": 0,
       "Y": 0,
-      "ValidNextArrows": [
-        false,
-        true,
-        true,
-        false,
-        false,
-        false
-      ],
       "BracketablePairingsOtherHeel": [
         [
           false,
@@ -103,6 +95,24 @@
           false,
           false,
           false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsStretch": [
+        [
+          false,
+          false,
+          false,
+          true,
+          true,
+          true
         ],
         [
           false,
@@ -171,14 +181,6 @@
     {
       "X": 1,
       "Y": 0,
-      "ValidNextArrows": [
-        true,
-        false,
-        true,
-        true,
-        false,
-        false
-      ],
       "BracketablePairingsOtherHeel": [
         [
           true,
@@ -226,6 +228,24 @@
         ],
         [
           true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsStretch": [
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          true
+        ],
+        [
+          false,
           false,
           false,
           false,
@@ -291,14 +311,6 @@
     {
       "X": 2,
       "Y": 0,
-      "ValidNextArrows": [
-        true,
-        true,
-        false,
-        true,
-        true,
-        false
-      ],
       "BracketablePairingsOtherHeel": [
         [
           false,
@@ -347,6 +359,24 @@
         [
           true,
           true,
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsStretch": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true
+        ],
+        [
+          false,
+          false,
           false,
           false,
           false,
@@ -411,14 +441,6 @@
     {
       "X": 3,
       "Y": 0,
-      "ValidNextArrows": [
-        false,
-        true,
-        true,
-        false,
-        true,
-        true
-      ],
       "BracketablePairingsOtherHeel": [
         [
           false,
@@ -468,6 +490,24 @@
           false,
           true,
           true,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsStretch": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          true,
+          false,
+          false,
           false,
           false,
           false
@@ -531,14 +571,6 @@
     {
       "X": 4,
       "Y": 0,
-      "ValidNextArrows": [
-        false,
-        false,
-        true,
-        true,
-        false,
-        true
-      ],
       "BracketablePairingsOtherHeel": [
         [
           false,
@@ -589,6 +621,24 @@
           false,
           true,
           true,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsStretch": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          true,
+          true,
+          false,
+          false,
           false,
           false
         ]
@@ -651,14 +701,6 @@
     {
       "X": 5,
       "Y": 0,
-      "ValidNextArrows": [
-        false,
-        false,
-        false,
-        true,
-        true,
-        false
-      ],
       "BracketablePairingsOtherHeel": [
         [
           false,
@@ -710,6 +752,24 @@
           false,
           true,
           true,
+          false
+        ]
+      ],
+      "OtherFootPairingsStretch": [
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          true,
+          true,
+          true,
+          false,
+          false,
           false
         ]
       ],

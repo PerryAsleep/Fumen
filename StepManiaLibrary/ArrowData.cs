@@ -39,12 +39,6 @@ namespace StepManiaLibrary
 		[JsonInclude] public int Y;
 
 		/// <summary>
-		/// Which arrows are valid as a next step from this arrow for either foot.
-		/// Index is arrow.
-		/// </summary>
-		[JsonInclude] public bool[] ValidNextArrows;
-
-		/// <summary>
 		/// Which arrows are bracketable with this arrow for the given foot when the
 		/// toes are on this arrow and the heel is on the other arrow.
 		/// First index is foot, second is arrow.
@@ -61,10 +55,18 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// Which arrows are valid pairings for the other foot.
 		/// For example, if the first index is Left, the arrows listed are the valid
-		/// positions for the Right foot without crossing over.
+		/// positions for the Right foot without crossing over or stretching.
 		/// First index is foot, second is arrow.
 		/// </summary>
 		[JsonInclude] public bool[][] OtherFootPairings = new bool[NumFeet][];
+
+		/// <summary>
+		/// Which arrows are valid pairings for the other foot with stretching.
+		/// For example, if the first index is Left, the arrows listed are the valid
+		/// positions for the Right foot without crossing over, but with stretching.
+		/// First index is foot, second is arrow.
+		/// </summary>
+		[JsonInclude] public bool[][] OtherFootPairingsStretch = new bool[NumFeet][];
 
 		/// <summary>
 		/// Which arrows form a front crossover.

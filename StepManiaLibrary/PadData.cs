@@ -136,17 +136,10 @@ namespace StepManiaLibrary
 			{
 				arrowData.Lane = lane;
 				lane++;
-
-				if (arrowData.ValidNextArrows == null || arrowData.ValidNextArrows.Length != NumArrows)
-				{
-					LogError(
-						$"Lane {lane}: {arrowData.ValidNextArrows?.Length ?? 0} ValidNextArrows entries found. Expected {NumArrows}.");
-					errors = true;
-				}
-
 				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsOtherHeel, lane, "BracketablePairingsOtherHeel");
 				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsOtherToe, lane, "BracketablePairingsOtherToe");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairings, lane, "OtherFootPairings");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsStretch, lane, "OtherFootPairingsStretch");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsOtherFootCrossoverFront, lane, "OtherFootPairingsOtherFootCrossoverFront");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsOtherFootCrossoverBehind, lane, "OtherFootPairingsOtherFootCrossoverBehind");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInverted, lane, "OtherFootPairingsInverted");

@@ -29,10 +29,7 @@ namespace ChartGeneratorTests
 			var padDataTask = PadData.LoadPadData("dance-single", "dance-single.json");
 			padDataTask.Wait();
 			var padData = padDataTask.Result;
-			SPGraph = StepGraph.CreateStepGraph(
-				padData,
-				padData.StartingPositions[0][0][L],
-				padData.StartingPositions[0][0][R]);
+			SPGraph = StepGraph.Load("dance-single.fsg", padData);
 		}
 
 		/// <summary>
@@ -413,6 +410,18 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
+		/// Helper method to assert that the given MineEvent matches the expected configuration.
+		/// </summary>
+		/// <param name="mineEvent">MineEvent to check.</param>
+		/// <param name="type">Expected MineType.</param>
+		/// <param name="n">Expected value for the MineEvent's ArrowIsNthClosest value.</param>
+		public static void AssertMineEventMatches(ExpressedChart.MineEvent mineEvent, MineType type, int n)
+		{
+			Assert.AreEqual(mineEvent.Type, type);
+			Assert.AreEqual(mineEvent.ArrowIsNthClosest, n);
+		}
+
+		/// <summary>
 		/// Helper method to determine if a GraphLinkInstance represents a single step with a given foot.
 		/// </summary>
 		/// <param name="link">GraphLinkInstance to check.</param>
@@ -527,10 +536,12 @@ namespace ChartGeneratorTests
 			Assert.AreEqual(4, ec.MineEvents.Count);
 			var i = 0;
 
-			// Mines which occur in lanes with no arrows should be NoArrow.
+			// Mines which occur after arrows that occurred at the same time should have
+			// the same N value. Do not require a specific arrow in the jump in this test
+			// as it is ambiguous.
 			AssertMineEventMatches(ec.MineEvents[i++], MineType.AfterArrow, 2, L);
-			AssertMineEventMatches(ec.MineEvents[i++], MineType.AfterArrow, 1, L);
-			AssertMineEventMatches(ec.MineEvents[i++], MineType.AfterArrow, 1, R);
+			AssertMineEventMatches(ec.MineEvents[i++], MineType.AfterArrow, 1);
+			AssertMineEventMatches(ec.MineEvents[i++], MineType.AfterArrow, 1);
 			AssertMineEventMatches(ec.MineEvents[i++], MineType.AfterArrow, 0, R);
 		}
 
@@ -1333,6 +1344,7 @@ namespace ChartGeneratorTests
 		public void TestJumpStepNoCrossovers()
 		{
 			var ec = Load(GetTestChartPath("TestJumpStepNoCrossovers"));
+			int i = 0;
 			foreach (var step in ec.StepEvents)
 			{
 				var links = step.LinkInstance.GraphLink.Links;
@@ -1349,6 +1361,8 @@ namespace ChartGeneratorTests
 						}
 					}
 				}
+
+				i++;
 			}
 		}
 

@@ -13,8 +13,6 @@
 		{
 			"X": 0,
 			"Y": 1,
-			// A foot on P1L can move next to P1D, P1U, or P1R.
-			"ValidNextArrows": [false, true, true, true],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1L is bracketable with the heel on other arrows on P1D.
 				[false, true, false, false],
@@ -32,6 +30,11 @@
 				[false, true, true, true],
 				// Right foot on P1L is a crossover with no normal left foot pairing.
 				[false, false, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Sinlges has no stretch.
+				[false, false, false, false],
+				[false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P1L is never a crossover position.
@@ -57,8 +60,6 @@
 		{
 			"X": 1,
 			"Y": 2,
-			// A foot on P1L can move next to P1D, P1U, or P1R.
-			"ValidNextArrows": [true, false, true, true],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1D uses the heel.
 				[false, false, false, false],
@@ -76,6 +77,11 @@
 				[false, false, true, true],
 				// Right foot on P1D supports Left foot on P1L and P1U without crossovers.
 				[true, false, true, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Sinlges has no stretch.
+				[false, false, false, false],
+				[false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P1D is a crossover with right in front with right is on P1L.
@@ -101,8 +107,6 @@
 		{
 			"X": 1,
 			"Y": 0,
-			// A foot on P1U can move next to P1L, P1D, or P1R.
-			"ValidNextArrows": [true, true, false, true],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1U is bracketable with the heel on other arrows on P1L.
 				[true, false, false, false],
@@ -120,6 +124,11 @@
 				[false, true, false, true],
 				// Right foot on P1U supports left foot on P1L and P1D without crossovers.
 				[true, true, false, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Sinlges has no stretch.
+				[false, false, false, false],
+				[false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// None.
@@ -145,8 +154,6 @@
 		{
 			"X": 2,
 			"Y": 1,
-			// A foot on P1R can move next to P1L, P1D, or P1U.
-			"ValidNextArrows": [true, true, true, false],
 			"BracketablePairingsOtherHeel": [
 				// Left foot on P1R is a crossover and not bracketable.
 				[false, false, false, false],
@@ -164,6 +171,11 @@
 				[false, false, false, false],
 				// Right foot on P1R supports left foot on P1L, P1D, and P1U without crossovers.
 				[true, true, true, false],
+			],
+			"OtherFootPairingsStretch": [
+				// Sinlges has no stretch.
+				[false, false, false, false],
+				[false, false, false, false]
 			],
 			"OtherFootPairingsOtherFootCrossoverFront": [
 				// Left foot on P1R is a crossover with right in front when right is on P1U.

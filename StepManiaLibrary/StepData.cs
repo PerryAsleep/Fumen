@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Fumen;
 using static StepManiaLibrary.Constants;
 
 namespace StepManiaLibrary
@@ -19,8 +18,9 @@ namespace StepManiaLibrary
 		InvertFront,
 		InvertBehind,
 		FootSwap,
+		NewArrowStretch,
 
-		// Bracket two arrows with one foot.
+		// Brackets.
 		BracketHeelNewToeNew,
 		BracketHeelNewToeSame,
 		BracketHeelSameToeNew,
@@ -29,12 +29,55 @@ namespace StepManiaLibrary
 		BracketHeelNewToeSwap,
 		BracketHeelSwapToeSame,
 		BracketHeelSwapToeNew,
+		BracketHeelSwapToeSwap,
 
-		// Bracket one arrow (e.g. due to holding on one arrow).
+		// Crossover brackets.
+		BracketCrossoverFrontHeelNewToeNew,
+		BracketCrossoverFrontHeelNewToeSame,
+		BracketCrossoverFrontHeelSameToeNew,
+		BracketCrossoverBackHeelNewToeNew,
+		BracketCrossoverBackHeelNewToeSame,
+		BracketCrossoverBackHeelSameToeNew,
+
+		// Invert brackets.
+		BracketInvertFrontHeelNewToeNew,
+		BracketInvertFrontHeelNewToeSame,
+		BracketInvertFrontHeelSameToeNew,
+		BracketInvertBackHeelNewToeNew,
+		BracketInvertBackHeelNewToeSame,
+		BracketInvertBackHeelSameToeNew,
+
+		// Stretch brackets.
+		BracketStretchHeelNewToeNew,
+		BracketStretchHeelNewToeSame,
+		BracketStretchHeelSameToeNew,
+
+		// Single arrow brackets.
 		BracketOneArrowHeelSame,
 		BracketOneArrowHeelNew,
+		BracketOneArrowHeelSwap,
 		BracketOneArrowToeSame,
-		BracketOneArrowToeNew
+		BracketOneArrowToeNew,
+		BracketOneArrowToeSwap,
+
+		// Single arrow crossover brackets.
+		BracketCrossoverFrontOneArrowHeelNew,
+		BracketCrossoverFrontOneArrowToeNew,
+		BracketCrossoverBackOneArrowHeelNew,
+		BracketCrossoverBackOneArrowToeNew,
+
+		// Single arrow invert brackets.
+		BracketInvertFrontOneArrowHeelNew,
+		BracketInvertFrontOneArrowToeNew,
+		BracketInvertBackOneArrowHeelNew,
+		BracketInvertBackOneArrowToeNew,
+
+		// Single arrow stretch brackets.
+		BracketStretchOneArrowHeelNew,
+		BracketStretchOneArrowToeNew,
+
+		// This enum is serialized as an integer in StepGraph.
+		// When changing this enum update serialization logic accordingly.
 	}
 
 	/// <summary>
@@ -47,6 +90,8 @@ namespace StepManiaLibrary
 		Tap,
 		Hold,
 		Release
+		// This enum is serialized as an integer in StepGraph.
+		// When changing this enum update serialization logic accordingly.
 	}
 
 	/// <summary>
@@ -58,18 +103,23 @@ namespace StepManiaLibrary
 		Normal,
 		InvertedRightOverLeft,
 		InvertedLeftOverRight
+		// This enum is serialized as an integer in StepGraph.
+		// When changing this enum update serialization logic accordingly.
 	}
 
 	/// <summary>
 	/// The state a foot on an arrow in StepGraph can be in.
-	/// There is no none / lifted state.
 	/// Each foot is on one or more arrows each in one of these states.
+	/// Lifted only occurs when a foot swaps and forces the other foot to release.
 	/// Rolls are considered no different than holds in the StepGraph.
 	/// </summary>
 	public enum GraphArrowState
 	{
 		Resting,
-		Held
+		Held,
+		Lifted,
+		// This enum is serialized as an integer in StepGraph.
+		// When changing this enum update serialization logic accordingly.
 	}
 
 	/// <summary>
@@ -77,30 +127,6 @@ namespace StepManiaLibrary
 	/// </summary>
 	public class StepData
 	{
-		/// <summary>
-		/// Cached FootAction combinations for a step.
-		/// Steps that involve one arrow will have an array of length 1 arrays.
-		/// Steps that involve multiple arrows (brackets) will have an array of length 2 arrays.
-		/// First index is the set of actions.
-		///  For example, for length 2 FootAction combinations we would have roughly 9 entries
-		///  since it is combining the 3 FootActions with 3 more.
-		/// Second index is the arrow for the foot in question.
-		///  For most StepTypes this will be a length 1 arrow. For brackets this will be a
-		///  length 2 array.
-		/// </summary>
-		public readonly FootAction[][] ActionSets;
-
-		/// <summary>
-		/// Which foot portions to use when filling the graph.
-		/// Most StepTypes use just one foot portion, DefaultFootPortion.
-		/// Bracket individual steps use one foot portion, Heel or Toe.
-		/// Brackets use two foot portions, Heel then Toe.
-		/// We do not need to include other combinations (Toe then Heel) since the
-		/// ActionCombinations will apply all FootAction combinations to Heel then Toe.
-		/// For example it will apply Hold, Tap to Heel, Toe, and also Tap, Hold to Heel Toe.
-		/// </summary>
-		public readonly int[] FootPortionsForStep;
-
 		/// <summary>
 		/// Whether or not this StepType can be used in a jump.
 		/// </summary>
@@ -123,32 +149,37 @@ namespace StepManiaLibrary
 		public readonly bool IsBracket;
 
 		/// <summary>
-		/// If true then when filling this StepType only consider filling from currently
-		/// valid State entries in the parent GraphNode.
-		/// If false, then loop over all arrows to try and fill for each.
+		/// Whether or not this StepType is a bracket on a single panel.
 		/// </summary>
-		public readonly bool OnlyConsiderCurrentArrowsWhenFilling;
+		public readonly bool IsOneArrowBracket;
+
+		public readonly bool IsCrossover;
+
+		public readonly bool IsInvert;
+
+		public readonly int NumNewArrows;
 
 		/// <summary>
 		/// Private Constructor
 		/// </summary>
 		private StepData(
-			FootAction[][] actionSets,
-			int[] footPortionsForStep,
 			bool canBeUsedInJump,
 			bool[] isFootSwap,
 			bool isBracket,
-			bool onlyConsiderCurrentArrowsWhenFilling)
+			bool isOneArrowBracket,
+			bool isCrossover,
+			bool isInvert,
+			int numNewArrows)
 		{
-			ActionSets = actionSets;
-			FootPortionsForStep = footPortionsForStep;
 			CanBeUsedInJump = canBeUsedInJump;
 			IsFootSwap = isFootSwap;
 			IsBracket = isBracket;
-			OnlyConsiderCurrentArrowsWhenFilling = onlyConsiderCurrentArrowsWhenFilling;
-
 			foreach (var swap in isFootSwap)
 				IsFootSwapWithAnyPortion |= swap;
+			IsOneArrowBracket = isOneArrowBracket;
+			IsCrossover = isCrossover;
+			IsInvert = isInvert;
+			NumNewArrows = numNewArrows;
 		}
 
 		/// <summary>
@@ -174,52 +205,6 @@ namespace StepManiaLibrary
 			StateAfterAction[(int) FootAction.Hold] = GraphArrowState.Held;
 			StateAfterAction[(int) FootAction.Release] = GraphArrowState.Resting;
 
-			// Create lists of combinations of actions for each number of foot portions.
-			// Create one list with releases and one without.
-			var actionCombinations = new FootAction[NumFootPortions][][];
-			var actionCombinationsWithoutReleases = new FootAction[NumFootPortions][][];
-			for (var i = 0; i < NumFootPortions; i++)
-			{
-				var combinations = Combinations.CreateCombinations<FootAction>(i + 1);
-
-				// For brackets you can never release and place at the same time
-				// This would be split into two events, a release first, and a step after.
-				// Prune those combinations out now so we don't loop over them and need to check for them
-				// when searching.
-				if (i >= 1)
-				{
-					combinations.RemoveAll(actions =>
-					{
-						var hasAtLeastOneRelease = false;
-						var isAllReleases = true;
-						foreach (var action in actions)
-						{
-							if (action == FootAction.Release)
-								hasAtLeastOneRelease = true;
-							else
-								isAllReleases = false;
-						}
-
-						return hasAtLeastOneRelease != isAllReleases;
-					});
-				}
-
-				actionCombinations[i] = combinations.ToArray();
-
-				// Update the combinations with no releases.
-				combinations.RemoveAll(actions =>
-				{
-					foreach (var action in actions)
-					{
-						if (action == FootAction.Release)
-							return true;
-					}
-
-					return false;
-				});
-				actionCombinationsWithoutReleases[i] = combinations.ToArray();
-			}
-
 			var steps = Enum.GetValues(typeof(StepType)).Cast<StepType>().ToList();
 
 			// Set up swap data arrays for legibility below.
@@ -227,167 +212,467 @@ namespace StepManiaLibrary
 			var defaultFootSwap = new bool[NumFootPortions];
 			var heelFootSwap = new bool[NumFootPortions];
 			var toeFootSwap = new bool[NumFootPortions];
+			var allFootSwap = new bool[NumFootPortions];
 			for (var p = 0; p < NumFootPortions; p++)
 			{
 				noFootSwap[p] = false;
 				defaultFootSwap[p] = p == DefaultFootPortion;
 				heelFootSwap[p] = p == Heel;
 				toeFootSwap[p] = p == Toe;
+				allFootSwap[p] = true;
 			}
 
 			// Configure the Steps.
 			Steps = new StepData[steps.Count];
+
+			// Simple step types.
 			Steps[(int) StepType.SameArrow] = new StepData(
-				actionSets: actionCombinations[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: true
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.NewArrow] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.CrossoverFront] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.CrossoverBehind] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.InvertFront] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.InvertBehind] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.FootSwap] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {DefaultFootPortion},
 				canBeUsedInJump: false,
 				isFootSwap: defaultFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
+			Steps[(int)StepType.NewArrowStretch] = new StepData(
+				canBeUsedInJump: true,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
+
+			// Brackets.
 			Steps[(int) StepType.BracketHeelNewToeNew] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 2
 			);
 			Steps[(int) StepType.BracketHeelNewToeSame] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.BracketHeelSameToeNew] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.BracketHeelSameToeSame] = new StepData(
-				actionSets: actionCombinations[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: true
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.BracketHeelSameToeSwap] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: false,
 				isFootSwap: toeFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.BracketHeelNewToeSwap] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: false,
 				isFootSwap: toeFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
 			);
 			Steps[(int) StepType.BracketHeelSwapToeSame] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: false,
 				isFootSwap: heelFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.BracketHeelSwapToeNew] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[1],
-				footPortionsForStep: new[] {Heel, Toe},
 				canBeUsedInJump: false,
 				isFootSwap: heelFootSwap,
 				isBracket: true,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
 			);
+			Steps[(int)StepType.BracketHeelSwapToeSwap] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: allFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
+			);
+
+			// Crossover brackets.
+			Steps[(int)StepType.BracketCrossoverFrontHeelNewToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 2
+			);
+			Steps[(int)StepType.BracketCrossoverFrontHeelNewToeSame] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketCrossoverFrontHeelSameToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketCrossoverBackHeelNewToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 2
+			);
+			Steps[(int)StepType.BracketCrossoverBackHeelNewToeSame] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketCrossoverBackHeelSameToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+
+			// Invert brackets.
+			Steps[(int)StepType.BracketInvertFrontHeelNewToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 2
+			);
+			Steps[(int)StepType.BracketInvertFrontHeelNewToeSame] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketInvertFrontHeelSameToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketInvertBackHeelNewToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 2
+			);
+			Steps[(int)StepType.BracketInvertBackHeelNewToeSame] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketInvertBackHeelSameToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+
+			// Stretch brackets.
+			Steps[(int)StepType.BracketStretchHeelNewToeNew] = new StepData(
+				canBeUsedInJump: true,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 2
+			);
+			Steps[(int)StepType.BracketStretchHeelNewToeSame] = new StepData(
+				canBeUsedInJump: true,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketStretchHeelSameToeNew] = new StepData(
+				canBeUsedInJump: true,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
+
+			// Single arrow brackets.
 			Steps[(int) StepType.BracketOneArrowHeelSame] = new StepData(
-				actionSets: actionCombinations[0],
-				footPortionsForStep: new[] {Heel},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: true
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.BracketOneArrowHeelNew] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {Heel},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketOneArrowHeelSwap] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.BracketOneArrowToeSame] = new StepData(
-				actionSets: actionCombinations[0],
-				footPortionsForStep: new[] {Toe},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: true
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
 			);
 			Steps[(int) StepType.BracketOneArrowToeNew] = new StepData(
-				actionSets: actionCombinationsWithoutReleases[0],
-				footPortionsForStep: new[] {Toe},
 				canBeUsedInJump: true,
 				isFootSwap: noFootSwap,
 				isBracket: false,
-				onlyConsiderCurrentArrowsWhenFilling: false
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketOneArrowToeSwap] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 0
+			);
+
+			// Single arrow crossover brackets.
+			Steps[(int)StepType.BracketCrossoverFrontOneArrowHeelNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketCrossoverFrontOneArrowToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketCrossoverBackOneArrowHeelNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketCrossoverBackOneArrowToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: true,
+				isInvert: false,
+				numNewArrows: 1
+			);
+
+			// Single arrow invert brackets.
+			Steps[(int)StepType.BracketInvertFrontOneArrowHeelNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketInvertFrontOneArrowToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketInvertBackOneArrowHeelNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketInvertBackOneArrowToeNew] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: true,
+				numNewArrows: 1
+			);
+
+			// Single arrow stretch brackets.
+			Steps[(int)StepType.BracketStretchOneArrowHeelNew] = new StepData(
+				canBeUsedInJump: true,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
+			Steps[(int)StepType.BracketStretchOneArrowToeNew] = new StepData(
+				canBeUsedInJump: true,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: true,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
 			);
 		}
 	}

@@ -53,6 +53,13 @@ namespace StepManiaLibrary
 				Valid = true;
 			}
 
+			public FootArrowState(StepType step, FootAction action, bool valid)
+			{
+				Step = step;
+				Action = action;
+				Valid = valid;
+			}
+
 			#region IEquatable Implementation
 
 			public override bool Equals(object obj)

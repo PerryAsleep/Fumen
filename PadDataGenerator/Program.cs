@@ -8,15 +8,28 @@ using static StepManiaLibrary.Constants;
 using System.Linq;
 using System.Threading.Tasks;
 using static System.Diagnostics.Debug;
+using Fumen;
 
 namespace PadDataGenerator
 {
 	/// <summary>
 	/// Program for generating PadData files from simplified input.
+	/// Optionally generates StepGraph files.
 	/// </summary>
 	internal class Program
 	{
 		private const string InputFileName = "input.json";
+
+		/// <summary>
+		/// Input to this application.
+		/// </summary>
+		private class Input
+		{
+			/// <summary>
+			/// StepsType to PadDataInput
+			/// </summary>
+			public Dictionary<string, PadDataInput> PadDataInput;
+		}
 
 		/// <summary>
 		/// Input to this application per ChartType.
@@ -32,14 +45,13 @@ namespace PadDataGenerator
 				public int Y;
 			}
 
-			// TODO: Stretch
-			public int MaxXSeparation = 2;
-			public int MaxYSeparation = 2;
-			// TODO: Wide Crossovers
+			public int MaxXSeparationBeforeStretch = 2;
+			public int MaxYSeparationBeforeStretch = 2;
 			public int MaxXSeparationCrossover = 1;
 			public int MaxXSeparationBracket = 1;
 			public int MaxYSeparationBracket = 1;
 			public double YTravelDistanceCompensation = 0.5;
+			public bool GenerateStepGraph = true;
 
 			/// <summary>
 			/// Positions of all arrows.
@@ -61,13 +73,15 @@ namespace PadDataGenerator
 
 		private static async Task Main()
 		{
-			// Load inputs.
-			var inputs = new Dictionary<string, PadDataInput>();
+			CreateLogger();
+
+			// Load input.
+			var input = new Input();
 			try
 			{
 				using (FileStream openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, InputFileName)))
 				{
-					inputs = JsonSerializer.Deserialize<Dictionary<string, PadDataInput>>(openStream, SerializationOptions);
+					input = JsonSerializer.Deserialize<Input>(openStream, SerializationOptions);
 				}
 			}
 			catch (Exception e)
@@ -80,9 +94,11 @@ namespace PadDataGenerator
 			var expectedPadData = await LoadExpectedPadData();
 
 			// Create pad data for each input and write it to disk.
-			foreach (var kvp in inputs)
+			var numStepGraphs = 0;
+			foreach (var kvp in input.PadDataInput)
 			{
 				// Create the pad data.
+				Logger.Info($"Creating {kvp.Key} PadData.");
 				var padData = CreatePadData(kvp.Value);
 
 				// Compare it to expected data, if expected data is present.
@@ -92,7 +108,8 @@ namespace PadDataGenerator
 				}
 
 				// Write to disk.
-				var outputFileName = $"{kvp.Key}.json";
+				var outputFileName = GetPadDataFileName(kvp.Key);
+				Logger.Info($"Saving {outputFileName}.");
 				try
 				{
 					var jsonString = JsonSerializer.Serialize(padData, SerializationOptions);
@@ -103,7 +120,116 @@ namespace PadDataGenerator
 					Console.WriteLine($"Failed to write {outputFileName}: {e}");
 					continue;
 				}
+				Logger.Info($"Saved {outputFileName}.");
+
+				if (kvp.Value.GenerateStepGraph)
+					numStepGraphs++;
 			}
+
+			// Generate StepGraphs.
+			if (numStepGraphs > 0)
+			{
+				var stepGraphTasks = new Task<StepGraph>[numStepGraphs];
+				int i = 0;
+				foreach (var kvp in input.PadDataInput)
+				{
+					if (!kvp.Value.GenerateStepGraph)
+						continue;
+					stepGraphTasks[i] = CreateStepGraphAsync(kvp.Key);
+					i++;
+				}
+				await Task.WhenAll(stepGraphTasks);
+			}
+		}
+
+		private static void CreateLogger()
+		{
+			var programPath = System.Reflection.Assembly.GetEntryAssembly().Location;
+			var programDir = System.IO.Path.GetDirectoryName(programPath);
+			var appName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+			var logDirectory = Fumen.Path.Combine(programDir, "logs");
+
+			var canLogToFile = true;
+			var logToFileError = "";
+			try
+			{
+				// Make a log directory if one doesn't exist.
+				Directory.CreateDirectory(logDirectory);
+
+				// Start the logger and write to disk as well as the internal buffer to display.
+				var logFileName = appName + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ".log";
+				var logFilePath = Fumen.Path.Combine(logDirectory, logFileName);
+				Logger.StartUp(new Logger.Config
+				{
+					WriteToConsole = false,
+
+					WriteToFile = true,
+					LogFilePath = logFilePath,
+					LogFileFlushIntervalSeconds = 20,
+					LogFileBufferSizeBytes = 10240,
+
+					WriteToBuffer = false,
+				});
+			}
+			catch (Exception e)
+			{
+				canLogToFile = false;
+				logToFileError = e.ToString();
+			}
+
+			// If we can't log to a file just log to the internal buffer.
+			if (!canLogToFile)
+			{
+				Logger.StartUp(new Logger.Config
+				{
+					WriteToConsole = false,
+					WriteToFile = false,
+					WriteToBuffer = false,
+				});
+
+				// Log an error that we were enable to log to a file.
+				Logger.Error($"Unable to log to disk. {logToFileError}");
+			}
+		}
+
+		private static string GetPadDataFileName(string stepsType)
+		{
+			return $"{stepsType}.json";
+		}
+
+		private static async Task<StepGraph> CreateStepGraphAsync(string stepsType)
+		{
+			return await Task.Run(async () =>
+			{
+				// Load pad data from disk.
+				// This guarantees all initialization has occured. When this application creates
+				// PadData it bypasses most of the initialization.
+				var padData = await PadData.LoadPadData(stepsType, GetPadDataFileName(stepsType));
+
+				// Create the StepGraph.
+				Logger.Info($"Creating {stepsType} StepGraph.");
+				var stepGraph = StepGraph.CreateStepGraph(
+					padData,
+					padData.StartingPositions[0][0][L],
+					padData.StartingPositions[0][0][R]);
+
+				// Save the StepGraph.
+				Logger.Info($"Saving {stepsType} StepGraph.");
+				var fileName = $"{stepsType}.fsg";
+				fileName = Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+				stepGraph.Save(fileName);
+
+				Logger.Info($"Saved {fileName}.");
+
+				// Ensure it can be loaded properly.
+				var loadedGraph = StepGraph.Load(fileName, padData);
+				if (loadedGraph == null)
+				{
+					Logger.Error($"Failed to load saved StepGraph for {stepsType}.");
+				}
+
+				return stepGraph;
+			});
 		}
 
 		private static async Task<Dictionary<string, PadData>> LoadExpectedPadData()
@@ -132,7 +258,6 @@ namespace PadDataGenerator
 			for (int a = 0; a < numArrows; a++)
 			{
 				var ad = new ArrowData();
-				ad.ValidNextArrows = new bool[numArrows];
 				for (var f = 0; f < NumFeet; f++)
 				{
 					ad.BracketablePairingsOtherHeel[f] = new bool[numArrows];
@@ -175,20 +300,6 @@ namespace PadDataGenerator
 				// Position
 				ad.X = input.Positions[a].X;
 				ad.Y = input.Positions[a].Y;
-
-				// Valid next arrows.
-				for (int a2 = 0; a2 < numArrows; a2++)
-				{
-					var xd = Math.Abs(ad.X - input.Positions[a2].X);
-					var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
-
-					// For this arrow to be a valid next arrow to step on...
-					padData.ArrowData[a].ValidNextArrows[a2] =
-						// Arrows must be different.
-						(a != a2)
-						// Arrows cannot be too far apart.
-						&& xd <= input.MaxXSeparation && yd <= input.MaxYSeparation;
-				}
 
 				// Bracketable pairings with the toe on this arrow and the heel on another.
 				for (var f = 0; f < NumFeet; f++)
@@ -282,7 +393,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparation && yd <= input.MaxYSeparation
+								&& xd <= input.MaxXSeparationBeforeStretch && yd <= input.MaxYSeparationBeforeStretch
 								// The arrow must not be to the left of your left foot, otherwise you would be crossed over.
 								&& input.Positions[a2].X >= ad.X;
 						}
@@ -293,7 +404,41 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparation && yd <= input.MaxYSeparation
+								&& xd <= input.MaxXSeparationBeforeStretch && yd <= input.MaxYSeparationBeforeStretch
+								// The arrow must not be to the right of your right foot, otherwise you would be crossed over.
+								&& input.Positions[a2].X <= ad.X;
+						}
+					}
+				}
+
+				// Other foot pairings with stretch.
+				for (var f = 0; f < NumFeet; f++)
+				{
+					ad.OtherFootPairingsStretch[f] = new bool[numArrows];
+					for (int a2 = 0; a2 < numArrows; a2++)
+					{
+						var xd = Math.Abs(ad.X - input.Positions[a2].X);
+						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
+
+						if (f == L)
+						{
+							// For this arrow to be a valid other foot pairing with stretch...
+							ad.OtherFootPairingsStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be at least stretch distance apart in one dimension.
+								&& (xd > input.MaxXSeparationBeforeStretch || yd > input.MaxYSeparationBeforeStretch)
+								// The arrow must not be to the left of your left foot, otherwise you would be crossed over.
+								&& input.Positions[a2].X >= ad.X;
+						}
+						else
+						{
+							// For this arrow to be a valid other foot pairing with stretch...
+							ad.OtherFootPairingsStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be at least stretch distance apart in one dimension.
+								&& (xd > input.MaxXSeparationBeforeStretch || yd > input.MaxYSeparationBeforeStretch)
 								// The arrow must not be to the right of your right foot, otherwise you would be crossed over.
 								&& input.Positions[a2].X <= ad.X;
 						}
@@ -316,7 +461,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparation
+								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
 								// Right foot must be in front of left foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the left of your left foot.
@@ -329,7 +474,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparation
+								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
 								// Left foot must be in front of right foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the right of your right foot.
@@ -354,7 +499,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparation
+								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
 								// Right foot must be in back of left foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the left of your left foot.
@@ -367,7 +512,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparation
+								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
 								// Left foot must be in back of right foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the right of your right foot.
@@ -392,7 +537,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows must be at the same Y position and not too far apart in X.
-								&& xd <= input.MaxXSeparation && yd <= 0
+								&& xd <= input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the left of your left foot.
 								&& input.Positions[a2].X < ad.X;
 						}
@@ -403,7 +548,7 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// Arrows must be at the same Y position and not too far apart in X.
-								&& xd <= input.MaxXSeparation && yd <= 0
+								&& xd <= input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the right of your right foot.
 								&& input.Positions[a2].X > ad.X;
 						}
@@ -624,13 +769,6 @@ namespace PadDataGenerator
 				var ad = actual.ArrowData[a];
 				Assert(ed.X == ad.X);
 				Assert(ed.Y == ad.Y);
-
-				Assert(numArrows == ed.ValidNextArrows.Length);
-				Assert(numArrows == ad.ValidNextArrows.Length);
-				for (var a2 = 0; a2 < numArrows; a2++)
-				{
-					Assert(ed.ValidNextArrows[a2] == ad.ValidNextArrows[a2]);
-				}
 
 				VerifyFootArrowArrow(ed.BracketablePairingsOtherHeel, ad.BracketablePairingsOtherHeel, numArrows);
 				VerifyFootArrowArrow(ed.BracketablePairingsOtherToe, ad.BracketablePairingsOtherToe, numArrows);

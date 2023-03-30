@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StepManiaLibrary;
 using static StepManiaLibrary.Constants;
 
-namespace ChartGeneratorTests
+namespace StepManiaLibraryTests
 {
 	/// <summary>
 	/// Tests for ArrowData.
@@ -44,9 +44,6 @@ namespace ChartGeneratorTests
 					var oppositeA = numArrows - a - 1;
 					var oppositeA2 = numArrows - a2 - 1;
 
-					Assert.AreEqual(arrowData[a].ValidNextArrows[a2],
-						arrowData[oppositeA].ValidNextArrows[oppositeA2]);
-
 					for (var f = 0; f < NumFeet; f++)
 					{
 						var oppositeF = NumFeet - f - 1;
@@ -56,45 +53,14 @@ namespace ChartGeneratorTests
 							arrowData[oppositeA].BracketablePairingsOtherHeel[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairings[f][a2],
 							arrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsStretch[f][a2],
+							arrowData[oppositeA].OtherFootPairingsStretch[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2],
 							arrowData[oppositeA].OtherFootPairingsOtherFootCrossoverFront[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2],
 							arrowData[oppositeA].OtherFootPairingsOtherFootCrossoverBehind[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsInverted[f][a2],
 							arrowData[oppositeA].OtherFootPairingsInverted[oppositeF][oppositeA2]);
-					}
-				}
-			}
-		}
-
-		[TestMethod]
-		public void TestValidNextArrows()
-		{
-			TestValidNextArrows(SPPadData.ArrowData);
-			TestValidNextArrows(DPPadData.ArrowData);
-		}
-
-		private void TestValidNextArrows(ArrowData[] arrowData)
-		{
-			var numArrows = arrowData.Length;
-			for (var a = 0; a < numArrows; a++)
-			{
-				for (var a2 = 0; a2 < numArrows; a2++)
-				{
-					for (var f = 0; f < NumFeet; f++)
-					{
-						if (arrowData[a].BracketablePairingsOtherHeel[f][a2])
-							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
-						if (arrowData[a].BracketablePairingsOtherToe[f][a2])
-							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
-						if (arrowData[a].OtherFootPairings[f][a2])
-							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
-						if (arrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2])
-							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
-						if (arrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2])
-							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
-						if (arrowData[a].OtherFootPairingsInverted[f][a2])
-							Assert.IsTrue(arrowData[a].ValidNextArrows[a2]);
 					}
 				}
 			}

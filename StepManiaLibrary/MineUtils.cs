@@ -111,27 +111,29 @@ namespace StepManiaLibrary
 						var addRelease = false;
 
 						// Releasing a hold
-						if ((currentState[f, arrow] == (int) GraphArrowState.Resting || currentState[f, arrow] == -1)
-						    && previousState[f, arrow] == (int) GraphArrowState.Held)
+						if ((currentState[f, arrow] == (int)GraphArrowState.Resting || currentState[f, arrow] == -1)
+						    && previousState[f, arrow] == (int)GraphArrowState.Held)
 						{
 							addRelease = true;
 						}
 						// Tapping on a new arrow
-						else if (currentState[f, arrow] == (int) GraphArrowState.Resting
+						else if (currentState[f, arrow] == (int)GraphArrowState.Resting
 						         && previousState[f, arrow] == -1)
 						{
 							addStep = true;
 							addRelease = true;
 						}
 						// Starting a hold
-						else if (currentState[f, arrow] == (int) GraphArrowState.Held
-						         && (previousState[f, arrow] == (int) GraphArrowState.Resting || previousState[f, arrow] == -1))
+						else if (currentState[f, arrow] == (int)GraphArrowState.Held
+						         && (previousState[f, arrow] == (int)GraphArrowState.Resting
+								 || previousState[f, arrow] == -1
+								 || previousState[f, arrow] == (int)GraphArrowState.Lifted))
 						{
 							addStep = true;
 						}
 						// Tapping on the same arrow
-						else if (previousState[f, arrow] == (int) GraphArrowState.Resting &&
-						         currentState[f, arrow] == (int) GraphArrowState.Resting)
+						else if (currentState[f, arrow] == (int)GraphArrowState.Resting
+							&& (previousState[f, arrow] == (int)GraphArrowState.Resting || previousState[f, arrow] == (int)GraphArrowState.Lifted) )
 						{
 							for (var p = 0; p < NumFootPortions; p++)
 							{
