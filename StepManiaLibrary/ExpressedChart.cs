@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Fumen;
 using Fumen.ChartDefinition;
@@ -143,6 +145,7 @@ namespace StepManiaLibrary
 		/// and the position, so that all nodes can be stored and compared without
 		/// conflicting.
 		/// </summary>
+		[DebuggerDisplay("{ToString()}")]
 		public class ChartSearchNode : IEquatable<ChartSearchNode>, MineUtils.IChartNode
 		{
 			private static long IdCounter;
@@ -182,6 +185,12 @@ namespace StepManiaLibrary
 			/// Cost to reach this ChartSearchNode from the previous node.
 			/// </summary>
 			public int Cost;
+
+			/// <summary>
+			/// For tie breaking, a cost associated with orientations. If two interpretations are equally
+			/// plausible, we should prefer interpretations that minimize twisting.
+			/// </summary>
+			public int TotalOrientationCost;
 
 			/// <summary>
 			/// Previous ChartSearchNode.
@@ -250,10 +259,11 @@ namespace StepManiaLibrary
 			/// Will update the Cost and TotalCost.
 			/// </summary>
 			/// <param name="cost">Cost of this ChartSearchNode.</param>
-			public void SetCost(int cost)
+			public void SetCost(int cost, int orientationCost)
 			{
 				Cost = cost;
 				TotalCost = (PreviousNode?.TotalCost ?? 0) + Cost;
+				TotalOrientationCost = (PreviousNode?.TotalOrientationCost ?? 0) + orientationCost;
 			}
 
 			/// <summary>
@@ -299,6 +309,129 @@ namespace StepManiaLibrary
 				}
 
 				return null;
+			}
+
+			public override string ToString()
+			{
+				const int positionLen = 5;
+				const int totalCostLen = 5;
+				const int linkLen = 25;
+				const int nodeLen = 25;
+				const int costLen = 5;
+				const int dressingLen = 15;
+
+				var sb = new StringBuilder(
+					positionLen
+					+ totalCostLen
+					+ costLen
+					+ linkLen
+					+ nodeLen
+					+ dressingLen);
+
+				// Position.
+				sb.Append(Position.ToString("D5"));
+				sb.Append(" ");
+
+				// Total cost.
+				sb.Append("(");
+				sb.Append(TotalCost.ToString("D5"));
+				sb.Append(") ");
+
+				// Link to this node.
+				sb.Append("[");
+				var linkStringLen = 0;
+				if (PreviousLink != null)
+				{
+					var linkString = PreviousLink.ToString();
+					sb.Append(linkString);
+					linkStringLen = linkString.Length;
+				}
+				for (var i = linkStringLen; i < linkLen; i++)
+				{
+					sb.Append(" ");
+				}
+				sb.Append("] -> [");
+
+				// Node.
+				var graphNodeString = GraphNode.ToString();
+				sb.Append(graphNodeString);
+				for (var i = graphNodeString.Length; i < nodeLen; i++)
+				{
+					sb.Append(" ");
+				}
+				sb.Append("]");
+
+				// Link cost.
+				sb.Append(" (");
+				sb.Append(Cost.ToString("D5"));
+				sb.Append(")");
+
+				return sb.ToString();
+			}
+
+			public virtual int CompareTo(ChartSearchNode other, bool test = false)
+			{
+				if (this == other)
+					return 0;
+
+				// Compare the total cost. Almost all comparisions should have different total costs.
+				if (TotalCost != other.TotalCost)
+					return TotalCost.CompareTo(other.TotalCost);
+
+				// At this point the interpretations are considered equally valid by cost.
+				// We need to tie break for a deterministic result.
+
+				// Tie breaking edge case.
+				// Consider the total orientation cost.
+				if (TotalOrientationCost != other.TotalOrientationCost)
+					return TotalOrientationCost.CompareTo(other.TotalOrientationCost);
+
+				// Tie breaking edge case.
+				// If two interpretations are equal by cost, prefer patterns which have a lower cost sooner.
+				// As an example, if an interpretation is only equal to another 10 measures from now, but right
+				// now there is a slight preference to make one move over another, it is likely you are supposed
+				// to interpret it that way and do the more natural pattern first, rather than something more
+				// awkward now in hopes it will even out later.
+				var thisNode = this;
+				var otherNode = other;
+				var lastBestNonZeroCostComparison = 0;
+				// Iterate backwards until we find the common ancestor.
+				while (thisNode != null && otherNode != null && thisNode != otherNode)
+				{
+					if (thisNode.Cost != otherNode.Cost)
+						lastBestNonZeroCostComparison = thisNode.Cost.CompareTo(otherNode.Cost);
+					thisNode = thisNode.PreviousNode;
+					otherNode = otherNode.PreviousNode;
+				}
+				if (lastBestNonZeroCostComparison != 0)
+					return lastBestNonZeroCostComparison;
+
+				// Tie breaking edge case
+				// Compare links. This is only for extreme edge cases when all costs are equal.
+				thisNode = this;
+				otherNode = other;
+				while (thisNode != null && thisNode.PreviousLink != null && otherNode != null && otherNode.PreviousLink != null)
+				{
+					var thisLink = thisNode.PreviousLink.GraphLink.Links;
+					var otherLink = otherNode.PreviousLink.GraphLink.Links;
+					for (var f = 0; f < NumFeet; f++)
+					{
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (thisLink[f, p].Valid != otherLink[f, p].Valid)
+								return thisLink[f, p].Valid ? -1 : 1;
+							if (!thisLink[f, p].Valid)
+								continue;
+							if (thisLink[f, p].Step != otherLink[f, p].Step)
+								return thisLink[f, p].Step.CompareTo(otherLink[f, p].Step);
+						}
+					}
+					thisNode = thisNode.PreviousNode;
+					otherNode = otherNode.PreviousNode;
+				}
+
+				// This is impossible.
+				return 0;
 			}
 
 			#region IEquatable Implementation
@@ -629,7 +762,7 @@ namespace StepManiaLibrary
 					// Choose path with lowest cost.
 					ChartSearchNode bestNode = null;
 					foreach (var node in currentSearchNodes)
-						if (bestNode == null || node.TotalCost < bestNode.TotalCost)
+						if (bestNode == null || node.CompareTo(bestNode) < 0)
 							bestNode = node;
 
 					// Remove any nodes that are not chosen so there is only one path through the chart.
@@ -930,7 +1063,8 @@ namespace StepManiaLibrary
 						// This GraphLink and child GraphNode result in a matching state.
 						// Determine the cost to go from this GraphLink to this GraphNode.
 						var cost = GetCost(childSearchNode, currentState, lastMines, lastReleases, StepGraph.PadData);
-						childSearchNode.SetCost(cost);
+						var orientationCost = GetOrientationCost(childSearchNode);
+						childSearchNode.SetCost(cost, orientationCost);
 
 						// Record the result as a new ChartSearchNode to be checked for pruning once
 						// all children have been determined.
@@ -1126,7 +1260,7 @@ namespace StepManiaLibrary
 				if (bestNodes.TryGetValue(node.GraphNode, out var currentNode))
 				{
 					// This node is better.
-					if (node.TotalCost < currentNode.TotalCost)
+					if (node.CompareTo(currentNode, true) < 0)
 					{
 						Prune(currentNode);
 
@@ -1180,6 +1314,21 @@ namespace StepManiaLibrary
 		}
 
 		#region Cost Evaluation
+
+		private int GetOrientationCost(ChartSearchNode searchNode)
+		{
+			switch (searchNode.GraphNode.Orientation)
+			{
+				case BodyOrientation.InvertedLeftOverRight:
+				case BodyOrientation.InvertedRightOverLeft:
+					return CostTieBreak_Orientation_Invert;
+				case BodyOrientation.Normal:
+				default:
+					if (StepGraph.IsCrossover(searchNode.GraphNode))
+						return CostTieBreak_Orientation_Crossover;
+					return CostTieBreak_Orientation_Normal;
+			}
+		}
 
 		/// <summary>
 		/// Determine the cost of arriving to the ChartSearchNode from its parent.
@@ -1816,18 +1965,18 @@ namespace StepManiaLibrary
 					var numInverts = 0;
 					var numSwaps = 0;
 					var numNewArrows = 0;
-					if (previousStepLink != null)
+					if (link != null)
 					{
 						for (var f = 0; f < NumFeet; f++)
 						{
 							var portionAccountedFor = false;
 							for (var p = 0; p < NumFootPortions; p++)
 							{
-								if (previousStepLink.Links[f, p].Valid)
+								if (link.Links[f, p].Valid)
 								{
 									if (!portionAccountedFor)
 									{
-										var sd = StepData.Steps[(int)previousStepLink.Links[f, p].Step];
+										var sd = StepData.Steps[(int)link.Links[f, p].Step];
 										numNewArrows += sd.NumNewArrows;
 										if (sd.IsFootSwapWithAnyPortion)
 											numSwaps++;

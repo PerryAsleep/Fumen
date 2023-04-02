@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 using static StepManiaLibrary.Constants;
 
 namespace StepManiaLibrary
@@ -15,6 +17,7 @@ namespace StepManiaLibrary
 	/// Footswaps result in both feet resting on the same arrow.
 	/// GraphNodes are considered equal if their state (but not necessarily GraphLinks) are equal.
 	/// </summary>
+	[DebuggerDisplay("{ToString()}")]
 	public class GraphNode : IEquatable<GraphNode>
 	{
 		/// <summary>
@@ -128,6 +131,65 @@ namespace StepManiaLibrary
 			if (Orientation != other.Orientation)
 				return false;
 			return true;
+		}
+
+		public override string ToString()
+		{
+			var hasLeft = false;
+			var leftBracket = false;
+			var hasRight = false;
+			var rightBracket = false;
+			for (int f = 0; f < NumFeet; f++)
+			{
+				for (int p = 0; p < NumFootPortions; p++)
+				{
+					if (State[f, p].Arrow != InvalidArrowIndex)
+					{
+						if (f == L)
+						{
+							hasLeft = true;
+						}
+						else
+						{
+							hasRight = true;
+						}
+					}
+				}
+			}
+
+			var sb = new StringBuilder();
+
+			for (int f = 0; f < NumFeet; f++)
+			{
+				if (f == 0)
+				{
+					sb.Append("L: ");
+				}
+				else
+				{
+					sb.Append(" R:");
+				}
+
+				for (int p = 0; p < NumFootPortions; p++)
+				{
+					if (State[f, p].Arrow == InvalidArrowIndex)
+						continue;
+					else if (p > 0)
+						sb.Append(" ");
+
+					sb.Append(State[f, p].Arrow.ToString());
+
+					if (State[f, p].State == GraphArrowState.Lifted)
+						sb.Append("L");
+					else if (State[f, p].State == GraphArrowState.Held)
+						sb.Append("H");
+				}
+			}
+
+			if (Orientation != BodyOrientation.Normal)
+				sb.Append(" (Inverted)");
+
+			return sb.ToString();
 		}
 
 		#region IEquatable Implementation

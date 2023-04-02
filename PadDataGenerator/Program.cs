@@ -140,6 +140,8 @@ namespace PadDataGenerator
 				}
 				await Task.WhenAll(stepGraphTasks);
 			}
+
+			Logger.Shutdown();
 		}
 
 		private static void CreateLogger()

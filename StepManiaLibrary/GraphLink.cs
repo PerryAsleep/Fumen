@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Text;
 using static StepManiaLibrary.Constants;
 
 namespace StepManiaLibrary
@@ -24,6 +26,7 @@ namespace StepManiaLibrary
 	/// Link between GraphNodes in a StepGraph.
 	/// Represents what each foot does to move from one GraphNode to a set of other GraphNodes.
 	/// </summary>
+	[DebuggerDisplay("{ToString()}")]
 	public class GraphLink : IEquatable<GraphLink>
 	{
 		/// <summary>
@@ -275,6 +278,153 @@ namespace StepManiaLibrary
 			return false;
 		}
 
+		#region ToString
+
+		/// <summary>
+		/// String representation.
+		/// Overridden for debugger support.
+		/// </summary>
+		public override string ToString()
+		{
+			var hasLeft = false;
+			var hasRight = false;
+			var isRelease = false;
+
+			for (int f = 0; f < NumFeet; f++)
+			{
+				for (int p = 0; p < NumFootPortions; p++)
+				{
+					if (Links[f, p].Valid)
+					{
+						if (Links[f, p].Action == FootAction.Release)
+							isRelease = true;
+						if (f == L)
+							hasLeft = true;
+						else
+							hasRight = true;
+					}
+				}
+			}
+
+			var sb = new StringBuilder();
+
+			if (isRelease)
+				sb.Append("Release ");
+			else if (hasLeft && hasRight)
+				sb.Append("Jump ");
+
+			if (hasLeft)
+			{
+				sb.Append("L: ");
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (Links[L, p].Valid)
+					{
+						sb.Append(GetSimpleString(Links[L, 0].Step));
+						break;
+					}
+				}
+				if (hasRight)
+					sb.Append(" ");
+			}
+			if (hasRight)
+			{
+				sb.Append("R: ");
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (Links[R, p].Valid)
+					{
+						sb.Append(GetSimpleString(Links[R, 0].Step));
+						break;
+					}
+				}
+			}
+
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// ToString helper.
+		/// </summary>
+		private static string GetSimpleString(StepType stepType)
+		{
+			switch(stepType)
+			{
+				case StepType.SameArrow: return "Same";
+				case StepType.NewArrow: return "New";
+				case StepType.CrossoverFront:
+				case StepType.CrossoverBehind:
+					return "Crossover";
+				case StepType.InvertFront:
+				case StepType.InvertBehind:
+					return "Invert";
+				case StepType.FootSwap: return "Swap";
+				case StepType.NewArrowStretch: return "Stretch";
+
+				case StepType.BracketHeelNewToeNew:
+				case StepType.BracketHeelNewToeSame:
+				case StepType.BracketHeelSameToeNew:
+				case StepType.BracketHeelSameToeSame:
+				case StepType.BracketHeelSameToeSwap:
+				case StepType.BracketHeelNewToeSwap:
+				case StepType.BracketHeelSwapToeSame:
+				case StepType.BracketHeelSwapToeNew:
+				case StepType.BracketHeelSwapToeSwap:
+					return "Bracket";
+
+				case StepType.BracketCrossoverFrontHeelNewToeNew:
+				case StepType.BracketCrossoverFrontHeelNewToeSame:
+				case StepType.BracketCrossoverFrontHeelSameToeNew:
+				case StepType.BracketCrossoverBackHeelNewToeNew:
+				case StepType.BracketCrossoverBackHeelNewToeSame:
+				case StepType.BracketCrossoverBackHeelSameToeNew:
+					return "Crossover Bracket";
+
+				case StepType.BracketInvertFrontHeelNewToeNew:
+				case StepType.BracketInvertFrontHeelNewToeSame:
+				case StepType.BracketInvertFrontHeelSameToeNew:
+				case StepType.BracketInvertBackHeelNewToeNew:
+				case StepType.BracketInvertBackHeelNewToeSame:
+				case StepType.BracketInvertBackHeelSameToeNew:
+					return "Invert Bracket";
+
+				case StepType.BracketStretchHeelNewToeNew:
+				case StepType.BracketStretchHeelNewToeSame:
+				case StepType.BracketStretchHeelSameToeNew:
+					return "Stretch Bracket";
+
+				case StepType.BracketOneArrowHeelSame:
+				case StepType.BracketOneArrowHeelNew:
+				case StepType.BracketOneArrowHeelSwap:
+				case StepType.BracketOneArrowToeSame:
+				case StepType.BracketOneArrowToeNew:
+				case StepType.BracketOneArrowToeSwap:
+					return "Single Bracket";
+
+				case StepType.BracketCrossoverFrontOneArrowHeelNew:
+				case StepType.BracketCrossoverFrontOneArrowToeNew:
+				case StepType.BracketCrossoverBackOneArrowHeelNew:
+				case StepType.BracketCrossoverBackOneArrowToeNew:
+					return "Single Crossover Bracket";
+
+				case StepType.BracketInvertFrontOneArrowHeelNew:
+				case StepType.BracketInvertFrontOneArrowToeNew:
+				case StepType.BracketInvertBackOneArrowHeelNew:
+				case StepType.BracketInvertBackOneArrowToeNew:
+					return "Single Invert Bracket";
+
+				case StepType.BracketStretchOneArrowHeelNew:
+				case StepType.BracketStretchOneArrowToeNew:
+					return "Single Stretch Bracket";
+
+				default:
+					Debug.Assert(false);
+					return "Unknown";
+			}
+		}
+
+		#endregion
+
 		#region IEquatable Implementation
 
 		public bool Equals(GraphLink other)
@@ -314,6 +464,7 @@ namespace StepManiaLibrary
 	/// and PerformedCharts. This allows GraphLink to remain slim, while supporting extra
 	/// information at runtime, like what type of hold (hold or roll) is used.
 	/// </summary>
+	[DebuggerDisplay("{ToString()}")]
 	public class GraphLinkInstance
 	{
 		/// <summary>
@@ -325,5 +476,10 @@ namespace StepManiaLibrary
 		/// Per foot and portion, any special instance types for the GraphLink.
 		/// </summary>
 		public InstanceStepType[,] InstanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
+
+		public override string ToString()
+		{
+			return GraphLink.ToString();
+		}
 	}
 }

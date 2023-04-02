@@ -122,5 +122,9 @@
 		public const int CostBracketJump_Crossover_Penalty = 8;
 		public const int CostBracketJump_Swap_Penalty = 4;
 		public const int CostBracketJump_NewArrow_Penalty = 1;
+
+		public const int CostTieBreak_Orientation_Invert = 2;
+		public const int CostTieBreak_Orientation_Crossover = 1;
+		public const int CostTieBreak_Orientation_Normal = 0;
 	}
 }

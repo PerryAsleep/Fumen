@@ -606,6 +606,8 @@ namespace StepManiaLibrary
 			var done = false;
 			var occupiedArrows = new bool[NumArrows];
 			var liftedUnoccupiedArrows = new bool[NumArrows];
+			var footInvolvesLift = new bool[NumFeet];
+			var footInvolvesBracket = new bool[NumFeet];
 			LogInfo("Creating Nodes...");
 			while (true)
 			{
@@ -614,12 +616,18 @@ namespace StepManiaLibrary
 					occupiedArrows[a] = false;
 					liftedUnoccupiedArrows[a] = false;
 				}
+				for (var f = 0; f < NumFeet; f++)
+				{
+					footInvolvesLift[f] = false;
+					footInvolvesBracket[f] = false;
+				}
 
 				var state = new GraphNode.FootArrowState[NumFeet, NumFootPortions];
 				var stateDigitIndex = 0;
 				var isValidState = true;
 				var inverted = false;
 				var crossover = false;
+				var totalNumArrowsOccupied = 0;
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var p = 0; p < NumFootPortions; p++)
@@ -647,6 +655,7 @@ namespace StepManiaLibrary
 								isValidState = false;
 								break;
 							}
+							totalNumArrowsOccupied++;
 							occupiedArrows[arrow] = true;
 							liftedUnoccupiedArrows[arrow] = false;
 						}
@@ -661,6 +670,7 @@ namespace StepManiaLibrary
 							}
 							if (!occupiedArrows[arrow])
 								liftedUnoccupiedArrows[arrow] = true;
+							footInvolvesLift[f] = true;
 						}
 
 						// Either there is only one foot portion for this foot (the DefaultFootPortion), or there are two
@@ -675,6 +685,7 @@ namespace StepManiaLibrary
 						// For a bracket, the two arrows must be valid bracketable pairings.
 						if (p > 0 && arrow != InvalidArrowIndex)
 						{
+							footInvolvesBracket[f] = true;
 							var heelArrow = state[f, Heel].Arrow;
 							if (!PadData.ArrowData[arrow].BracketablePairingsOtherHeel[f][heelArrow])
 							{
@@ -702,6 +713,22 @@ namespace StepManiaLibrary
 									isValidState = false;
 									break;
 								}
+							}
+
+							// Cannot have a state where one foot is resting or holding with one portion and lifted with the other
+							// while the other foot is on the same two arrows also with one lift and one rest or hold. For example,
+							// on 8 panel doubles, you cannot have L with heel on 4 resting and toe on 3 lifted and R with heel on
+							// 4 lifted and toe on 3 resting. This can't occur because it would require a jump to enter with that
+							// jump being two bracket one arrow swap steps, and swaps can't be used in jumps.
+							// We already know from above checks that two lifts can't occur on the same arrow, so we can check for
+							// two brackets on the same two arrows where each foot has one lift.
+							if (totalNumArrowsOccupied == NumFootPortions
+								&& footInvolvesLift[L] && footInvolvesLift[R]
+								&& footInvolvesBracket[L] && footInvolvesBracket[R])
+							{
+								LogState($"Jump with two one arrow bracket swaps.", f, p, state, arrow, gas);
+								isValidState = false;
+								break;
 							}
 
 							// The steps must be an invert, crossover, stretch, or normal position.
@@ -781,7 +808,9 @@ namespace StepManiaLibrary
 			var footIsSame = new bool[NumFeet];
 			var footIsSameExceptForLifts = new bool[NumFeet];
 			var fromFootIsBracket = new bool[NumFeet];
+			var fromFootAnyHeld = new bool[NumFeet];
 			var toFootIsBracket = new bool[NumFeet];
+			var toStateHasLifts = new bool[NumFeet];
 			for (var n1i = 0; n1i < nodeCount; n1i++)
 			{
 				var from = allNodes[n1i];
@@ -790,10 +819,16 @@ namespace StepManiaLibrary
 				for (var f = 0; f < NumFeet; f++)
 				{
 					fromFootIsBracket[f] = true;
+					fromFootAnyHeld[f] = false;
 					for (var p = 0; p < NumFootPortions; p++)
 					{
 						if (fromState[f, p].Arrow == InvalidArrowIndex)
+						{
+							fromFootIsBracket[f] = false;
 							toFootIsBracket[f] = false;
+						}
+						if (fromState[f, p].Arrow != InvalidArrowIndex && fromState[f, p].State == GraphArrowState.Held)
+							fromFootAnyHeld[f] = true;
 					}
 				}
 
@@ -807,6 +842,7 @@ namespace StepManiaLibrary
 						footIsSame[f] = true;
 						footIsSameExceptForLifts[f] = true;
 						toFootIsBracket[f] = true;
+						toStateHasLifts[f] = false;
 						for (var p = 0; p < NumFootPortions; p++)
 						{
 							if (fromState[f, p].Arrow != toState[f, p].Arrow || fromState[f, p].State != toState[f, p].State)
@@ -820,25 +856,14 @@ namespace StepManiaLibrary
 								footIsSameExceptForLifts[f] = false;
 							}
 
+							if (toState[f, p].Arrow != InvalidArrowIndex && toState[f, p].State == GraphArrowState.Lifted)
+							{
+								toStateHasLifts[f] = true;
+							}
+
 							if (toState[f, p].Arrow == InvalidArrowIndex)
 								toFootIsBracket[f] = false;
 						}
-					}
-
-					// Move into swap
-					if (StateMatches(
-						fromState, 2, GraphArrowState.Resting, 3, GraphArrowState.Resting,
-						toState, 2, GraphArrowState.Lifted, 2, GraphArrowState.Resting))
-					{
-						int a = 1;
-					}
-
-					// Move after swap
-					if (StateMatches(
-						fromState, 2, GraphArrowState.Lifted, 2, GraphArrowState.Resting,
-						toState, 0, GraphArrowState.Resting, 2, GraphArrowState.Resting))
-					{
-						int a = 1;
 					}
 
 					// Cannot do a 360.
@@ -858,9 +883,18 @@ namespace StepManiaLibrary
 						linksPerFoot[f] = new List<GraphLink>();
 						var links = linksPerFoot[f];
 
+						// No action this foot can take can cause it to become Lifted.
+						// A foot can only become Lifted if the other foot did a FootSwap onto it.
+						if (toStateHasLifts[f])
+							continue;
+
 						// Simple steps with no brackets involved.
 						// It doesn't matter whether the foot is coming from a bracket or a single step.
-						if (!toFootIsBracket[f])
+						// If the previous state is bracketing and holding any arrow, then the only valid
+						// next steps are bracket steps, either by releasing the hold which would be a one-arrow
+						// bracket move, or by pressing on another arrow which would also be a one-arrow bracket
+						// move, or by releasing both holds, which would be a full bracket move.
+						if (!toFootIsBracket[f] && !(fromFootIsBracket[f] && fromFootAnyHeld[f]))
 						{
 							var p = DefaultFootPortion;
 							var fs = fromState[f, p];
@@ -868,11 +902,6 @@ namespace StepManiaLibrary
 							if (!CanFootActionTransition(fs.State, ts.State))
 								continue;
 							var action = GetActionForStates(fs.State, ts.State);
-
-							// No action this foot can take can cause it to become Lifted.
-							// A foot can only become Lifted if the other foot did a FootSwap onto it.
-							if (ts.State == GraphArrowState.Lifted)
-								continue;
 
 							// Stepping on the same arrow is either a SameArrow step or a FootSwap.
 							if (IsSameArrowStep(fromState, f, ts.Arrow) && from.Orientation == to.Orientation)
@@ -945,17 +974,96 @@ namespace StepManiaLibrary
 						// The foot is moving to a bracket position, from either a simple position or a bracket position
 						else
 						{
-							// Holding with Heel and bracketing with the Toe.
-							if (fromState[f, Heel].State == GraphArrowState.Held
-								&& toState[f, Heel].State == GraphArrowState.Held
+							// Bracketing single arrows is complicated as the foot portion can swap when this occurs.
+							// For example if you were holding with your heel and your toe was resting from a previous
+							// bracket, you could still do a BracketOneArrowHeelNew from this position by sliding your
+							// foot to now hold the held arrow with your toe. These variables help make the conditionals
+							// below easier to understand.
+							var holdingWithDefaultPortionInNonBracketFromStateWithToStateHeelArrow =
+								!fromFootIsBracket[f]
+								&& fromState[f, DefaultFootPortion].State == GraphArrowState.Held
+								&& fromState[f, DefaultFootPortion].Arrow == toState[f, Heel].Arrow;
+							var holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow =
+								fromFootIsBracket[f]
+								&& fromState[f, Heel].State == GraphArrowState.Held
 								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow
-								&& fromState[f, Toe].State != GraphArrowState.Held)
+								&& fromState[f, Toe].State != GraphArrowState.Held;
+							var holdingWithOnlyToeInBracketFromStateWithToStateHeelArrow =
+								fromFootIsBracket[f]
+								&& fromState[f, Toe].State == GraphArrowState.Held
+								&& fromState[f, Toe].Arrow == toState[f, Heel].Arrow
+								&& fromState[f, Heel].State != GraphArrowState.Held;
+							var holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow =
+								fromFootIsBracket[f]
+								&& fromState[f, Heel].State == GraphArrowState.Held
+								&& fromState[f, Toe].State == GraphArrowState.Held
+								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow;
+							var heelUnchangedToeChanged =
+								fromFootIsBracket[f]
+								&& toFootIsBracket[f]
+								&& fromState[f, Heel].State == toState[f, Heel].State
+								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow
+								&& (fromState[f, Toe].State != toState[f, Toe].State
+								|| fromState[f, Toe].Arrow != toState[f, Toe].Arrow);
+
+							var holdingWithDefaultPortionInNonBracketFromStateWithToStateToeArrow =
+								!fromFootIsBracket[f]
+								&& fromState[f, DefaultFootPortion].State == GraphArrowState.Held
+								&& fromState[f, DefaultFootPortion].Arrow == toState[f, Toe].Arrow;
+							var holdingWithOnlyHeelInBracketFromStateWithToStateToeArrow =
+								fromFootIsBracket[f]
+								&& fromState[f, Heel].State == GraphArrowState.Held
+								&& fromState[f, Heel].Arrow == toState[f, Toe].Arrow
+								&& fromState[f, Toe].State != GraphArrowState.Held;
+							var holdingWithOnlyToeInBracketFromStateWithToStateToeArrow =
+								fromFootIsBracket[f]
+								&& fromState[f, Toe].State == GraphArrowState.Held
+								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow
+								&& fromState[f, Heel].State != GraphArrowState.Held;
+							var holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow =
+								fromFootIsBracket[f]
+								&& fromState[f, Heel].State == GraphArrowState.Held
+								&& fromState[f, Toe].State == GraphArrowState.Held
+								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow;
+							var toeUnchangedHeelChanged =
+								fromFootIsBracket[f]
+								&& toFootIsBracket[f]
+								&& fromState[f, Toe].State == toState[f, Toe].State
+								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow
+								&& (fromState[f, Heel].State != toState[f, Heel].State
+								|| fromState[f, Heel].Arrow != toState[f, Heel].Arrow);
+
+							// Holding with Heel and bracketing with the Toe.
+							if ((heelUnchangedToeChanged && fromFootAnyHeld[f])
+								|| (toState[f, Heel].State == GraphArrowState.Held
+								&& (holdingWithDefaultPortionInNonBracketFromStateWithToStateHeelArrow
+								|| holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow
+								|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
+								|| holdingWithOnlyToeInBracketFromStateWithToStateHeelArrow
+								|| heelUnchangedToeChanged)))
 							{
-								var toeAction = GetActionForStates(fromState[f, Toe].State, toState[f, Toe].State);
+								// The from state for the toe depends on how the from state was oriented.
+								// If we were coming from a state where only the toe was holding and now we
+								// are transitioning to a state where the heel has replaced the toe on the arrow
+								// which is holding then we want to consider the toe as coming from a default state.
+								var toeFromState = GraphArrowState.Resting;
+								var toeFromArrow = InvalidArrowIndex;
+								if (heelUnchangedToeChanged
+									|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
+									|| holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow)
+								{
+									toeFromState = fromState[f, Toe].State;
+									toeFromArrow = fromState[f, Toe].Arrow;
+								}
+
+								if (!CanFootActionTransition(toeFromState, toState[f, Toe].State))
+									continue;
+
+								var toeAction = GetActionForStates(toeFromState, toState[f, Toe].State);
 								var toeArrow = toState[f, Toe].Arrow;
 
 								// Toe bracketing the same arrow.
-								if (fromState[f, Toe].Arrow != InvalidArrowIndex && fromState[f, Toe].Arrow == toeArrow)
+								if (toeFromArrow != InvalidArrowIndex && toeFromArrow == toeArrow)
 								{
 									if (IsFootSwap(fromState, toState, f, toeArrow) && toeAction != FootAction.Release)
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeSwap, toeAction);
@@ -964,7 +1072,7 @@ namespace StepManiaLibrary
 								}
 
 								// Toe bracketing a new arrow.
-								if (fromState[f, Toe].Arrow != InvalidArrowIndex && toeArrow != InvalidArrowIndex && fromState[f, Toe].Arrow != toeArrow)
+								if (toeArrow != InvalidArrowIndex && toeFromArrow != toeArrow)
 								{
 									// Cannot release on a new arrow.
 									if (toeAction == FootAction.Release)
@@ -1010,16 +1118,35 @@ namespace StepManiaLibrary
 							}
 
 							// Holding with Toe and bracketing with the Heel.
-							else if (fromState[f, Toe].State == GraphArrowState.Held
-								&& toState[f, Toe].State == GraphArrowState.Held
-								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow
-								&& fromState[f, Heel].State != GraphArrowState.Held)
+							else if ((toeUnchangedHeelChanged && fromFootAnyHeld[f])
+								|| (toState[f, Toe].State == GraphArrowState.Held
+								&& (holdingWithDefaultPortionInNonBracketFromStateWithToStateToeArrow
+								|| holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow
+								|| holdingWithOnlyHeelInBracketFromStateWithToStateToeArrow
+								|| holdingWithOnlyToeInBracketFromStateWithToStateToeArrow)))
 							{
-								var heelAction = GetActionForStates(fromState[f, Heel].State, toState[f, Heel].State);
+								// The from state for the heel depends on how the from state was oriented.
+								// If we were coming from a state where only the heel was holding and now we
+								// are transitioning to a state where the toe has replaced the heel on the arrow
+								// which is holding then we want to consider the heel as coming from a default state.
+								var heelFromState = GraphArrowState.Resting;
+								var heelFromArrow = InvalidArrowIndex;
+								if (toeUnchangedHeelChanged
+									|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
+									|| holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow)
+								{
+									heelFromState = fromState[f, Heel].State;
+									heelFromArrow = fromState[f, Heel].Arrow;
+								}
+
+								if (!CanFootActionTransition(heelFromState, toState[f, Heel].State))
+									continue;
+
+								var heelAction = GetActionForStates(heelFromState, toState[f, Heel].State);
 								var heelArrow = toState[f, Heel].Arrow;
 
 								// Heel bracketing the same arrow.
-								if (fromState[f, Heel].Arrow != InvalidArrowIndex && fromState[f, Heel].Arrow == heelArrow)
+								if (heelFromArrow != InvalidArrowIndex && heelFromArrow == heelArrow)
 								{
 									if (IsFootSwap(fromState, toState, f, heelArrow) && heelAction != FootAction.Release)
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelSwap, heelAction);
@@ -1028,7 +1155,7 @@ namespace StepManiaLibrary
 								}
 
 								// Heel bracketing a new arrow.
-								if (fromState[f, Heel].Arrow != InvalidArrowIndex && heelArrow != InvalidArrowIndex && fromState[f, Heel].Arrow != heelArrow)
+								if (heelArrow != InvalidArrowIndex && heelFromArrow != heelArrow)
 								{
 									// Cannot release on a new arrow.
 									if (heelAction == FootAction.Release)
@@ -1078,6 +1205,20 @@ namespace StepManiaLibrary
 							{
 								var actions = new FootAction[NumFootPortions];
 								var numReleases = 0;
+
+								// Ensure the transition can be made.
+								var canTransition = true;
+								for (var p = 0; p < NumFootPortions; p++)
+								{
+									if (!CanFootActionTransition(fromState[f, p].State, toState[f, p].State))
+									{
+										canTransition = false;
+										break;
+									}
+								}
+								if (!canTransition)
+									continue;
+
 								for (var p = 0; p < NumFootPortions; p++)
 								{
 									actions[p] = GetActionForStates(fromState[f, p].State, toState[f, p].State);
@@ -1091,16 +1232,20 @@ namespace StepManiaLibrary
 
 								var heelArrow = toState[f, Heel].Arrow;
 								var toeArrow = toState[f, Toe].Arrow;
-								var heelSame = fromState[f, Heel].Arrow == heelArrow;
-								var toeSame = fromState[f, Toe].Arrow == toeArrow;
+								var heelSame =
+									(!fromFootIsBracket[f] && heelArrow == fromState[f, DefaultFootPortion].Arrow)
+									|| (fromFootIsBracket[f] && heelArrow == fromState[f, Heel].Arrow);
+								var toeSame =
+									(!fromFootIsBracket[f] && toeArrow == fromState[f, DefaultFootPortion].Arrow)
+									|| (fromFootIsBracket[f] && toeArrow == fromState[f, Toe].Arrow);
 								var heelSwap = IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow);
 								var toeSwap = IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow);
 
 								// Bracketing the same two arrows.
 								if (fromFootIsBracket[f] && heelSame && toeSame)
 								{
-									var heelSwapValid = actions[Heel] != FootAction.Release;
-									var toeSwapValid = actions[Toe] != FootAction.Release;
+									var heelSwapValid = heelSwap && (actions[Heel] != FootAction.Release);
+									var toeSwapValid = toeSwap && (actions[Toe] != FootAction.Release);
 
 									if (heelSwapValid && toeSwapValid)
 										RecordLink(links, f, StepType.BracketHeelSwapToeSwap, actions);
@@ -1178,7 +1323,7 @@ namespace StepManiaLibrary
 									if (to.Orientation != BodyOrientation.Normal)
 										continue;
 
-									//
+									// Other bracket states.
 									if (IsCrossoverInBack(toState, f))
 									{
 										if (!heelSame && !toeSame)
@@ -1302,7 +1447,7 @@ namespace StepManiaLibrary
 				{
 					if (!trackedNodes.Contains(node))
 					{
-						LogNode("Unreachable node", null);
+						LogNode("Unreachable node", node);
 					}
 				}
 			}
@@ -1364,6 +1509,48 @@ namespace StepManiaLibrary
 		}
 
 		#endregion Fill
+
+		#region Public State Helpers
+
+		public bool IsStretch(GraphNode node)
+		{
+			return IsStretch(node.State);
+		}
+
+		public bool IsCrossover(GraphNode node)
+		{
+			return IsCrossover(node.State);
+		}
+
+		public bool IsInverted(GraphNode node)
+		{
+			return IsInverted(node.State);
+		}
+
+		public bool Matches(GraphNode node, int leftArrow, int rightArrow)
+		{
+			return StateMatches(node.State, leftArrow, rightArrow);
+		}
+
+		public bool Matches(GraphNode node,
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			return StateMatches(node.State, leftArrow, leftState, rightArrow, rightState);
+		}
+
+		public bool Matches(GraphNode node,
+			int leftHeelArrow, GraphArrowState leftHeelState,
+			int leftToeArrow, GraphArrowState leftToeState,
+			int rightHeelArrow, GraphArrowState rightHeelState,
+			int rightToeArrow, GraphArrowState rightToeState)
+		{
+			return StateMatches(node.State,
+				leftHeelArrow, leftHeelState, leftToeArrow, leftToeState,
+				rightHeelArrow, rightHeelState, rightToeArrow, rightToeState);
+		}
+
+		#endregion Public State Helpers
 
 		#region Fill Helpers
 
@@ -1618,6 +1805,35 @@ namespace StepManiaLibrary
 			}
 
 			return false;
+		}
+
+		private static bool StateMatches(GraphNode.FootArrowState[,] state,
+			int leftHeelArrow, GraphArrowState leftHeelState,
+			int leftToeArrow, GraphArrowState leftToeState,
+			int rightHeelArrow, GraphArrowState rightHeelState,
+			int rightToeArrow, GraphArrowState rightToeState)
+		{
+			return
+				state[L, Heel].Arrow == leftHeelArrow && state[L, Heel].State == leftHeelState
+				&& state[L, Toe].Arrow == leftToeArrow && state[L, Toe].State == leftToeState
+				&& state[R, Heel].Arrow == rightHeelArrow && state[R, Heel].State == rightHeelState
+				&& state[R, Toe].Arrow == rightToeArrow && state[R, Toe].State == rightToeState;
+		}
+
+		private static bool StateMatches(GraphNode.FootArrowState[,] state,
+			int leftArrow, GraphArrowState leftState,
+			int rightArrow, GraphArrowState rightState)
+		{
+			return
+				state[L, DefaultFootPortion].Arrow == leftArrow && state[L, DefaultFootPortion].State == leftState
+				&& state[R, DefaultFootPortion].Arrow == rightArrow && state[R, DefaultFootPortion].State == rightState;
+		}
+
+		private static bool StateMatches(GraphNode.FootArrowState[,] state, int leftArrow, int rightArrow)
+		{
+			return
+				state[L, DefaultFootPortion].Arrow == leftArrow
+				&& state[R, DefaultFootPortion].Arrow == rightArrow;
 		}
 
 		private bool StateMatches(
