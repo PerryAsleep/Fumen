@@ -1343,11 +1343,23 @@ namespace StepManiaLibrary
 											RecordLink(links, f, StepType.BracketCrossoverFrontHeelNewToeSame, actions);
 									}
 									else if (heelSwap && toeSwap)
+									{
 										RecordLink(links, f, StepType.BracketHeelSwapToeSwap, actions);
+									}
 									else if (!heelSwap && toeSwap)
-										RecordLink(links, f, StepType.BracketHeelNewToeSwap, actions);
+									{
+										if (heelSame)
+											RecordLink(links, f, StepType.BracketHeelSameToeSwap, actions);
+										else
+											RecordLink(links, f, StepType.BracketHeelNewToeSwap, actions);
+									}
 									else if (heelSwap && !toeSwap)
-										RecordLink(links, f, StepType.BracketHeelSwapToeNew, actions);
+									{
+										if (toeSame)
+											RecordLink(links, f, StepType.BracketHeelSwapToeSame, actions);
+										else
+											RecordLink(links, f, StepType.BracketHeelSwapToeNew, actions);
+									}
 									else if (IsStretch(toState))
 									{
 										if (!heelSame && !toeSame)

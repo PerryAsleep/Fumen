@@ -56,10 +56,10 @@
 		public const int CostNewArrow_StepFromJump_Ambiguous = 2;
 
 		public const int CostNewArrow_Crossover_AfterJump = 20;
-		public const int CostNewArrow_Crossover_OtherHeld = 3;
+		public const int CostNewArrow_Crossover_OtherHeld = 4;  // This needs to be worse than CostNewArrow_OtherHoldingOne
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated = 100;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication = 200;
-		public const int CostNewArrow_Crossover = 4;
+		public const int CostNewArrow_Crossover = 5;
 
 		// TODO: Balance
 		public const int CostNewArrow_Bracket_Crossover_AfterJump = 50;
