@@ -544,7 +544,7 @@ namespace StepManiaLibrary
 			);
 			Steps[(int)StepType.BracketOneArrowHeelSwap] = new StepData(
 				canBeUsedInJump: false,
-				isFootSwap: noFootSwap,
+				isFootSwap: heelFootSwap,
 				isBracket: false,
 				isOneArrowBracket: true,
 				isCrossover: false,
@@ -571,7 +571,7 @@ namespace StepManiaLibrary
 			);
 			Steps[(int)StepType.BracketOneArrowToeSwap] = new StepData(
 				canBeUsedInJump: false,
-				isFootSwap: noFootSwap,
+				isFootSwap: toeFootSwap,
 				isBracket: false,
 				isOneArrowBracket: true,
 				isCrossover: false,
