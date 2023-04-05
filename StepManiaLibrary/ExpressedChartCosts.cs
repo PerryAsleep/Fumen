@@ -13,6 +13,7 @@
 		// foot does an alternating pattern then the other foot is only going to
 		// be hitting the same arrow which has a very low cost.
 		public const int CostSameArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 7;
+		public const int CostSameArrow_AfterSwap = 20;
 		public const int CostSameArrow = 0;
 
 		public const int CostNewArrow_AllOtherHeld_ThisFootCanBracketToNewArrow = 1;
@@ -68,8 +69,11 @@
 		public const int CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_NoIndication = 230;
 		public const int CostNewArrow_Bracket_Crossover = 34;
 
-		public const int CostNewArrow_FootSwap_DoubleStep_NoMineIndication = 150;
-		public const int CostNewArrow_FootSwap_DoubleStep_MineIndication = 75;
+		public const int Cost_FootSwap_DoubleStep_NoMineIndication = 150;
+		public const int Cost_FootSwap_DoubleStep_MineIndication = 75;
+
+		public const int Cost_FootSwap_AfterOtherFootJack = 20;
+
 		public const int CostNewArrow_FootSwap_OtherHolding = 13;
 		public const int CostNewArrow_FootSwap_OtherInBracketPosture = 13;
 		public const int CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow = 1;
@@ -77,6 +81,11 @@
 		public const int CostNewArrow_FootSwap_SubsequentSwap = 6;
 		public const int CostNewArrow_FootSwap_NoIndication_Bracketable = 7;
 		public const int CostNewArrow_FootSwap_NoIndication_NotBracketable = 8;
+
+		public const int CostSameArrow_FootSwap_MineIndicationOnThisFootsArrow = 1;
+		public const int CostSameArrow_FootSwap_MineIndicationOnFreeLaneArrow = 2;
+		public const int CostSameArrow_FootSwap_AlternatingSwap = 0;
+		public const int CostSameArrow_FootSwap_DoubleSwap = 6;
 
 		public const int CostNewArrow_Invert_FromSwap = 200;
 		public const int CostNewArrow_Invert_OtherHeld = 5;

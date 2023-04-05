@@ -289,22 +289,41 @@ namespace StepManiaLibrary
 				var node = this;
 				while (node.PreviousNode != null)
 				{
-					var link = node.PreviousLink;
-					for (var f = 0; f < NumFeet; f++)
+					var linkToNode = node.PreviousLink;
+					if (!linkToNode.GraphLink.IsRelease())
 					{
-						for (var p = 0; p < NumFootPortions; p++)
+						nthPrevious--;
+						if (nthPrevious <= 0)
 						{
-							if (link.GraphLink.Links[f, p].Valid && link.GraphLink.Links[f, p].Action != FootAction.Release)
-							{
-								nthPrevious--;
-								if (nthPrevious <= 0)
-								{
-									return link;
-								}
-							}
+							return linkToNode;
 						}
 					}
+					node = node.PreviousNode;
+				}
 
+				return null;
+			}
+
+			/// <summary>
+			/// Gets the preceding ChartSearchNode that was a step.
+			/// Will recurse until one is found or the root ChartSearchNode has been reached.
+			/// Skips releases.
+			/// </summary>
+			/// <returns>The preceding step ChartSearchNode or null if none exists.</returns>
+			public ChartSearchNode GetPreviousStepSearchNode(int nthPrevious = 1)
+			{
+				var node = PreviousNode;
+				while (node != null && node.PreviousNode != null)
+				{
+					var linkToNode = node.PreviousLink;
+					if (!linkToNode.GraphLink.IsRelease())
+					{
+						nthPrevious--;
+						if (nthPrevious <= 0)
+						{
+							return node;
+						}
+					}
 					node = node.PreviousNode;
 				}
 
@@ -1395,7 +1414,8 @@ namespace StepManiaLibrary
 						out var thisMinePositionFollowingPreviousStep,
 						out var thisReleasePositionOfPreviousStep,
 						out var thisFootPreviousArrows,
-						out var thisFootInBracketPosture);
+						out var thisFootInBracketPosture,
+						out var thisLifted);
 					GetOneArrowStepInfo(otherFoot, thisArrow, lastMines, lastReleases, padData, previousState,
 						out var otherAnyHeld,
 						out var otherAllHeld,
@@ -1406,7 +1426,8 @@ namespace StepManiaLibrary
 						out var otherMinePositionFollowingPreviousStep,
 						out var otherReleasePositionOfPreviousStep,
 						out var otherFootPreviousArrows,
-						out var otherFootInBracketPosture);
+						out var otherFootInBracketPosture,
+						out var otherLifted);
 
 					var doubleStep = previousStepLink != null && previousStepLink.IsStepWithFoot(thisFoot) && !otherAnyHeld;
 					var doubleStepOtherFootReleasedAtSameTime = false;
@@ -1448,6 +1469,13 @@ namespace StepManiaLibrary
 						case StepType.BracketOneArrowHeelSame:
 						case StepType.BracketOneArrowToeSame:
 						{
+							// If this is a same arrow step after a swap with this foot it is likely that we should continue
+							// to alternate swaps rather than jack
+							if (previousStepLink != null
+								&& previousStepLink.IsFootSwap(out var swappingFoot, out _)
+								&& swappingFoot == thisFoot)
+								return CostSameArrow_AfterSwap;
+
 							if (thisAnyHeld && !otherAnyHeld && otherCanStepToNewArrow)
 								return CostSameArrow_OtherHoldingNone_ThisHeld_OtherCanStep;
 							return CostSameArrow;
@@ -1643,8 +1671,8 @@ namespace StepManiaLibrary
 							if (doubleStep)
 							{
 								if (mineIndicatedOnThisFootsArrow)
-									return CostNewArrow_FootSwap_DoubleStep_MineIndication;
-								return CostNewArrow_FootSwap_DoubleStep_NoMineIndication;
+									return Cost_FootSwap_DoubleStep_MineIndication;
+								return Cost_FootSwap_DoubleStep_NoMineIndication;
 							}
 
 							// If the other foot is holding this swap becomes more unlikely as it may
@@ -1694,15 +1722,60 @@ namespace StepManiaLibrary
 							    && BracketParsingMethod != BracketParsingMethod.Aggressive)
 								return CostNewArrow_FootSwap_OtherInBracketPosture;
 
+							var previousStepNode = searchNode.GetPreviousStepSearchNode();
+							var thisSameArrowStep = previousStepNode != null
+								&& (previousStepNode.GraphNode.State[thisFoot, Heel].Arrow == thisArrow
+								|| previousStepNode.GraphNode.State[thisFoot, Toe].Arrow == thisArrow);
+
 							// Mine indicated
 							if (mineIndicatedOnThisFootsArrow)
-								return CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
+								return thisSameArrowStep ? CostSameArrow_FootSwap_MineIndicationOnThisFootsArrow : CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
 							if (mineIndicatedOnFreeLaneArrow)
-								return CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
+								return thisSameArrowStep ? CostSameArrow_FootSwap_MineIndicationOnFreeLaneArrow : CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
+							
+							// Swapping after a same arrow step with the other foot should be penalized to promote
+							// alternating swaps or no swaps at all
+							var previousPreviousStepNode = searchNode.GetPreviousStepSearchNode(2);
+							if (previousStepNode != null && previousPreviousStepNode != null
+								&& previousStepLink != null && previousPreviousStepLink != null)
+							{
+								var previousStateHadOtherFootOnArrow = false;
+								var previousPreviousStateHadOtherFootOnArrow = false;
+								
+								for (var p = 0; p < NumFootPortions; p++)
+								{
+									if (previousStepNode.GraphNode.State[otherFoot, p].Arrow == thisArrow
+										&& previousStepNode.GraphNode.State[otherFoot, p].State != GraphArrowState.Lifted)
+									{
+										previousStateHadOtherFootOnArrow = true;
+									}
+									if (previousPreviousStepNode.GraphNode.State[otherFoot, p].Arrow == thisArrow
+										&& previousPreviousStepNode.GraphNode.State[otherFoot, p].State != GraphArrowState.Lifted)
+									{
+										previousPreviousStateHadOtherFootOnArrow = true;
+									}
+								}
+								if (previousStateHadOtherFootOnArrow
+									&& previousPreviousStateHadOtherFootOnArrow
+									&& (previousStepLink.IsSingleStep(out _, out var previousFoot) && previousFoot == otherFoot)
+									&& (previousPreviousStepLink.IsSingleStep(out _, out var previousPreviousFoot) && previousPreviousFoot == otherFoot))
+								{
+									return Cost_FootSwap_AfterOtherFootJack;
+								}
+							}
 
-							// If previous was swap
-							if (previousStepLink?.IsFootSwap(out _, out _) ?? false)
+							// If the other foot is already lifted then we are swapping twice with the same foot.
+							if (otherLifted)
+							{
+								if (thisSameArrowStep)
+									return CostSameArrow_FootSwap_DoubleSwap;
 								return CostNewArrow_FootSwap_SubsequentSwap;
+							}
+
+							// If this foot is lifted, meaning it was swapped off of its current arrow, and it can
+							// swap back onto the same arrow
+							if (thisSameArrowStep && thisLifted)
+								return CostSameArrow_FootSwap_AlternatingSwap;
 
 							// No indication and bracketable.
 							if (thisCanBracketToNewArrow)
@@ -2021,7 +2094,8 @@ namespace StepManiaLibrary
 			out int minePositionFollowingPreviousStep,
 			out int releasePositionOfPreviousStep,
 			out int[] previousArrows,
-			out bool inBracketPosture)
+			out bool inBracketPosture,
+			out bool lifted)
 		{
 			anyHeld = false;
 			allHeld = true;
@@ -2033,6 +2107,7 @@ namespace StepManiaLibrary
 			releasePositionOfPreviousStep = 0;
 			previousArrows = new int[NumFootPortions];
 			inBracketPosture = true;
+			lifted = false;
 			var arrowData = padData.ArrowData;
 
 			// TODO: Should this logic include inverted steps too?
@@ -2043,6 +2118,10 @@ namespace StepManiaLibrary
 			{
 				previousArrows[p] = previousState[foot, p].Arrow;
 
+				if (previousState[otherFoot, p].Arrow == arrow)
+				{
+					lifted = previousState[foot, p].State == GraphArrowState.Lifted;
+				}
 				if (previousState[otherFoot, p].Arrow != InvalidArrowIndex)
 				{
 					canCrossoverToNewArrow |=

@@ -883,11 +883,6 @@ namespace StepManiaLibrary
 						linksPerFoot[f] = new List<GraphLink>();
 						var links = linksPerFoot[f];
 
-						// No action this foot can take can cause it to become Lifted.
-						// A foot can only become Lifted if the other foot did a FootSwap onto it.
-						if (toStateHasLifts[f])
-							continue;
-
 						// Simple steps with no brackets involved.
 						// It doesn't matter whether the foot is coming from a bracket or a single step.
 						// If the previous state is bracketing and holding any arrow, then the only valid
@@ -1005,6 +1000,12 @@ namespace StepManiaLibrary
 								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow
 								&& (fromState[f, Toe].State != toState[f, Toe].State
 								|| fromState[f, Toe].Arrow != toState[f, Toe].Arrow);
+							var heelUnchangedHeelSameArrow =
+								fromFootIsBracket[f]
+								&& toFootIsBracket[f]
+								&& fromState[f, Heel].State == toState[f, Heel].State
+								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow
+								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow;
 
 							var holdingWithDefaultPortionInNonBracketFromStateWithToStateToeArrow =
 								!fromFootIsBracket[f]
@@ -1032,6 +1033,12 @@ namespace StepManiaLibrary
 								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow
 								&& (fromState[f, Heel].State != toState[f, Heel].State
 								|| fromState[f, Heel].Arrow != toState[f, Heel].Arrow);
+							var toeUnchangedHeelSameArrow =
+								fromFootIsBracket[f]
+								&& toFootIsBracket[f]
+								&& fromState[f, Toe].State == toState[f, Toe].State
+								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow
+								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow;
 
 							// Holding with Heel and bracketing with the Toe.
 							if ((heelUnchangedToeChanged && fromFootAnyHeld[f])
@@ -1049,6 +1056,7 @@ namespace StepManiaLibrary
 								var toeFromState = GraphArrowState.Resting;
 								var toeFromArrow = InvalidArrowIndex;
 								if (heelUnchangedToeChanged
+									|| heelUnchangedHeelSameArrow
 									|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
 									|| holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow)
 								{
@@ -1132,6 +1140,7 @@ namespace StepManiaLibrary
 								var heelFromState = GraphArrowState.Resting;
 								var heelFromArrow = InvalidArrowIndex;
 								if (toeUnchangedHeelChanged
+									|| toeUnchangedHeelSameArrow
 									|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
 									|| holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow)
 								{
@@ -1483,8 +1492,8 @@ namespace StepManiaLibrary
 			// No FootAction will transition from Held to Held.
 			if (from == GraphArrowState.Held && to == GraphArrowState.Held)
 				return false;
-			// No FootAction will transition from Lifted to Lifted.
-			if (from == GraphArrowState.Lifted && to == GraphArrowState.Lifted)
+			// No FootAction will transition to Lifted.
+			if (to == GraphArrowState.Lifted)
 				return false;
 			return true;
 		}
