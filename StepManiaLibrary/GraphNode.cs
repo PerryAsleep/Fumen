@@ -135,28 +135,6 @@ namespace StepManiaLibrary
 
 		public override string ToString()
 		{
-			var hasLeft = false;
-			var leftBracket = false;
-			var hasRight = false;
-			var rightBracket = false;
-			for (int f = 0; f < NumFeet; f++)
-			{
-				for (int p = 0; p < NumFootPortions; p++)
-				{
-					if (State[f, p].Arrow != InvalidArrowIndex)
-					{
-						if (f == L)
-						{
-							hasLeft = true;
-						}
-						else
-						{
-							hasRight = true;
-						}
-					}
-				}
-			}
-
 			var sb = new StringBuilder();
 
 			for (int f = 0; f < NumFeet; f++)
