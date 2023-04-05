@@ -56,6 +56,7 @@
     <Compile Include="Testfire.cs" />
     <Compile Include="TestGIGAVIOLATE.cs" />
     <Compile Include="TestSSC.cs" />
+    <Compile Include="TestTake_Me_To_Pleasure_Island.cs" />
     <Compile Include="TestTheLoveBug.cs" />
     <Compile Include="TestZora.cs" />
     <Compile Include="Utils.cs" />
