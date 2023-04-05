@@ -123,7 +123,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestTimeSignature44()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestTimeSignature44", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestTimeSignature44", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var numEvents = 39;
@@ -154,7 +154,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestOddTimeSignaturesValid()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestOddTimeSignaturesValid", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestOddTimeSignaturesValid", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			Assert.AreEqual(139, e.Count);
@@ -376,7 +376,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestOddTimeSignaturesBadMeasureBoundary()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestOddTimeSignaturesBadMeasureBoundary", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestOddTimeSignaturesBadMeasureBoundary", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var numEvents = 132;
@@ -414,7 +414,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestOddTimeSignaturesUnsupportedSignature()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestOddTimeSignaturesUnsupportedSignature", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestOddTimeSignaturesUnsupportedSignature", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var numEvents = 132;
@@ -452,7 +452,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestStopTiming()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestStopTiming", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestStopTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var i = 0;
@@ -555,7 +555,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestDelayTiming()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestDelayTiming", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestDelayTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var i = 0;
@@ -661,7 +661,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestTempoChangeTiming()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestTempoChangeTiming", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestTempoChangeTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var i = 0;
@@ -759,7 +759,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestStutterGimmickTiming()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestStutterGimmickTiming", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestStutterGimmickTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var numEvents = 72;
@@ -811,7 +811,7 @@ namespace ChartGeneratorTests
 		[TestMethod]
 		public void TestWarpTiming()
 		{
-			var s = LoadSSCSong(GetTestChartPath("TestWarpTiming", "test", "ssc"));
+			var s = LoadSong(GetTestChartPath("TestWarpTiming", "test", "ssc"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			var numEvents = 42;
@@ -917,7 +917,7 @@ namespace ChartGeneratorTests
 			// Load the sm file here.
 			// This sm file is the same as the ssc file from TestWarpTiming. StepMania generated
 			// both files from the same Chart.
-			var s = LoadSMSong(GetTestChartPath("TestNegativeStopTiming", "test", "sm"));
+			var s = LoadSong(GetTestChartPath("TestNegativeStopTiming", "test", "sm"));
 			Assert.AreEqual(s.Charts.Count, 1);
 			var e = s.Charts[0].Layers[0].Events;
 			Assert.AreEqual(37, e.Count);
@@ -1078,7 +1078,7 @@ namespace ChartGeneratorTests
 			}
 
 			// Load and check the test song.
-			var song = LoadSSCSong(GetTestChartPath("TestSaveLoadUnsupportedSpacing", "test", "ssc"));
+			var song = LoadSong(GetTestChartPath("TestSaveLoadUnsupportedSpacing", "test", "ssc"));
 			CheckSong(song, true);
 
 			// Save this file with UseSourceExtraOriginalMeasurePosition reload it to ensure we preserve the spacing.

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Fumen;
 using Fumen.ChartDefinition;
 using Fumen.Converters;
@@ -31,48 +30,49 @@ namespace ChartGeneratorTests
 		}
 
 		/// <summary>
-		/// Load an sm file.
+		/// Load a song file.
 		/// </summary>
-		/// <param name="smFile">SM file with path and extension.</param>
+		/// <param name="file">Song file with path and extension.</param>
 		/// <returns>Song</returns>
-		public static Song LoadSMSong(string smFile)
+		public static Song LoadSong(string file)
 		{
-			Song song = null;
-			Task.Run(async () => { song = await new SMReader(smFile).LoadAsync(CancellationToken.None); }).Wait();
-			return song;
+			var reader = Reader.CreateReader(file);
+			var task = reader.LoadAsync(CancellationToken.None);
+			task.Wait();
+			return task.Result;
 		}
 
 		/// <summary>
-		/// Load an ssc file.
+		/// Load a song file and return the first Chart matching the given parameters.
 		/// </summary>
-		/// <param name="sscFile">SSC file with path and extension.</param>
-		/// <returns>Song</returns>
-		public static Song LoadSSCSong(string sscFile)
+		/// <param name="file">Song file with path and extension.</param>
+		/// <param name="chartDifficultyType">Optional difficulty type string of chart in song file to load.</param>
+		/// <param name="type">Optional type string of chart in song file to load.</param>
+		/// <returns>Chart</returns>
+		public static Chart LoadChart(string file, string chartDifficultyType = null, string type = null)
 		{
-			Song song = null;
-			Task.Run(async () => { song = await new SSCReader(sscFile).LoadAsync(CancellationToken.None); }).Wait();
-			return song;
-		}
-
-		/// <summary>
-		/// Load an sm file and return the ExpressedChart representation.
-		/// </summary>
-		/// <param name="smFile">SM file with path and extension.</param>
-		/// <param name="chartDifficultyType">
-		/// Optional difficulty type string of chart in SM file to load.
-		/// If omitted, the first chart found will be used.
-		/// </param>
-		/// <returns></returns>
-		public static Chart LoadSMChart(string smFile, string chartDifficultyType = null)
-		{
-			var song = LoadSMSong(smFile);
+			var song = LoadSong(file);
 
 			// Use the specified chart, if present.
-			if (chartDifficultyType != null)
+			foreach (var chart in song.Charts)
 			{
-				foreach (var chart in song.Charts)
+				if (chartDifficultyType != null && type != null)
+				{
+					if (chart.DifficultyType == chartDifficultyType && chart.Type == type)
+					{
+						return chart;
+					}
+				}
+				else if (chartDifficultyType != null)
 				{
 					if (chart.DifficultyType == chartDifficultyType)
+					{
+						return chart;
+					}
+				}
+				else if (type != null)
+				{
+					if (chart.Type == type)
 					{
 						return chart;
 					}

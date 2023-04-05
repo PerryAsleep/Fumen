@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StepManiaLibrary;
-using Fumen.Converters;
 using static StepManiaLibrary.Constants;
 using System.Threading.Tasks;
-using Fumen.ChartDefinition;
+using System.Collections.Generic;
+using static Fumen.Converters.SMCommon;
+using System.Linq;
 
 namespace ChartGeneratorTests
 {
@@ -17,35 +17,70 @@ namespace ChartGeneratorTests
 	public class TestExpressedChart
 	{
 		/// <summary>
-		/// SP StepGraph for running tests.
+		/// Locks for loading StepGraphs for tests.
 		/// </summary>
-		private static readonly StepGraph SPGraph;
+		private static Dictionary<ChartType, object> StepGraphLocks;
 
 		/// <summary>
-		/// Static initializer for creating the SP StepGraph.
+		/// Loaded StepGraphs for tests.
+		/// </summary>
+		private static Dictionary<ChartType, StepGraph> StepGraphs;
+
+		/// <summary>
+		/// Static initializer.
 		/// </summary>
 		static TestExpressedChart()
 		{
-			var padDataTask = PadData.LoadPadData("dance-single", "dance-single.json");
-			padDataTask.Wait();
-			var padData = padDataTask.Result;
-			SPGraph = StepGraph.Load("dance-single.fsg", padData);
+			StepGraphs = new Dictionary<ChartType, StepGraph>();
+			StepGraphLocks = new Dictionary<ChartType, object>();
+			foreach (var chartType in Enum.GetValues(typeof(ChartType)).Cast<ChartType>())
+				StepGraphLocks[chartType] = new object();
+		}
+
+		/// <summary>
+		/// Helper to asynchronously load a StepGraph for the given ChartType.
+		/// </summary>
+		/// <param name="type">ChartType of the StephGraph.</param>
+		/// <returns>StepGraph.</returns>
+		private static async Task<StepGraph> LoadStepGraph(ChartType type)
+		{
+			var chartTypeString = ChartTypeString(type);
+			var padData = await PadData.LoadPadData(chartTypeString, $"{chartTypeString}.json");
+			return await StepGraph.LoadAsync($"{chartTypeString}.fsg", padData);
+		}
+
+		/// <summary>
+		/// Memoized accessor for tests to get a StepGraph of the given type.
+		/// The first call will load the StepGraph from disk. Subsequent calls retrieve the cached version.
+		/// </summary>
+		/// <param name="type">ChartType of the StephGraph.</param>
+		/// <returns>StepGraph.</returns>
+		private static StepGraph GetStepGraph(ChartType type)
+		{
+			lock (StepGraphLocks[type])
+			{
+				if (StepGraphs.ContainsKey(type))
+					return StepGraphs[type];
+
+				var stepGraphTask = LoadStepGraph(type);
+				stepGraphTask.Wait();
+				StepGraphs[type] = stepGraphTask.Result;
+				return StepGraphs[type];
+			}
 		}
 
 		/// <summary>
 		/// Gets the path with extension to a test sm file in the given folder.
 		/// </summary>
 		/// <param name="songFolder">Name of the folder containing the test sm file.</param>
-		/// <param name="smFile">
-		/// Optional sm file name without extension.
-		/// Defaults to "test".
-		/// </param>
-		/// <returns>String representation of path to sm file with extension.</returns>
-		public static string GetTestChartPath(string songFolder, string smFile = "test")
+		/// <param name="songFile">Optional song file name without extension. Defaults to "test".</param>
+		/// <param name="extension">Optional extension. Defaults to "sm".</param>
+		/// <returns>String representation of path to song file with extension.</returns>
+		public static string GetTestChartPath(string songFolder, string songFile = "test", string extension = "sm")
 		{
 			return Fumen.Path.Combine(new []{
 				AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "ChartGeneratorTests", "TestData", songFolder,
-				$"{smFile}.sm"});
+				$"{songFile}.{extension}"});
 		}
 
 		/// <summary>
@@ -57,11 +92,11 @@ namespace ChartGeneratorTests
 		/// If omitted, the first chart found will be used.
 		/// </param>
 		/// <returns></returns>
-		public static ExpressedChart Load(string smFile, string chartDifficultyType = null)
+		public static ExpressedChart Load(string smFile, string chartDifficultyType = null, ChartType chartType = ChartType.dance_single)
 		{
-			var chart = Utils.LoadSMChart(smFile, chartDifficultyType);
-			
-			Task.Run(async () => { await new SMReader(smFile).LoadAsync(CancellationToken.None); }).Wait();
+			var stepGraph = GetStepGraph(chartType);
+
+			var chart = Utils.LoadChart(smFile, chartDifficultyType);
 			
 			var events = chart.Layers[0].Events;
 			var difficultyRating = chart.DifficultyRating;
@@ -78,7 +113,7 @@ namespace ChartGeneratorTests
 				BalancedBracketsPerMinuteForAggressiveBrackets = 3.0,
 				BalancedBracketsPerMinuteForNoBrackets = 0.571
 			};
-			var expressedChart = ExpressedChart.CreateFromSMEvents(events, SPGraph, config, difficultyRating);
+			var expressedChart = ExpressedChart.CreateFromSMEvents(events, stepGraph, config, difficultyRating);
 			return expressedChart;
 		}
 
