@@ -11,10 +11,6 @@ using System.Threading.Tasks;
 using Fumen.Compression;
 using System.Diagnostics;
 
-#if DEBUG_STEPGRAPH
-using System.Diagnostics;
-#endif // DEBUG_STEPGRAPH
-
 namespace StepManiaLibrary
 {
 	/// <summary>
@@ -48,7 +44,6 @@ namespace StepManiaLibrary
 		/// StepGraphs are publicly created using CreateStepGraph.
 		/// </summary>
 		/// <param name="padData">PadData this StepGraph is for.</param>
-		/// <param name="root">Root GraphNode.</param>
 		private StepGraph(PadData padData)
 		{
 			PadData = padData;
@@ -590,7 +585,11 @@ namespace StepManiaLibrary
 				boIndex++;
 			}
 
-			// all 4-digit base 18 numbers
+			// There must be a better way to describe this, but we need to loop over all possible
+			// foot arrow states for all combinations of feet and portions. A way to do that is to
+			// effectively have a N-digit base-M number where N is 4 (NumFeet * NumFootPortions) and
+			// M is 3 * NumArrows (3 being the number of unique GraphArrowStates). Using that number
+			// we can loop over all values to get all the combinations.
 			var numFootArrowStates = (NumArrows + 1) * numGasValues;
 			var numStatesPerNode = NumFeet * NumFootPortions;
 			var digits = new int[numStatesPerNode];
@@ -1936,6 +1935,7 @@ namespace StepManiaLibrary
 
 		private void LogStateHelper(string message, GraphNode.FootArrowState[,] state, int f, int p)
 		{
+#if DEBUG_STEPGRAPH
 			var sb = new StringBuilder();
 			sb.Append("[");
 			for (int fi = 0; fi <= f; fi++)
@@ -1976,6 +1976,7 @@ namespace StepManiaLibrary
 				sb.Append($" {message}");
 
 			LogInfo(sb.ToString());
+#endif
 		}
 
 		#endregion Logging
