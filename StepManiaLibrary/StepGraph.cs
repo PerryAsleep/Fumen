@@ -1570,6 +1570,63 @@ namespace StepManiaLibrary
 				rightHeelArrow, rightHeelState, rightToeArrow, rightToeState);
 		}
 
+		/// <summary>
+		/// Gets the position of the given foot on the pads in the given GraphNode.
+		/// For brackets, this position is the average of the bracketed arrows.
+		/// </summary>
+		/// <param name="node">GraphNode to get the foot position of.</param>
+		/// <param name="foot">Foot to get the position of.</param>
+		/// <returns>Position represented as a tuple of doubles representing the X and Y positions.</returns>
+		public (double, double) GetFootPosition(GraphNode node, int foot)
+		{
+			var x = 0.0;
+			var y = 0.0;
+			var num = 0;
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				if (node.State[foot, p].Arrow != InvalidArrowIndex)
+				{
+					num++;
+					x += PadData.ArrowData[node.State[foot, p].Arrow].X;
+					y += PadData.ArrowData[node.State[foot, p].Arrow].Y;
+				}
+			}
+			if (num > 1)
+			{
+				x /= num;
+				y /= num;
+			}
+			return (x, y);
+		}
+
+		/// <summary>
+		/// Gets the average position of the given arrows. Assumes the given array represents
+		/// arrows corresponding to the FootPortions for one foot on a GraphNode.
+		/// </summary>
+		/// <param name="footArrows">Array of arrows being stepped on.</param>
+		/// <returns>Position represented as a tuple of doubles representing the X and Y positions.</returns>
+		public (double, double) GetFootPosition(int[] footArrows)
+		{
+			var x = 0.0;
+			var y = 0.0;
+			var num = 0;
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				if (footArrows[p] != InvalidArrowIndex)
+				{
+					num++;
+					x += PadData.ArrowData[footArrows[p]].X;
+					y += PadData.ArrowData[footArrows[p]].Y;
+				}
+			}
+			if (num > 1)
+			{
+				x /= num;
+				y /= num;
+			}
+			return (x, y);
+		}
+
 		#endregion Public State Helpers
 
 		#region Fill Helpers

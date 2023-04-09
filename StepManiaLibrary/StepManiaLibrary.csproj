@@ -73,6 +73,7 @@
     <Compile Include="MineUtils.cs" />
     <Compile Include="PadData.cs" />
     <Compile Include="PerformedChart.cs" />
+    <Compile Include="PerformedChartConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StepData.cs" />
     <Compile Include="StepGraph.cs" />

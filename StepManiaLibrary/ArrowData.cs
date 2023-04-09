@@ -97,13 +97,5 @@ namespace StepManiaLibrary
 		/// First index is foot, second is arrow.
 		/// </summary>
 		[JsonInclude] public bool[][] OtherFootPairingsInverted = new bool[NumFeet][];
-
-		/// <summary>
-		/// Approximate distance the foot needs to move from this arrow to the other arrows.
-		/// This distance takes into account that Y distances require less movement due to the
-		/// length of the foot.
-		/// Index is arrow.
-		/// </summary>
-		[JsonIgnore] public double[] TravelDistanceWithArrow;
 	}
 }

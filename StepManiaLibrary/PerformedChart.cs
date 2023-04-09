@@ -6,7 +6,6 @@ using Fumen;
 using Fumen.ChartDefinition;
 using Fumen.Converters;
 using static StepManiaLibrary.Constants;
-using static Fumen.Utils;
 
 namespace StepManiaLibrary
 {
@@ -169,15 +168,19 @@ namespace StepManiaLibrary
 				new Dictionary<GraphLink, HashSet<SearchNode>>();
 
 			/// <summary>
-			/// This SearchNode's cost for using unwanted individual steps.
+			/// This SearchNode's cost for fast steps.
 			/// Higher values are worse.
 			/// </summary>
-			private readonly double TotalIndividualStepCost;
-
-			private readonly double IndividualStepCost;
+			private readonly double TotalIndividualStepTravelSpeedCost;
 
 			/// <summary>
-			/// This SearchNode's cost for using unwanted faster lateral movement.
+			/// This SearchNode's cost for wide steps.
+			/// Higher values are worse.
+			/// </summary>
+			private readonly double TotalIndividualStepTravelDistanceCost;
+
+			/// <summary>
+			/// This SearchNode's cost for using unwanted fast lateral movement.
 			/// Higher values are worse.
 			/// </summary>
 			private readonly double TotalLateralMovementSpeedCost;
@@ -186,15 +189,20 @@ namespace StepManiaLibrary
 			/// This SearchNode's cost for deviating from the configured DesiredArrowWeights.
 			/// Higher values are worse.
 			/// </summary>
-			private readonly double DistributionCost;
+			private readonly double TotalDistributionCost;
 
+			/// <summary>
+			/// This SearchNode's cost for stretch moves.
+			/// Higher values are worse.
+			/// </summary>
+			private readonly double TotalStretchCost;
+
+			// TODO
 			private readonly double SectionStepTypeCost;
-
 			private readonly int TotalNumSameArrowSteps;
 			private readonly int TotalNumSameArrowStepsInARowPerFootOverMax;
 			private readonly int TotalNumNewArrowSteps;
 			private readonly int TotalNumBracketableNewArrowSteps;
-
 
 			/// <summary>
 			/// This SearchNode's random weight for when all costs are equal.
@@ -356,12 +364,13 @@ namespace StepManiaLibrary
 					}
 				}
 
-				double lateralMovementSpeedCost;
-				(DistributionCost, IndividualStepCost, lateralMovementSpeedCost) =
-					DetermineCostsAndUpdateStepTracking(stepGraph, nps, config);
-
-				TotalIndividualStepCost = (PreviousNode?.TotalIndividualStepCost ?? 0.0) + IndividualStepCost;
-				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + lateralMovementSpeedCost;
+				var (travelSpeedCost, travelDistanceCost) = GetStepTravelCostsAndUpdateStepTracking(stepGraph, config);
+				TotalIndividualStepTravelSpeedCost = (PreviousNode?.TotalIndividualStepTravelSpeedCost ?? 0.0) + travelSpeedCost;
+				TotalIndividualStepTravelDistanceCost = (PreviousNode?.TotalIndividualStepTravelDistanceCost ?? 0.0) + travelDistanceCost;
+				TotalDistributionCost = GetDistributionCost(stepGraph, config);
+				TotalStretchCost = (PreviousNode?.TotalStretchCost ?? 0.0) + GetStretchCost(stepGraph, config);
+				LateralBodyPosition = GetLateralBodyPosition(stepGraph);
+				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + GetLateralMovementCost(config, nps);
 
 				TotalNumSameArrowSteps = PreviousNode?.TotalNumSameArrowSteps ?? 0;
 				TotalNumSameArrowStepsInARowPerFootOverMax = PreviousNode?.TotalNumSameArrowStepsInARowPerFootOverMax ?? 0;
@@ -400,6 +409,7 @@ namespace StepManiaLibrary
 								break;
 							}
 							case StepType.SameArrow:
+							{
 								TotalNumSameArrowSteps++;
 								if (fillSectionConfig != null && fillSectionConfig.MaxSameArrowsInARowPerFoot > 0)
 								{
@@ -435,10 +445,10 @@ namespace StepManiaLibrary
 									}
 								}
 								break;
+							}
 						}
 					}
 				}
-
 				SectionStepTypeCost = DetermineSectionStepCost(fillSectionConfig);
 
 				var (ambiguous, misleading) = DetermineAmbiguity(stepGraph);
@@ -460,6 +470,7 @@ namespace StepManiaLibrary
 				return NextNodes.First().Value.First();
 			}
 
+			// TODO
 			private double DetermineSectionStepCost(FillConfig config)
 			{
 				if (config == null)
@@ -486,64 +497,32 @@ namespace StepManiaLibrary
 			}
 
 			/// <summary>
-			/// Determines the costs of this SearchNode.
-			/// The three costs returned are the distribution cost, the individual step cost, and the
-			/// lateral movement speed cost.
+			/// Determines the step travel costs of this SearchNode.
 			/// Higher values are worse.
 			/// Also updates LastArrowsSteppedOnByFoot, LastTimeFootStepped, and LateralBodyPosition.
 			/// Expects that LastArrowsSteppedOnByFoot and LastTimeFootStepped represent values from the
 			/// previous SearchNode at the time of calling.
 			/// </summary>
-			/// <param name="averageNps">Average notes per second of the Chart.</param>
-			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
 			/// <returns>
-			/// Costs to use for this SearchNode.
-			/// Value 1: distribution cost
-			/// Value 2: individual step cost
-			/// Value 3: lateral movement speed cost
+			/// Value 1: Travel speed cost
+			/// Value 2: Travel distance cost
 			/// </returns>
-			private (double, double, double) DetermineCostsAndUpdateStepTracking(
-				StepGraph stepGraph,
-				double averageNps,
-				PerformedChartConfig config)
+			private (double, double) GetStepTravelCostsAndUpdateStepTracking(StepGraph stepGraph, PerformedChartConfig config)
 			{
-				// Record the previous step time.
-				// This is currently stored in LastTimeFootStepped from initialization.
-				// We will update LastTimeFootStepped for this step later.
-				var previousStepTime = 0.0;
-				for (var f = 0; f < NumFeet; f++)
-				{
-					if (LastTimeFootStepped[f] > previousStepTime)
-						previousStepTime = LastTimeFootStepped[f];
-				}
+				var speedCost = 0.0;
+				var distanceCost = 0.0;
 
-				// Determine distribution cost by calculating how far off the chart up to this point
-				// is from the desired distribution of arrows.
-				var distributionCost = 0.0;
-				var weights = config.GetDesiredArrowWeightsNormalized(stepGraph.PadData.StepsType);
-				var totalSteps = 0;
-				for (var a = 0; a < StepCounts.Length; a++)
-					totalSteps += StepCounts[a];
-				if (totalSteps > 0)
-				{
-					var totalDifferenceFromDesiredLanePercentage = 0.0;
-					for (var a = 0; a < StepCounts.Length; a++)
-						totalDifferenceFromDesiredLanePercentage += Math.Abs((double) StepCounts[a] / totalSteps - weights[a]);
-					distributionCost = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
-				}
+				var stepConfig = config.StepTightening;
 
 				// Determine how the feet step at this SearchNode.
 				// While checking each foot, 
-				var individualStepCost = 0.0;
-				if (GraphLinkFromPreviousNode != null)
+				if (PreviousNode != null && PreviousNode.GraphNode != null)
 				{
+					var footSpeedCost = 0.0;
+					var footDistanceCost = 0.0;
 					for (var f = 0; f < NumFeet; f++)
 					{
 						var steppedWithThisFoot = false;
-						var bracketedWithThisFoot = false;
-						var steppedWithOtherFoot = false;
-						var thisFootPortionSteppingWith = InvalidFootPortion;
-						var otherFoot = OtherFoot(f);
 						for (var p = 0; p < NumFootPortions; p++)
 						{
 							if (GraphLinkFromPreviousNode.Links[f, p].Valid)
@@ -556,48 +535,35 @@ namespace StepManiaLibrary
 
 								if (GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
 								{
-									bracketedWithThisFoot = steppedWithThisFoot;
 									steppedWithThisFoot = true;
 									Stepped = true;
-									thisFootPortionSteppingWith = p;
 								}
 							}
-
-							if (GraphLinkFromPreviousNode.Links[otherFoot, p].Valid)
-								steppedWithOtherFoot = true;
 						}
 
 						// Check for updating this SearchNode's individual step cost if the Config is
 						// configured to use individual step tightening.
-						if (steppedWithThisFoot
-						    && !bracketedWithThisFoot
-						    && !steppedWithOtherFoot
-						    && config.IndividualStepTighteningMinTimeSeconds > 0.0)
+						if (steppedWithThisFoot)
 						{
-							var arrowBeingSteppedTo = GraphNode.State[f, thisFootPortionSteppingWith].Arrow;
-							var timeBetweenStepsSeconds = Time - LastTimeFootStepped[f];
+							var (currX, currY) = stepGraph.GetFootPosition(GraphNode, f);
+							var (prevX, prevY) = stepGraph.GetFootPosition(LastArrowsSteppedOnByFoot[f]);
+							var time = Time - LastTimeFootStepped[f];
+							var distance = stepGraph.PadData.GetDistance(currX, currY, prevX, prevY);
 
-							for (var p = 0; p < NumFootPortions; p++)
+							// Determine the speed cost for this foot.
+							if (stepConfig.TravelSpeedMinTimeSeconds > 0.0)
 							{
-								if (LastArrowsSteppedOnByFoot[f][p] == InvalidArrowIndex)
-									continue;
-
-								var arrowBeingSteppedFrom = LastArrowsSteppedOnByFoot[f][p];
-								var travelDistance = stepGraph.PadData.ArrowData[arrowBeingSteppedTo]
-									.TravelDistanceWithArrow[arrowBeingSteppedFrom];
-
 								// Determine the normalized speed penalty
 								double speedPenalty;
 
 								// The configure min and max speeds are a range.
-								if (config.IndividualStepTighteningMinTimeSeconds <
-								    config.IndividualStepTighteningMaxTimeSeconds)
+								if (stepConfig.TravelSpeedMinTimeSeconds < stepConfig.TravelSpeedMaxTimeSeconds)
 								{
 									// Clamp to a normalized value.
 									// Invert since lower times represent faster movements, which are worse.
 									speedPenalty = Math.Min(1.0, Math.Max(0.0,
-										1.0 - (timeBetweenStepsSeconds - config.IndividualStepTighteningMinTimeSeconds) 
-										/ (config.IndividualStepTighteningMaxTimeSeconds - config.IndividualStepTighteningMinTimeSeconds)));
+										1.0 - (time - stepConfig.TravelSpeedMinTimeSeconds)
+										/ (stepConfig.TravelSpeedMaxTimeSeconds - stepConfig.TravelSpeedMinTimeSeconds)));
 								}
 
 								// The configured min and max speeds are the same, and are non-zero.
@@ -605,21 +571,30 @@ namespace StepManiaLibrary
 								{
 									// If the actual speed is faster than the configured speed then use the full speed penalty
 									// of 1.0. Otherwise use no speed penalty of 0.0;
-									speedPenalty = timeBetweenStepsSeconds < config.IndividualStepTighteningMinTimeSeconds ? 1.0 : 0.0;
+									speedPenalty = time < stepConfig.TravelSpeedMinTimeSeconds ? 1.0 : 0.0;
 								}
 
-								individualStepCost = Math.Max(individualStepCost, speedPenalty * travelDistance);
+								footSpeedCost = speedPenalty * distance;
 							}
-						}
 
-						// Update our values for tracking the last steps.
-						if (steppedWithThisFoot)
-						{
+							// Determine the distance cost for this foot.
+							if (stepConfig.TravelDistanceMin > 0.0)
+							{
+								footDistanceCost = 1.0;
+								var distanceRange = stepConfig.TravelDistanceMax - stepConfig.TravelDistanceMin;
+								if (distanceRange > 0.0)
+								{
+									footDistanceCost = Math.Min(1.0, Math.Max(0.0,
+										(distance - stepConfig.TravelDistanceMin) / distanceRange));
+								}
+							}
+
+							// Update our values for tracking the last steps.
 							LastTimeFootStepped[f] = Time;
 							for (var p = 0; p < NumFootPortions; p++)
 							{
 								if (GraphLinkFromPreviousNode.Links[f, p].Valid &&
-								    GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+									GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
 								{
 									LastArrowsSteppedOnByFoot[f][p] = GraphNode.State[f, p].Arrow;
 								}
@@ -630,19 +605,86 @@ namespace StepManiaLibrary
 							}
 						}
 					}
+
+					speedCost += footSpeedCost;
+					distanceCost += footDistanceCost;
 				}
 
-				// Now that we have updated the LastTimeFootStepped and LastArrowsSteppedOnByFoot values,
-				// calculate the lateral position at this node so we can check for lateral speed cost.
-				LateralBodyPosition = GetLateralBodyPosition(stepGraph);
+				return (speedCost, distanceCost);
+			}
+
+			/// <summary>
+			/// Gets the distribution cost of this SearchNode.
+			/// The distribution costs represents how far off the chart up to this point does not match
+			/// the desired arrow weights from the PerformedChartConfig.
+			/// </summary>
+			/// <returns>Distribution cost.</returns>
+			private double GetDistributionCost(StepGraph stepGraph, PerformedChartConfig config)
+			{
+				var distributionCost = 0.0;
+				var weights = config.GetArrowWeightsNormalized(stepGraph.PadData.StepsType);
+				var totalSteps = 0;
+				for (var a = 0; a < StepCounts.Length; a++)
+					totalSteps += StepCounts[a];
+				if (totalSteps > 0)
+				{
+					var totalDifferenceFromDesiredLanePercentage = 0.0;
+					for (var a = 0; a < StepCounts.Length; a++)
+						totalDifferenceFromDesiredLanePercentage += Math.Abs((double)StepCounts[a] / totalSteps - weights[a]);
+					distributionCost = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
+				}
+
+				return distributionCost;
+			}
+
+			/// <summary>
+			/// Gets the stretch cost of this SearchNode.
+			/// The stretch cost represents how much this node stretches beyond desired limits from
+			/// the PerformedChartConfig.
+			/// </summary>
+			/// <returns>Stretch cost.</returns>
+			private double GetStretchCost(StepGraph stepGraph, PerformedChartConfig config)
+			{
+				var stretchCost = 0.0;
+				var stepConfig = config.StepTightening;
+
+				// Determine the stretch distance.
+				var (lx, ly) = stepGraph.GetFootPosition(GraphNode, L);
+				var (rx, ry) = stepGraph.GetFootPosition(GraphNode, R);
+				var stretchDistance = stepGraph.PadData.GetDistance(lx, ly, rx, ry);
+
+				// Determine the cost based on the stretch distance.
+				if (stretchDistance >= stepConfig.StretchDistanceMin)
+				{
+					stretchCost = 1.0;
+					var stretchRange = stepConfig.StretchDistanceMax - stepConfig.StretchDistanceMin;
+					if (stretchRange > 0.0)
+					{
+						stretchCost = Math.Min(1.0, Math.Max(0.0,
+							(stretchDistance - stepConfig.StretchDistanceMin) / stretchRange));
+					}
+				}
+
+				return stretchCost;
+			}
+
+			/// <summary>
+			/// Gets the lateral movement cost of this SearchNode.
+			/// </summary>
+			/// <param name="config"></param>
+			/// <param name="averageNps"></param>
+			/// <returns></returns>
+			private double GetLateralMovementCost(PerformedChartConfig config, double averageNps)
+			{
+				var lateralConfig = config.LateralTightening;
 
 				// Determine the lateral body movement cost.
 				// When notes are more dense the body should move side to side less.
 				var lateralMovementSpeedCost = 0.0;
-				if (config.LateralTighteningPatternLength > 0)
+				if (lateralConfig.PatternLength > 0)
 				{
 					// Scan backwards over the previous LateralTighteningPatternLength steps.
-					var stepCounter = config.LateralTighteningPatternLength;
+					var stepCounter = lateralConfig.PatternLength;
 					var node = PreviousNode;
 					bool? goingLeft = null;
 					var previousPosition = LateralBodyPosition;
@@ -698,18 +740,18 @@ namespace StepManiaLibrary
 					// in one direction, then perform the nps and speed checks.
 					if (stepCounter == 0)
 					{
-						var nps = config.LateralTighteningPatternLength / (Time - previousTime);
+						var nps = lateralConfig.PatternLength / (Time - previousTime);
 						var speed = Math.Abs(LateralBodyPosition - previousPosition) / (Time - previousTime);
-						if (((averageNps > 0.0 && nps > averageNps * config.LateralTighteningRelativeNPS)
-						     || nps > config.LateralTighteningAbsoluteNPS)
-						    && speed > config.LateralTighteningSpeed)
+						if (((averageNps > 0.0 && nps > averageNps * lateralConfig.RelativeNPS)
+							 || nps > lateralConfig.AbsoluteNPS)
+							&& speed > lateralConfig.Speed)
 						{
-							lateralMovementSpeedCost = speed - config.LateralTighteningSpeed;
+							lateralMovementSpeedCost = speed - lateralConfig.Speed;
 						}
 					}
 				}
 
-				return (distributionCost, individualStepCost, lateralMovementSpeedCost);
+				return lateralMovementSpeedCost;
 			}
 
 			/// <summary>
@@ -972,21 +1014,19 @@ namespace StepManiaLibrary
 				if (AmbiguousStepCount != other.AmbiguousStepCount)
 					return AmbiguousStepCount < other.AmbiguousStepCount ? -1 : 1;
 
-				//if (GraphLinkFromPreviousNode != null
-				//    && other.GraphLinkFromPreviousNode != null
-				//    && GraphLinkFromPreviousNode.Equals(other.GraphLinkFromPreviousNode))
-				//{
-				//	if (Math.Abs(IndividualStepCost - other.IndividualStepCost) > 0.00001)
-				//		return IndividualStepCost < other.IndividualStepCost ? -1 : 1;
-				//}
-
 				if (TotalNumSameArrowStepsInARowPerFootOverMax != other.TotalNumSameArrowStepsInARowPerFootOverMax)
 					return TotalNumSameArrowStepsInARowPerFootOverMax < other.TotalNumSameArrowStepsInARowPerFootOverMax ? -1 : 1;
 
+				if (Math.Abs(TotalStretchCost - other.TotalStretchCost) > 0.00001)
+					return TotalStretchCost < other.TotalStretchCost ? -1 : 1;
+
 				// Next consider individual step cost. This is a measure of how uncomfortably energetic
 				// the individual steps are.
-				if (Math.Abs(TotalIndividualStepCost - other.TotalIndividualStepCost) > 0.00001)
-					return TotalIndividualStepCost < other.TotalIndividualStepCost ? -1 : 1;
+				if (Math.Abs(TotalIndividualStepTravelDistanceCost - other.TotalIndividualStepTravelDistanceCost) > 0.00001)
+					return TotalIndividualStepTravelDistanceCost < other.TotalIndividualStepTravelDistanceCost ? -1 : 1;
+
+				if (Math.Abs(TotalIndividualStepTravelSpeedCost - other.TotalIndividualStepTravelSpeedCost) > 0.00001)
+					return TotalIndividualStepTravelSpeedCost < other.TotalIndividualStepTravelSpeedCost ? -1 : 1;
 
 				if (Math.Abs(SectionStepTypeCost - other.SectionStepTypeCost) > 0.00001)
 					return SectionStepTypeCost < other.SectionStepTypeCost ? -1 : 1;
@@ -996,8 +1036,8 @@ namespace StepManiaLibrary
 					return TotalLateralMovementSpeedCost < other.TotalLateralMovementSpeedCost ? -1 : 1;
 
 				// If the individual steps and body movement are good, try to match a good distribution next.
-				if (Math.Abs(DistributionCost - other.DistributionCost) > 0.00001)
-					return DistributionCost < other.DistributionCost ? -1 : 1;
+				if (Math.Abs(TotalDistributionCost - other.TotalDistributionCost) > 0.00001)
+					return TotalDistributionCost < other.TotalDistributionCost ? -1 : 1;
 
 				// Finally, use a random weight. This is helpful to break up patterns.
 				// For example breaking up L U D R into L D U R as well.

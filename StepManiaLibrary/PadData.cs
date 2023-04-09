@@ -31,13 +31,6 @@ namespace StepManiaLibrary
 		[JsonIgnore] public int NumArrows;
 
 		/// <summary>
-		/// Maximum difference in indices between arrows of a bracket in any ArrowData[] array.
-		/// Used to improve scans over ArrowData for bracketable pairings.
-		/// Set after deserialization.
-		/// </summary>
-		[JsonIgnore] public int MaxBracketSeparation;
-
-		/// <summary>
 		/// Valid starting positions.
 		/// First array is tier, with lower indices preferred to higher indices when choosing a start position.
 		/// Second array is all equally preferred positions of the same tier.
@@ -53,7 +46,7 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// When the foot travels in Y it needs to travel less than when it travels in X
 		/// since the foot is longer than it is wide. Movements in Y are substantially shorter
-		/// as a result. This value is subtracted from Y deltas when computing TravelDistanceWithArrow.
+		/// as a result.
 		/// values.
 		/// </summary>
 		[JsonInclude] public double YTravelDistanceCompensation = 0.5;
@@ -97,8 +90,6 @@ namespace StepManiaLibrary
 					if (!padData.Validate())
 						return null;
 					padData.SetFlippedAndMirroredPositions();
-					padData.SetTravelDistances();
-					padData.DetermineMaxBracketSeparation();
 				}
 			}
 			catch (Exception e)
@@ -237,49 +228,6 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Sets the TravelDistanceWithArrow values for each ArrowData in the given array
-		/// based off of the X and Y positions of the other ArrowData entries.
-		/// </summary>
-		private void SetTravelDistances()
-		{
-			foreach (var data in ArrowData)
-			{
-				data.TravelDistanceWithArrow = new double[ArrowData.Length];
-				foreach (var otherData in ArrowData)
-				{
-					var dx = data.X - otherData.X;
-					// Subtract YTravelDistanceCompensation from y since the heel and toe make forward
-					// and backward movements shorter.
-					var dy = Math.Max(0.0, Math.Abs(data.Y - otherData.Y) - YTravelDistanceCompensation);
-					var d = Math.Sqrt(dx * dx + dy * dy);
-					data.TravelDistanceWithArrow[otherData.Lane] = d;
-				}
-			}
-		}
-
-		/// <summary>
-		/// Determines and caches the maximum number arrow indices which separate
-		/// arrows in a bracket on this PadData. Used for improving performance when generating
-		/// a StepGraph with this PadData.
-		/// </summary>
-		private void DetermineMaxBracketSeparation()
-		{
-			var numArrows = ArrowData.Length;
-			for (var a = 0; a < numArrows; a++)
-			{
-				for (var a2 = 0; a2 < numArrows; a2++)
-				{
-					for (var f = 0; f < NumFeet; f++)
-					{
-						if (ArrowData[a].BracketablePairingsOtherHeel[f][a2]
-						    || ArrowData[a].BracketablePairingsOtherToe[f][a2])
-							MaxBracketSeparation = Math.Max(MaxBracketSeparation, Math.Abs(a2 - a));
-					}
-				}
-			}
-		}
-
-		/// <summary>
 		/// Sets MirroredLane and FlippedLane on the ArrowData based on the individual ArrowData
 		/// X and Y values.
 		/// </summary>
@@ -322,6 +270,45 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+		}
+
+		/// <summary>
+		/// Gets the X distance between two points on the pads.
+		/// </summary>
+		/// <param name="x1">Point 1 X.</param>
+		/// <param name="x2">Point 2 X.</param>
+		/// <returns>X distance between the two points.</returns>
+		public double GetXDistance(double x1, double x2)
+		{
+			return Math.Abs(x1 - x2);
+		}
+
+		/// <summary>
+		/// Gets the Y distance between two points on the pads, taking into account the configured
+		/// YTravelDistanceCompensation.
+		/// </summary>
+		/// <param name="y1">Point 1 Y.</param>
+		/// <param name="y2">Point 2 Y.</param>
+		/// <returns>Y distance between the two points.</returns>
+		public double GetYDistance(double y1, double y2)
+		{
+			return Math.Max(0.0, Math.Abs(y1 - y2) - YTravelDistanceCompensation);
+		}
+
+		/// <summary>
+		/// Gets the distance between two points on the pads, taking into account the configured
+		/// YTravelDistanceCompensation.
+		/// </summary>
+		/// <param name="x1">Point 1 X.</param>
+		/// <param name="y1">Point 1 Y.</param>
+		/// <param name="x2">Point 2 X.</param>
+		/// <param name="y2">Point 2 Y.</param>
+		/// <returns>Distance between the two points.</returns>
+		public double GetDistance(double x1, double y1, double x2, double y2)
+		{
+			var dx = GetXDistance(x1, x2);
+			var dy = GetYDistance(y1, y2);
+			return Math.Sqrt(dx * dx + dy * dy);
 		}
 
 		#region Logging

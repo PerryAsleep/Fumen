@@ -108,6 +108,16 @@ namespace StepManiaLibrary
 	}
 
 	/// <summary>
+	/// The direction the body is facing relative to the center of the pads.
+	/// </summary>
+	public enum Facing
+	{
+		Normal,
+		Inward,
+		Outward,
+	}
+
+	/// <summary>
 	/// The state a foot on an arrow in StepGraph can be in.
 	/// Each foot is on one or more arrows each in one of these states.
 	/// Lifted only occurs when a foot swaps and forces the other foot to release.
