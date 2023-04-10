@@ -20,6 +20,8 @@ namespace PadDataGenerator
 	{
 		private const string InputFileName = "input.json";
 
+		// Silence warnings about unassigned fields. The fields are deserialized from JSON.
+#pragma warning disable 0649
 		/// <summary>
 		/// Input to this application.
 		/// </summary>
@@ -58,6 +60,7 @@ namespace PadDataGenerator
 			/// </summary>
 			public List<Position> Positions;
 		}
+#pragma warning restore 0649
 
 		private static JsonSerializerOptions SerializationOptions = new JsonSerializerOptions()
 		{
