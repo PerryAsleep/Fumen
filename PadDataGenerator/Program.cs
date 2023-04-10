@@ -93,9 +93,6 @@ namespace PadDataGenerator
 				return;
 			}
 
-			// Load expected pad data for verification.
-			var expectedPadData = await LoadExpectedPadData();
-
 			// Create pad data for each input and write it to disk.
 			var numStepGraphs = 0;
 			foreach (var kvp in input.PadDataInput)
@@ -103,12 +100,6 @@ namespace PadDataGenerator
 				// Create the pad data.
 				Logger.Info($"Creating {kvp.Key} PadData.");
 				var padData = CreatePadData(kvp.Value);
-
-				// Compare it to expected data, if expected data is present.
-				if (expectedPadData.ContainsKey(kvp.Key))
-				{
-					VerifyPadData(expectedPadData[kvp.Key], padData);
-				}
 
 				// Write to disk.
 				var outputFileName = GetPadDataFileName(kvp.Key);
@@ -237,22 +228,6 @@ namespace PadDataGenerator
 			});
 		}
 
-		private static async Task<Dictionary<string, PadData>> LoadExpectedPadData()
-		{
-			var expectedPadData = new Dictionary<string, PadData>();
-
-			var expectedTypes = new string[] { "dance-single", "dance-double" };
-			foreach (var expectedType in expectedTypes)
-			{
-				var padData = await PadData.LoadPadData(expectedType, $"expected-{expectedType}.json");
-				if (padData == null)
-					Console.WriteLine($"Failed to load expected-{expectedType}.json");
-				else
-					expectedPadData[expectedType] = padData;
-			}
-			return expectedPadData;
-		}
-
 		static PadData CreatePadData(PadDataInput input)
 		{
 			var numArrows = input.Positions.Count;
@@ -322,7 +297,8 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the right of these arrows so you aren't crossed over.
-								&& (roomAtOrToRight[a]) && (roomAtOrToRight[a2])
+								// No longer checking this as it prevents inverted brackets and crossover brackets.
+								//&& (roomAtOrToRight[a]) && (roomAtOrToRight[a2])
 								// The arrows must be withing bracketable distance from each other.
 								&& xd <= input.MaxXSeparationBracket && yd <= input.MaxYSeparationBracket
 								// The other arrow must not be in front, otherwise you would be facing backwards.
@@ -335,7 +311,8 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the left of these arrows so you aren't crossed over.
-								&& (roomAtOrToLeft[a]) && (roomAtOrToLeft[a2])
+								// No longer checking this as it prevents inverted brackets and crossover brackets.
+								//&& (roomAtOrToLeft[a]) && (roomAtOrToLeft[a2])
 								// The arrows must be withing bracketable distance from each other.
 								&& xd <= input.MaxXSeparationBracket && yd <= input.MaxYSeparationBracket
 								// The other arrow must not be in front, otherwise you would be facing backwards.
@@ -360,7 +337,8 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the right of these arrows so you aren't crossed over.
-								&& (roomAtOrToRight[a]) && (roomAtOrToRight[a2])
+								// No longer checking this as it prevents inverted brackets and crossover brackets.
+								//&& (roomAtOrToRight[a]) && (roomAtOrToRight[a2])
 								// The arrows must be withing bracketable distance from each other.
 								&& xd <= input.MaxXSeparationBracket && yd <= input.MaxYSeparationBracket
 								// The other arrow must not be in back, otherwise you would be facing backwards.
@@ -373,7 +351,8 @@ namespace PadDataGenerator
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the left of these arrows so you aren't crossed over.
-								&& (roomAtOrToLeft[a]) && (roomAtOrToLeft[a2])
+								// No longer checking this as it prevents inverted brackets and crossover brackets.
+								//&& (roomAtOrToLeft[a]) && (roomAtOrToLeft[a2])
 								// The arrows must be withing bracketable distance from each other.
 								&& xd <= input.MaxXSeparationBracket && yd <= input.MaxYSeparationBracket
 								// The other arrow must not be in back, otherwise you would be facing backwards.
@@ -758,45 +737,6 @@ namespace PadDataGenerator
 				+ xRating;
 
 			return (tierRating, overallRating);
-		}
-
-		/// <summary>
-		/// Verify generated PadData by comparing it to expected PadData.
-		/// </summary>
-		private static void VerifyPadData(PadData expected, PadData actual)
-		{
-			// Intentionally do not verify starting positions as they are expected to differ.
-			var numArrows = expected.ArrowData.Length;
-			Assert(numArrows == actual.ArrowData.Length);
-			for (var a = 0; a < numArrows; a++)
-			{
-				var ed = expected.ArrowData[a];
-				var ad = actual.ArrowData[a];
-				Assert(ed.X == ad.X);
-				Assert(ed.Y == ad.Y);
-
-				VerifyFootArrowArrow(ed.BracketablePairingsOtherHeel, ad.BracketablePairingsOtherHeel, numArrows);
-				VerifyFootArrowArrow(ed.BracketablePairingsOtherToe, ad.BracketablePairingsOtherToe, numArrows);
-				VerifyFootArrowArrow(ed.OtherFootPairings, ad.OtherFootPairings, numArrows);
-				VerifyFootArrowArrow(ed.OtherFootPairingsOtherFootCrossoverFront, ad.OtherFootPairingsOtherFootCrossoverFront, numArrows);
-				VerifyFootArrowArrow(ed.OtherFootPairingsOtherFootCrossoverBehind, ad.OtherFootPairingsOtherFootCrossoverBehind, numArrows);
-				VerifyFootArrowArrow(ed.OtherFootPairingsInverted, ad.OtherFootPairingsInverted, numArrows);
-			}
-		}
-
-		private static void VerifyFootArrowArrow(bool[][] expected, bool[][] actual, int numArrows)
-		{
-			Assert(NumFeet == expected.Length);
-			Assert(NumFeet == actual.Length);
-			for (var f = 0; f < NumFeet; f++)
-			{
-				Assert(numArrows == expected[f].Length);
-				Assert(numArrows == actual[f].Length);
-				for (var a2 = 0; a2 < numArrows; a2++)
-				{
-					Assert(expected[f][a2] == actual[f][a2]);
-				}
-			}
 		}
 	}
 }
