@@ -1111,15 +1111,19 @@ namespace StepManiaLibrary
 										continue;
 
 									// Other toe bracket states.
+									// Using if/else here because a normal bracket step of one arrow by itself might look
+									// like stretch. In other words, IsNormalStep() would return false for that step. We already
+									// from the checks above that the new arrow is a valid bracketable pairing, so if it isn't 
+									// any kind of special step then we know it is a normal step.
 									if (IsCrossoverInBack(toState, f, toeArrow))
 										RecordLink(links, f, Toe, StepType.BracketCrossoverBackOneArrowToeNew, toeAction);
-									if (IsCrossoverInFront(toState, f, toeArrow))
+									else if (IsCrossoverInFront(toState, f, toeArrow))
 										RecordLink(links, f, Toe, StepType.BracketCrossoverFrontOneArrowToeNew, toeAction);
-									if (IsFootSwap(fromState, toState, f, toeArrow))
+									else if (IsFootSwap(fromState, toState, f, toeArrow))
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeSwap, toeAction);
-									if (IsStretch(toState))
+									else if (IsStretch(toState))
 										RecordLink(links, f, Toe, StepType.BracketStretchOneArrowToeNew, toeAction);
-									if (IsNormalStep(toState, f, toeArrow))
+									else
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeNew, toeAction);
 								}
 							}
@@ -1195,15 +1199,19 @@ namespace StepManiaLibrary
 										continue;
 
 									// Other heel bracket states.
+									// Using if/else here because a normal bracket step of one arrow by itself might look
+									// like stretch. In other words, IsNormalStep() would return false for that step. We already
+									// from the checks above that the new arrow is a valid bracketable pairing, so if it isn't 
+									// any kind of special step then we know it is a normal step.
 									if (IsCrossoverInBack(toState, f, heelArrow))
 										RecordLink(links, f, Heel, StepType.BracketCrossoverBackOneArrowHeelNew, heelAction);
-									if (IsCrossoverInFront(toState, f, heelArrow))
+									else if (IsCrossoverInFront(toState, f, heelArrow))
 										RecordLink(links, f, Heel, StepType.BracketCrossoverFrontOneArrowHeelNew, heelAction);
-									if (IsFootSwap(fromState, toState, f, heelArrow))
+									else if (IsFootSwap(fromState, toState, f, heelArrow))
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelSwap, heelAction);
-									if (IsStretch(toState))
+									else if (IsStretch(toState))
 										RecordLink(links, f, Heel, StepType.BracketStretchOneArrowHeelNew, heelAction);
-									if (IsNormalStep(toState, f, heelArrow))
+									else
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelNew, heelAction);
 								}
 							}
