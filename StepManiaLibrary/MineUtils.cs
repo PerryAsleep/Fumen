@@ -478,6 +478,26 @@ namespace StepManiaLibrary
 				}
 			}
 
+			// It is still possible to fail in some edge cases. For example if we are trying to a place a mine
+			// after the 4th most recent arrow and the the 3rd and 4th most recent were a bracket, which causes
+			// them to both be 3rd and there to be no forth. In this case, reduce N and recurse. This could be
+			// done more efficiently but this is simple and this edge case is extremely rare.
+			if (bestArrow == InvalidArrowIndex && desiredN > 0)
+			{
+				bestArrow = FindBestNthMostRecentArrow(
+					searchBackwards,
+					desiredN - 1,
+					desiredFoot,
+					numArrows,
+					releases,
+					releaseIndex,
+					steps,
+					stepIndex,
+					arrowsOccupiedByMines,
+					minePosition,
+					randomLaneOrder);
+			}
+
 			return bestArrow;
 		}
 
