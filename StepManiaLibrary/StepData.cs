@@ -19,6 +19,7 @@ namespace StepManiaLibrary
 		InvertBehind,
 		FootSwap,
 		NewArrowStretch,
+		Swing,
 
 		// Brackets.
 		BracketHeelNewToeNew,
@@ -30,6 +31,7 @@ namespace StepManiaLibrary
 		BracketHeelSwapToeSame,
 		BracketHeelSwapToeNew,
 		BracketHeelSwapToeSwap,
+		BracketSwing,
 
 		// Crossover brackets.
 		BracketCrossoverFrontHeelNewToeNew,
@@ -308,6 +310,15 @@ namespace StepManiaLibrary
 				isInvert: false,
 				numNewArrows: 1
 			);
+			Steps[(int)StepType.Swing] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: false,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 1
+			);
 
 			// Brackets.
 			Steps[(int) StepType.BracketHeelNewToeNew] = new StepData(
@@ -390,6 +401,15 @@ namespace StepManiaLibrary
 				isCrossover: false,
 				isInvert: false,
 				numNewArrows: 0
+			);
+			Steps[(int)StepType.BracketSwing] = new StepData(
+				canBeUsedInJump: false,
+				isFootSwap: noFootSwap,
+				isBracket: true,
+				isOneArrowBracket: false,
+				isCrossover: false,
+				isInvert: false,
+				numNewArrows: 2
 			);
 
 			// Crossover brackets.

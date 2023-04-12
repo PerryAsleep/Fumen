@@ -1376,10 +1376,8 @@ namespace StepManiaLibrary
 			var link = searchNode.PreviousLink.GraphLink;
 
 			// Releases have a 0 cost.
-			for (var f = 0; f < NumFeet; f++)
-				for (var p = 0; p < NumFootPortions; p++)
-					if (link.Links[f, p].Valid && link.Links[f, p].Action == FootAction.Release)
-						return CostRelease;
+			if (link.IsRelease())
+				return CostRelease;
 
 			// Determine how many steps are in this state.
 			var numSteps = 0;
@@ -1465,6 +1463,9 @@ namespace StepManiaLibrary
 
 					switch (step)
 					{
+						case StepType.Swing:
+							return CostSwing;
+
 						case StepType.SameArrow:
 						case StepType.BracketOneArrowHeelSame:
 						case StepType.BracketOneArrowToeSame:
@@ -1875,6 +1876,9 @@ namespace StepManiaLibrary
 						{
 							return NoBrackets_CostBracket;
 						}
+
+						if (step == StepType.BracketSwing)
+							return CostBracketSwing;
 
 						if (StepData.Steps[(int)step].IsInvert)
 							return CostTwoArrows_Bracket_Invert;

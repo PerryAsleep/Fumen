@@ -8,6 +8,10 @@
 		public const int CostUnknown = 1000;
 		public const int CostRelease = 0;
 
+		// Avoid swing unless absolutely necessary
+		public const int CostSwing = 800;
+		public const int CostBracketSwing = 900;
+
 		// This needs to be great enough such that we prefer one foot holding and
 		// the other foot rocking back and forth. If this were low then the held
 		// foot does an alternating pattern then the other foot is only going to
