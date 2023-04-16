@@ -1643,8 +1643,8 @@ namespace StepManiaLibrary
 						case StepType.CrossoverBehindStretch:
 						case StepType.BracketCrossoverFrontOneArrowHeelNew:
 						case StepType.BracketCrossoverFrontOneArrowToeNew:
-						case StepType.BracketCrossoverBackOneArrowHeelNew:
-						case StepType.BracketCrossoverBackOneArrowToeNew:
+						case StepType.BracketCrossoverBehindOneArrowHeelNew:
+						case StepType.BracketCrossoverBehindOneArrowToeNew:
 						{
 							var costAfterJump = CostNewArrow_Crossover_AfterJump;
 							var costOtherHeld = CostNewArrow_Crossover_OtherHeld;
@@ -1823,8 +1823,8 @@ namespace StepManiaLibrary
 						case StepType.InvertBehindStretch:
 						case StepType.BracketInvertFrontOneArrowHeelNew:
 						case StepType.BracketInvertFrontOneArrowToeNew:
-						case StepType.BracketInvertBackOneArrowHeelNew:
-						case StepType.BracketInvertBackOneArrowToeNew:
+						case StepType.BracketInvertBehindOneArrowHeelNew:
+						case StepType.BracketInvertBehindOneArrowToeNew:
 						{
 							var costFromSwap = CostNewArrow_Invert_FromSwap;
 							var costOtherHeld = CostNewArrow_Invert_OtherHeld;

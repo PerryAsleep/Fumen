@@ -146,15 +146,15 @@ namespace StepManiaLibrary
 				StepType.BracketCrossoverFrontHeelNewToeNew,
 				StepType.BracketCrossoverFrontHeelNewToeSame,
 				StepType.BracketCrossoverFrontHeelSameToeNew,
-				StepType.BracketCrossoverBackHeelNewToeNew,
-				StepType.BracketCrossoverBackHeelNewToeSame,
-				StepType.BracketCrossoverBackHeelSameToeNew,
+				StepType.BracketCrossoverBehindHeelNewToeNew,
+				StepType.BracketCrossoverBehindHeelNewToeSame,
+				StepType.BracketCrossoverBehindHeelSameToeNew,
 				StepType.BracketInvertFrontHeelNewToeNew,
 				StepType.BracketInvertFrontHeelNewToeSame,
 				StepType.BracketInvertFrontHeelSameToeNew,
-				StepType.BracketInvertBackHeelNewToeNew,
-				StepType.BracketInvertBackHeelNewToeSame,
-				StepType.BracketInvertBackHeelSameToeNew,
+				StepType.BracketInvertBehindHeelNewToeNew,
+				StepType.BracketInvertBehindHeelNewToeSame,
+				StepType.BracketInvertBehindHeelSameToeNew,
 				StepType.BracketStretchHeelNewToeNew,
 				StepType.BracketStretchHeelNewToeSame,
 				StepType.BracketStretchHeelSameToeNew,
@@ -166,12 +166,12 @@ namespace StepManiaLibrary
 				StepType.BracketOneArrowToeSwap,
 				StepType.BracketCrossoverFrontOneArrowHeelNew,
 				StepType.BracketCrossoverFrontOneArrowToeNew,
-				StepType.BracketCrossoverBackOneArrowHeelNew,
-				StepType.BracketCrossoverBackOneArrowToeNew,
+				StepType.BracketCrossoverBehindOneArrowHeelNew,
+				StepType.BracketCrossoverBehindOneArrowToeNew,
 				StepType.BracketInvertFrontOneArrowHeelNew,
 				StepType.BracketInvertFrontOneArrowToeNew,
-				StepType.BracketInvertBackOneArrowHeelNew,
-				StepType.BracketInvertBackOneArrowToeNew,
+				StepType.BracketInvertBehindOneArrowHeelNew,
+				StepType.BracketInvertBehindOneArrowToeNew,
 				StepType.BracketStretchOneArrowHeelNew,
 				StepType.BracketStretchOneArrowToeNew,
 			};
@@ -1231,7 +1231,7 @@ namespace StepManiaLibrary
 										if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
 										{
 											if (f == L)
-												RecordLink(links, f, Toe, StepType.BracketInvertBackOneArrowToeNew, toeAction);
+												RecordLink(links, f, Toe, StepType.BracketInvertBehindOneArrowToeNew, toeAction);
 											else
 												RecordLink(links, f, Toe, StepType.BracketInvertFrontOneArrowToeNew, toeAction);
 										}
@@ -1241,7 +1241,7 @@ namespace StepManiaLibrary
 											if (f == L)
 												RecordLink(links, f, Toe, StepType.BracketInvertFrontOneArrowToeNew, toeAction);
 											else
-												RecordLink(links, f, Toe, StepType.BracketInvertBackOneArrowToeNew, toeAction);
+												RecordLink(links, f, Toe, StepType.BracketInvertBehindOneArrowToeNew, toeAction);
 										}
 									}
 
@@ -1262,7 +1262,7 @@ namespace StepManiaLibrary
 									if (xoBack || xoBackStr)
 									{
 										if (otherFootUnchanged && xoBack)
-											RecordLink(links, f, Toe, StepType.BracketCrossoverBackOneArrowToeNew, toeAction);
+											RecordLink(links, f, Toe, StepType.BracketCrossoverBehindOneArrowToeNew, toeAction);
 									}
 									else if (xoFront || xoFrontStr)
 									{
@@ -1350,7 +1350,7 @@ namespace StepManiaLibrary
 										if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
 										{
 											if (f == L)
-												RecordLink(links, f, Heel, StepType.BracketInvertBackOneArrowHeelNew, heelAction);
+												RecordLink(links, f, Heel, StepType.BracketInvertBehindOneArrowHeelNew, heelAction);
 											else
 												RecordLink(links, f, Heel, StepType.BracketInvertFrontOneArrowHeelNew, heelAction);
 										}
@@ -1360,7 +1360,7 @@ namespace StepManiaLibrary
 											if (f == L)
 												RecordLink(links, f, Heel, StepType.BracketInvertFrontOneArrowHeelNew, heelAction);
 											else
-												RecordLink(links, f, Heel, StepType.BracketInvertBackOneArrowHeelNew, heelAction);
+												RecordLink(links, f, Heel, StepType.BracketInvertBehindOneArrowHeelNew, heelAction);
 										}
 									}
 
@@ -1381,7 +1381,7 @@ namespace StepManiaLibrary
 									if (xoBack || xoBackStr)
 									{
 										if (otherFootUnchanged && xoBack)
-											RecordLink(links, f, Heel, StepType.BracketCrossoverBackOneArrowHeelNew, heelAction);
+											RecordLink(links, f, Heel, StepType.BracketCrossoverBehindOneArrowHeelNew, heelAction);
 									}
 									else if (xoFront || xoFrontStr)
 									{
@@ -1501,11 +1501,11 @@ namespace StepManiaLibrary
 											if (f == L)
 											{
 												if (heelSame && !toeSame)
-													RecordLink(links, f, StepType.BracketInvertBackHeelSameToeNew, actions);
+													RecordLink(links, f, StepType.BracketInvertBehindHeelSameToeNew, actions);
 												else if (toeSame && !heelSame)
-													RecordLink(links, f, StepType.BracketInvertBackHeelNewToeSame, actions);
+													RecordLink(links, f, StepType.BracketInvertBehindHeelNewToeSame, actions);
 												else if (!heelSame && !toeSame)
-													RecordLink(links, f, StepType.BracketInvertBackHeelNewToeNew, actions);
+													RecordLink(links, f, StepType.BracketInvertBehindHeelNewToeNew, actions);
 											}
 											// Invert in front.
 											else
@@ -1535,11 +1535,11 @@ namespace StepManiaLibrary
 											else
 											{
 												if (heelSame && !toeSame)
-													RecordLink(links, f, StepType.BracketInvertBackHeelSameToeNew, actions);
+													RecordLink(links, f, StepType.BracketInvertBehindHeelSameToeNew, actions);
 												else if (toeSame && !heelSame)
-													RecordLink(links, f, StepType.BracketInvertBackHeelNewToeSame, actions);
+													RecordLink(links, f, StepType.BracketInvertBehindHeelNewToeSame, actions);
 												else if (!heelSame && !toeSame)
-													RecordLink(links, f, StepType.BracketInvertBackHeelNewToeNew, actions);
+													RecordLink(links, f, StepType.BracketInvertBehindHeelNewToeNew, actions);
 											}
 										}
 									}
@@ -1559,11 +1559,11 @@ namespace StepManiaLibrary
 										if (xoBack && otherFootUnchanged)
 										{
 											if (!heelSame && !toeSame)
-												RecordLink(links, f, StepType.BracketCrossoverBackHeelNewToeNew, actions);
+												RecordLink(links, f, StepType.BracketCrossoverBehindHeelNewToeNew, actions);
 											else if (heelSame && !toeSame)
-												RecordLink(links, f, StepType.BracketCrossoverBackHeelSameToeNew, actions);
+												RecordLink(links, f, StepType.BracketCrossoverBehindHeelSameToeNew, actions);
 											else if (!heelSame && toeSame)
-												RecordLink(links, f, StepType.BracketCrossoverBackHeelNewToeSame, actions);
+												RecordLink(links, f, StepType.BracketCrossoverBehindHeelNewToeSame, actions);
 										}
 									}
 									else if (xoFront || xoFrontStr)

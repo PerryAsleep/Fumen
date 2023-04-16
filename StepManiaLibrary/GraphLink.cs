@@ -395,17 +395,17 @@ namespace StepManiaLibrary
 				case StepType.BracketCrossoverFrontHeelNewToeNew:
 				case StepType.BracketCrossoverFrontHeelNewToeSame:
 				case StepType.BracketCrossoverFrontHeelSameToeNew:
-				case StepType.BracketCrossoverBackHeelNewToeNew:
-				case StepType.BracketCrossoverBackHeelNewToeSame:
-				case StepType.BracketCrossoverBackHeelSameToeNew:
+				case StepType.BracketCrossoverBehindHeelNewToeNew:
+				case StepType.BracketCrossoverBehindHeelNewToeSame:
+				case StepType.BracketCrossoverBehindHeelSameToeNew:
 					return "Crossover Bracket";
 
 				case StepType.BracketInvertFrontHeelNewToeNew:
 				case StepType.BracketInvertFrontHeelNewToeSame:
 				case StepType.BracketInvertFrontHeelSameToeNew:
-				case StepType.BracketInvertBackHeelNewToeNew:
-				case StepType.BracketInvertBackHeelNewToeSame:
-				case StepType.BracketInvertBackHeelSameToeNew:
+				case StepType.BracketInvertBehindHeelNewToeNew:
+				case StepType.BracketInvertBehindHeelNewToeSame:
+				case StepType.BracketInvertBehindHeelSameToeNew:
 					return "Invert Bracket";
 
 				case StepType.BracketStretchHeelNewToeNew:
@@ -423,14 +423,14 @@ namespace StepManiaLibrary
 
 				case StepType.BracketCrossoverFrontOneArrowHeelNew:
 				case StepType.BracketCrossoverFrontOneArrowToeNew:
-				case StepType.BracketCrossoverBackOneArrowHeelNew:
-				case StepType.BracketCrossoverBackOneArrowToeNew:
+				case StepType.BracketCrossoverBehindOneArrowHeelNew:
+				case StepType.BracketCrossoverBehindOneArrowToeNew:
 					return "Single Crossover Bracket";
 
 				case StepType.BracketInvertFrontOneArrowHeelNew:
 				case StepType.BracketInvertFrontOneArrowToeNew:
-				case StepType.BracketInvertBackOneArrowHeelNew:
-				case StepType.BracketInvertBackOneArrowToeNew:
+				case StepType.BracketInvertBehindOneArrowHeelNew:
+				case StepType.BracketInvertBehindOneArrowToeNew:
 					return "Single Invert Bracket";
 
 				case StepType.BracketStretchOneArrowHeelNew:

@@ -49,17 +49,17 @@ namespace StepManiaLibrary
 		BracketCrossoverFrontHeelNewToeNew,
 		BracketCrossoverFrontHeelNewToeSame,
 		BracketCrossoverFrontHeelSameToeNew,
-		BracketCrossoverBackHeelNewToeNew,
-		BracketCrossoverBackHeelNewToeSame,
-		BracketCrossoverBackHeelSameToeNew,
+		BracketCrossoverBehindHeelNewToeNew,
+		BracketCrossoverBehindHeelNewToeSame,
+		BracketCrossoverBehindHeelSameToeNew,
 
 		// Invert brackets.
 		BracketInvertFrontHeelNewToeNew,
 		BracketInvertFrontHeelNewToeSame,
 		BracketInvertFrontHeelSameToeNew,
-		BracketInvertBackHeelNewToeNew,
-		BracketInvertBackHeelNewToeSame,
-		BracketInvertBackHeelSameToeNew,
+		BracketInvertBehindHeelNewToeNew,
+		BracketInvertBehindHeelNewToeSame,
+		BracketInvertBehindHeelSameToeNew,
 
 		// Stretch brackets.
 		BracketStretchHeelNewToeNew,
@@ -77,14 +77,14 @@ namespace StepManiaLibrary
 		// Single arrow crossover brackets.
 		BracketCrossoverFrontOneArrowHeelNew,
 		BracketCrossoverFrontOneArrowToeNew,
-		BracketCrossoverBackOneArrowHeelNew,
-		BracketCrossoverBackOneArrowToeNew,
+		BracketCrossoverBehindOneArrowHeelNew,
+		BracketCrossoverBehindOneArrowToeNew,
 
 		// Single arrow invert brackets.
 		BracketInvertFrontOneArrowHeelNew,
 		BracketInvertFrontOneArrowToeNew,
-		BracketInvertBackOneArrowHeelNew,
-		BracketInvertBackOneArrowToeNew,
+		BracketInvertBehindOneArrowHeelNew,
+		BracketInvertBehindOneArrowToeNew,
 
 		// Single arrow stretch brackets.
 		BracketStretchOneArrowHeelNew,
@@ -575,7 +575,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketCrossoverBackHeelNewToeNew] = new StepData(
+			Steps[(int)StepType.BracketCrossoverBehindHeelNewToeNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: true,
@@ -585,7 +585,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 2
 			);
-			Steps[(int)StepType.BracketCrossoverBackHeelNewToeSame] = new StepData(
+			Steps[(int)StepType.BracketCrossoverBehindHeelNewToeSame] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: true,
@@ -595,7 +595,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketCrossoverBackHeelSameToeNew] = new StepData(
+			Steps[(int)StepType.BracketCrossoverBehindHeelSameToeNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: true,
@@ -637,7 +637,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketInvertBackHeelNewToeNew] = new StepData(
+			Steps[(int)StepType.BracketInvertBehindHeelNewToeNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: true,
@@ -647,7 +647,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 2
 			);
-			Steps[(int)StepType.BracketInvertBackHeelNewToeSame] = new StepData(
+			Steps[(int)StepType.BracketInvertBehindHeelNewToeSame] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: true,
@@ -657,7 +657,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketInvertBackHeelSameToeNew] = new StepData(
+			Steps[(int)StepType.BracketInvertBehindHeelSameToeNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: true,
@@ -783,7 +783,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketCrossoverBackOneArrowHeelNew] = new StepData(
+			Steps[(int)StepType.BracketCrossoverBehindOneArrowHeelNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
@@ -793,7 +793,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketCrossoverBackOneArrowToeNew] = new StepData(
+			Steps[(int)StepType.BracketCrossoverBehindOneArrowToeNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
@@ -825,7 +825,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketInvertBackOneArrowHeelNew] = new StepData(
+			Steps[(int)StepType.BracketInvertBehindOneArrowHeelNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,
@@ -835,7 +835,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int)StepType.BracketInvertBackOneArrowToeNew] = new StepData(
+			Steps[(int)StepType.BracketInvertBehindOneArrowToeNew] = new StepData(
 				canBeUsedInJump: false,
 				isFootSwap: noFootSwap,
 				isBracket: false,

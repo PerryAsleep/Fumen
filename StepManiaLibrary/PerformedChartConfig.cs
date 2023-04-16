@@ -2,6 +2,9 @@
 using Fumen;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using static Fumen.Converters.SMCommon;
+using System;
+using System.Linq;
 
 namespace StepManiaLibrary
 {
@@ -349,6 +352,9 @@ namespace StepManiaLibrary
 		[JsonInclude] public LateralTighteningConfig LateralTightening = new LateralTighteningConfig();
 		[JsonInclude] public StepTighteningConfig StepTightening = new StepTighteningConfig();
 
+		[JsonInclude] public Dictionary<StepType, List<string>> StepTypeFallbacks = new Dictionary<StepType, List<string>>();
+		[JsonIgnore] public Dictionary<StepType, List<StepType>> StepTypeFallbacksParsed = new Dictionary<StepType, List<StepType>>();
+
 		/// <summary>
 		/// Dictionary of StepMania StepsType to a List of integers representing weights
 		/// for each lane. When generating a PerformedChart we should try to match these weights
@@ -386,6 +392,14 @@ namespace StepManiaLibrary
 			StepTightening.SetAsOverrideOf(other.StepTightening);
 			Facing.SetAsOverrideOf(other.Facing);
 
+			foreach(var kvp in other.StepTypeFallbacks)
+			{
+				if (!StepTypeFallbacks.ContainsKey(kvp.Key))
+				{
+					StepTypeFallbacks.Add(kvp.Key, new List<string>(kvp.Value));
+				}
+			}
+
 			foreach (var kvp in other.ArrowWeights)
 			{
 				if (!ArrowWeights.ContainsKey(kvp.Key))
@@ -413,6 +427,57 @@ namespace StepManiaLibrary
 						ArrowWeightsNormalized[entry.Key].Add((double)weight / sum);
 				}
 			}
+
+			foreach (var kvp in StepTypeFallbacks)
+			{
+				var stepTypeList = new List<StepType>();
+				var ancestors = new HashSet<StepType> { kvp.Key };
+				try
+				{
+					ParseStepTypeList(ancestors, kvp.Value, stepTypeList);
+				}
+				catch(Exception e)
+				{
+					e.Data.Add("StepTypeFallback", kvp.Key);
+					throw e;
+				}
+				StepTypeFallbacksParsed.Add(kvp.Key, stepTypeList);
+			}
+		}
+
+		private void ParseStepTypeList(
+			HashSet<StepType> ancestors,
+			List<string> stepTypeStringList,
+			List<StepType> stepTypeList)
+		{
+			foreach (var stepTypeStr in stepTypeStringList)
+			{
+				if (stepTypeStr.StartsWith("*"))
+				{
+					if (!Enum.TryParse(stepTypeStr.Substring(1), out StepType baseStepType))
+					{
+						throw new Exception($"Could not parse \"{stepTypeStr}\".");
+					}
+					if (!StepTypeFallbacks.TryGetValue(baseStepType, out var baseStrings))
+					{
+						throw new Exception($"No \"{baseStepType:G}\" entry found for \"{stepTypeStr}\".");
+					}
+					if (ancestors.Contains(baseStepType))
+					{
+						throw new Exception($"Cycle detected on {stepTypeStr}.");
+					}
+					ancestors.Add(baseStepType);
+					ParseStepTypeList(ancestors, baseStrings, stepTypeList);
+				}
+				else
+				{
+					if (!Enum.TryParse(stepTypeStr, out StepType stepType))
+					{
+						throw new Exception($"Could not parse \"{stepTypeStr}\".");
+					}
+					stepTypeList.Add(stepType);
+				}
+			}
 		}
 
 		/// <summary>
@@ -426,7 +491,29 @@ namespace StepManiaLibrary
 			errors = LateralTightening.Validate(pccId) || errors;
 			errors = StepTightening.Validate(pccId) || errors;
 			errors = Facing.Validate(pccId) || errors;
+			errors = ValidateStepTypeFallbacks(pccId) || errors;
 			return !errors;
+		}
+
+		/// <summary>
+		/// Lor errors if any StepType fallbacks aren't present.
+		/// </summary>
+		/// <param name="pccId">Identifier for logging.</param>
+		/// <returns>True if errors were found and false otherwise.</returns>
+		private bool ValidateStepTypeFallbacks(string pccId)
+		{
+			var stepTypes = Enum.GetValues(typeof(StepType)).Cast<StepType>().ToList();
+			var errors = false;
+			foreach (var stepType in stepTypes)
+			{
+				if (!StepTypeFallbacksParsed.ContainsKey(stepType) || StepTypeFallbacksParsed[stepType].Count == 0)
+					LogError($"No StepTypeFallbacks for {stepType:G}."
+							+ $" To ignore {stepType:G} steps, include an entry for it in StepTypeFallbacks and with an"
+							+ " array value containing at least one StepType to use as a replacement.",
+							pccId);
+				errors = true;
+			}
+			return errors;
 		}
 
 		public bool ValidateArrowWeights(
@@ -468,6 +555,11 @@ namespace StepManiaLibrary
 			}
 
 			return !errors;
+		}
+
+		public List<StepType> GetFallbacks(StepType stepType)
+		{
+			return StepTypeFallbacksParsed[stepType];
 		}
 
 		#region Logging
