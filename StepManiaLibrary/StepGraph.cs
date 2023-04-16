@@ -123,8 +123,16 @@ namespace StepManiaLibrary
 				StepType.InvertFront,
 				StepType.InvertBehind,
 				StepType.FootSwap,
-				StepType.NewArrowStretch,
 				StepType.Swing,
+				StepType.NewArrowStretch,
+				StepType.CrossoverFrontStretch,
+				StepType.CrossoverBehindStretch,
+				StepType.InvertFrontStretch,
+				StepType.InvertBehindStretch,
+				StepType.FootSwapCrossoverFront,
+				StepType.FootSwapCrossoverBehind,
+				StepType.FootSwapInvertFront,
+				StepType.FootSwapInvertBehind,
 				StepType.BracketHeelNewToeNew,
 				StepType.BracketHeelNewToeSame,
 				StepType.BracketHeelSameToeNew,
@@ -699,8 +707,8 @@ namespace StepManiaLibrary
 						// Update the state.
 						state[f, p] = new GraphNode.FootArrowState(arrow, gas);
 
-						inverted = IsInverted(state);
-						crossover = IsCrossover(state);
+						inverted = IsInvertedWithOrWithoutStretch(state);
+						crossover = IsCrossoverWithOrWithoutStretch(state);
 
 						// And the end of the loop over feet and portions, determine if this is a valid combination.
 						if (f > 0 && p > 0)
@@ -874,6 +882,8 @@ namespace StepManiaLibrary
 
 					var swing = IsSwing(from, to);
 
+					var footPerformedValidFootSwap = new bool[NumFeet];
+
 					var linksPerFoot = new List<GraphLink>[NumFeet];
 					// Gather links to the second node from this node considering only one foot at a time.
 					for (var f = 0; f < NumFeet; f++)
@@ -881,7 +891,10 @@ namespace StepManiaLibrary
 						linksPerFoot[f] = new List<GraphLink>();
 						var links = linksPerFoot[f];
 
-						var otherFootUnchanged = footIsSame[OtherFoot(f)];
+						var otherFoot = OtherFoot(f);
+						var otherFootUnchanged = footIsSame[otherFoot];
+						var otherFootUnchangedExceptForLifts = footIsSameExceptForLifts[otherFoot];
+						var otherFootSamePosition = otherFootUnchanged || otherFootUnchangedExceptForLifts;
 
 						// Simple steps with no brackets involved.
 						// It doesn't matter whether the foot is coming from a bracket or a single step.
@@ -898,6 +911,8 @@ namespace StepManiaLibrary
 								continue;
 							var action = GetActionForStates(fs.State, ts.State);
 
+							var isValidFootSwap = IsFootSwap(fromState, toState, f, ts.Arrow, true) && action != FootAction.Release;
+
 							// Swing
 							if (swing)
 							{
@@ -908,10 +923,15 @@ namespace StepManiaLibrary
 							// Stepping on the same arrow is either a SameArrow step or a FootSwap.
 							else if (IsSameArrowStep(fromState, f, ts.Arrow) && from.Orientation == to.Orientation)
 							{
-								if (IsFootSwap(fromState, toState, f, ts.Arrow) && action != FootAction.Release)
+								if (isValidFootSwap)
+								{
 									RecordLink(links, f, p, StepType.FootSwap, action);
+									footPerformedValidFootSwap[f] = true;
+								}
 								else
+								{
 									RecordLink(links, f, p, StepType.SameArrow, action);
+								}
 							}
 
 							// New arrow step.
@@ -923,7 +943,9 @@ namespace StepManiaLibrary
 
 								// Inverted steps. Process these first because every other step type
 								// other than inverted steps require the orientation to be normal.
-								if (IsInverted(toState, f, ts.Arrow) && otherFootUnchanged)
+								var invertedWithStretch = IsInvertedWithStretch(toState, f, ts.Arrow);
+								var invertedWithoutStretch = IsInvertedWithoutStretch(toState, f, ts.Arrow);
+								if ((invertedWithStretch || invertedWithoutStretch) && otherFootSamePosition)
 								{
 									// Inverting right over left.
 									if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
@@ -932,12 +954,44 @@ namespace StepManiaLibrary
 										// bringing the left foot from a position further back on the pads
 										// upwards and behind the right foot.
 										if (f == L && ad[fs.Arrow].Y >= ad[ts.Arrow].Y)
-											RecordLink(links, f, p, StepType.InvertBehind, action);
+										{
+											if (otherFootUnchanged)
+											{
+												if (invertedWithStretch)
+													RecordLink(links, f, p, StepType.InvertBehindStretch, action);
+												else
+													RecordLink(links, f, p, StepType.InvertBehind, action);
+											}
+											else if (isValidFootSwap)
+											{
+												if (!invertedWithStretch)
+												{
+													footPerformedValidFootSwap[f] = true;
+													RecordLink(links, f, p, StepType.FootSwapInvertBehind, action);
+												}
+											}
+										}
 										// Inverting right over left when moving the right foot requires
 										// bringing the right foot from a position further up on the pads
 										// downwards and in front of the left foot.
 										if (f == R && ad[fs.Arrow].Y <= ad[ts.Arrow].Y)
-											RecordLink(links, f, p, StepType.InvertFront, action);
+										{
+											if (otherFootUnchanged)
+											{
+												if (invertedWithStretch)
+													RecordLink(links, f, p, StepType.InvertFrontStretch, action);
+												else
+													RecordLink(links, f, p, StepType.InvertFront, action);
+											}
+											else if (isValidFootSwap)
+											{
+												if (!invertedWithStretch)
+												{
+													footPerformedValidFootSwap[f] = true;
+													RecordLink(links, f, p, StepType.FootSwapInvertFront, action);
+												}
+											}
+										}
 									}
 									// Inverting left over right.
 									else if (to.Orientation == BodyOrientation.InvertedLeftOverRight)
@@ -946,12 +1000,44 @@ namespace StepManiaLibrary
 										// bringing the left foot from a position further up on the pads
 										// downwards and in front of the right foot.
 										if (f == L && ad[fs.Arrow].Y <= ad[ts.Arrow].Y)
-											RecordLink(links, f, p, StepType.InvertFront, action);
+										{
+											if (otherFootUnchanged)
+											{
+												if (invertedWithStretch)
+													RecordLink(links, f, p, StepType.InvertFrontStretch, action);
+												else
+													RecordLink(links, f, p, StepType.InvertFront, action);
+											}
+											else if (isValidFootSwap)
+											{
+												if (!invertedWithStretch)
+												{
+													footPerformedValidFootSwap[f] = true;
+													RecordLink(links, f, p, StepType.FootSwapInvertFront, action);
+												}
+											}
+										}
 										// Inverting left over right when moving the right foot requires
 										// bringing the right foot from a position further back on the pads
 										// upwards and behind the left foot.
 										if (f == R && ad[fs.Arrow].Y >= ad[ts.Arrow].Y)
-											RecordLink(links, f, p, StepType.InvertBehind, action);
+										{
+											if (otherFootUnchanged)
+											{
+												if (invertedWithStretch)
+													RecordLink(links, f, p, StepType.InvertBehindStretch, action);
+												else
+													RecordLink(links, f, p, StepType.InvertBehind, action);
+											}
+											else if (isValidFootSwap)
+											{
+												if (!invertedWithStretch)
+												{
+													footPerformedValidFootSwap[f] = true;
+													RecordLink(links, f, p, StepType.FootSwapInvertBehind, action);
+												}
+											}
+										}
 									}
 								}
 
@@ -959,17 +1045,49 @@ namespace StepManiaLibrary
 								if (to.Orientation != BodyOrientation.Normal)
 									continue;
 
+								var normalCrossoverInBack = IsCrossoverInBackWithoutStretch(toState, f, ts.Arrow);
+								var normalCrossoverInFront = IsCrossoverInFrontWithoutStretch(toState, f, ts.Arrow);
+
 								// Other simple step types.
-								if (IsCrossoverInBack(toState, f, ts.Arrow) && otherFootUnchanged)
+								if (IsCrossoverInBackWithStretch(toState, f, ts.Arrow) && otherFootUnchanged)
+								{
+									RecordLink(links, f, p, StepType.CrossoverBehindStretch, action);
+								}
+								else if (normalCrossoverInBack && otherFootUnchanged)
+								{
 									RecordLink(links, f, p, StepType.CrossoverBehind, action);
-								if (IsCrossoverInFront(toState, f, ts.Arrow) && otherFootUnchanged)
+								}
+								else if (normalCrossoverInBack && isValidFootSwap)
+								{
+									RecordLink(links, f, p, StepType.FootSwapCrossoverBehind, action);
+									footPerformedValidFootSwap[f] = true;
+								}
+								else if (IsCrossoverInFrontWithStretch(toState, f, ts.Arrow) && otherFootUnchanged)
+								{
+									RecordLink(links, f, p, StepType.CrossoverFrontStretch, action);
+								}
+								else if (normalCrossoverInFront && otherFootUnchanged)
+								{
 									RecordLink(links, f, p, StepType.CrossoverFront, action);
-								if (IsFootSwap(fromState, toState, f, ts.Arrow))
+								}
+								else if (normalCrossoverInFront && isValidFootSwap)
+								{
+									RecordLink(links, f, p, StepType.FootSwapCrossoverFront, action);
+									footPerformedValidFootSwap[f] = true;
+								}
+								else if (isValidFootSwap)
+								{
 									RecordLink(links, f, p, StepType.FootSwap, action);
-								if (IsStretch(toState))
+									footPerformedValidFootSwap[f] = true;
+								}
+								else if (IsStretch(toState))
+								{
 									RecordLink(links, f, p, StepType.NewArrowStretch, action);
-								if (IsNormalStep(toState, f, ts.Arrow))
+								}
+								else if (IsNormalStep(toState, f, ts.Arrow))
+								{
 									RecordLink(links, f, p, StepType.NewArrow, action);
+								}
 							}
 						}
 
@@ -1077,6 +1195,8 @@ namespace StepManiaLibrary
 								var toeAction = GetActionForStates(toeFromState, toState[f, Toe].State);
 								var toeArrow = toState[f, Toe].Arrow;
 
+								var isValidFootSwap = IsFootSwap(fromState, toState, f, toeArrow, true) && toeAction != FootAction.Release;
+
 								// Swing
 								if (swing)
 								{
@@ -1086,10 +1206,15 @@ namespace StepManiaLibrary
 								// Toe bracketing the same arrow.
 								else if (toeFromArrow != InvalidArrowIndex && toeFromArrow == toeArrow)
 								{
-									if (IsFootSwap(fromState, toState, f, toeArrow) && toeAction != FootAction.Release)
+									if (isValidFootSwap)
+									{
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeSwap, toeAction);
+										footPerformedValidFootSwap[f] = true;
+									}
 									else
+									{
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeSame, toeAction);
+									}
 								}
 
 								// Toe bracketing a new arrow.
@@ -1100,7 +1225,7 @@ namespace StepManiaLibrary
 										continue;
 
 									// Inverted steps caused by toe bracketing a new arrow.
-									if (IsInverted(toState, f, toeArrow) && otherFootUnchanged)
+									if (IsInvertedWithoutStretch(toState, f, toeArrow) && otherFootUnchanged)
 									{
 										// Inverting toe bracket right over left.
 										if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
@@ -1124,27 +1249,39 @@ namespace StepManiaLibrary
 									if (to.Orientation != BodyOrientation.Normal)
 										continue;
 
+									var xoBackStr = IsCrossoverInBackWithStretch(toState, f, toeArrow);
+									var xoBack = IsCrossoverInBackWithoutStretch(toState, f, toeArrow);
+									var xoFrontStr = IsCrossoverInFrontWithStretch(toState, f, toeArrow);
+									var xoFront = IsCrossoverInFrontWithoutStretch(toState, f, toeArrow);
+
 									// Other toe bracket states.
 									// Using if/else here because a normal bracket step of one arrow by itself might look
 									// like stretch. In other words, IsNormalStep() would return false for that step. We already
 									// from the checks above that the new arrow is a valid bracketable pairing, so if it isn't 
 									// any kind of special step then we know it is a normal step.
-									if (IsCrossoverInBack(toState, f, toeArrow))
+									if (xoBack || xoBackStr)
 									{
-										if (otherFootUnchanged)
+										if (otherFootUnchanged && xoBack)
 											RecordLink(links, f, Toe, StepType.BracketCrossoverBackOneArrowToeNew, toeAction);
 									}
-									else if (IsCrossoverInFront(toState, f, toeArrow) && otherFootUnchanged)
+									else if (xoFront || xoFrontStr)
 									{
-										if (otherFootUnchanged)
+										if (otherFootUnchanged && xoFront)
 											RecordLink(links, f, Toe, StepType.BracketCrossoverFrontOneArrowToeNew, toeAction);
 									}
-									else if (IsFootSwap(fromState, toState, f, toeArrow))
+									else if (isValidFootSwap)
+									{
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeSwap, toeAction);
+										footPerformedValidFootSwap[f] = true;
+									}
 									else if (IsStretch(toState))
+									{
 										RecordLink(links, f, Toe, StepType.BracketStretchOneArrowToeNew, toeAction);
+									}
 									else
+									{
 										RecordLink(links, f, Toe, StepType.BracketOneArrowToeNew, toeAction);
+									}
 								}
 							}
 
@@ -1177,6 +1314,8 @@ namespace StepManiaLibrary
 								var heelAction = GetActionForStates(heelFromState, toState[f, Heel].State);
 								var heelArrow = toState[f, Heel].Arrow;
 
+								var isValidFootSwap = IsFootSwap(fromState, toState, f, heelArrow, true) && heelAction != FootAction.Release;
+
 								// Swing
 								if (swing)
 								{
@@ -1186,10 +1325,15 @@ namespace StepManiaLibrary
 								// Heel bracketing the same arrow.
 								else if (heelFromArrow != InvalidArrowIndex && heelFromArrow == heelArrow)
 								{
-									if (IsFootSwap(fromState, toState, f, heelArrow) && heelAction != FootAction.Release)
+									if (isValidFootSwap)
+									{
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelSwap, heelAction);
+										footPerformedValidFootSwap[f] = true;
+									}
 									else
+									{
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelSame, heelAction);
+									}
 								}
 
 								// Heel bracketing a new arrow.
@@ -1200,7 +1344,7 @@ namespace StepManiaLibrary
 										continue;
 
 									// Inverted steps caused by heel bracketing a new arrow.
-									if (IsInverted(toState, f, heelArrow) && otherFootUnchanged)
+									if (IsInvertedWithoutStretch(toState, f, heelArrow) && otherFootUnchanged)
 									{
 										// Inverting heel bracket right over left.
 										if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
@@ -1224,27 +1368,39 @@ namespace StepManiaLibrary
 									if (to.Orientation != BodyOrientation.Normal)
 										continue;
 
+									var xoBackStr = IsCrossoverInBackWithStretch(toState, f, heelArrow);
+									var xoBack = IsCrossoverInBackWithoutStretch(toState, f, heelArrow);
+									var xoFrontStr = IsCrossoverInFrontWithStretch(toState, f, heelArrow);
+									var xoFront = IsCrossoverInFrontWithoutStretch(toState, f, heelArrow);
+
 									// Other heel bracket states.
 									// Using if/else here because a normal bracket step of one arrow by itself might look
 									// like stretch. In other words, IsNormalStep() would return false for that step. We already
 									// from the checks above that the new arrow is a valid bracketable pairing, so if it isn't 
 									// any kind of special step then we know it is a normal step.
-									if (IsCrossoverInBack(toState, f, heelArrow))
+									if (xoBack || xoBackStr)
 									{
-										if (otherFootUnchanged)
+										if (otherFootUnchanged && xoBack)
 											RecordLink(links, f, Heel, StepType.BracketCrossoverBackOneArrowHeelNew, heelAction);
 									}
-									else if (IsCrossoverInFront(toState, f, heelArrow))
+									else if (xoFront || xoFrontStr)
 									{
-										if (otherFootUnchanged)
+										if (otherFootUnchanged && xoFront)
 											RecordLink(links, f, Heel, StepType.BracketCrossoverFrontOneArrowHeelNew, heelAction);
 									}
-									else if (IsFootSwap(fromState, toState, f, heelArrow))
+									else if (isValidFootSwap)
+									{
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelSwap, heelAction);
+										footPerformedValidFootSwap[f] = true;
+									}
 									else if (IsStretch(toState))
+									{
 										RecordLink(links, f, Heel, StepType.BracketStretchOneArrowHeelNew, heelAction);
+									}
 									else
+									{
 										RecordLink(links, f, Heel, StepType.BracketOneArrowHeelNew, heelAction);
+									}
 								}
 							}
 
@@ -1286,8 +1442,14 @@ namespace StepManiaLibrary
 								var toeSame =
 									(!fromFootIsBracket[f] && toeArrow == fromState[f, DefaultFootPortion].Arrow)
 									|| (fromFootIsBracket[f] && toeArrow == fromState[f, Toe].Arrow);
-								var heelSwap = IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow);
-								var toeSwap = IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow);
+
+								var isHeelValidIndependentSwap =
+									actions[Heel] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow, true);
+								var isToeValidIndependentSwap =
+									actions[Toe] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow, true);
+								var isValidFullBracketSwap =
+									actions[Heel] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow, false)
+									&& actions[Toe] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow, false);
 
 								// Swing
 								if (swing)
@@ -1299,17 +1461,25 @@ namespace StepManiaLibrary
 								// Bracketing the same two arrows.
 								else if (fromFootIsBracket[f] && heelSame && toeSame)
 								{
-									var heelSwapValid = heelSwap && (actions[Heel] != FootAction.Release);
-									var toeSwapValid = toeSwap && (actions[Toe] != FootAction.Release);
-
-									if (heelSwapValid && toeSwapValid)
+									if (isValidFullBracketSwap)
+									{
 										RecordLink(links, f, StepType.BracketHeelSwapToeSwap, actions);
-									else if (heelSwapValid && !toeSwapValid)
+										footPerformedValidFootSwap[f] = true;
+									}
+									else if (isHeelValidIndependentSwap && !isToeValidIndependentSwap)
+									{
 										RecordLink(links, f, StepType.BracketHeelSwapToeSame, actions);
-									else if (!heelSwapValid && toeSwapValid)
+										footPerformedValidFootSwap[f] = true;
+									}
+									else if (!isHeelValidIndependentSwap && isToeValidIndependentSwap)
+									{
 										RecordLink(links, f, StepType.BracketHeelSameToeSwap, actions);
+										footPerformedValidFootSwap[f] = true;
+									}
 									else
+									{
 										RecordLink(links, f, StepType.BracketHeelSameToeSame, actions);
+									}
 								}
 
 								// Bracketing with at least one new arrow
@@ -1322,7 +1492,7 @@ namespace StepManiaLibrary
 										continue;
 
 									// Inverted bracket steps.
-									if (IsInverted(toState) && otherFootUnchanged)
+									if (IsInvertedWithoutStretch(toState) && otherFootUnchanged)
 									{
 										// Inverting bracket right over left.
 										if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
@@ -1378,10 +1548,15 @@ namespace StepManiaLibrary
 									if (to.Orientation != BodyOrientation.Normal)
 										continue;
 
+									var xoBackStr = IsCrossoverInBackWithStretch(toState, f);
+									var xoBack = IsCrossoverInBackWithoutStretch(toState, f);
+									var xoFrontStr = IsCrossoverInFrontWithStretch(toState, f);
+									var xoFront = IsCrossoverInFrontWithoutStretch(toState, f);
+
 									// Other bracket states.
-									if (IsCrossoverInBack(toState, f))
+									if (xoBack || xoBackStr)
 									{
-										if (otherFootUnchanged)
+										if (xoBack && otherFootUnchanged)
 										{
 											if (!heelSame && !toeSame)
 												RecordLink(links, f, StepType.BracketCrossoverBackHeelNewToeNew, actions);
@@ -1391,9 +1566,9 @@ namespace StepManiaLibrary
 												RecordLink(links, f, StepType.BracketCrossoverBackHeelNewToeSame, actions);
 										}
 									}
-									else if (IsCrossoverInFront(toState, f))
+									else if (xoFront || xoFrontStr)
 									{
-										if (otherFootUnchanged)
+										if (xoFront && otherFootUnchanged)
 										{
 											if (!heelSame && !toeSame)
 												RecordLink(links, f, StepType.BracketCrossoverFrontHeelNewToeNew, actions);
@@ -1403,23 +1578,36 @@ namespace StepManiaLibrary
 												RecordLink(links, f, StepType.BracketCrossoverFrontHeelNewToeSame, actions);
 										}
 									}
-									else if (heelSwap && toeSwap)
+									else if (isValidFullBracketSwap)
 									{
 										RecordLink(links, f, StepType.BracketHeelSwapToeSwap, actions);
+										footPerformedValidFootSwap[f] = true;
 									}
-									else if (!heelSwap && toeSwap)
+									else if (!isHeelValidIndependentSwap && isToeValidIndependentSwap)
 									{
 										if (heelSame)
+										{
 											RecordLink(links, f, StepType.BracketHeelSameToeSwap, actions);
+											footPerformedValidFootSwap[f] = true;
+										}
 										else
+										{
 											RecordLink(links, f, StepType.BracketHeelNewToeSwap, actions);
+											footPerformedValidFootSwap[f] = true;
+										}
 									}
-									else if (heelSwap && !toeSwap)
+									else if (isHeelValidIndependentSwap && !isToeValidIndependentSwap)
 									{
 										if (toeSame)
+										{
 											RecordLink(links, f, StepType.BracketHeelSwapToeSame, actions);
+											footPerformedValidFootSwap[f] = true;
+										}
 										else
+										{
 											RecordLink(links, f, StepType.BracketHeelSwapToeNew, actions);
+											footPerformedValidFootSwap[f] = true;
+										}
 									}
 									else if (IsStretch(toState))
 									{
@@ -1445,20 +1633,22 @@ namespace StepManiaLibrary
 					}
 
 					// Take the links gathered above and add them as single foot steps if appropriate.
+					var validFeetCount = 0;
 					for (var f = 0; f < NumFeet; f++)
 					{
 						// The other foot must be in the same state before and after for a single step to be valid.
 						// Or it adjusted due to being swapped over.
 						var of = OtherFoot(f);
-						if (!footIsSameExceptForLifts[of])
+						if (!(footIsSame[of] || footPerformedValidFootSwap[f]))
 							continue;
 
+						validFeetCount++;
 						foreach (var link in linksPerFoot[f])
 							AddLink(from, to, link);
 					}
 
 					// Combine the links gathered above into jump links for valid pairs.
-					foreach(var leftLink in linksPerFoot[L])
+					foreach (var leftLink in linksPerFoot[L])
 					{
 						if (!CanBeUsedInJump(leftLink))
 							continue;
@@ -1590,14 +1780,34 @@ namespace StepManiaLibrary
 			return IsStretch(node.State);
 		}
 
-		public bool IsCrossover(GraphNode node)
+		public bool IsCrossoverWithOrWithoutStretch(GraphNode node)
 		{
-			return IsCrossover(node.State);
+			return IsCrossoverWithOrWithoutStretch(node.State);
 		}
 
-		public bool IsInverted(GraphNode node)
+		public bool IsCrossoverWithStretch(GraphNode node)
 		{
-			return IsInverted(node.State);
+			return IsCrossoverWithStretch(node.State);
+		}
+
+		public bool IsCrossoverWithoutStretch(GraphNode node)
+		{
+			return IsCrossoverWithoutStretch(node.State);
+		}
+
+		public bool IsInvertedWithOrWithoutStretch(GraphNode node)
+		{
+			return IsInvertedWithOrWithoutStretch(node.State);
+		}
+
+		public bool IsInvertedWithStretch(GraphNode node)
+		{
+			return IsInvertedWithStretch(node.State);
+		}
+
+		public bool IsInvertedWithoutStretch(GraphNode node)
+		{
+			return IsInvertedWithoutStretch(node.State);
 		}
 
 		public bool IsTransitionBetweenOpposingInverts(GraphNode from, GraphNode to)
@@ -1618,22 +1828,22 @@ namespace StepManiaLibrary
 
 		public bool IsTransitionBetweenInvertAndOpposingCrossover(GraphNode from, GraphNode to)
 		{
-			if (IsCrossoverInBack(from.State, L) && to.Orientation == BodyOrientation.InvertedLeftOverRight)
+			if (IsCrossoverInBackWithOrWithoutStretch(from.State, L) && to.Orientation == BodyOrientation.InvertedLeftOverRight)
 				return true;
-			if (IsCrossoverInFront(from.State, L) && to.Orientation == BodyOrientation.InvertedRightOverLeft)
+			if (IsCrossoverInFrontWithOrWithoutStretch(from.State, L) && to.Orientation == BodyOrientation.InvertedRightOverLeft)
 				return true;
-			if (IsCrossoverInBack(to.State, L) && from.Orientation == BodyOrientation.InvertedLeftOverRight)
+			if (IsCrossoverInBackWithOrWithoutStretch(to.State, L) && from.Orientation == BodyOrientation.InvertedLeftOverRight)
 				return true;
-			if (IsCrossoverInFront(to.State, L) && from.Orientation == BodyOrientation.InvertedRightOverLeft)
+			if (IsCrossoverInFrontWithOrWithoutStretch(to.State, L) && from.Orientation == BodyOrientation.InvertedRightOverLeft)
 				return true;
 			return false;
 		}
 
 		public bool IsTransitionBetweenOpposingCrossovers(GraphNode from, GraphNode to)
 		{
-			if (IsCrossoverInBack(from.State, L) && IsCrossoverInFront(to.State, L))
+			if (IsCrossoverInBackWithOrWithoutStretch(from.State, L) && IsCrossoverInFrontWithOrWithoutStretch(to.State, L))
 				return true;
-			if (IsCrossoverInFront(from.State, L) && IsCrossoverInBack(to.State, L))
+			if (IsCrossoverInFrontWithOrWithoutStretch(from.State, L) && IsCrossoverInBackWithOrWithoutStretch(to.State, L))
 				return true;
 			return false;
 		}
@@ -1860,31 +2070,36 @@ namespace StepManiaLibrary
 			return numStretchPairs == numTotalPairs || numStretchPairs > 1;
 		}
 
-		private bool IsCrossoverInFront(GraphNode.FootArrowState[,] state, int foot)
+		private bool IsCrossoverInFrontWithStretch(GraphNode.FootArrowState[,] state, int foot)
 		{
 			for (var p = 0; p < NumFootPortions; p++)
 			{
 				var footArrowIndex = state[foot, p].Arrow;
-				if (footArrowIndex != InvalidArrowIndex && IsCrossoverInFront(state, foot, footArrowIndex))
+				if (footArrowIndex != InvalidArrowIndex && IsCrossoverInFrontWithStretch(state, foot, footArrowIndex))
 					return true;
 			}
 
 			return false;
 		}
 
-		private bool IsCrossoverInBack(GraphNode.FootArrowState[,] state, int foot)
+		private bool IsCrossoverInFrontWithoutStretch(GraphNode.FootArrowState[,] state, int foot)
 		{
 			for (var p = 0; p < NumFootPortions; p++)
 			{
 				var footArrowIndex = state[foot, p].Arrow;
-				if (footArrowIndex != InvalidArrowIndex && IsCrossoverInBack(state, foot, footArrowIndex))
+				if (footArrowIndex != InvalidArrowIndex && IsCrossoverInFrontWithoutStretch(state, foot, footArrowIndex))
 					return true;
 			}
 
 			return false;
 		}
 
-		private bool IsCrossoverInFront(GraphNode.FootArrowState[,] state, int foot, int arrow)
+		private bool IsCrossoverInFrontWithOrWithoutStretch(GraphNode.FootArrowState[,] state, int foot)
+		{
+			return IsCrossoverInFrontWithStretch(state, foot) || IsCrossoverInFrontWithoutStretch(state, foot);
+		}
+
+		private bool IsCrossoverInFrontWithStretch(GraphNode.FootArrowState[,] state, int foot, int arrow)
 		{
 			if (IsOtherFootOnArrowWithoutLift(state, foot, arrow))
 				return false;
@@ -1895,14 +2110,14 @@ namespace StepManiaLibrary
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow])
+					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverFrontStretch[otherFoot][arrow])
 					return true;
 			}
 
 			return false;
 		}
 
-		private bool IsCrossoverInBack(GraphNode.FootArrowState[,] state, int foot, int arrow)
+		private bool IsCrossoverInFrontWithoutStretch(GraphNode.FootArrowState[,] state, int foot, int arrow)
 		{
 			if (IsOtherFootOnArrowWithoutLift(state, foot, arrow))
 				return false;
@@ -1913,7 +2128,72 @@ namespace StepManiaLibrary
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
 					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow])
+					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverFront[otherFoot][arrow])
+					return true;
+			}
+
+			return false;
+		}
+
+		private bool IsCrossoverInBackWithStretch(GraphNode.FootArrowState[,] state, int foot)
+		{
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				var footArrowIndex = state[foot, p].Arrow;
+				if (footArrowIndex != InvalidArrowIndex && IsCrossoverInBackWithStretch(state, foot, footArrowIndex))
+					return true;
+			}
+
+			return false;
+		}
+
+		private bool IsCrossoverInBackWithoutStretch(GraphNode.FootArrowState[,] state, int foot)
+		{
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				var footArrowIndex = state[foot, p].Arrow;
+				if (footArrowIndex != InvalidArrowIndex && IsCrossoverInBackWithoutStretch(state, foot, footArrowIndex))
+					return true;
+			}
+
+			return false;
+		}
+
+		private bool IsCrossoverInBackWithOrWithoutStretch(GraphNode.FootArrowState[,] state, int foot)
+		{
+			return IsCrossoverInBackWithStretch(state, foot) || IsCrossoverInBackWithoutStretch(state, foot);
+		}
+
+		private bool IsCrossoverInBackWithStretch(GraphNode.FootArrowState[,] state, int foot, int arrow)
+		{
+			if (IsOtherFootOnArrowWithoutLift(state, foot, arrow))
+				return false;
+
+			var otherFoot = OtherFoot(foot);
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+					&& state[otherFoot, p].State != GraphArrowState.Lifted
+					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverBehindStretch[otherFoot][arrow])
+					return true;
+			}
+
+			return false;
+		}
+
+		private bool IsCrossoverInBackWithoutStretch(GraphNode.FootArrowState[,] state, int foot, int arrow)
+		{
+			if (IsOtherFootOnArrowWithoutLift(state, foot, arrow))
+				return false;
+
+			var otherFoot = OtherFoot(foot);
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+					&& state[otherFoot, p].State != GraphArrowState.Lifted
+					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverBehind[otherFoot][arrow])
 					return true;
 			}
 
@@ -1921,9 +2201,10 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Returns true if the given state represents a crossover position. If any portion of any foot is
-		/// crossed over with any portion of any other foot it is considered a crossover.
-		private bool IsCrossover(GraphNode.FootArrowState[,] state)
+		/// Returns true if the given state represents a crossover position without stretch.
+		/// If any portion of any foot is crossed over with any portion of any other foot it is considered a crossover.
+		/// </summary>
+		private bool IsCrossoverWithoutStretch(GraphNode.FootArrowState[,] state)
 		{
 			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
 			{
@@ -1933,8 +2214,8 @@ namespace StepManiaLibrary
 					{
 						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex)
 						{
-							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsOtherFootCrossoverFront[L][state[R, rightFootPortion].Arrow]
-								|| PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsOtherFootCrossoverBehind[L][state[R, rightFootPortion].Arrow])
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverFront[L][state[R, rightFootPortion].Arrow]
+								|| PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverBehind[L][state[R, rightFootPortion].Arrow])
 							return true;
 						}
 					}
@@ -1944,11 +2225,99 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Returns true if the given foot at the given arrow represents an inverted step for the given state.
+		/// Returns true if the given state represents a crossover position with stretch.
+		/// If any portion of any foot is crossed over with any portion of any other foot it is considered a crossover.
+		/// </summary>
+		private bool IsCrossoverWithStretch(GraphNode.FootArrowState[,] state)
+		{
+			// For brackets, both feet must be stretching for it to be considered a stretch crossover.
+			if (IsCrossoverWithoutStretch(state))
+				return false;
+
+			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
+			{
+				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex)
+				{
+					for (var rightFootPortion = 0; rightFootPortion < NumFootPortions; rightFootPortion++)
+					{
+						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex)
+						{
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverFrontStretch[L][state[R, rightFootPortion].Arrow]
+								|| PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverBehindStretch[L][state[R, rightFootPortion].Arrow])
+								return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// Returns true if the given state represents a crossover position with or without stretch.
+		/// If any portion of any foot is crossed over with any portion of any other foot it is considered a crossover.
+		/// </summary>
+		private bool IsCrossoverWithOrWithoutStretch(GraphNode.FootArrowState[,] state)
+		{
+			return IsCrossoverWithStretch(state) || IsCrossoverWithoutStretch(state);
+		}
+
+		/// <summary>
+		/// Returns true if the given foot at the given arrow represents an inverted step for the given state with stretch.
 		/// If the given foot inverts with any portion of the other foot in this state, it is considered inverted.
 		/// Lifted states do not count.
 		/// </summary>
-		private bool IsInverted(GraphNode.FootArrowState[,] state, int foot, int arrow)
+		private bool IsInvertedWithStretch(GraphNode.FootArrowState[,] state, int foot, int arrow)
+		{
+			if (IsOtherFootOnArrowWithoutLift(state, foot, arrow))
+				return false;
+
+			var otherFoot = OtherFoot(foot);
+			for (var p = 0; p < NumFootPortions; p++)
+			{
+				var otherFootArrowIndex = state[otherFoot, p].Arrow;
+				if (otherFootArrowIndex != InvalidArrowIndex
+					&& state[otherFoot, p].State != GraphArrowState.Lifted
+					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsInvertedStretch[otherFoot][arrow])
+					return true;
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Returns true if the given state represents an inverted position with stretch.
+		/// If any portion of any foot is inverted with any portion of any other foot it is considered inverted.
+		/// Lifted states do not count.
+		/// </summary>
+		private bool IsInvertedWithStretch(GraphNode.FootArrowState[,] state)
+		{
+			// For brackets, both feed must be inverted with stretch for it to be considered a stretch invert.
+			if (IsInvertedWithoutStretch(state))
+				return false;
+
+			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
+			{
+				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex && state[L, leftFootPortion].State != GraphArrowState.Lifted)
+				{
+					for (var rightFootPortion = 0; rightFootPortion < NumFootPortions; rightFootPortion++)
+					{
+						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex && state[R, rightFootPortion].State != GraphArrowState.Lifted)
+						{
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsInvertedStretch[L][state[R, rightFootPortion].Arrow])
+								return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// Returns true if the given foot at the given arrow represents an inverted step for the given state without stretch.
+		/// If the given foot inverts with any portion of the other foot in this state, it is considered inverted.
+		/// Lifted states do not count.
+		/// </summary>
+		private bool IsInvertedWithoutStretch(GraphNode.FootArrowState[,] state, int foot, int arrow)
 		{
 			if (IsOtherFootOnArrowWithoutLift(state, foot, arrow))
 				return false;
@@ -1967,10 +2336,11 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Returns true if the given state represents an inverted position. If any portion of any foot is
-		/// inverted with any portion of any other foot it is considered inverted. Lifted states do not count.
+		/// Returns true if the given state represents an inverted position without stretch.
+		/// If any portion of any foot is inverted with any portion of any other foot it is considered inverted.
+		/// Lifted states do not count.
 		/// </summary>
-		private bool IsInverted(GraphNode.FootArrowState[,] state)
+		private bool IsInvertedWithoutStretch(GraphNode.FootArrowState[,] state)
 		{
 			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
 			{
@@ -1978,7 +2348,7 @@ namespace StepManiaLibrary
 				{
 					for (var rightFootPortion = 0; rightFootPortion < NumFootPortions; rightFootPortion++)
 					{
-						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex && state[L, leftFootPortion].State != GraphArrowState.Lifted)
+						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex && state[R, rightFootPortion].State != GraphArrowState.Lifted)
 						{
 							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsInverted[L][state[R, rightFootPortion].Arrow])
 								return true;
@@ -1990,12 +2360,25 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
+		/// Returns true if the given state represents an inverted position with or without stretch.
+		/// If any portion of any foot is inverted with any portion of any other foot it is considered inverted.
+		/// Lifted states do not count.
+		/// </summary>
+		private bool IsInvertedWithOrWithoutStretch(GraphNode.FootArrowState[,] state)
+		{
+			return IsInvertedWithStretch(state) || IsInvertedWithoutStretch(state);
+		}
+
+		/// <summary>
 		/// Returns true if the given foot at the given arrow is a foot swap for the given state.
 		/// A foot swap requires the current state to have its other foot lifted on the given arrow
 		/// due to being swapped onto, and it requires the other foot to have been down on the
 		/// given arrow in the previous state.
 		/// </summary>
-		private bool IsFootSwap(GraphNode.FootArrowState[,] fromstate, GraphNode.FootArrowState[,] toState, int foot, int arrow)
+		private bool IsFootSwap(
+			GraphNode.FootArrowState[,] fromstate,
+			GraphNode.FootArrowState[,] toState,
+			int foot, int arrow, bool footIsSingleArrowStep)
 		{
 			if (arrow == InvalidArrowIndex)
 				return false;
@@ -2009,21 +2392,53 @@ namespace StepManiaLibrary
 			if (!steppedOnArrow)
 				return false;
 
-			// The other foot needs to be lifted on this arrow.
+			// The other foot needs to have not moved and to have become lifted.
 			var steppedOnLiftedArrow = false;
 			for (var p = 0; p < NumFootPortions; p++)
-				if (toState[otherFoot, p].Arrow == arrow && toState[otherFoot, p].State == GraphArrowState.Lifted)
-					steppedOnLiftedArrow = true;
-
-			// The other foot can't have been lifted already.
-			if (steppedOnLiftedArrow)
 			{
-				for (var p = 0; p < NumFootPortions; p++)
-					if (fromstate[otherFoot, p].Arrow == arrow && fromstate[otherFoot, p].State != GraphArrowState.Lifted)
-						return true;
-			}
+				// The other foot needs to become lifted on this arrow during this transition.
+				if (toState[otherFoot, p].Arrow == arrow)
+				{
+					if (fromstate[otherFoot, p].Arrow != arrow)
+						return false;
+					if (toState[otherFoot, p].State == GraphArrowState.Lifted && fromstate[otherFoot, p].State != GraphArrowState.Lifted)
+						steppedOnLiftedArrow = true;
+				}
 
-			return false;
+				// The other foot's other portion needs to have not moved.
+				else
+				{
+					// The arrow needs to be the same.
+					if (toState[otherFoot, p].Arrow != fromstate[otherFoot, p].Arrow)
+						return false;
+
+					// If the other foot other portion is actually on another arrow that hasn't changed...
+					if (toState[otherFoot, p].Arrow != InvalidArrowIndex)
+					{
+						// With a single step, the other foot's other portion needs to be identical before and after.
+						if (footIsSingleArrowStep)
+						{
+							if(toState[otherFoot, p].State != fromstate[otherFoot, p].State)
+							{
+								return false;
+							}
+						}
+						// With a bracket step, the other foot's other arrow could also lift.
+						else
+						{
+							if (!(toState[otherFoot, p].State == fromstate[otherFoot, p].State
+								|| (toState[otherFoot, p].State == GraphArrowState.Lifted && fromstate[otherFoot, p].State != GraphArrowState.Lifted)))
+							{
+								return false;
+							}
+						}
+					}
+				}
+			}
+			if (!steppedOnLiftedArrow)
+				return false;
+
+			return true;
 		}
 
 		private static bool StateMatches(GraphNode.FootArrowState[,] state,

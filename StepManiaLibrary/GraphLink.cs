@@ -350,16 +350,36 @@ namespace StepManiaLibrary
 		{
 			switch(stepType)
 			{
-				case StepType.SameArrow: return "Same";
-				case StepType.NewArrow: return "New";
+				case StepType.SameArrow:
+					return "Same";
+				case StepType.NewArrow:
+					return "New";
 				case StepType.CrossoverFront:
 				case StepType.CrossoverBehind:
 					return "Crossover";
 				case StepType.InvertFront:
 				case StepType.InvertBehind:
 					return "Invert";
-				case StepType.FootSwap: return "Swap";
-				case StepType.NewArrowStretch: return "Stretch";
+				case StepType.FootSwap:
+					return "Swap";
+				case StepType.Swing:
+					return "Swing";
+
+				case StepType.NewArrowStretch:
+					return "Stretch";
+				case StepType.CrossoverFrontStretch:
+				case StepType.CrossoverBehindStretch:
+					return "Stretch Crossover";
+				case StepType.InvertFrontStretch:
+				case StepType.InvertBehindStretch:
+					return "Stretch Invert";
+
+				case StepType.FootSwapCrossoverFront:
+				case StepType.FootSwapCrossoverBehind:
+					return "Swap Crossover";
+				case StepType.FootSwapInvertFront:
+				case StepType.FootSwapInvertBehind:
+					return "Swap Invert";
 
 				case StepType.BracketHeelNewToeNew:
 				case StepType.BracketHeelNewToeSame:

@@ -1343,7 +1343,7 @@ namespace StepManiaLibrary
 					return CostTieBreak_Orientation_Invert;
 				case BodyOrientation.Normal:
 				default:
-					if (StepGraph.IsCrossover(searchNode.GraphNode))
+					if (StepGraph.IsCrossoverWithOrWithoutStretch(searchNode.GraphNode))
 						return CostTieBreak_Orientation_Crossover;
 					return CostTieBreak_Orientation_Normal;
 			}
@@ -1639,35 +1639,67 @@ namespace StepManiaLibrary
 						}
 						case StepType.CrossoverFront:
 						case StepType.CrossoverBehind:
+						case StepType.CrossoverFrontStretch:
+						case StepType.CrossoverBehindStretch:
 						case StepType.BracketCrossoverFrontOneArrowHeelNew:
 						case StepType.BracketCrossoverFrontOneArrowToeNew:
 						case StepType.BracketCrossoverBackOneArrowHeelNew:
 						case StepType.BracketCrossoverBackOneArrowToeNew:
 						{
+							var costAfterJump = CostNewArrow_Crossover_AfterJump;
+							var costOtherHeld = CostNewArrow_Crossover_OtherHeld;
+							var costDoubleStepMineIndicated = CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated;
+							var costDoubleStepNoIndication = CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication;
+							var costCrossover = CostNewArrow_Crossover;
+							if (bracket)
+							{
+								costAfterJump = CostNewArrow_Bracket_Crossover_AfterJump;
+								costOtherHeld = CostNewArrow_Bracket_Crossover_OtherHeld;
+								costDoubleStepMineIndicated = CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_MineIndicated;
+								costDoubleStepNoIndication = CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_NoIndication;
+								costCrossover = CostNewArrow_Bracket_Crossover;
+							}
+							else if (step == StepType.CrossoverFrontStretch || step == StepType.CrossoverBehindStretch)
+							{
+								costAfterJump = CostNewArrow_Crossover_Stretch_AfterJump;
+								costOtherHeld = CostNewArrow_Crossover_Stretch_OtherHeld;
+								costDoubleStepMineIndicated = CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_MineIndicated;
+								costDoubleStepNoIndication = CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_NoIndication;
+								costCrossover = CostNewArrow_Crossover_Stretch;
+							}
+
 							if ((previousStepLink?.IsJump() ?? false) && !otherAnyHeld)
-								return bracket ? CostNewArrow_Bracket_Crossover_AfterJump: CostNewArrow_Crossover_AfterJump;
+								return costAfterJump;
 
 							if (otherAnyHeld)
-								return bracket ? CostNewArrow_Bracket_Crossover_OtherHeld : CostNewArrow_Crossover_OtherHeld;
+								return costOtherHeld;
 
 							if (doubleStep)
 							{
 								// Mine indicated
 								if (thisMinePositionFollowingPreviousStep >= 0)
-									return bracket ? CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_MineIndicated : CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated;
+									return costDoubleStepMineIndicated;
 
 								// No indication
-								return bracket ? CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_NoIndication : CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication;
+								return costDoubleStepNoIndication;
 							}
 
-							return bracket ? CostNewArrow_Bracket_Crossover : CostNewArrow_Crossover;
+							return costCrossover;
 						}
-
 						case StepType.FootSwap:
 						case StepType.BracketOneArrowHeelSwap:
 						case StepType.BracketOneArrowToeSwap:
+						case StepType.FootSwapCrossoverFront:
+						case StepType.FootSwapCrossoverBehind:
+						case StepType.FootSwapInvertFront:
+						case StepType.FootSwapInvertBehind:
 						{
 							var mineIndicatedOnThisFootsArrow = thisMinePositionFollowingPreviousStep >= 0;
+
+							if (step == StepType.FootSwapInvertFront || step == StepType.FootSwapInvertBehind)
+								return Cost_FootSwap_Invert;
+							if (step == StepType.FootSwapCrossoverFront || step == StepType.FootSwapCrossoverBehind)
+								return Cost_FootSwap_Crossover;
 
 							if (doubleStep)
 							{
@@ -1787,31 +1819,53 @@ namespace StepManiaLibrary
 						}
 						case StepType.InvertFront:
 						case StepType.InvertBehind:
+						case StepType.InvertFrontStretch:
+						case StepType.InvertBehindStretch:
 						case StepType.BracketInvertFrontOneArrowHeelNew:
 						case StepType.BracketInvertFrontOneArrowToeNew:
 						case StepType.BracketInvertBackOneArrowHeelNew:
 						case StepType.BracketInvertBackOneArrowToeNew:
 						{
+							var costFromSwap = CostNewArrow_Invert_FromSwap;
+							var costOtherHeld = CostNewArrow_Invert_OtherHeld;
+							var costDoubleStepMineIndicated = CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated;
+							var costDoubleStepNoIndication = CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication;
+							var costInvert = CostNewArrow_Invert;
+							if (bracket)
+							{
+								costFromSwap = CostNewArrow_Bracket_Invert_FromSwap;
+								costOtherHeld = CostNewArrow_Bracket_Invert_OtherHeld;
+								costDoubleStepMineIndicated = CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_MineIndicated;
+								costDoubleStepNoIndication = CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_NoIndication;
+								costInvert = CostNewArrow_Bracket_Invert;
+							}
+							else if (step == StepType.InvertFrontStretch || step == StepType.InvertBehindStretch)
+							{
+								costFromSwap = CostNewArrow_Stretch_Invert_FromSwap;
+								costOtherHeld = CostNewArrow_Stretch_Invert_OtherHeld;
+								costDoubleStepMineIndicated = CostNewArrow_Stretch_Invert_OtherFree_DoubleStep_MineIndicated;
+								costDoubleStepNoIndication = CostNewArrow_Stretch_Invert_OtherFree_DoubleStep_NoIndication;
+								costInvert = CostNewArrow_Stretch_Invert;
+							}
+
 							// Inversion from a foot swap
 							if (previousStepLink?.IsFootSwap(out _, out _) ?? false)
-								return bracket ? CostNewArrow_Bracket_Invert : CostNewArrow_Invert_FromSwap;
+								return costFromSwap;
 
 							if (otherAnyHeld)
-								return bracket ? CostNewArrow_Bracket_Invert : CostNewArrow_Invert_OtherHeld;
+								return costOtherHeld;
 
 							if (doubleStep)
 							{
 								// Mine indicated
 								if (thisMinePositionFollowingPreviousStep >= 0)
-									return bracket ? CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_MineIndicated :
-												CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated;
+									return costDoubleStepMineIndicated;
 
 								// No indication
-								return bracket ? CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_NoIndication :
-											CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication;
+								return costDoubleStepNoIndication;
 							}
 
-							return bracket ? CostNewArrow_Bracket_Invert : CostNewArrow_Invert;
+							return costInvert;
 						}
 						default:
 						{
@@ -2003,13 +2057,7 @@ namespace StepManiaLibrary
 						var crossedOver = false;
 						if (!holdingAny[L] && !holdingAny[R])
 						{
-							if (padData.ArrowData[lArrow].OtherFootPairingsOtherFootCrossoverBehind[L][rArrow]
-							    || padData.ArrowData[lArrow].OtherFootPairingsOtherFootCrossoverFront[L][rArrow]
-							    || padData.ArrowData[rArrow].OtherFootPairingsOtherFootCrossoverBehind[R][lArrow]
-							    || padData.ArrowData[rArrow].OtherFootPairingsOtherFootCrossoverFront[R][lArrow])
-							{
-								crossedOver = true;
-							}
+							crossedOver = StepGraph.IsCrossoverWithOrWithoutStretch(searchNode.GraphNode);
 						}
 
 						if (crossedOver)
@@ -2054,7 +2102,7 @@ namespace StepManiaLibrary
 									if (!portionAccountedFor)
 									{
 										var sd = StepData.Steps[(int)link.Links[f, p].Step];
-										numNewArrows += sd.NumNewArrows;
+										numNewArrows += sd.NumPossibleNewArrows;
 										if (sd.IsFootSwapWithAnyPortion)
 											numSwaps++;
 										if (sd.IsInvert)
@@ -2129,8 +2177,8 @@ namespace StepManiaLibrary
 				if (previousState[otherFoot, p].Arrow != InvalidArrowIndex)
 				{
 					canCrossoverToNewArrow |=
-						arrowData[previousState[otherFoot, p].Arrow].OtherFootPairingsOtherFootCrossoverBehind[otherFoot][arrow]
-						|| arrowData[previousState[otherFoot, p].Arrow].OtherFootPairingsOtherFootCrossoverFront[otherFoot][arrow];
+						arrowData[previousState[otherFoot, p].Arrow].OtherFootPairingsCrossoverBehind[otherFoot][arrow]
+						|| arrowData[previousState[otherFoot, p].Arrow].OtherFootPairingsCrossoverFront[otherFoot][arrow];
 					canStepToNewArrowWithoutCrossover |=
 						arrowData[previousState[otherFoot, p].Arrow].OtherFootPairings[otherFoot][arrow];
 				}
@@ -2363,8 +2411,8 @@ namespace StepManiaLibrary
 								}
 
 								var ad = arrowData[otherA];
-								if (ad.OtherFootPairingsOtherFootCrossoverBehind[otherFoot][a]
-									|| ad.OtherFootPairingsOtherFootCrossoverBehind[otherFoot][a])
+								if (ad.OtherFootPairingsCrossoverBehind[otherFoot][a]
+									|| ad.OtherFootPairingsCrossoverBehind[otherFoot][a])
 								{
 									involvesCrossoverIfBracketed = true;
 								}

@@ -55,12 +55,18 @@ namespace StepManiaLibraryTests
 							arrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsStretch[f][a2],
 							arrowData[oppositeA].OtherFootPairingsStretch[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverBehind[f][a2],
-							arrowData[oppositeA].OtherFootPairingsOtherFootCrossoverFront[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsOtherFootCrossoverFront[f][a2],
-							arrowData[oppositeA].OtherFootPairingsOtherFootCrossoverBehind[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverBehind[f][a2],
+							arrowData[oppositeA].OtherFootPairingsCrossoverFront[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverBehindStretch[f][a2],
+							arrowData[oppositeA].OtherFootPairingsCrossoverFrontStretch[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverFront[f][a2],
+							arrowData[oppositeA].OtherFootPairingsCrossoverBehind[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverFrontStretch[f][a2],
+							arrowData[oppositeA].OtherFootPairingsCrossoverBehindStretch[oppositeF][oppositeA2]);
 						Assert.AreEqual(arrowData[a].OtherFootPairingsInverted[f][a2],
 							arrowData[oppositeA].OtherFootPairingsInverted[oppositeF][oppositeA2]);
+						Assert.AreEqual(arrowData[a].OtherFootPairingsInvertedStretch[f][a2],
+							arrowData[oppositeA].OtherFootPairingsInvertedStretch[oppositeF][oppositeA2]);
 					}
 				}
 			}

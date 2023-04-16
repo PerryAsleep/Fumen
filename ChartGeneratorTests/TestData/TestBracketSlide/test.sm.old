@@ -1,0 +1,37 @@
+#TITLE:TestSwing;
+#SUBTITLE:;
+#ARTIST:Unknown artist;
+#TITLETRANSLIT:;
+#SUBTITLETRANSLIT:;
+#ARTISTTRANSLIT:;
+#GENRE:;
+#CREDIT:;
+#MUSIC:test.ogg;
+#BANNER:;
+#BACKGROUND:;
+#CDTITLE:;
+#SAMPLESTART:0.000;
+#SAMPLELENGTH:5.000;
+#SELECTABLE:YES;
+#OFFSET:0.000;
+#BPMS:0.000=170.000;
+#STOPS:;
+#BGCHANGES:;
+#FGCHANGES:;
+//--------------- dance-double -  ----------------
+#NOTES:
+     dance-double:
+     :
+     Beginner:
+     1:
+     0,0,0,0,0:
+10020000
+01000000
+00000100
+00000010
+,
+00100000
+10030000
+00000000
+00000000
+;

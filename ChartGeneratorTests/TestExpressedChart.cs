@@ -2227,5 +2227,62 @@ namespace ChartGeneratorTests
 			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);
 		}
 		#endregion Miscellaneous
+
+		#region Doubles
+
+		/// <summary>
+		/// Test a swing during a forced spin.
+		/// </summary>
+		[TestMethod]
+		public void TestSwing()
+		{
+			var ec = Load(GetTestChartPath("TestSwing"), null, ChartType.dance_double);
+			Assert.AreEqual(7, ec.StepEvents.Count);
+			var i = 0;
+
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrow, FootAction.Tap, StepType.NewArrow, FootAction.Hold);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.CrossoverBehindStretch, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.Swing, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Release);
+			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.NewArrow, FootAction.Tap);
+		}
+
+		/// <summary>
+		/// Test needing to slide a foot across bracket holds.
+		/// </summary>
+		[TestMethod]
+		public void TestBracketSlide()
+		{
+			var ec = Load(GetTestChartPath("TestBracketSlide"), null, ChartType.dance_double);
+			Assert.AreEqual(8, ec.StepEvents.Count);
+			var i = 0;
+
+			AssertLinkMatchesJump(ec.StepEvents[i++].LinkInstance, StepType.NewArrowStretch, FootAction.Hold, StepType.NewArrowStretch, FootAction.Hold);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Heel, StepType.BracketStretchOneArrowHeelNew, FootAction.Hold, InstanceStepType.Default,
+				R, Heel, StepType.BracketStretchOneArrowHeelNew, FootAction.Hold, InstanceStepType.Default);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, InstanceStepType.Default,
+				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, InstanceStepType.Default);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Heel, StepType.BracketStretchOneArrowHeelNew, FootAction.Hold, InstanceStepType.Default,
+				R, Heel, StepType.BracketStretchOneArrowHeelNew, FootAction.Hold, InstanceStepType.Default);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, InstanceStepType.Default,
+				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, InstanceStepType.Default);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, InstanceStepType.Default,
+				R, Toe, StepType.BracketOneArrowToeNew, FootAction.Hold, InstanceStepType.Default);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, InstanceStepType.Default,
+				R, Heel, StepType.BracketOneArrowHeelSame, FootAction.Release, InstanceStepType.Default);
+			AssertLinkMatchesTwoSteps(ec.StepEvents[i++].LinkInstance,
+				L, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, InstanceStepType.Default,
+				R, Toe, StepType.BracketOneArrowToeSame, FootAction.Release, InstanceStepType.Default);
+		}
+
+		#endregion Doubles
 	}
 }

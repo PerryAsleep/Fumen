@@ -66,12 +66,21 @@
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication = 200;
 		public const int CostNewArrow_Crossover = 5;
 
+		public const int CostNewArrow_Crossover_Stretch_AfterJump = 25;
+		public const int CostNewArrow_Crossover_Stretch_OtherHeld = 5;  // This needs to be worse than CostNewArrow_OtherHoldingOne
+		public const int CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_MineIndicated = 120;
+		public const int CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_NoIndication = 220;
+		public const int CostNewArrow_Crossover_Stretch = 6;
+
 		// TODO: Balance
 		public const int CostNewArrow_Bracket_Crossover_AfterJump = 50;
 		public const int CostNewArrow_Bracket_Crossover_OtherHeld = 33;
 		public const int CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_MineIndicated = 130;
 		public const int CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_NoIndication = 230;
 		public const int CostNewArrow_Bracket_Crossover = 34;
+
+		public const int Cost_FootSwap_Invert = 250;
+		public const int Cost_FootSwap_Crossover = 200;
 
 		public const int Cost_FootSwap_DoubleStep_NoMineIndication = 150;
 		public const int Cost_FootSwap_DoubleStep_MineIndication = 75;
@@ -97,10 +106,18 @@
 		public const int CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication = 400;
 		public const int CostNewArrow_Invert = 6;
 
+		public const int CostNewArrow_Stretch_Invert_FromSwap = 250;
+		public const int CostNewArrow_Stretch_Invert_OtherHeld = 6;
+		public const int CostNewArrow_Stretch_Invert_OtherFree_DoubleStep_MineIndicated = 350;
+		public const int CostNewArrow_Stretch_Invert_OtherFree_DoubleStep_NoIndication = 450;
+		public const int CostNewArrow_Stretch_Invert = 7;
+
 		// TODO: Balance
-		public const int CostNewArrow_Bracket_Invert = 200;
+		public const int CostNewArrow_Bracket_Invert_FromSwap = 600;
+		public const int CostNewArrow_Bracket_Invert_OtherHeld = 190;
 		public const int CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_MineIndicated = 400;
 		public const int CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_NoIndication = 500;
+		public const int CostNewArrow_Bracket_Invert = 200;
 
 		public const int NoBrackets_CostBracket = 1000;
 

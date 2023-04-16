@@ -7,7 +7,6 @@ using System.Text.Json.Serialization;
 using static StepManiaLibrary.Constants;
 using System.Linq;
 using System.Threading.Tasks;
-using static System.Diagnostics.Debug;
 using Fumen;
 
 namespace PadDataGenerator
@@ -49,7 +48,9 @@ namespace PadDataGenerator
 
 			public int MaxXSeparationBeforeStretch = 2;
 			public int MaxYSeparationBeforeStretch = 2;
-			public int MaxXSeparationCrossover = 1;
+			public int MaxXSeparationCrossoverBeforeStretch = 1;
+			public int MaxYSeparationCrossoverBeforeStretch = 2;
+			public int MaxXSeparationInvertBeforeStretch = 2;
 			public int MaxXSeparationBracket = 1;
 			public int MaxYSeparationBracket = 1;
 			public double YTravelDistanceCompensation = 0.5;
@@ -157,7 +158,7 @@ namespace PadDataGenerator
 				var logFilePath = Fumen.Path.Combine(logDirectory, logFileName);
 				Logger.StartUp(new Logger.Config
 				{
-					WriteToConsole = false,
+					WriteToConsole = true,
 
 					WriteToFile = true,
 					LogFilePath = logFilePath,
@@ -236,19 +237,7 @@ namespace PadDataGenerator
 			padData.YTravelDistanceCompensation = input.YTravelDistanceCompensation;
 			padData.ArrowData = new ArrowData[numArrows];
 			for (int a = 0; a < numArrows; a++)
-			{
-				var ad = new ArrowData();
-				for (var f = 0; f < NumFeet; f++)
-				{
-					ad.BracketablePairingsOtherHeel[f] = new bool[numArrows];
-					ad.BracketablePairingsOtherToe[f] = new bool[numArrows];
-					ad.OtherFootPairings[f] = new bool[numArrows];
-					ad.OtherFootPairingsOtherFootCrossoverFront[f] = new bool[numArrows];
-					ad.OtherFootPairingsOtherFootCrossoverBehind[f] = new bool[numArrows];
-					ad.OtherFootPairingsInverted[f] = new bool[numArrows];
-				}
-				padData.ArrowData[a] = ad;
-			}
+				padData.ArrowData[a] = new ArrowData();
 
 			// Determine for each arrow if there is room to the left or right of it.
 			// This is helpful for determine valid brackets below.
@@ -432,7 +421,8 @@ namespace PadDataGenerator
 				// Other foot pairings where the other foot crosses over in front.
 				for (var f = 0; f < NumFeet; f++)
 				{
-					ad.OtherFootPairingsOtherFootCrossoverFront[f] = new bool[numArrows];
+					ad.OtherFootPairingsCrossoverFront[f] = new bool[numArrows];
+					ad.OtherFootPairingsCrossoverFrontStretch[f] = new bool[numArrows];
 					for (int a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
@@ -441,11 +431,22 @@ namespace PadDataGenerator
 						if (f == L)
 						{
 							// For the right foot to cross over in front of the left on this arrow...
-							ad.OtherFootPairingsOtherFootCrossoverFront[f][a2] =
+							ad.OtherFootPairingsCrossoverFront[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								// Right foot must be in front of left foot.
+								&& input.Positions[a2].Y < ad.Y
+								// The arrow must be to the left of your left foot.
+								&& input.Positions[a2].X < ad.X;
+
+							// For the right foot to cross over in front of the left on this arrow with stretch...
+							ad.OtherFootPairingsCrossoverFrontStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be far enough apart.
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Right foot must be in front of left foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the left of your left foot.
@@ -454,11 +455,22 @@ namespace PadDataGenerator
 						else
 						{
 							// For the left foot to cross over in front of the right on this arrow...
-							ad.OtherFootPairingsOtherFootCrossoverFront[f][a2] =
+							ad.OtherFootPairingsCrossoverFront[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								// Left foot must be in front of right foot.
+								&& input.Positions[a2].Y < ad.Y
+								// The arrow must be to the right of your right foot.
+								&& input.Positions[a2].X > ad.X;
+
+							// For the left foot to cross over in front of the right on this arrow with stretch...
+							ad.OtherFootPairingsCrossoverFrontStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be far enough apart.
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Left foot must be in front of right foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the right of your right foot.
@@ -470,7 +482,8 @@ namespace PadDataGenerator
 				// Other foot pairings where the other foot crosses over in back.
 				for (var f = 0; f < NumFeet; f++)
 				{
-					ad.OtherFootPairingsOtherFootCrossoverBehind[f] = new bool[numArrows];
+					ad.OtherFootPairingsCrossoverBehind[f] = new bool[numArrows];
+					ad.OtherFootPairingsCrossoverBehindStretch[f] = new bool[numArrows];
 					for (int a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
@@ -479,11 +492,22 @@ namespace PadDataGenerator
 						if (f == L)
 						{
 							// For the right foot to cross over in back of the left on this arrow...
-							ad.OtherFootPairingsOtherFootCrossoverBehind[f][a2] =
+							ad.OtherFootPairingsCrossoverBehind[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								// Right foot must be in back of left foot.
+								&& input.Positions[a2].Y > ad.Y
+								// The arrow must be to the left of your left foot.
+								&& input.Positions[a2].X < ad.X;
+
+							// For the right foot to cross over in back of the left on this arrow with stretch...
+							ad.OtherFootPairingsCrossoverBehindStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be far enough apart.
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Right foot must be in back of left foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the left of your left foot.
@@ -492,11 +516,22 @@ namespace PadDataGenerator
 						else
 						{
 							// For the left foot to cross over in back of the right on this arrow...
-							ad.OtherFootPairingsOtherFootCrossoverBehind[f][a2] =
+							ad.OtherFootPairingsCrossoverBehind[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossover && yd <= input.MaxYSeparationBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								// Left foot must be in back of right foot.
+								&& input.Positions[a2].Y > ad.Y
+								// The arrow must be to the right of your right foot.
+								&& input.Positions[a2].X > ad.X;
+
+							// For the left foot to cross over in back of the right on this arrow with stretch...
+							ad.OtherFootPairingsCrossoverBehindStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be far enough apart.
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Left foot must be in back of right foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the right of your right foot.
@@ -509,6 +544,7 @@ namespace PadDataGenerator
 				for (var f = 0; f < NumFeet; f++)
 				{
 					ad.OtherFootPairingsInverted[f] = new bool[numArrows];
+					ad.OtherFootPairingsInvertedStretch[f] = new bool[numArrows];
 					for (int a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
@@ -524,15 +560,33 @@ namespace PadDataGenerator
 								&& xd <= input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the left of your left foot.
 								&& input.Positions[a2].X < ad.X;
+
+							// For the right foot to be inverted with the left foot with stretch...
+							ad.OtherFootPairingsInvertedStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be at the same Y position and far enough apart in X.
+								&& xd > input.MaxXSeparationBeforeStretch && yd <= 0
+								// The arrow must be to the left of your left foot.
+								&& input.Positions[a2].X < ad.X;
 						}
 						else
 						{
-							// For the left foot to cross over in back of the right on this arrow...
+							// For the left foot to be inverted with the right foot...
 							ad.OtherFootPairingsInverted[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// Arrows must be at the same Y position and not too far apart in X.
 								&& xd <= input.MaxXSeparationBeforeStretch && yd <= 0
+								// The arrow must be to the right of your right foot.
+								&& input.Positions[a2].X > ad.X;
+
+							// For the left foot to be inverted with the right foot with stretch...
+							ad.OtherFootPairingsInvertedStretch[f][a2] =
+								// Arrows must be different.
+								(a != a2)
+								// Arrows must be at the same Y position and far enough apart in X.
+								&& xd > input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the right of your right foot.
 								&& input.Positions[a2].X > ad.X;
 						}

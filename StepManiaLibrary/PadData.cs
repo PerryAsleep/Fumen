@@ -131,9 +131,12 @@ namespace StepManiaLibrary
 				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsOtherToe, lane, "BracketablePairingsOtherToe");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairings, lane, "OtherFootPairings");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsStretch, lane, "OtherFootPairingsStretch");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsOtherFootCrossoverFront, lane, "OtherFootPairingsOtherFootCrossoverFront");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsOtherFootCrossoverBehind, lane, "OtherFootPairingsOtherFootCrossoverBehind");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFront, lane, "OtherFootPairingsCrossoverFront");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFrontStretch, lane, "OtherFootPairingsCrossoverFrontStretch");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverBehind, lane, "OtherFootPairingsCrossoverBehind");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverBehindStretch, lane, "OtherFootPairingsCrossoverBehindStretch");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInverted, lane, "OtherFootPairingsInverted");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInvertedStretch, lane, "OtherFootPairingsInvertedStretch");
 			}
 
 			if (StartingPositions == null || StartingPositions.Length < 1)

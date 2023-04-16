@@ -74,7 +74,15 @@ namespace StepManiaLibrary
 		/// positions for the Right foot such that Right is crossing over in front.
 		/// First index is foot, second is arrow.
 		/// </summary>
-		[JsonInclude] public bool[][] OtherFootPairingsOtherFootCrossoverFront = new bool[NumFeet][];
+		[JsonInclude] public bool[][] OtherFootPairingsCrossoverFront = new bool[NumFeet][];
+
+		/// <summary>
+		/// Which arrows form a front stretch crossover.
+		/// For example, if the first index is Left, the arrows listed are the valid
+		/// positions for the Right foot such that Right is crossing over in front.
+		/// First index is foot, second is arrow.
+		/// </summary>
+		[JsonInclude] public bool[][] OtherFootPairingsCrossoverFrontStretch = new bool[NumFeet][];
 
 		/// <summary>
 		/// Which arrows form a back crossover.
@@ -82,7 +90,15 @@ namespace StepManiaLibrary
 		/// positions for the Right foot such that Right is crossing over in back.
 		/// First index is foot, second is arrow.
 		/// </summary>
-		[JsonInclude] public bool[][] OtherFootPairingsOtherFootCrossoverBehind = new bool[NumFeet][];
+		[JsonInclude] public bool[][] OtherFootPairingsCrossoverBehind = new bool[NumFeet][];
+
+		/// <summary>
+		/// Which arrows form a back stretch crossover.
+		/// For example, if the first index is Left, the arrows listed are the valid
+		/// positions for the Right foot such that Right is crossing over in back.
+		/// First index is foot, second is arrow.
+		/// </summary>
+		[JsonInclude] public bool[][] OtherFootPairingsCrossoverBehindStretch = new bool[NumFeet][];
 
 		/// <summary>
 		/// Which arrows form an inverted position.
@@ -97,5 +113,19 @@ namespace StepManiaLibrary
 		/// First index is foot, second is arrow.
 		/// </summary>
 		[JsonInclude] public bool[][] OtherFootPairingsInverted = new bool[NumFeet][];
+
+		/// <summary>
+		/// Which arrows form an inverted stretch position.
+		/// An inverted position is one where if the player stood normally without
+		/// twisting their body to face the screen they would be facing completely backwards.
+		/// For example, left foot on right and right foot on left.
+		/// For this data structure, if the first index is Left, the arrows listed are the valid
+		/// positions for the Right foot such that the player is inverted.
+		/// While there are two BodyOrientations for being inverted, every inverted position
+		/// can be performed with right over left and left over right, so we only need one
+		/// data structure.
+		/// First index is foot, second is arrow.
+		/// </summary>
+		[JsonInclude] public bool[][] OtherFootPairingsInvertedStretch = new bool[NumFeet][];
 	}
 }

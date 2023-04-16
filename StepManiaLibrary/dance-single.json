@@ -95,7 +95,7 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
+      "OtherFootPairingsCrossoverFront": [
         [
           false,
           false,
@@ -109,7 +109,21 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
+      "OtherFootPairingsCrossoverFrontStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehind": [
         [
           false,
           false,
@@ -119,6 +133,20 @@
         [
           false,
           true,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehindStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
           false,
           false
         ]
@@ -135,6 +163,20 @@
           false,
           false,
           true
+        ]
+      ],
+      "OtherFootPairingsInvertedStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
         ]
       ]
     },
@@ -197,7 +239,7 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
+      "OtherFootPairingsCrossoverFront": [
         [
           true,
           false,
@@ -211,7 +253,35 @@
           true
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
+      "OtherFootPairingsCrossoverFrontStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehind": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehindStretch": [
         [
           false,
           false,
@@ -226,6 +296,20 @@
         ]
       ],
       "OtherFootPairingsInverted": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInvertedStretch": [
         [
           false,
           false,
@@ -299,7 +383,7 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
+      "OtherFootPairingsCrossoverFront": [
         [
           false,
           false,
@@ -313,7 +397,21 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
+      "OtherFootPairingsCrossoverFrontStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehind": [
         [
           true,
           false,
@@ -327,7 +425,35 @@
           true
         ]
       ],
+      "OtherFootPairingsCrossoverBehindStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
       "OtherFootPairingsInverted": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInvertedStretch": [
         [
           false,
           false,
@@ -401,7 +527,7 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverFront": [
+      "OtherFootPairingsCrossoverFront": [
         [
           false,
           false,
@@ -415,10 +541,38 @@
           false
         ]
       ],
-      "OtherFootPairingsOtherFootCrossoverBehind": [
+      "OtherFootPairingsCrossoverFrontStretch": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehind": [
         [
           false,
           true,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsCrossoverBehindStretch": [
+        [
+          false,
+          false,
           false,
           false
         ],
@@ -432,6 +586,20 @@
       "OtherFootPairingsInverted": [
         [
           true,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "OtherFootPairingsInvertedStretch": [
+        [
+          false,
           false,
           false,
           false
