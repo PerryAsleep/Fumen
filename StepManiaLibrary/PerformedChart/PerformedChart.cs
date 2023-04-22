@@ -104,12 +104,6 @@ namespace StepManiaLibrary.PerformedChart
 		/// <param name="stepGraph">
 		/// StepGraph representing all possible states that can be traversed.
 		/// </param>
-		/// <param name="rootNodes">
-		/// Tiers of root GraphNodes to try as the root.
-		/// Outer list expected to be sorted by how desirable the GraphNodes are with the
-		/// first List being the most desirable GraphNodes and the last List being the least
-		/// desirable GraphNodes. Inner Lists expected to contain GraphNodes of equal preference.
-		/// </param>
 		/// <param name="expressedChart">ExpressedChart to search.</param>
 		/// <param name="randomSeed">
 		/// Random seed to use when needing to make random choices when creating the PerformedChart.
@@ -123,206 +117,164 @@ namespace StepManiaLibrary.PerformedChart
 		public static PerformedChart CreateFromExpressedChart(
 			StepGraph stepGraph,
 			Config config,
-			List<List<GraphNode>> rootNodes,
 			ExpressedChart expressedChart,
 			int randomSeed,
 			string logIdentifier)
 		{
-			if (rootNodes == null || rootNodes.Count < 1 || rootNodes[0] == null || rootNodes[0].Count < 1)
-				return null;
-
+			var rootNode = stepGraph.GetRoot();
 			SearchNode rootSearchNode = null;
-			GraphNode rootGraphNodeToUse = null;
 			var nps = FindNPS(expressedChart);
 			var random = new Random(randomSeed);
 
 			// Find a path of SearchNodes through the ExpressedChart.
 			if (expressedChart.StepEvents.Count > 0)
 			{
-				// Try each tier of root nodes in order until we find a chart.
-				var tier = -1;
-				var furthestPosition = 0;
-				foreach (var currentTierOfRootNodes in rootNodes)
+				var depth = 0;
+
+				// Set up a root search node at the root GraphNode.
+				rootSearchNode = new SearchNode(
+					rootNode,
+					LinkCache.GetGraphLinks(expressedChart.StepEvents[0].LinkInstance, config),
+					null,
+					0.0,
+					0.0,
+					depth,
+					null,
+					new PerformanceFootAction[stepGraph.NumArrows],
+					stepGraph,
+					nps,
+					random.NextDouble(),
+					config,
+					null);
+				var currentSearchNodes = new HashSet<SearchNode>();
+				currentSearchNodes.Add(rootSearchNode);
+
+				while (true)
 				{
-					tier++;
-
-					// Order the root nodes at this tier randomly since they are weighted evenly.
-					var roots = currentTierOfRootNodes.OrderBy(a => random.Next()).ToList();
-
-					// Try each root node.
-					foreach (var rootGraphNode in roots)
+					// Finished
+					if (depth >= expressedChart.StepEvents.Count)
 					{
-						var depth = 0;
+						// Choose path with lowest cost.
+						SearchNode bestNode = null;
+						foreach (var node in currentSearchNodes)
+							if (bestNode == null || node.CompareTo(bestNode) < 0)
+								bestNode = node;
 
-						// Set up a root search node at the root GraphNode.
-						rootSearchNode = new SearchNode(
-							rootGraphNode,
-							LinkCache.GetGraphLinks(expressedChart.StepEvents[0].LinkInstance, config),
-							null,
-							0.0,
-							0.0,
-							depth,
-							null,
-							new PerformanceFootAction[stepGraph.NumArrows],
-							stepGraph,
-							nps,
-							random.NextDouble(),
-							config,
-							null);
-						var currentSearchNodes = new HashSet<SearchNode>();
-						currentSearchNodes.Add(rootSearchNode);
-
-						while (true)
+						// Remove any nodes that are not chosen so there is only one path through the chart.
+						foreach (var node in currentSearchNodes)
 						{
-							// Finished
-							if (depth >= expressedChart.StepEvents.Count)
-							{
-								// Choose path with lowest cost.
-								SearchNode bestNode = null;
-								foreach (var node in currentSearchNodes)
-									if (bestNode == null || node.CompareTo(bestNode) < 0)
-										bestNode = node;
-
-								// Remove any nodes that are not chosen so there is only one path through the chart.
-								foreach (var node in currentSearchNodes)
-								{
-									if (node.Equals(bestNode))
-										continue;
-									Prune(node);
-								}
-
-								rootGraphNodeToUse = rootGraphNode;
-								break;
-							}
-
-							// Failed to find a path. Break out and try the next root.
-							if (currentSearchNodes.Count == 0)
-							{
-								furthestPosition = Math.Max(furthestPosition, expressedChart.StepEvents[depth].Position);
-								break;
-							}
-
-							// Accumulate the next level of SearchNodes by looping over each SearchNode
-							// in the current set.
-							var nextDepth = depth + 1;
-							var nextSearchNodes = new HashSet<SearchNode>();
-							foreach (var searchNode in currentSearchNodes)
-							{
-								var numLinks = searchNode.GraphLinks.Count;
-								for (var l = 0; l < numLinks; l++)
-								{
-									var graphLink = searchNode.GraphLinks[l];
-									var stepTypeCost = GetStepTypeCost(searchNode, l);
-
-									// Special case handling for a blank link for a skipped step.
-									if (graphLink.GraphLink.IsBlank())
-									{
-										// This next node is the same as the previous node since we skipped a step.
-										var nextGraphNode = searchNode.GraphNode;
-										// Similarly, the links out of this node haven't changed.
-										var graphLinksToNextNode = searchNode.GraphLinks;
-										// Blank steps involve no actions.
-										var actions = new PerformanceFootAction[stepGraph.NumArrows];
-										for (var a = 0; a < stepGraph.NumArrows; a++)
-											actions[a] = PerformanceFootAction.None;
-
-										// Set up the new SearchNode.
-										var nextSearchNode = new SearchNode(
-											nextGraphNode,
-											graphLinksToNextNode,
-											graphLink,
-											stepTypeCost,
-											expressedChart.StepEvents[depth].Time,
-											nextDepth,
-											searchNode,
-											actions,
-											stepGraph,
-											nps,
-											random.NextDouble(),
-											config,
-											null
-										);
-
-										// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
-										if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
-											continue;
-									}
-									else
-									{
-										// The GraphNode may not actually have this GraphLink due to
-										// the StepTypeReplacements.
-										if (!searchNode.GraphNode.Links.ContainsKey(graphLink.GraphLink))
-											continue;
-
-										// Check every GraphNode linked to by this GraphLink.
-										var nextNodes = searchNode.GraphNode.Links[graphLink.GraphLink];
-										for (var n = 0; n < nextNodes.Count; n++)
-										{
-											var nextGraphNode = nextNodes[n];
-
-											// Determine new step information.
-											var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink, stepGraph.NumArrows);
-
-											// Set up the graph links leading out of this node to its next nodes.
-											var graphLinksToNextNode = new List<GraphLinkInstance>();
-											if (nextDepth < expressedChart.StepEvents.Count)
-											{
-												var sourceLinkKey = expressedChart.StepEvents[nextDepth].LinkInstance;
-												graphLinksToNextNode = LinkCache.GetGraphLinks(sourceLinkKey, config);
-											}
-
-											// Set up a new SearchNode.
-											var nextSearchNode = new SearchNode(
-												nextGraphNode,
-												graphLinksToNextNode,
-												graphLink,
-												stepTypeCost,
-												expressedChart.StepEvents[depth].Time,
-												nextDepth,
-												searchNode,
-												actions,
-												stepGraph,
-												nps,
-												random.NextDouble(),
-												config,
-												null
-											);
-
-											// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
-											if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
-												continue;
-										}
-									}
-								}
-							}
-
-							// Prune all the next SearchNodes, store them in currentSearchNodes, and advance.
-							currentSearchNodes = Prune(nextSearchNodes);
-							depth = nextDepth;
+							if (node.Equals(bestNode))
+								continue;
+							Prune(node);
 						}
-
-						// If we found a path from a root GraphNode, then the search is complete.
-						if (rootGraphNodeToUse != null)
-							break;
+						break;
 					}
 
-					// If we found a path from a root GraphNode, then the search is complete.
-					if (rootGraphNodeToUse != null)
-						break;
-				}
+					// Failed to find a path.
+					// This should never happen due to the allowance of blank steps.
+					if (currentSearchNodes.Count == 0)
+					{
+						LogError($"Unable to create PerformedChart. Furthest position: {expressedChart.StepEvents[depth].Position}", logIdentifier);
+						return null;
+					}
 
-				// If we exhausted all valid root GraphNodes and did not find a path, log an error
-				// and return a null PerformedChart.
-				if (rootGraphNodeToUse == null)
-				{
-					LogError($"Unable to create performance. Furthest position: {furthestPosition}", logIdentifier);
-					return null;
-				}
+					// Accumulate the next level of SearchNodes by looping over each SearchNode
+					// in the current set.
+					var nextDepth = depth + 1;
+					var nextSearchNodes = new HashSet<SearchNode>();
+					foreach (var searchNode in currentSearchNodes)
+					{
+						var numLinks = searchNode.GraphLinks.Count;
+						for (var l = 0; l < numLinks; l++)
+						{
+							var graphLink = searchNode.GraphLinks[l];
+							var stepTypeCost = GetStepTypeCost(searchNode, l);
 
-				// Log a warning if we had to fall back to a worse tier of root GraphNodes.
-				if (tier > 0)
-				{
-					LogInfo($"Using fallback root at tier {tier}.", logIdentifier);
+							// Special case handling for a blank link for a skipped step.
+							if (graphLink.GraphLink.IsBlank())
+							{
+								// This next node is the same as the previous node since we skipped a step.
+								var nextGraphNode = searchNode.GraphNode;
+								// Similarly, the links out of this node haven't changed.
+								var graphLinksToNextNode = searchNode.GraphLinks;
+								// Blank steps involve no actions.
+								var actions = new PerformanceFootAction[stepGraph.NumArrows];
+								for (var a = 0; a < stepGraph.NumArrows; a++)
+									actions[a] = PerformanceFootAction.None;
+
+								// Set up the new SearchNode.
+								var nextSearchNode = new SearchNode(
+									nextGraphNode,
+									graphLinksToNextNode,
+									graphLink,
+									stepTypeCost,
+									expressedChart.StepEvents[depth].Time,
+									nextDepth,
+									searchNode,
+									actions,
+									stepGraph,
+									nps,
+									random.NextDouble(),
+									config,
+									null
+								);
+
+								// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
+								if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
+									continue;
+							}
+							else
+							{
+								// The GraphNode may not actually have this GraphLink due to
+								// the StepTypeReplacements.
+								if (!searchNode.GraphNode.Links.ContainsKey(graphLink.GraphLink))
+									continue;
+
+								// Check every GraphNode linked to by this GraphLink.
+								var nextNodes = searchNode.GraphNode.Links[graphLink.GraphLink];
+								for (var n = 0; n < nextNodes.Count; n++)
+								{
+									var nextGraphNode = nextNodes[n];
+
+									// Determine new step information.
+									var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink, stepGraph.NumArrows);
+
+									// Set up the graph links leading out of this node to its next nodes.
+									var graphLinksToNextNode = new List<GraphLinkInstance>();
+									if (nextDepth < expressedChart.StepEvents.Count)
+									{
+										var sourceLinkKey = expressedChart.StepEvents[nextDepth].LinkInstance;
+										graphLinksToNextNode = LinkCache.GetGraphLinks(sourceLinkKey, config);
+									}
+
+									// Set up a new SearchNode.
+									var nextSearchNode = new SearchNode(
+										nextGraphNode,
+										graphLinksToNextNode,
+										graphLink,
+										stepTypeCost,
+										expressedChart.StepEvents[depth].Time,
+										nextDepth,
+										searchNode,
+										actions,
+										stepGraph,
+										nps,
+										random.NextDouble(),
+										config,
+										null
+									);
+
+									// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
+									if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
+										continue;
+								}
+							}
+						}
+					}
+
+					// Prune all the next SearchNodes, store them in currentSearchNodes, and advance.
+					currentSearchNodes = Prune(nextSearchNodes);
+					depth = nextDepth;
 				}
 			}
 
@@ -332,7 +284,7 @@ namespace StepManiaLibrary.PerformedChart
 				new StepPerformanceNode
 				{
 					Position = 0,
-					GraphNodeInstance = new GraphNodeInstance {Node = rootGraphNodeToUse ?? rootNodes[0][0]},
+					GraphNodeInstance = new GraphNodeInstance {Node = rootNode},
 				},
 				logIdentifier);
 

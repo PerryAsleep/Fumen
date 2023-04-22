@@ -31,12 +31,9 @@ namespace StepManiaLibrary
 		[JsonIgnore] public int NumArrows;
 
 		/// <summary>
-		/// Valid starting positions.
-		/// First array is tier, with lower indices preferred to higher indices when choosing a start position.
-		/// Second array is all equally preferred positions of the same tier.
-		/// Third array is lane indices, one for each foot.
+		/// Best starting position. Index is foot. Value is lane.
 		/// </summary>
-		[JsonInclude] public int[][][] StartingPositions;
+		[JsonInclude] public int[] StartingPosition;
 
 		/// <summary>
 		/// Data for each arrow on the pad.
@@ -139,59 +136,23 @@ namespace StepManiaLibrary
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInvertedStretch, lane, "OtherFootPairingsInvertedStretch");
 			}
 
-			if (StartingPositions == null || StartingPositions.Length < 1)
+			if (StartingPosition == null || StartingPosition.Length != NumFeet)
 			{
-				LogError("Empty StartingPositions. At least one valid starting position is required.");
+				LogError($"{StartingPosition?.Length ?? 0} StartingPosition entries found. Expected {NumFeet}.");
 				errors = true;
 			}
 			else
 			{
-				var tierIndex = 0;
-				foreach (var tier in StartingPositions)
+				var laneIndex = 0;
+				foreach (var spLane in StartingPosition)
 				{
-					if (tier == null || tier.Length < 1)
+					if (spLane < 0 || spLane >= NumArrows)
 					{
-						LogError($"Empty array at StartingPositions[{tierIndex}].");
+						LogError(
+							$"StartingPosition[{laneIndex}] lane {spLane} out of bounds. Must be within [0, {NumArrows - 1}].");
 						errors = true;
 					}
-					else
-					{
-						if (tierIndex == 0 && tier.Length != 1)
-						{
-							LogError($"The first tier of StartingPositions has {tier.Length} entries. It should only have 1.");
-							errors = true;
-						}
-
-						var positionIndex = 0;
-						foreach (var position in tier)
-						{
-							if (position == null || position.Length != NumFeet)
-							{
-								LogError(
-									$"StartingPositions[{tierIndex}][{positionIndex}] {position?.Length ?? 0} entries found. Expected {NumFeet}, one for each foot.");
-								errors = true;
-							}
-							else
-							{
-								var laneIndex = 0;
-								foreach (var spLane in position)
-								{
-									if (spLane < 0 || spLane >= NumArrows)
-									{
-										LogError(
-											$"StartingPositions[{tierIndex}][{positionIndex}][{laneIndex}] lane {spLane} out of bounds Must be within [0, {NumArrows - 1}].");
-										errors = true;
-									}
-
-									laneIndex++;
-								}
-							}
-
-							positionIndex++;
-						}
-					}
-
-					tierIndex++;
+					laneIndex++;
 				}
 			}
 

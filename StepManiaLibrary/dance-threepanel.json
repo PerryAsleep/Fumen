@@ -1,21 +1,7 @@
 {
-  "StartingPositions": [
-    [
-      [
-        0,
-        2
-      ]
-    ],
-    [
-      [
-        0,
-        1
-      ],
-      [
-        1,
-        2
-      ]
-    ]
+  "StartingPosition": [
+    0,
+    2
   ],
   "ArrowData": [
     {
