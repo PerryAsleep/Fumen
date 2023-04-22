@@ -23,6 +23,19 @@ namespace StepManiaLibrary
 		private const string LogTag = "Performed Chart";
 
 		/// <summary>
+		/// StepType cost for falling back to a completely blank link, dropping all steps for all portions of all feet.
+		/// </summary>
+		private const double BlankStepCost = 1000.0;
+		/// <summary>
+		/// StepType cost for falling back to a link with at least one foot having all of its steps dropped.
+		/// </summary>
+		private const double BlankSingleStepCost = 900.0;
+		/// <summary>
+		/// StepType cost for falling back to a link with dropped steps.
+		/// </summary>
+		private const double IndividualDroppedArrowStepCost = 100.0;
+
+		/// <summary>
 		/// Enumeration of states each arrow can be in at each position.
 		/// Used to assist with translating a PerformedChart into an SM Chart.
 		/// </summary>
@@ -134,7 +147,7 @@ namespace StepManiaLibrary
 			/// <summary>
 			/// The GraphLink from the Previous SearchNode that links to this SearchNode.
 			/// </summary>
-			public readonly GraphLink GraphLinkFromPreviousNode;
+			public readonly GraphLinkInstance GraphLinkFromPreviousNode;
 
 			/// <summary>
 			/// The depth of this SearchNode.
@@ -158,14 +171,14 @@ namespace StepManiaLibrary
 			/// This is a List and not just one GraphLink due to configurable StepType replacements.
 			/// See Config.StepTypeReplacements.
 			/// </summary>
-			public readonly List<GraphLink> GraphLinks;
+			public readonly List<GraphLinkInstance> GraphLinks;
 
 			/// <summary>
 			/// All the valid NextNodes out of this SearchNode.
 			/// These are added during the search and pruned so at the end there is at most one next SearchNode.
 			/// </summary>
-			public readonly Dictionary<GraphLink, HashSet<SearchNode>> NextNodes =
-				new Dictionary<GraphLink, HashSet<SearchNode>>();
+			public readonly Dictionary<GraphLinkInstance, HashSet<SearchNode>> NextNodes =
+				new Dictionary<GraphLinkInstance, HashSet<SearchNode>>();
 
 			/// <summary>
 			/// This SearchNode's cost for fast steps.
@@ -196,6 +209,12 @@ namespace StepManiaLibrary
 			/// Higher values are worse.
 			/// </summary>
 			private readonly double TotalStretchCost;
+
+			/// <summary>
+			/// This SearchNode's cost for using fallback StepTypes.
+			/// Higher values are worse.
+			/// </summary>
+			private readonly double TotalFallbackStepCost;
 
 			// TODO
 			private readonly double SectionStepTypeCost;
@@ -282,13 +301,15 @@ namespace StepManiaLibrary
 			/// <param name="graphNode">
 			/// GraphNode representing the state of this SearchNode.
 			/// </param>
-			/// <param name="originalGraphLinkToNextNode">
-			/// The original GraphLink to the next GraphNode.
-			/// This will be used to determine which replacement GraphLinks are acceptable from
-			/// this SearchNode.
+			/// <param name="possibleGraphLinksToNextNode">
+			/// All the possible GraphLinkInstances out of this SearchNode to following nodes.
 			/// </param>
 			/// <param name="graphLinkFromPreviousNode">
 			/// The GraphLink to this SearchNode from the previous SearchNode.
+			/// </param>
+			/// <param name="stepTypeFallbackCost">
+			/// The cost to use this SearchNode compared to its siblings based on the StepTypes used
+			/// to reach this node from its parent and how preferable those StepTypes are.
 			/// </param>
 			/// <param name="time">
 			/// Time of the corresponding ExpressedChart event in seconds.
@@ -305,8 +326,9 @@ namespace StepManiaLibrary
 			/// </param>
 			public SearchNode(
 				GraphNode graphNode,
-				List<GraphLink> possibleGraphLinksToNextNode,
-				GraphLink graphLinkFromPreviousNode,
+				List<GraphLinkInstance> possibleGraphLinksToNextNode,
+				GraphLinkInstance graphLinkFromPreviousNode,
+				double stepTypeFallbackCost,
 				double time,
 				int depth,
 				SearchNode previousNode,
@@ -333,6 +355,8 @@ namespace StepManiaLibrary
 				// an ambiguous or misleading step.
 				AmbiguousStepCount = previousNode?.AmbiguousStepCount ?? 0;
 				MisleadingStepCount = previousNode?.MisleadingStepCount ?? 0;
+
+				TotalFallbackStepCost = stepTypeFallbackCost + (previousNode?.TotalFallbackStepCost ?? 0.0);
 
 				// Copy the previous SearchNode's StepCounts and update them.
 				StepCounts = new int[Actions.Length];
@@ -378,7 +402,7 @@ namespace StepManiaLibrary
 				TotalNumBracketableNewArrowSteps = PreviousNode?.TotalNumBracketableNewArrowSteps ?? 0;
 				if (graphLinkFromPreviousNode != null)
 				{
-					if (graphLinkFromPreviousNode.IsSingleStep(out var stepType, out var footPerformingStep))
+					if (graphLinkFromPreviousNode.GraphLink.IsSingleStep(out var stepType, out var footPerformingStep))
 					{
 						switch (stepType)
 						{
@@ -419,7 +443,7 @@ namespace StepManiaLibrary
 									var previousNodeToCheck = PreviousNode;
 									while (previousNodeToCheck != null && previousNodeToCheck.GraphLinkFromPreviousNode != null)
 									{
-										if (previousNodeToCheck.GraphLinkFromPreviousNode.IsSingleStep(out var previousStepType, out var previousFoot)
+										if (previousNodeToCheck.GraphLinkFromPreviousNode.GraphLink.IsSingleStep(out var previousStepType, out var previousFoot)
 											&& previousFoot == footPerformingStep)
 										{
 											if (previousStepType == StepType.SameArrow)
@@ -456,6 +480,14 @@ namespace StepManiaLibrary
 					AmbiguousStepCount++;
 				if (misleading)
 					MisleadingStepCount++;
+			}
+
+			/// <summary>
+			/// Returns whether or not this SearchNode represents a completely blank step.
+			/// </summary>
+			public bool IsBlank()
+			{
+				return GraphLinkFromPreviousNode.GraphLink.IsBlank();
 			}
 
 			/// <summary>
@@ -518,6 +550,7 @@ namespace StepManiaLibrary
 				// While checking each foot, 
 				if (PreviousNode != null && PreviousNode.GraphNode != null)
 				{
+					var prevLinks = GraphLinkFromPreviousNode.GraphLink.Links;
 					var footSpeedCost = 0.0;
 					var footDistanceCost = 0.0;
 					for (var f = 0; f < NumFeet; f++)
@@ -525,15 +558,15 @@ namespace StepManiaLibrary
 						var steppedWithThisFoot = false;
 						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (GraphLinkFromPreviousNode.Links[f, p].Valid)
+							if (prevLinks[f, p].Valid)
 							{
-								if (GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Release
-								    || GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Tap)
+								if (prevLinks[f, p].Action == FootAction.Release
+								    || prevLinks[f, p].Action == FootAction.Tap)
 								{
 									LastTimeFootReleased[f] = Time;
 								}
 
-								if (GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+								if (prevLinks[f, p].Action != FootAction.Release)
 								{
 									steppedWithThisFoot = true;
 									Stepped = true;
@@ -593,8 +626,7 @@ namespace StepManiaLibrary
 							LastTimeFootStepped[f] = Time;
 							for (var p = 0; p < NumFootPortions; p++)
 							{
-								if (GraphLinkFromPreviousNode.Links[f, p].Valid &&
-									GraphLinkFromPreviousNode.Links[f, p].Action != FootAction.Release)
+								if (prevLinks[f, p].Valid && prevLinks[f, p].Action != FootAction.Release)
 								{
 									LastArrowsSteppedOnByFoot[f][p] = GraphNode.State[f, p].Arrow;
 								}
@@ -795,6 +827,10 @@ namespace StepManiaLibrary
 				// Technically the first step can be ambiguous
 				if (GraphLinkFromPreviousNode == null)
 					return (false, false);
+				if (IsBlank())
+					return (false, false);
+
+				var prevLinks = GraphLinkFromPreviousNode.GraphLink.Links;
 
 				// Perform early outs while determining some information about this step.
 				var isJump = true;
@@ -807,21 +843,20 @@ namespace StepManiaLibrary
 						if (p == DefaultFootPortion)
 						{
 							// We only care about single steps and jumps, not releases.
-							if (GraphLinkFromPreviousNode.Links[f, p].Action == FootAction.Release)
+							if (prevLinks[f, p].Action == FootAction.Release)
 								return (false, false);
-							if (!GraphLinkFromPreviousNode.Links[f, p].Valid)
+							if (!prevLinks[f, p].Valid)
 								isJump = false;
-							else if (GraphLinkFromPreviousNode.Links[f, p].Step != StepType.NewArrow
-							         && GraphLinkFromPreviousNode.Links[f, p].Step != StepType.SameArrow)
+							else if (prevLinks[f, p].Step != StepType.NewArrow && prevLinks[f, p].Step != StepType.SameArrow)
 								return (false, false);
-							if (GraphLinkFromPreviousNode.Links[f, p].Valid)
+							if (prevLinks[f, p].Valid)
 							{
-								involvesSameArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.SameArrow;
-								involvesNewArrowStep |= GraphLinkFromPreviousNode.Links[f, p].Step == StepType.NewArrow;
+								involvesSameArrowStep |= prevLinks[f, p].Step == StepType.SameArrow;
+								involvesNewArrowStep |= prevLinks[f, p].Step == StepType.NewArrow;
 							}
 						}
 						// We only care about single steps and jumps, not brackets.
-						else if (GraphLinkFromPreviousNode.Links[f, p].Valid)
+						else if (prevLinks[f, p].Valid)
 							return (false, false);
 					}
 				}
@@ -835,7 +870,7 @@ namespace StepManiaLibrary
 
 					// Jumps with same arrow.
 					var matchesPreviousArrows = DoNonInstanceActionsMatch(Actions, PreviousNode.Actions);
-					var followsBracket = PreviousNode.GraphLinkFromPreviousNode?.IsBracketStep() ?? false;
+					var followsBracket = PreviousNode.GraphLinkFromPreviousNode?.GraphLink?.IsBracketStep() ?? false;
 
 					// Any jump involving a new arrow that matches the previous arrows is misleading.
 					// Any same arrow same arrow jump following a bracket is misleading.
@@ -907,7 +942,7 @@ namespace StepManiaLibrary
 				for (var f = 0; f < NumFeet; f++)
 					for (var p = 0; p < NumFootPortions; p++)
 						if (p == DefaultFootPortion)
-							otherGraphLink.Links[OtherFoot(f), p] = GraphLinkFromPreviousNode.Links[f, p];
+							otherGraphLink.Links[OtherFoot(f), p] = prevLinks[f, p];
 
 				// For ambiguity the arrows generated from the steps from both nodes must be the same.
 				var ambiguous = DoesAnySiblingNodeFromLinkMatchActions(otherGraphLink, stepGraph);
@@ -1004,7 +1039,11 @@ namespace StepManiaLibrary
 
 			public int CompareTo(SearchNode other)
 			{
-				// First, consider misleading steps. These are steps which a player would
+				// First consider how much this path has needed to fallback to less preferred steps.
+				if (Math.Abs(TotalFallbackStepCost - other.TotalFallbackStepCost) > 0.00001)
+					return TotalFallbackStepCost < other.TotalFallbackStepCost ? -1 : 1;
+
+				// Next, consider misleading steps. These are steps which a player would
 				// never interpret as intended.
 				if (MisleadingStepCount != other.MisleadingStepCount)
 					return MisleadingStepCount < other.MisleadingStepCount ? -1 : 1;
@@ -1080,8 +1119,8 @@ namespace StepManiaLibrary
 		/// each node of a search.
 		/// It is expected that this 
 		/// </summary>
-		private static readonly Dictionary<GraphLink, List<GraphLink>> GraphLinkReplacementCache =
-			new Dictionary<GraphLink, List<GraphLink>>();
+		private static readonly Dictionary<PerformedChartConfig, Dictionary<GraphLinkInstance, List<GraphLinkInstance>>> GraphLinkCache =
+			new Dictionary<PerformedChartConfig, Dictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
 
 		/// <summary>
 		/// List of PerformanceNodes representing the roots of each section of the PerformedChart.
@@ -1157,12 +1196,6 @@ namespace StepManiaLibrary
 			int randomSeed,
 			string logIdentifier)
 		{
-			if (GraphLinkReplacementCache.Count == 0)
-			{
-				LogError("Programmer Error. No cached GraphLink replacements. See CacheGraphLinks.", logIdentifier);
-				return null;
-			}
-
 			if (rootNodes == null || rootNodes.Count < 1 || rootNodes[0] == null || rootNodes[0].Count < 1)
 				return null;
 
@@ -1176,6 +1209,7 @@ namespace StepManiaLibrary
 			{
 				// Try each tier of root nodes in order until we find a chart.
 				var tier = -1;
+				var furthestPosition = 0;
 				foreach (var currentTierOfRootNodes in rootNodes)
 				{
 					tier++;
@@ -1191,9 +1225,10 @@ namespace StepManiaLibrary
 						// Set up a root search node at the root GraphNode.
 						rootSearchNode = new SearchNode(
 							rootGraphNode,
-							GraphLinkReplacementCache[expressedChart.StepEvents[0].LinkInstance.GraphLink],
+							GetGraphLinks(expressedChart.StepEvents[0].LinkInstance, config),
 							null,
-							0L,
+							0.0,
+							0.0,
 							depth,
 							null,
 							new PerformanceFootAction[stepGraph.NumArrows],
@@ -1230,7 +1265,10 @@ namespace StepManiaLibrary
 
 							// Failed to find a path. Break out and try the next root.
 							if (currentSearchNodes.Count == 0)
+							{
+								furthestPosition = Math.Max(furthestPosition, expressedChart.StepEvents[depth].Position);
 								break;
+							}
 
 							// Accumulate the next level of SearchNodes by looping over each SearchNode
 							// in the current set.
@@ -1238,33 +1276,30 @@ namespace StepManiaLibrary
 							var nextSearchNodes = new HashSet<SearchNode>();
 							foreach (var searchNode in currentSearchNodes)
 							{
-								// Check every GraphLink out of the SearchNode.
-								var deadEnd = true;
-								for (var l = 0; l < searchNode.GraphLinks.Count; l++)
+								var numLinks = searchNode.GraphLinks.Count;
+								for (var l = 0; l < numLinks; l++)
 								{
 									var graphLink = searchNode.GraphLinks[l];
-									// The GraphNode may not actually have this GraphLink due to
-									// the StepTypeReplacements.
-									if (!searchNode.GraphNode.Links.ContainsKey(graphLink))
-										continue;
+									var stepTypeCost = GetStepTypeCost(searchNode, l);
 
-									// Check every GraphNode linked to by this GraphLink.
-									var nextNodes = searchNode.GraphNode.Links[graphLink];
-									for (var n = 0; n < nextNodes.Count; n++)
+									// Special case handling for a blank link for a skipped step.
+									if (graphLink.GraphLink.IsBlank())
 									{
-										var nextGraphNode = nextNodes[n];
-										// Determine new step information.
-										var actions = GetActionsForNode(nextGraphNode, graphLink, stepGraph.NumArrows);
+										// This next node is the same as the previous node since we skipped a step.
+										var nextGraphNode = searchNode.GraphNode;
+										// Similarly, the links out of this node haven't changed.
+										var graphLinksToNextNode = searchNode.GraphLinks;
+										// Blank steps involve no actions.
+										var actions = new PerformanceFootAction[stepGraph.NumArrows];
+										for (var a = 0; a < stepGraph.NumArrows; a++)
+											actions[a] = PerformanceFootAction.None;
 
-										var graphLinksToNextNode = new List<GraphLink>();
-										if (nextDepth < expressedChart.StepEvents.Count)
-											graphLinksToNextNode = GraphLinkReplacementCache[expressedChart.StepEvents[nextDepth].LinkInstance.GraphLink];
-
-										// Set up a new SearchNode.
+										// Set up the new SearchNode.
 										var nextSearchNode = new SearchNode(
 											nextGraphNode,
 											graphLinksToNextNode,
 											graphLink,
+											stepTypeCost,
 											expressedChart.StepEvents[depth].Time,
 											nextDepth,
 											searchNode,
@@ -1276,24 +1311,57 @@ namespace StepManiaLibrary
 											null
 										);
 
-										// Do not consider this next SearchNode if it results in an invalid state.
-										if (DoesNodeStepOnReleaseAtSamePosition(nextSearchNode, expressedChart, stepGraph.NumArrows))
+										// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
+										if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
+											continue;
+									}
+									else
+									{
+										// The GraphNode may not actually have this GraphLink due to
+										// the StepTypeReplacements.
+										if (!searchNode.GraphNode.Links.ContainsKey(graphLink.GraphLink))
 											continue;
 
-										// Update the previous SearchNode's NextNodes to include the new SearchNode.
-										if (!searchNode.NextNodes.ContainsKey(graphLink))
-											searchNode.NextNodes[graphLink] = new HashSet<SearchNode>();
-										searchNode.NextNodes[graphLink].Add(nextSearchNode);
+										// Check every GraphNode linked to by this GraphLink.
+										var nextNodes = searchNode.GraphNode.Links[graphLink.GraphLink];
+										for (var n = 0; n < nextNodes.Count; n++)
+										{
+											var nextGraphNode = nextNodes[n];
 
-										// Add this node to the set of next SearchNodes to be pruned after they are all found.
-										nextSearchNodes.Add(nextSearchNode);
-										deadEnd = false;
+											// Determine new step information.
+											var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink, stepGraph.NumArrows);
+
+											// Set up the graph links leading out of this node to its next nodes.
+											var graphLinksToNextNode = new List<GraphLinkInstance>();
+											if (nextDepth < expressedChart.StepEvents.Count)
+											{
+												var sourceLinkKey = expressedChart.StepEvents[nextDepth].LinkInstance;
+												graphLinksToNextNode = GetGraphLinks(sourceLinkKey, config);
+											}
+
+											// Set up a new SearchNode.
+											var nextSearchNode = new SearchNode(
+												nextGraphNode,
+												graphLinksToNextNode,
+												graphLink,
+												stepTypeCost,
+												expressedChart.StepEvents[depth].Time,
+												nextDepth,
+												searchNode,
+												actions,
+												stepGraph,
+												nps,
+												random.NextDouble(),
+												config,
+												null
+											);
+
+											// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
+											if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
+												continue;
+										}
 									}
 								}
-
-								// This SearchNode has no valid children. Prune it.
-								if (deadEnd)
-									Prune(searchNode);
 							}
 
 							// Prune all the next SearchNodes, store them in currentSearchNodes, and advance.
@@ -1315,7 +1383,7 @@ namespace StepManiaLibrary
 				// and return a null PerformedChart.
 				if (rootGraphNodeToUse == null)
 				{
-					LogError("Unable to find performance.", logIdentifier);
+					LogError($"Unable to create performance. Furthest position: {furthestPosition}", logIdentifier);
 					return null;
 				}
 
@@ -1342,25 +1410,19 @@ namespace StepManiaLibrary
 			currentSearchNode = currentSearchNode?.GetNextNode();
 			while (currentSearchNode != null)
 			{
+				if (currentSearchNode.IsBlank())
+				{
+					currentSearchNode = currentSearchNode.GetNextNode();
+					continue;
+				}
+
 				// Create GraphNodeInstance.
+				var graphLinkInstance = currentSearchNode.GraphLinkFromPreviousNode;
 				var stepEventIndex = currentSearchNode.Depth - 1;
 				var graphNodeInstance = new GraphNodeInstance {Node = currentSearchNode.GraphNode};
 				for (var f = 0; f < NumFeet; f++)
 					for (var p = 0; p < NumFootPortions; p++)
-						graphNodeInstance.InstanceTypes[f, p] =
-							expressedChart.StepEvents[stepEventIndex].LinkInstance.InstanceTypes[f, p];
-
-				// Create GraphLinkInstance.
-				var graphLink = currentSearchNode.GraphLinkFromPreviousNode;
-				GraphLinkInstance graphLinkInstance = new GraphLinkInstance {GraphLink = graphLink};
-				for (var f = 0; f < NumFeet; f++)
-				{
-					for (var p = 0; p < NumFootPortions; p++)
-					{
-						graphLinkInstance.InstanceTypes[f, p] =
-							expressedChart.StepEvents[stepEventIndex].LinkInstance.InstanceTypes[f, p];
-					}
-				}
+						graphNodeInstance.InstanceTypes[f, p] = graphLinkInstance.InstanceTypes[f, p];
 
 				// Add new StepPerformanceNode and advance.
 				var newNode = new StepPerformanceNode
@@ -1381,6 +1443,71 @@ namespace StepManiaLibrary
 			AddMinesToPerformedChart(performedChart, stepGraph, expressedChart, lastPerformanceNode, random);
 
 			return performedChart;
+		}
+
+		/// <summary>
+		/// Helper function when searching to add a new child SearchNode.
+		/// Checks for whether this node would be invalid due to stepping on a previous release at the same position.
+		/// Updates the parentNode's NextNodes links to include the new childNode.
+		/// Updates nextSearchNodes to include the new child SearchNode for later pruning.
+		/// </summary>
+		private static bool AddChildNode(
+			SearchNode parentNode,
+			SearchNode childNode,
+			GraphLinkInstance graphLink,
+			HashSet<SearchNode> nextSearchNodes,
+			StepGraph stepGraph,
+			ExpressedChart expressedChart)
+		{
+			// Do not consider this next SearchNode if it results in an invalid state.
+			if (DoesNodeStepOnReleaseAtSamePosition(childNode, expressedChart, stepGraph.NumArrows))
+				return false;
+
+			// Update the previous SearchNode's NextNodes to include the new SearchNode.
+			if (!parentNode.NextNodes.ContainsKey(graphLink))
+				parentNode.NextNodes[graphLink] = new HashSet<SearchNode>();
+			parentNode.NextNodes[graphLink].Add(childNode);
+
+			// Add this node to the set of next SearchNodes to be pruned after they are all found.
+			nextSearchNodes.Add(childNode);
+			return true;
+		}
+
+		/// <summary>
+		/// Helper function when searching to get a child SearchNode's step
+		/// </summary>
+		/// <param name="parentNode"></param>
+		/// <param name="graphLinkIndexToChild"></param>
+		/// <returns></returns>
+		private static double GetStepTypeCost(
+			SearchNode parentNode,
+			int graphLinkIndexToChild)
+		{
+			var numLinks = parentNode.GraphLinks.Count;
+			var graphLinkToChild = parentNode.GraphLinks[graphLinkIndexToChild];
+
+			if (graphLinkToChild.GraphLink.IsBlank())
+				return BlankStepCost;
+
+			// Determine the step type cost for this node.
+			// Assumption that the first GraphLink is the source from which the fallbacks were derived.
+			var sourceLink = parentNode.GraphLinks[0];
+			if (ContainsBlankLink(sourceLink, graphLinkToChild))
+			{
+				return BlankSingleStepCost;
+			}
+			else
+			{
+				var numStepsRemoved = GetNumStepsRemoved(parentNode.GraphLinks[0], graphLinkToChild);
+				if (numStepsRemoved > 0)
+				{
+					return numStepsRemoved * IndividualDroppedArrowStepCost;
+				}
+			}
+
+			// The first link out of this search node is the most preferred node. The
+			// links at higher indexes are less preferred fallbacks that should cost more.
+			return (double)graphLinkIndexToChild / numLinks;
 		}
 
 		// TODO: Rewrite
@@ -2308,115 +2435,424 @@ namespace StepManiaLibrary
 		#region GraphLink Cache
 
 		/// <summary>
-		/// Determines and caches all replacement GraphLinks for the given GraphLinks.
-		/// Caches into GraphLinkReplacementCache.
+		/// Custom Comparer for replacement GraphLinkInstances.
 		/// </summary>
-		/// <remarks>
-		/// Expected that the given GraphLinks represent the set of all GraphLinks in
-		/// the output StepGraph.
-		/// Expected that this method is called to populate the cache prior to calling
-		/// CreateFromExpressedChart.
-		/// </remarks>
-		/// <param name="graphLinks">Collection of GraphLinks</param>
-		public static void CacheGraphLinks(IEnumerable<GraphLink> graphLinks,
-			Dictionary<StepType, HashSet<StepType>> stepTypeReplacements)
+		private class ReplacementGraphLinkComparer : IComparer<GraphLinkInstance>
 		{
-			foreach (var graphLink in graphLinks)
+			GraphLink SourceLink;
+			PerformedChartConfig Config;
+
+			public ReplacementGraphLinkComparer(GraphLink sourceLink, PerformedChartConfig config)
 			{
-				if (!GraphLinkReplacementCache.ContainsKey(graphLink))
-					GraphLinkReplacementCache.Add(graphLink, FindAllAcceptableLinks(graphLink, stepTypeReplacements));
+				SourceLink = sourceLink;
+				Config = config;
+			}
+
+			public int Compare(GraphLinkInstance l1, GraphLinkInstance l2)
+			{
+				if (l1.Equals(l2))
+					return 0;
+
+				// Completely blank links are the worst option as they result in completely skipping steps.
+				var l1Blank = l1.GraphLink.IsBlank();
+				var l2Blank = l2.GraphLink.IsBlank();
+				if (l1Blank != l2Blank)
+					return l1Blank ? 1 : -1;
+
+				double l1LCost = 0.0;
+				double l1RCost = 0.0;
+				double l2LCost = 0.0;
+				double l2RCost = 0.0;
+
+				var sourceLHasAnyValid = false;
+				var sourceRHasAnyValid = false;
+
+				var l1LHasAnyValid = false;
+				var l1RHasAnyValid = false;
+
+				var l2LHasAnyValid = false;
+				var l2RHasAnyValid = false;
+
+				var numL1StepsDropped = 0;
+				var numL2StepsDropped = 0;
+
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (SourceLink.Links[L, p].Valid)
+					{
+						var numFallbacks = Config.GetFallbacks(SourceLink.Links[L, p].Step).Count();
+						sourceLHasAnyValid = true;
+
+						if (!l1.GraphLink.Links[L, p].Valid)
+							numL1StepsDropped++;
+						else
+							l1LHasAnyValid = true;
+						if (!l2.GraphLink.Links[L, p].Valid)
+							numL2StepsDropped++;
+						else
+							l2LHasAnyValid = true;
+
+						if (l1LCost.DoubleEquals(0.0) && l1.GraphLink.Links[L, p].Valid)
+							l1LCost = (double)Config.GetFallbackIndex(SourceLink.Links[L, p].Step, l1.GraphLink.Links[L, p].Step) / numFallbacks;
+						if (l2LCost.DoubleEquals(0.0) && l2.GraphLink.Links[L, p].Valid)
+							l2LCost = (double)Config.GetFallbackIndex(SourceLink.Links[L, p].Step, l2.GraphLink.Links[L, p].Step) / numFallbacks;
+					}
+					if (SourceLink.Links[R, p].Valid)
+					{
+						var numFallbacks = Config.GetFallbacks(SourceLink.Links[R, p].Step).Count();
+						sourceRHasAnyValid = true;
+
+						if (!l1.GraphLink.Links[R, p].Valid)
+							numL1StepsDropped++;
+						else
+							l1RHasAnyValid = true;
+						if (!l2.GraphLink.Links[R, p].Valid)
+							numL2StepsDropped++;
+						else
+							l2RHasAnyValid = true;
+
+						if (l1RCost.DoubleEquals(0.0) && l1.GraphLink.Links[R, p].Valid)
+							l1RCost = (double)Config.GetFallbackIndex(SourceLink.Links[R, p].Step, l1.GraphLink.Links[R, p].Step) / numFallbacks;
+						if (l2RCost.DoubleEquals(0.0) && l2.GraphLink.Links[R, p].Valid)
+							l2RCost = (double)Config.GetFallbackIndex(SourceLink.Links[R, p].Step, l2.GraphLink.Links[R, p].Step) / numFallbacks;
+					}
+				}
+
+				// Dropping a single foot is next worst.
+				var l1DroppedFoot = ((sourceLHasAnyValid && !l1LHasAnyValid) || (sourceRHasAnyValid && !l1RHasAnyValid));
+				var l2DroppedFoot = ((sourceLHasAnyValid && !l2LHasAnyValid) || (sourceRHasAnyValid && !l2RHasAnyValid));
+				if (l1DroppedFoot != l2DroppedFoot)
+					return l1DroppedFoot ? 1 : -1;
+
+				// Steps which reduce the number of arrows are next worst.
+				var comparison = numL1StepsDropped.CompareTo(numL2StepsDropped);
+				if (comparison != 0)
+					return comparison;
+
+				// If there is no difference in the number of dropped steps, sort by how far away we are from the ideal step.
+				comparison = (l1LCost + l1RCost).CompareTo(l2LCost + l2RCost);
+				if (comparison != 0)
+					return comparison;
+
+				// Tie break on left foot cost.
+				comparison = l1LCost.CompareTo(l2LCost);
+				return comparison;
+			}
+
+			int IComparer<GraphLinkInstance>.Compare(GraphLinkInstance l1, GraphLinkInstance l2)
+			{
+				return Compare(l1, l2);
 			}
 		}
 
 		/// <summary>
-		/// Given a GraphLink from an ExpressedChart, return all acceptable GraphLinks that can be used
-		/// in its place in the PerformedChart.
-		/// Replacements are specified in Config.StepTypeReplacements.
+		/// Finds all the valid replacement GraphLinkInstance for the given foot that can be used to
+		/// replace the given GraphLinkInstance based on the given PerformedChartConfig's StepTypeFallbacks.
+		/// Helper function for FindAllReplacementLinks.
+		/// Results are a list of GraphLinkInstance with only one foot's worth of data set.
+		/// Results are unsorted.
 		/// </summary>
-		/// <param name="originalGraphLinkToNextNode">Original GraphLink.</param>
-		/// <returns>List of all valid GraphLink replacements.</returns>
-		private static List<GraphLink> FindAllAcceptableLinks(
-			GraphLink originalGraphLinkToNextNode,
-			Dictionary<StepType, HashSet<StepType>> stepTypeReplacements)
+		/// <param name="foot">Foot.</param>
+		/// <param name="sourceLink">Original GraphLinkInstance.</param>
+		/// <param name="config">PerformedChartConfig defining StepTypeFallbacks.</param>
+		/// <returns>List of all valid replacement FootArrowStates.</returns>
+		private static List<GraphLinkInstance> FindReplacementLinksForFoot(
+			int foot,
+			GraphLinkInstance sourceLink,
+			PerformedChartConfig config)
 		{
-			var acceptableLinks = new List<GraphLink>();
-			if (originalGraphLinkToNextNode == null)
-				return acceptableLinks;
+			var stepTypeReplacements = config.StepTypeFallbacks;
+			var originalLinks = sourceLink.GraphLink.Links;
+			var footLinks = new List<GraphLinkInstance>();
 
-			var originalLinks = originalGraphLinkToNextNode.Links;
-
-			// Accumulate states to turn into GraphLinks.
-			// Loop over each foot and portion, updating tempStates with valid replacements.
-			var tempStates = new List<GraphLink.FootArrowState[,]>();
-			for (var f = 0; f < NumFeet; f++)
+			for (var p = 0; p < NumFootPortions; p++)
 			{
-				for (var p = 0; p < NumFootPortions; p++)
+				if (!originalLinks[foot, p].Valid)
+					continue;
+				var originalStep = originalLinks[foot, p].Step;
+				if (!stepTypeReplacements.TryGetValue(originalStep, out var newSteps))
+					continue;
+				var originalStepData = StepData.Steps[(int)originalStep];
+				var originalBracket = originalStepData.IsBracket;
+				var originalPortionToUseForNewStep = DefaultFootPortion;
+				if (originalStepData.IsOneArrowBracket)
 				{
-					// Get the acceptable steps for the step at this Foot and FootPortion.
-					if (!originalLinks[f, p].Valid)
-						continue;
-					if (!stepTypeReplacements.TryGetValue(originalLinks[f, p].Step, out var acceptableSteps))
-						continue;
+					originalPortionToUseForNewStep = originalStepData.SingleStepFootPortion;
+				}
 
-					// If no temp states exist yet, create new ones for this Foot and FootPortion.
-					if (tempStates.Count == 0)
+				foreach (var newStep in newSteps)
+				{
+					var newStepData = StepData.Steps[(int)newStep];
+
+					// Don't create invalid releases.
+					if (!newStepData.CanBeUsedInRelease
+						&& ((originalLinks[foot, Heel].Valid && originalLinks[foot, Heel].Action == FootAction.Release)
+						|| (originalLinks[foot, Toe].Valid && originalLinks[foot, Toe].Action == FootAction.Release)))
 					{
-						foreach (var stepType in acceptableSteps)
-						{
-							var state = new GraphLink.FootArrowState[NumFeet, NumFootPortions];
-							state[f, p] = new GraphLink.FootArrowState(stepType, originalLinks[f, p].Action);
-							tempStates.Add(state);
-						}
+						continue;
 					}
 
-					// If temp states exist, loop over them and add to their states.
-					else
+					// Single step.
+					// This could be creating a step that is technically impossible. For example replacing a
+					// single bracket step like BracketOneArrowToeNew from a state where you are holding with
+					// your heel with a stpe like NewArrow is impossible. But it is simpler to create this
+					// step and rely on there being link that matches it when searching.
+					if (!newStepData.IsBracket)
 					{
-						// Accumulate new states taking the state from the current tempStates and
-						// adding the new step to them.
-						var newStates = new List<GraphLink.FootArrowState[,]>();
-						foreach (var tempState in tempStates)
+						// Determine the portion to use for the new step. Usually this will be
+						// the DefaultFootPortion. For single arrow brackets it could be the Toe.
+						var newStepFootPortion = DefaultFootPortion;
+						if (newStepData.IsOneArrowBracket)
 						{
-							foreach (var stepType in acceptableSteps)
-							{
-								// Don't create invalid brackets. In a bracket, both FootPortions
-								// must use the same StepType.
-								if (p > 0
-								    && tempState[f, 0].Valid
-								    && StepData.Steps[(int) tempState[f, 0].Step].IsBracket
-								    && stepType != tempState[f, 0].Step)
-								{
-									continue;
-								}
-
-								// Create a new state, copied from the current temp state.
-								var state = new GraphLink.FootArrowState[NumFeet, NumFootPortions];
-								for (var f2 = 0; f2 < NumFeet; f2++)
-									for (var p2 = 0; p2 < NumFootPortions; p2++)
-										state[f2, p2] = tempState[f2, p2];
-								// Update the new state with the new StepType.
-								state[f, p] = new GraphLink.FootArrowState(stepType, originalLinks[f, p].Action);
-								newStates.Add(state);
-							}
+							newStepFootPortion = newStepData.SingleStepFootPortion;
 						}
 
-						// Update the tempStates with the newStates.
-						tempStates = newStates;
+						// Determine the portion from the original step to use for the FootAction.
+						var originalPortion = originalPortionToUseForNewStep;
+						if (originalBracket)
+						{
+							// We need to drop a step. We can drop the heel or the toe.
+							// Prioritize maintaining holds.
+							originalPortion = -1;
+							for (var p2 = 0; p2 < NumFootPortions; p2++)
+							{
+								if (originalLinks[foot, p2].Action == FootAction.Hold)
+								{
+									originalPortion = p2;
+									break;
+								}
+							}
+							if (originalPortion == -1)
+								originalPortion = DefaultFootPortion;
+						}
+
+						// Record the new state.
+						var newLink = new GraphLinkInstance();
+						newLink.InstanceTypes[foot, originalPortion] = sourceLink.InstanceTypes[foot, originalPortion];
+						newLink.GraphLink = new GraphLink();
+						newLink.GraphLink.Links[foot, newStepFootPortion] = new GraphLink.FootArrowState(newStep, originalLinks[foot, originalPortion].Action);
+						footLinks.Add(newLink);
+					}
+
+					// Bracket.
+					else
+					{
+						FootAction heelAction;
+						InstanceStepType heelInstanceType;
+						FootAction toeAction;
+						InstanceStepType toeInstanceType;
+
+						// Both brackets.
+						if (originalBracket)
+						{
+							heelAction = originalLinks[foot, Heel].Action;
+							heelInstanceType = sourceLink.InstanceTypes[foot, Heel];
+							toeAction = originalLinks[foot, Toe].Action;
+							toeInstanceType = sourceLink.InstanceTypes[foot, Toe];
+						}
+
+						// Converting a single step to a bracket.
+						// This isn't normally supported and would only happen if someone is using a bizarre configuration to
+						// add brackets.
+						else
+						{
+							heelAction = originalLinks[foot, originalPortionToUseForNewStep].Action;
+							heelInstanceType = sourceLink.InstanceTypes[foot, originalPortionToUseForNewStep];
+
+							// Do not add more holds as there likely won't be future releases to release them.
+							toeAction = heelAction == FootAction.Release ? FootAction.Release : FootAction.Tap;
+							toeInstanceType = InstanceStepType.Default;
+						}
+
+						// Add a new state with matching heel and toe actions.
+						var newLink = new GraphLinkInstance();
+						newLink.InstanceTypes[foot, Heel] = heelInstanceType;
+						newLink.InstanceTypes[foot, Toe] = toeInstanceType;
+						newLink.GraphLink = new GraphLink();
+						newLink.GraphLink.Links[foot, Heel] = new GraphLink.FootArrowState(newStep, heelAction);
+						newLink.GraphLink.Links[foot, Toe] = new GraphLink.FootArrowState(newStep, toeAction);
+						footLinks.Add(newLink);
+
+						// Add another new state with swapped heel and toe actions if they are different.
+						if (heelAction != toeAction)
+						{
+							newLink = new GraphLinkInstance();
+							newLink.InstanceTypes[foot, Heel] = toeInstanceType;
+							newLink.InstanceTypes[foot, Toe] = heelInstanceType;
+							newLink.GraphLink = new GraphLink();
+							newLink.GraphLink.Links[foot, Heel] = new GraphLink.FootArrowState(newStep, toeAction);
+							newLink.GraphLink.Links[foot, Toe] = new GraphLink.FootArrowState(newStep, heelAction);
+							footLinks.Add(newLink);
+						}
+					}
+				}
+
+				// In all cases, break.
+				// There is a never a case where there are multiple valid distinct steps on one foot.
+				break;
+			}
+
+			// Add a blank link.
+			var blankLink = new GraphLinkInstance();
+			blankLink.GraphLink = new GraphLink();
+			footLinks.Add(blankLink);
+
+			return footLinks;
+		}
+
+		/// <summary>
+		/// Given a GraphLink from an ExpressedChart, find andreturn all acceptable GraphLinks that can
+		/// be used in its place in the PerformedChart according to the given PerformedChartConfig.
+		/// </summary>
+		/// <param name="sourceLink">Original GraphLink.</param>
+		/// <param name="config">PerformedChartConfig defining StepTypeFallbacks.</param>
+		/// <returns>List of all valid GraphLink replacements sorted by how good they are.</returns>
+		private static List<GraphLinkInstance> FindAllReplacementLinks(GraphLinkInstance sourceLink, PerformedChartConfig config)
+		{
+			var replacementLinks = new List<GraphLinkInstance>();
+			if (sourceLink == null)
+				return replacementLinks;
+
+			// Accumulate links for each foot.
+			var leftLinks = FindReplacementLinksForFoot(L, sourceLink, config);
+			var rightLinks = FindReplacementLinksForFoot(R, sourceLink, config);
+
+			if (leftLinks.Count == 0 && rightLinks.Count == 0)
+				return replacementLinks;
+
+			// Left foot step.
+			if (leftLinks.Count > 0 && rightLinks.Count == 0)
+			{
+				replacementLinks.AddRange(leftLinks);
+			}
+			// Right foot step.
+			else if (rightLinks.Count > 0 && leftLinks.Count == 0)
+			{
+				replacementLinks.AddRange(rightLinks);
+			}
+			// Jump.
+			else
+			{
+				foreach (var leftLink in leftLinks)
+				{
+					// Do not include steps which can't be used in jumps.
+					var invalidJump = false;
+					for (var p = 0; p < NumFootPortions; p++)
+					{
+						if (leftLink.GraphLink.Links[L, p].Valid && !StepData.Steps[(int)leftLink.GraphLink.Links[L, p].Step].CanBeUsedInJump)
+						{
+							invalidJump = true;
+							break;
+						}
+					}
+					if (invalidJump)
+						continue;
+
+					foreach (var rightLink in rightLinks)
+					{
+						// Do not include steps which can't be used in jumps.
+						invalidJump = false;
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							if (rightLink.GraphLink.Links[R, p].Valid && !StepData.Steps[(int)rightLink.GraphLink.Links[R, p].Step].CanBeUsedInJump)
+							{
+								invalidJump = true;
+								break;
+							}
+						}
+						if (invalidJump)
+							continue;
+
+						var newLink = new GraphLinkInstance();
+						newLink.GraphLink = new GraphLink();
+						for (var p = 0; p < NumFootPortions; p++)
+						{
+							newLink.GraphLink.Links[L, p] = leftLink.GraphLink.Links[L, p];
+							newLink.InstanceTypes[L, p] = leftLink.InstanceTypes[L, p];
+							newLink.GraphLink.Links[R, p] = rightLink.GraphLink.Links[R, p];
+							newLink.InstanceTypes[R, p] = rightLink.InstanceTypes[R, p];
+						}
+						replacementLinks.Add(newLink);
 					}
 				}
 			}
 
-			// Accumulate all the states into GraphLinks.
-			foreach (var state in tempStates)
+			// Sort. Better options should come first.
+			replacementLinks.Sort(new ReplacementGraphLinkComparer(sourceLink.GraphLink, config));
+			return replacementLinks;
+		}
+
+		/// <summary>
+		/// Given a GraphLink from an ExpressedChart, return all acceptable GraphLinks that can be used
+		/// in its place in the PerformedChart according to the given PerformedChartConfig.
+		/// This function can involve some heavy loops depending on how deep the PerformedChartConfig's
+		/// StepTypeReplacements are and how many valid foot portions are present in the given link.
+		/// Results are cached for the given config and source link so subsequent calls with the same
+		/// parameters return with an O(1) lookup.
+		/// </summary>
+		/// <param name="sourceLink">Original GraphLink.</param>
+		/// <param name="config">PerformedChartConfig defining StepTypeFallbacks.</param>
+		/// <returns>List of all valid GraphLink replacements sorted by how good they are.</returns>
+		private static List<GraphLinkInstance> GetGraphLinks(GraphLinkInstance sourceLink, PerformedChartConfig config)
+		{
+			// TODO: Thread safety.
+
+			if (!GraphLinkCache.ContainsKey(config))
 			{
-				var g = new GraphLink();
-				for (var f = 0; f < NumFeet; f++)
-					for (var p = 0; p < NumFootPortions; p++)
-						g.Links[f, p] = state[f, p];
-				acceptableLinks.Add(g);
+				GraphLinkCache.Add(config, new Dictionary<GraphLinkInstance, List<GraphLinkInstance>>());
+			}
+			var cache = GraphLinkCache[config];
+			if (cache.TryGetValue(sourceLink, out List<GraphLinkInstance> cachedLinks))
+			{
+				return cachedLinks;
 			}
 
-			return acceptableLinks;
+			var links = FindAllReplacementLinks(sourceLink, config);
+			cache[sourceLink] = links;
+
+			return links;
+		}
+
+		/// <summary>
+		/// Returns whether the given replacement GraphLinkInstance replaces any valid foot action
+		/// with a blank link from the given source GraphLinkInstance.
+		/// </summary>
+		/// <param name="sourceLink">Source GraphLinkInstance.</param>
+		/// <param name="replacementLink">Replacement GraphLinkInstance.</param>
+		/// <returns>True of the replacement contains a Blank link where the source does not.</returns>
+		private static bool ContainsBlankLink(GraphLinkInstance sourceLink, GraphLinkInstance replacementLink)
+		{
+			for (var f = 0; f < NumFeet; f++)
+			{
+				var sourceFootValid = false;
+				var replacementFootValid = false;
+				for(var p = 0; p < NumFootPortions; p++)
+				{
+					if (sourceLink.GraphLink.Links[f, p].Valid)
+						sourceFootValid = true;
+					if (replacementLink.GraphLink.Links[f, p].Valid)
+						replacementFootValid = true;
+				}
+				if (sourceFootValid && !replacementFootValid)
+					return true;
+			}
+			return false;
+		}
+
+		private static int GetNumStepsRemoved(GraphLinkInstance sourceLink, GraphLinkInstance replacementLink)
+		{
+			var numStepsRemoved = 0;
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (sourceLink.GraphLink.Links[f, p].Valid && !replacementLink.GraphLink.Links[f, p].Valid)
+					{
+						numStepsRemoved++;
+					}
+				}
+			}
+			return numStepsRemoved;
 		}
 
 		#endregion GraphLink Cache

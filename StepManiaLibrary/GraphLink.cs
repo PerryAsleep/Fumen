@@ -96,6 +96,28 @@ namespace StepManiaLibrary
 		public readonly FootArrowState[,] Links = new FootArrowState[NumFeet, NumFootPortions];
 
 		/// <summary>
+		/// Returns whether this link is completely blank.
+		/// This represents a skipped step.
+		/// This is normally not valid in a StepGraph and is used for fallbacks that
+		/// need to remove steps.
+		/// </summary>
+		/// <returns>True if this GraphLink represends a blank link and false otherwse.</returns>
+		public bool IsBlank()
+		{
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (Links[f, p].Valid)
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		/// <summary>
 		/// Whether or not this link represents a jump with both feet.
 		/// Includes bracket jumps
 		/// </summary>
@@ -339,6 +361,8 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+			if (!hasLeft && !hasRight)
+				sb.Append("Nothing");
 
 			return sb.ToString();
 		}
@@ -485,7 +509,7 @@ namespace StepManiaLibrary
 	/// information at runtime, like what type of hold (hold or roll) is used.
 	/// </summary>
 	[DebuggerDisplay("{ToString()}")]
-	public class GraphLinkInstance
+	public class GraphLinkInstance : IEquatable<GraphLinkInstance>
 	{
 		/// <summary>
 		/// Underlying GraphLink.
@@ -501,5 +525,40 @@ namespace StepManiaLibrary
 		{
 			return GraphLink.ToString();
 		}
+
+		#region IEquatable Implementation
+
+		public bool Equals(GraphLinkInstance other)
+		{
+			if (other == null)
+				return false;
+			if (GraphLink != other.GraphLink)
+				return false;
+			for (var f = 0; f < NumFeet; f++)
+				for (var p = 0; p < NumFootPortions; p++)
+					if (!InstanceTypes[f, p].Equals(other.InstanceTypes[f, p]))
+						return false;
+			return true;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (obj == null)
+				return false;
+			if (!(obj is GraphLinkInstance g))
+				return false;
+			return Equals(g);
+		}
+
+		public override int GetHashCode()
+		{
+			var hash = GraphLink.GetHashCode();
+			for (var f = 0; f < NumFeet; f++)
+				for (var p = 0; p < NumFootPortions; p++)
+					hash = unchecked(hash * 31 + InstanceTypes[f, p].GetHashCode());
+			return hash;
+		}
+
+		#endregion
 	}
 }
