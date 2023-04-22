@@ -5,12 +5,12 @@ using System.Text.Json.Serialization;
 using System;
 using System.Linq;
 
-namespace StepManiaLibrary
+namespace StepManiaLibrary.PerformedChart
 {
 	/// <summary>
 	/// Configuration data for PerformedChart behavior.
 	/// </summary>
-	public class PerformedChartConfig
+	public class Config
 	{
 		/// <summary>
 		/// Tag for logging messages.
@@ -398,12 +398,12 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Sets this PerformedChartConfig to be an override of the the given other PerformedChartConfig.
-		/// Any values in this PerformedChartConfig which are at their default, invalid values will
-		/// be replaced with the corresponding values in the given other PerformedChartConfig.
+		/// Sets this Config to be an override of the the given other Config.
+		/// Any values in this Config which are at their default, invalid values will
+		/// be replaced with the corresponding values in the given other Config.
 		/// </summary>
-		/// <param name="other">Other PerformedChartConfig to use as as a base.</param>
-		public void SetAsOverrideOf(PerformedChartConfig other)
+		/// <param name="other">Other Config to use as as a base.</param>
+		public void SetAsOverrideOf(Config other)
 		{
 			LateralTightening.SetAsOverrideOf(other.LateralTightening);
 			StepTightening.SetAsOverrideOf(other.StepTightening);

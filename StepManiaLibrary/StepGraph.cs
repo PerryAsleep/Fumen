@@ -500,43 +500,6 @@ namespace StepManiaLibrary
 			return node.Equals(newNode);
 		}
 
-		/// <summary>
-		/// Finds all GraphLinks used by this StepGraph.
-		/// </summary>
-		/// <returns>HashSet of all GraphLinks in this StepGraph.</returns>
-		public HashSet<GraphLink> FindAllGraphLinks()
-		{
-			var allLinks = new HashSet<GraphLink>();
-			var trackedNodes = new HashSet<GraphNode>();
-			var nodes = new HashSet<GraphNode> {Root};
-			trackedNodes.Add(Root);
-			while (true)
-			{
-				var newNodes = new HashSet<GraphNode>();
-				foreach (var node in nodes)
-				{
-					foreach (var l in node.Links)
-					{
-						allLinks.Add(l.Key);
-						foreach (var g in l.Value)
-						{
-							if (!trackedNodes.Contains(g))
-							{
-								trackedNodes.Add(g);
-								newNodes.Add(g);
-							}
-						}
-					}
-				}
-
-				nodes = newNodes;
-				if (nodes.Count == 0)
-					break;
-			}
-
-			return allLinks;
-		}
-
 		#endregion Public Search Methods
 
 		#region Fill

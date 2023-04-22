@@ -241,7 +241,7 @@ namespace StepManiaLibrary
 
 		// Facing controls
 
-		[JsonInclude] public PerformedChartConfig PerformedChartConfig;
+		[JsonInclude] public PerformedChart.Config PerformedChartConfig;
 
 		[JsonIgnore] public double SameArrowStepWeightNormalized;
 		[JsonIgnore] public double NewArrowStepWeightNormalized;

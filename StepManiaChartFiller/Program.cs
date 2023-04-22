@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static StepManiaLibrary.Constants;
+using StepManiaLibrary.PerformedChart;
 using Fumen;
 using Fumen.ChartDefinition;
 using Fumen.Converters;
@@ -72,7 +73,6 @@ namespace StepManiaChartFiller
 				values.Add(stepType);
 				stepTypeReplacments[stepType] = values;
 			}
-			PerformedChart.CacheGraphLinks(StepGraph.FindAllGraphLinks(), stepTypeReplacments);
 
 			await ProcessChart();
 

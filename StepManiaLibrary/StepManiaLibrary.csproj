@@ -72,8 +72,11 @@
     <Compile Include="GraphNode.cs" />
     <Compile Include="MineUtils.cs" />
     <Compile Include="PadData.cs" />
-    <Compile Include="PerformedChart.cs" />
-    <Compile Include="PerformedChartConfig.cs" />
+    <Compile Include="PerformedChart\GraphLinkInstanceCache.cs" />
+    <Compile Include="PerformedChart\PerformanceNode.cs" />
+    <Compile Include="PerformedChart\PerformedChart.cs" />
+    <Compile Include="PerformedChart\Config.cs" />
+    <Compile Include="PerformedChart\SearchNode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StepData.cs" />
     <Compile Include="StepGraph.cs" />
