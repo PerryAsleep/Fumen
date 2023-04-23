@@ -1079,12 +1079,6 @@ namespace StepManiaLibrary.PerformedChart
 
 							arrowsOccupiedByMines[bestArrow] = true;
 						}
-						else
-						{
-							performedChart.LogWarn(
-								$"Skipping {mineEvent.Type:G} mine event at {mineEvent.Position}. Unable to determine best arrow to associate with this mine.");
-						}
-
 						break;
 					}
 					case MineType.NoArrow:
@@ -1104,12 +1098,6 @@ namespace StepManiaLibrary.PerformedChart
 
 							arrowsOccupiedByMines[firstLaneWithNoArrow] = true;
 						}
-						else
-						{
-							performedChart.LogWarn(
-								$"Skipping {mineEvent.Type:G} mine event at {mineEvent.Position}. No empty lanes.");
-						}
-
 						break;
 					}
 				}
