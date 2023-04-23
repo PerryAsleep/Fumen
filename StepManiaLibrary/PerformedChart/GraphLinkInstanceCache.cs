@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using Fumen;
 using static StepManiaLibrary.Constants;
@@ -135,14 +136,14 @@ namespace StepManiaLibrary.PerformedChart
 		/// Cache of GraphLinkInstance to all replacement GraphLinkInstances which can be used in a PerformedChart
 		/// based on the StepTypeReplacements in a given Config.
 		/// </summary>
-		private readonly Dictionary<Config, Dictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
+		private readonly ConcurrentDictionary<Config, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		public GraphLinkInstanceCache()
 		{
-			Cache = new Dictionary<Config, Dictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
+			Cache = new ConcurrentDictionary<Config, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
 		}
 
 		/// <summary>
@@ -395,6 +396,11 @@ namespace StepManiaLibrary.PerformedChart
 			return replacementLinks;
 		}
 
+		private static ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>> CreateCache(Config config)
+		{
+			return new ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>();
+		}
+
 		/// <summary>
 		/// Given a GraphLinkInstance, return all acceptable GraphLinkInstances that can be used
 		/// in its place in the PerformedChart according to the given Config.
@@ -412,33 +418,8 @@ namespace StepManiaLibrary.PerformedChart
 		/// </returns>
 		public List<GraphLinkInstance> GetGraphLinks(GraphLinkInstance sourceLink, Config config)
 		{
-			// Get the cache for this Config.
-			Dictionary<GraphLinkInstance, List<GraphLinkInstance>> cacheForConfig;
-			lock (Cache)
-			{
-				if (!Cache.ContainsKey(config))
-				{
-					Cache.Add(config, new Dictionary<GraphLinkInstance, List<GraphLinkInstance>>());
-				}
-				cacheForConfig = Cache[config];
-			}
-
-			// Get the List of GraphLinkInstances from the cache, or create them if they haven't been cached yet.
-			List<GraphLinkInstance> links;
-			lock (cacheForConfig)
-			{
-				if (cacheForConfig.TryGetValue(sourceLink, out List<GraphLinkInstance> cachedLinks))
-				{
-					links = cachedLinks;
-				}
-				else
-				{
-					links = FindAllReplacementLinks(sourceLink, config);
-					cacheForConfig[sourceLink] = links;
-				}
-			}
-
-			return links;
+			var cacheForConfig = Cache.GetOrAdd(config, CreateCache);
+			return cacheForConfig.GetOrAdd(sourceLink, FindAllReplacementLinks, config);
 		}
 
 		/// <summary>
