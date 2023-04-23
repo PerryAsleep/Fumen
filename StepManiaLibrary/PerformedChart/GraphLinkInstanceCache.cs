@@ -307,7 +307,7 @@ namespace StepManiaLibrary.PerformedChart
 		private List<GraphLinkInstance> FindAllReplacementLinks(GraphLinkInstance sourceLink, Config config)
 		{
 			var replacementLinks = new List<GraphLinkInstance>();
-			if (sourceLink == null)
+			if (sourceLink == null || sourceLink.GraphLink.IsBlank())
 				return replacementLinks;
 
 			// Accumulate links for each foot.
@@ -317,13 +317,29 @@ namespace StepManiaLibrary.PerformedChart
 			if (leftLinks.Count == 0 && rightLinks.Count == 0)
 				return replacementLinks;
 
+			var sourceStepsWithL = false;
+			var sourceStepsWithR = false;
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					if (sourceLink.GraphLink.Links[f, p].Valid)
+					{
+						if (f == L)
+							sourceStepsWithL = true;
+						else
+							sourceStepsWithR = true;
+					}
+				}
+			}
+
 			// Left foot step.
-			if (leftLinks.Count > 0 && rightLinks.Count == 0)
+			if (sourceStepsWithL && !sourceStepsWithR)
 			{
 				replacementLinks.AddRange(leftLinks);
 			}
 			// Right foot step.
-			else if (rightLinks.Count > 0 && leftLinks.Count == 0)
+			else if (sourceStepsWithR && !sourceStepsWithL)
 			{
 				replacementLinks.AddRange(rightLinks);
 			}
