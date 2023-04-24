@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StepManiaLibrary;
-using static StepManiaLibrary.Constants;
+using static Fumen.Converters.SMCommon;
+using System.Collections.Generic;
 
 namespace StepManiaLibraryTests
 {
@@ -11,62 +12,103 @@ namespace StepManiaLibraryTests
 	[TestClass]
 	public class TestArrowData
 	{
-		private static PadData SPPadData;
-		private static PadData DPPadData;
+		private static ChartType[] PadDataTypes = new ChartType[]
+		{
+			ChartType.dance_single,
+			ChartType.dance_double,
+			ChartType.dance_solo,
+			ChartType.dance_threepanel,
+			ChartType.pump_single,
+			ChartType.pump_halfdouble,
+			ChartType.pump_double,
+			ChartType.smx_beginner,
+			ChartType.smx_single,
+			ChartType.smx_dual,
+			ChartType.smx_full,
+		};
+
+		private static Dictionary<ChartType, PadData> TestPadData;
 
 		static TestArrowData()
 		{
-			var spPadDataTask = PadData.LoadPadData("dance-single", "dance-single.json");
-			var dpPadDataTask = PadData.LoadPadData("dance-double", "dance-double.json");
-			Task.WaitAll(spPadDataTask, dpPadDataTask);
-			SPPadData = spPadDataTask.Result;
-			DPPadData = dpPadDataTask.Result;
+			TestPadData = new Dictionary<ChartType, PadData>();
+			var tasks = new Task<PadData>[PadDataTypes.Length];
+			for (var i = 0; i < PadDataTypes.Length; i++)
+			{
+				var typeStr = ChartTypeString(PadDataTypes[i]);
+				tasks[i] = PadData.LoadPadData(typeStr, $"{typeStr}.json");
+			}
+			Task.WaitAll(tasks);
+			for (var i = 0; i < PadDataTypes.Length; i++)
+			{
+				TestPadData[PadDataTypes[i]] = tasks[i].Result;
+			}
 		}
 
 		/// <summary>
-		/// ArrowData arrays should be symmetric.
-		/// Asymmetric data likely means a typo in construction.
+		/// Tests that expected pad data can fit within other pad data.
 		/// </summary>
 		[TestMethod]
-		public void TestSymmetry()
+		public void TestCanFitWithin()
 		{
-			TestSymmetry(SPPadData.ArrowData);
-			TestSymmetry(DPPadData.ArrowData);
-		}
-
-		private void TestSymmetry(ArrowData[] arrowData)
-		{
-			var numArrows = arrowData.Length;
-			for (var a = 0; a < numArrows; a++)
+			foreach (var kvp in TestPadData)
 			{
-				for (var a2 = 0; a2 < numArrows; a2++)
-				{
-					var oppositeA = numArrows - a - 1;
-					var oppositeA2 = numArrows - a2 - 1;
+				Assert.IsTrue(kvp.Value.CanFitWithin(kvp.Value));
+			}
 
-					for (var f = 0; f < NumFeet; f++)
+			var expectedFits = new Dictionary<ChartType, HashSet<ChartType>>();
+			expectedFits[ChartType.dance_single] = new HashSet<ChartType> {
+				ChartType.dance_double,
+				ChartType.dance_solo,
+				ChartType.smx_single,
+				ChartType.smx_full,
+			};
+			expectedFits[ChartType.dance_double] = new HashSet<ChartType> {
+				ChartType.smx_full,
+			};
+			expectedFits[ChartType.dance_threepanel] = new HashSet<ChartType> {
+				ChartType.dance_solo
+			};
+			expectedFits[ChartType.pump_single] = new HashSet<ChartType> {
+				ChartType.pump_double
+			};
+			expectedFits[ChartType.pump_halfdouble] = new HashSet<ChartType> {
+				ChartType.pump_double
+			};
+			expectedFits[ChartType.smx_beginner] = new HashSet<ChartType> {
+				ChartType.dance_solo,
+				ChartType.smx_single,
+				ChartType.smx_dual,
+				ChartType.smx_full,
+			};
+			expectedFits[ChartType.smx_single] = new HashSet<ChartType> {
+				ChartType.smx_full,
+			};
+			expectedFits[ChartType.smx_dual] = new HashSet<ChartType> {
+				ChartType.smx_full,
+			};
+
+			for (var t1 = 0; t1 < PadDataTypes.Length; t1++)
+			{
+				for (var t2 = 0; t2 < PadDataTypes.Length; t2++)
+				{
+					var p1 = TestPadData[PadDataTypes[t1]];
+					var p2 = TestPadData[PadDataTypes[t2]];
+
+					if (t1 == t2)
 					{
-						var oppositeF = NumFeet - f - 1;
-						Assert.AreEqual(arrowData[a].BracketablePairingsOtherHeel[f][a2],
-							arrowData[oppositeA].BracketablePairingsOtherToe[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].BracketablePairingsOtherToe[f][a2],
-							arrowData[oppositeA].BracketablePairingsOtherHeel[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairings[f][a2],
-							arrowData[oppositeA].OtherFootPairings[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsStretch[f][a2],
-							arrowData[oppositeA].OtherFootPairingsStretch[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverBehind[f][a2],
-							arrowData[oppositeA].OtherFootPairingsCrossoverFront[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverBehindStretch[f][a2],
-							arrowData[oppositeA].OtherFootPairingsCrossoverFrontStretch[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverFront[f][a2],
-							arrowData[oppositeA].OtherFootPairingsCrossoverBehind[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsCrossoverFrontStretch[f][a2],
-							arrowData[oppositeA].OtherFootPairingsCrossoverBehindStretch[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsInverted[f][a2],
-							arrowData[oppositeA].OtherFootPairingsInverted[oppositeF][oppositeA2]);
-						Assert.AreEqual(arrowData[a].OtherFootPairingsInvertedStretch[f][a2],
-							arrowData[oppositeA].OtherFootPairingsInvertedStretch[oppositeF][oppositeA2]);
+						Assert.IsTrue(p1.CanFitWithin(p2));
+					}
+					else
+					{
+						if (expectedFits.ContainsKey(PadDataTypes[t1]))
+						{
+							Assert.AreEqual(expectedFits[PadDataTypes[t1]].Contains(PadDataTypes[t2]), p1.CanFitWithin(p2));
+						}
+						else
+						{
+							Assert.IsFalse(p1.CanFitWithin(p2));
+						}
 					}
 				}
 			}

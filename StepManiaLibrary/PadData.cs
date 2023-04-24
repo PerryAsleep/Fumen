@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -273,6 +274,183 @@ namespace StepManiaLibrary
 			var dx = GetXDistance(x1, x2);
 			var dy = GetYDistance(y1, y2);
 			return Math.Sqrt(dx * dx + dy * dy);
+		}
+
+		private (int, int, int, int) GetBounds()
+		{
+			var minX = int.MaxValue;
+			var maxX = int.MinValue;
+			var minY = int.MaxValue;
+			var maxY = int.MinValue;
+
+			for (var i = 0; i < NumArrows; i++)
+			{
+				minX = Math.Min(minX, ArrowData[i].X);
+				maxX = Math.Max(maxX, ArrowData[i].X);
+				minY = Math.Min(minY, ArrowData[i].Y);
+				maxY = Math.Max(maxY, ArrowData[i].Y);
+			}
+
+			return (minX, maxX, minY, maxY);
+		}
+
+		private int FindArrowAt(int x, int y)
+		{
+			for (int a = 0; a < NumArrows; a++)
+				if (ArrowData[a].X == x && ArrowData[a].Y == y)
+					return a;
+			return InvalidArrowIndex;
+		}
+
+		/// <summary>
+		/// Returns whether this PadData can fit within the given other PadData.
+		/// For this to fit within the other data, all of it's arrows must be able to be represented in
+		/// the other data, and all the moves between those arrows must be able to be represented in the
+		/// other data.
+		/// For example, dance-single fits within dance-double (it is a clear subset) and smx-beginner fits
+		/// within dance-solo (it can be shifted upwards so the three in a row overlap the three top solo
+		/// arrows).
+		/// </summary>
+		/// <param name="other">Other PadData to check.</param>
+		/// <returns>True if this PadData fits within the other PadData and false otherwise.</returns>
+		public bool CanFitWithin(PadData other)
+		{
+			// PadData always overlaps itself.
+			if (this == other)
+				return true;
+			// Early out on arrow count.
+			if (NumArrows > other.NumArrows)
+				return false;
+
+			// Get the bounds and ensure the bounds of this PadData fit within the other's bounds.
+			var (minX, maxX, minY, maxY) = GetBounds();
+			var dx = maxX + 1 - minX;
+			var dy = maxY + 1 - minY;
+			var (otherMinX, otherMaxX, otherMinY, otherMaxY) = other.GetBounds();
+			var otherDx = otherMaxX + 1 - otherMinX;
+			var otherDy = otherMaxY + 1 - otherMinY;
+			var xExtraRoom = otherDx - dx;
+			var yExtraRoom = otherDy - dy;
+			if (xExtraRoom < 0 || yExtraRoom < 0)
+				return false;
+
+			// Try every valid coordinate overlap.
+			for (int otherStartX = otherMinX; otherStartX <= otherMinX + xExtraRoom; otherStartX++)
+			{
+				for (int otherStartY = otherMinY; otherStartY <= otherMinY + yExtraRoom; otherStartY++)
+				{
+					// For this overlap coordinate, ensure this PadData's arrows can lay in the same
+					// pattern on the other PadData's arrows.
+					var validOverlap = true;
+					var arrowMapping = new Dictionary<int, int>();
+					for (int thisX = minX, otherX = otherStartX; thisX <= maxX; thisX++, otherX++)
+					{
+						for (int thisY = minY, otherY = otherStartY; thisY <= maxY; thisY++, otherY++)
+						{
+							var thisA = FindArrowAt(thisX, thisY);
+							if (thisA == InvalidArrowIndex)
+								continue;
+							var otherA = other.FindArrowAt(otherX, otherY);
+							if (otherA == InvalidArrowIndex)
+							{
+								validOverlap = false;
+								break;
+							}
+							arrowMapping[thisA] = otherA;
+						}
+						if (!validOverlap)
+							break;
+					}
+					if (!validOverlap)
+						continue;
+
+					// At this point the arrows overlap.
+					// Ensure that all the moves between the arrows are also preserved.
+					// This is expected to be true unless the PadData used the same coordinates but had
+					// for example unbracketable arrows or arrows of a different size such that stretch boundaries were different.
+					var pairingsMatch = true;
+					for (var a1 = 0; a1 < NumArrows; a1++)
+					{
+						for (var a2 = 0; a2 < NumArrows; a2++)
+						{
+							for (var f = 0; f < NumFeet; f++)
+							{
+								if (ArrowData[a1].BracketablePairingsOtherHeel[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsOtherHeel[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].BracketablePairingsOtherToe[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsOtherToe[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairings[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairings[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsStretch[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsStretch[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsCrossoverFront[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverFront[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsCrossoverFrontStretch[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverFrontStretch[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsCrossoverBehind[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverBehind[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsCrossoverBehindStretch[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverBehindStretch[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsInverted[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsInverted[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+								if (ArrowData[a1].OtherFootPairingsInvertedStretch[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsInvertedStretch[f][arrowMapping[a2]])
+								{
+									pairingsMatch = false;
+									break;
+								}
+							}
+							if (!pairingsMatch)
+								break;
+						}
+						if (!pairingsMatch)
+							break;
+					}
+
+					// If all the pairings match then this PadData fits within the other PadData.
+					if (pairingsMatch)
+						return true;
+				}
+			}
+
+			// No valid fit was found.
+			return false;
 		}
 
 		#region Logging
