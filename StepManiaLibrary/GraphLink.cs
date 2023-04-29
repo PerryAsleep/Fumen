@@ -283,7 +283,7 @@ namespace StepManiaLibrary
 
 		/// <summary>
 		/// Gets wither this link involves any brackets.
-		/// Includes both single arrow and multiple arrow steps.
+		/// Includes only multiple arrow steps.
 		/// </summary>
 		/// <returns>True if this link involves any brackets and false otherwise.</returns>
 		public bool InvolvesBracket()
@@ -293,6 +293,26 @@ namespace StepManiaLibrary
 				for (var p = 0; p < NumFootPortions; p++)
 				{
 					if (Links[f, p].Valid && StepData.Steps[(int) Links[f, p].Step].IsBracket)
+						return true;
+				}
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Gets wither this link involves any brackets.
+		/// Includes both single arrow and multiple arrow steps.
+		/// </summary>
+		/// <returns>True if this link involves any brackets and false otherwise.</returns>
+		public bool InvolvesBracketOrSingleArrowBracket()
+		{
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					var sd = StepData.Steps[(int)Links[f, p].Step];
+					if (Links[f, p].Valid && (sd.IsBracket || sd.IsOneArrowBracket))
 						return true;
 				}
 			}

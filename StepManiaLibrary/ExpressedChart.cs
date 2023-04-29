@@ -812,7 +812,7 @@ namespace StepManiaLibrary
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						releases[0].IntegerPosition, timeSeconds, lastMines, lastReleases);
+						releases[0].IntegerPosition, timeSeconds, lastMines, lastReleases, true);
 				}
 
 				// Get mines and record them for processing after the search is complete.
@@ -850,7 +850,7 @@ namespace StepManiaLibrary
 
 					// Add children and prune.
 					currentSearchNodes = AddChildrenAndPrune(currentSearchNodes, currentState, generatedStateBuffer,
-						steps[0].IntegerPosition, timeSeconds, lastMines, lastReleases);
+						steps[0].IntegerPosition, timeSeconds, lastMines, lastReleases, false);
 				}
 
 				// Update the current state now that the events at this position have been processed.
@@ -969,7 +969,7 @@ namespace StepManiaLibrary
 			var node = Root;
 			while (node != null)
 			{
-				if (node.PreviousLink?.GraphLink?.InvolvesBracket() ?? false)
+				if (node.PreviousLink?.GraphLink?.InvolvesBracketOrSingleArrowBracket() ?? false)
 					bracketCount++;
 				node = node.GetNextNode();
 			}
@@ -1038,20 +1038,27 @@ namespace StepManiaLibrary
 			int position,
 			double timeSeconds,
 			int[] lastMines,
-			int[] lastReleases)
+			int[] lastReleases,
+			bool isRelease)
 		{
 			var childSearchNodes = new HashSet<ChartSearchNode>();
 
 			var instanceTypes = new InstanceStepType[StepGraph.NumArrows];
+			var numNewActions = 0;
 			for (var a = 0; a < StepGraph.NumArrows; a++)
 			{
-				if (currentState[a] == SearchState.Roll || currentState[a] == SearchState.Rolling)
+				var c = currentState[a];
+				if (c == SearchState.Tap || c == SearchState.Hold || c == SearchState.Roll || c == SearchState.Fake || c == SearchState.Lift)
+					numNewActions++;
+				if (c == SearchState.Roll || c == SearchState.Rolling)
 					instanceTypes[a] = InstanceStepType.Roll;
-				else if (currentState[a] == SearchState.Fake)
+				else if (c == SearchState.Fake)
 					instanceTypes[a] = InstanceStepType.Fake;
-				else if (currentState[a] == SearchState.Lift)
+				else if (c == SearchState.Lift)
 					instanceTypes[a] = InstanceStepType.Lift;
 			}
+			var couldPossiblyBracket = numNewActions > 1;
+			var couldPossiblyJump = numNewActions > 1;
 
 			// Check every current ChartSearchNode.
 			foreach (var searchNode in currentSearchNodes)
@@ -1061,6 +1068,16 @@ namespace StepManiaLibrary
 				// Check every GraphLink out of the ChartSearchNode's GraphNode.
 				foreach (var l in searchNode.GraphNode.Links)
 				{
+					// Early out. Most steps are simple. Most StepTypes are complicated. Earlying out when we know
+					// we won't jump or bracket saves us from looping over a large number of unnecessary bracket and
+					// jump StepType combinations below. This is a huge performance optimization.
+					if (!couldPossiblyJump && l.Key.IsJump())
+						continue;
+					if (!couldPossiblyBracket && l.Key.InvolvesBracket())
+						continue;
+					if (isRelease && !l.Key.IsRelease())
+						continue;
+
 					// Check every resulting child GraphNode.
 					for (var childNodeIndex = 0; childNodeIndex < l.Value.Count; childNodeIndex++)
 					{
