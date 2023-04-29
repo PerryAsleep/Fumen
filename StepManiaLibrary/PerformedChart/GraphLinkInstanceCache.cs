@@ -7,8 +7,8 @@ using static StepManiaLibrary.Constants;
 namespace StepManiaLibrary.PerformedChart
 {
 	/// <summary>
-	/// Cache of acceptable GraphLinkInstances that can be used as replacements for other GraphLinkInstances.
-	/// PerformedChart Configs specify StepTypeFallbacks, which define acceptable fallback StepTypes for each StepType.
+	/// Cache of acceptable GraphLinkInstances that can be used as replacements for other GraphLinkInstances based
+	/// on StepTypeFallbacks which define acceptable fallback StepTypes for each StepType.
 	/// This allows for falling back to the most appropriate other StepTypes when the original StepType can't be used
 	/// when generating a PerformedChart. These StepTypes are ordered from most preferable to least preferable.
 	/// Given that steps can involve multiple feet, multiple portions per foot, and multiple FootAction types, the
@@ -27,12 +27,12 @@ namespace StepManiaLibrary.PerformedChart
 		private class ReplacementGraphLinkComparer : IComparer<GraphLinkInstance>
 		{
 			private GraphLink SourceLink;
-			private Config Config;
+			private StepTypeFallbacks Fallbacks;
 
-			public ReplacementGraphLinkComparer(GraphLink sourceLink, Config config)
+			public ReplacementGraphLinkComparer(GraphLink sourceLink, StepTypeFallbacks fallbacks)
 			{
 				SourceLink = sourceLink;
-				Config = config;
+				Fallbacks = fallbacks;
 			}
 
 			public int Compare(GraphLinkInstance l1, GraphLinkInstance l2)
@@ -67,7 +67,7 @@ namespace StepManiaLibrary.PerformedChart
 				{
 					if (SourceLink.Links[L, p].Valid)
 					{
-						var numFallbacks = Config.GetFallbacks(SourceLink.Links[L, p].Step).Count();
+						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[L, p].Step).Count();
 						sourceLHasAnyValid = true;
 
 						if (!l1.GraphLink.Links[L, p].Valid)
@@ -80,13 +80,13 @@ namespace StepManiaLibrary.PerformedChart
 							l2LHasAnyValid = true;
 
 						if (l1LCost.DoubleEquals(0.0) && l1.GraphLink.Links[L, p].Valid)
-							l1LCost = (double)Config.GetFallbackIndex(SourceLink.Links[L, p].Step, l1.GraphLink.Links[L, p].Step) / numFallbacks;
+							l1LCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[L, p].Step, l1.GraphLink.Links[L, p].Step) / numFallbacks;
 						if (l2LCost.DoubleEquals(0.0) && l2.GraphLink.Links[L, p].Valid)
-							l2LCost = (double)Config.GetFallbackIndex(SourceLink.Links[L, p].Step, l2.GraphLink.Links[L, p].Step) / numFallbacks;
+							l2LCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[L, p].Step, l2.GraphLink.Links[L, p].Step) / numFallbacks;
 					}
 					if (SourceLink.Links[R, p].Valid)
 					{
-						var numFallbacks = Config.GetFallbacks(SourceLink.Links[R, p].Step).Count();
+						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[R, p].Step).Count();
 						sourceRHasAnyValid = true;
 
 						if (!l1.GraphLink.Links[R, p].Valid)
@@ -99,9 +99,9 @@ namespace StepManiaLibrary.PerformedChart
 							l2RHasAnyValid = true;
 
 						if (l1RCost.DoubleEquals(0.0) && l1.GraphLink.Links[R, p].Valid)
-							l1RCost = (double)Config.GetFallbackIndex(SourceLink.Links[R, p].Step, l1.GraphLink.Links[R, p].Step) / numFallbacks;
+							l1RCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[R, p].Step, l1.GraphLink.Links[R, p].Step) / numFallbacks;
 						if (l2RCost.DoubleEquals(0.0) && l2.GraphLink.Links[R, p].Valid)
-							l2RCost = (double)Config.GetFallbackIndex(SourceLink.Links[R, p].Step, l2.GraphLink.Links[R, p].Step) / numFallbacks;
+							l2RCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[R, p].Step, l2.GraphLink.Links[R, p].Step) / numFallbacks;
 					}
 				}
 
@@ -134,32 +134,39 @@ namespace StepManiaLibrary.PerformedChart
 
 		/// <summary>
 		/// Cache of GraphLinkInstance to all replacement GraphLinkInstances which can be used in a PerformedChart
-		/// based on the StepTypeReplacements in a given Config.
+		/// based on the StepTypeFallbacks.
 		/// </summary>
-		private readonly ConcurrentDictionary<Config, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
+		private readonly ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
+
+		/// <summary>
+		/// Cache of GraphLinkInstance to all replacement GraphLinkInstances when there are no StepTypeFallbacks.
+		/// Each value in this dictionary is a list containing only the key.
+		/// </summary>
+		private ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>> NullFallbacksCache;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		public GraphLinkInstanceCache()
 		{
-			Cache = new ConcurrentDictionary<Config, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
+			Cache = new ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
+			NullFallbacksCache = new ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>();
 		}
 
 		/// <summary>
 		/// Finds all the valid replacement GraphLinkInstance for the given foot that can be used to
-		/// replace the given GraphLinkInstance based on the given Config's StepTypeFallbacks.
+		/// replace the given GraphLinkInstance based on the given StepTypeFallbacks.
 		/// Helper function for FindAllReplacementLinks.
 		/// Results are a list of GraphLinkInstance with only one foot's worth of data set.
 		/// Results are unsorted.
 		/// </summary>
 		/// <param name="foot">Foot.</param>
 		/// <param name="sourceLink">Original GraphLinkInstance.</param>
-		/// <param name="config">Config defining StepTypeFallbacks.</param>
+		/// <param name="fallbacks">StepTypeFallbacks.</param>
 		/// <returns>List of all valid replacement FootArrowStates.</returns>
-		private List<GraphLinkInstance> FindReplacementLinksForFoot(int foot, GraphLinkInstance sourceLink, Config config)
+		private List<GraphLinkInstance> FindReplacementLinksForFoot(int foot, GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
 		{
-			var stepTypeReplacements = config.StepTypeFallbacks;
+			var stepTypeReplacements = fallbacks.GetFallbacks();
 			var originalLinks = sourceLink.GraphLink.Links;
 			var footLinks = new List<GraphLinkInstance>();
 
@@ -299,21 +306,21 @@ namespace StepManiaLibrary.PerformedChart
 		}
 
 		/// <summary>
-		/// Given a GraphLink from an ExpressedChart, find andreturn all acceptable GraphLinks that can
-		/// be used in its place in the PerformedChart according to the given Config.
+		/// Given a GraphLink from an ExpressedChart, find and return all acceptable GraphLinks that can
+		/// be used in its place in the PerformedChart according to the given StepTypeFallbacks.
 		/// </summary>
 		/// <param name="sourceLink">Original GraphLink.</param>
-		/// <param name="config">Config defining StepTypeFallbacks.</param>
+		/// <param name="fallbacks">StepTypeFallbacks.</param>
 		/// <returns>List of all valid GraphLink replacements sorted by how good they are.</returns>
-		private List<GraphLinkInstance> FindAllReplacementLinks(GraphLinkInstance sourceLink, Config config)
+		private List<GraphLinkInstance> FindAllReplacementLinks(GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
 		{
 			var replacementLinks = new List<GraphLinkInstance>();
 			if (sourceLink == null || sourceLink.GraphLink.IsBlank())
 				return replacementLinks;
 
 			// Accumulate links for each foot.
-			var leftLinks = FindReplacementLinksForFoot(L, sourceLink, config);
-			var rightLinks = FindReplacementLinksForFoot(R, sourceLink, config);
+			var leftLinks = FindReplacementLinksForFoot(L, sourceLink, fallbacks);
+			var rightLinks = FindReplacementLinksForFoot(R, sourceLink, fallbacks);
 
 			if (leftLinks.Count == 0 && rightLinks.Count == 0)
 				return replacementLinks;
@@ -392,34 +399,42 @@ namespace StepManiaLibrary.PerformedChart
 			}
 
 			// Sort. Better options should come first.
-			replacementLinks.Sort(new ReplacementGraphLinkComparer(sourceLink.GraphLink, config));
+			replacementLinks.Sort(new ReplacementGraphLinkComparer(sourceLink.GraphLink, fallbacks));
 			return replacementLinks;
 		}
 
-		private static ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>> CreateCache(Config config)
+		private static ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>> CreateCache(StepTypeFallbacks fallbacks)
 		{
 			return new ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>();
 		}
 
+		private static List<GraphLinkInstance> CreateNullbacksList(GraphLinkInstance link)
+		{
+			return new List<GraphLinkInstance>() { link };
+		}
+
 		/// <summary>
 		/// Given a GraphLinkInstance, return all acceptable GraphLinkInstances that can be used
-		/// in its place in the PerformedChart according to the given Config.
-		/// This function can involve some heavy loops depending on how deep the Config's
-		/// StepTypeReplacements are and how many valid foot portions are present in the given link.
-		/// Results are cached for the given config and source link so subsequent calls with the same
-		/// parameters return with an O(1) lookup.
+		/// in its place in the PerformedChart according to the given StepTypeFallbacks.
+		/// This function can involve some heavy loops depending on how deep the StepTypeFallbacks
+		/// are and how many valid foot portions are present in the given link.
+		/// Results are cached for the given StepTypeFallbacksg and source link so subsequent call
+		/// with the same parameters return with an O(1) lookup.
 		/// Thread-safe.
 		/// </summary>
 		/// <param name="sourceLink">Original GraphLinkInstance.</param>
-		/// <param name="config">Config defining StepTypeFallbacks.</param>
+		/// <param name="fallbacks">StepTypeFallbacks.</param>
 		/// <returns>
 		/// List of all valid GraphLinkInstance replacements sorted by how good they are.
 		/// This will include Blank GraphLinkInstances.
 		/// </returns>
-		public List<GraphLinkInstance> GetGraphLinks(GraphLinkInstance sourceLink, Config config)
+		public List<GraphLinkInstance> GetGraphLinks(GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
 		{
-			var cacheForConfig = Cache.GetOrAdd(config, CreateCache);
-			return cacheForConfig.GetOrAdd(sourceLink, FindAllReplacementLinks, config);
+			if (fallbacks == null)
+				return NullFallbacksCache.GetOrAdd(sourceLink, CreateNullbacksList);
+
+			var cacheForFallbacks = Cache.GetOrAdd(fallbacks, CreateCache);
+			return cacheForFallbacks.GetOrAdd(sourceLink, FindAllReplacementLinks, fallbacks);
 		}
 
 		/// <summary>

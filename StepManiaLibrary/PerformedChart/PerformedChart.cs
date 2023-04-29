@@ -117,6 +117,7 @@ namespace StepManiaLibrary.PerformedChart
 		public static PerformedChart CreateFromExpressedChart(
 			StepGraph stepGraph,
 			Config config,
+			StepTypeFallbacks fallbacks,
 			ExpressedChart expressedChart,
 			int randomSeed,
 			string logIdentifier)
@@ -134,7 +135,7 @@ namespace StepManiaLibrary.PerformedChart
 				// Set up a root search node at the root GraphNode.
 				rootSearchNode = new SearchNode(
 					rootNode,
-					LinkCache.GetGraphLinks(expressedChart.StepEvents[0].LinkInstance, config),
+					LinkCache.GetGraphLinks(expressedChart.StepEvents[0].LinkInstance, fallbacks),
 					null,
 					0.0,
 					0.0,
@@ -244,7 +245,7 @@ namespace StepManiaLibrary.PerformedChart
 									if (nextDepth < expressedChart.StepEvents.Count)
 									{
 										var sourceLinkKey = expressedChart.StepEvents[nextDepth].LinkInstance;
-										graphLinksToNextNode = LinkCache.GetGraphLinks(sourceLinkKey, config);
+										graphLinksToNextNode = LinkCache.GetGraphLinks(sourceLinkKey, fallbacks);
 									}
 
 									// Set up a new SearchNode.

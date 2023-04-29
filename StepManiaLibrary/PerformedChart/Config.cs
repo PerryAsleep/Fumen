@@ -361,19 +361,6 @@ namespace StepManiaLibrary.PerformedChart
 		[JsonInclude] public StepTighteningConfig StepTightening = new StepTighteningConfig();
 
 		/// <summary>
-		/// StepTypeFallbacks from config as strings.
-		/// </summary>
-		[JsonInclude, JsonPropertyName("StepTypeFallbacks")] public Dictionary<StepType, List<string>> StepTypeFallbacksStrings = new Dictionary<StepType, List<string>>();
-		/// <summary>
-		/// Parsed StepTypeFallbacks.
-		/// </summary>
-		[JsonIgnore] public Dictionary<StepType, List<StepType>> StepTypeFallbacks = new Dictionary<StepType, List<StepType>>();
-		/// <summary>
-		/// Cached indexes of StepType fallbacks per StepType.
-		/// </summary>
-		[JsonIgnore] private Dictionary<StepType, Dictionary<StepType, int>> StepTypeFallbackIndexes = new Dictionary<StepType, Dictionary<StepType, int>>();
-
-		/// <summary>
 		/// Dictionary of StepMania StepsType to a List of integers representing weights
 		/// for each lane. When generating a PerformedChart we should try to match these weights
 		/// for distributing arrows.
@@ -409,14 +396,6 @@ namespace StepManiaLibrary.PerformedChart
 			StepTightening.SetAsOverrideOf(other.StepTightening);
 			Facing.SetAsOverrideOf(other.Facing);
 
-			foreach(var kvp in other.StepTypeFallbacksStrings)
-			{
-				if (!StepTypeFallbacksStrings.ContainsKey(kvp.Key))
-				{
-					StepTypeFallbacksStrings.Add(kvp.Key, new List<string>(kvp.Value));
-				}
-			}
-
 			foreach (var kvp in other.ArrowWeights)
 			{
 				if (!ArrowWeights.ContainsKey(kvp.Key))
@@ -445,78 +424,6 @@ namespace StepManiaLibrary.PerformedChart
 						ArrowWeightsNormalized[entry.Key].Add((double)weight / sum);
 				}
 			}
-
-			// Init StepTypeFallbacks.
-			foreach (var kvp in StepTypeFallbacksStrings)
-			{
-				var stepTypeList = new List<StepType>();
-				var ancestors = new HashSet<StepType> { kvp.Key };
-				try
-				{
-					ParseStepTypeList(ancestors, kvp.Value, stepTypeList);
-				}
-				catch(Exception e)
-				{
-					e.Data.Add("StepTypeFallback", kvp.Key);
-					throw e;
-				}
-				StepTypeFallbacks.Add(kvp.Key, stepTypeList);
-			}
-			foreach(var kvp in StepTypeFallbacks)
-			{
-				var order = new Dictionary<StepType, int>();
-				var index = 0;
-				foreach (var fallback in kvp.Value)
-				{
-					order.Add(fallback, index);
-					index++;
-				}
-				StepTypeFallbackIndexes.Add(kvp.Key, order);
-			}
-		}
-
-		/// <summary>
-		/// Parse a list of strings of StepTypes from the config's StepTypeFallbacks elements that may include
-		/// special entries to include other lists.
-		/// </summary>
-		/// <param name="ancestors">The visited nodes to prevent infinite recursion due to misconfiguration.</param>
-		/// <param name="stepTypeStringList">The list of strings of StepType or include entries.</param>
-		/// <param name="stepTypeList">The StepType list to generate.</param>
-		private void ParseStepTypeList(HashSet<StepType> ancestors, List<string> stepTypeStringList, List<StepType> stepTypeList)
-		{
-			foreach (var stepTypeStr in stepTypeStringList)
-			{
-				// This value starts with the character indicating it should expand to another list.
-				if (stepTypeStr.StartsWith("*"))
-				{
-					if (!Enum.TryParse(stepTypeStr.Substring(1), out StepType baseStepType))
-					{
-						throw new Exception($"Could not parse \"{stepTypeStr}\".");
-					}
-					if (!StepTypeFallbacksStrings.TryGetValue(baseStepType, out var baseStrings))
-					{
-						throw new Exception($"No \"{baseStepType:G}\" entry found for \"{stepTypeStr}\".");
-					}
-					if (ancestors.Contains(baseStepType))
-					{
-						throw new Exception($"Cycle detected on {stepTypeStr}.");
-					}
-
-					// Record this type and recurse.
-					ancestors.Add(baseStepType);
-					ParseStepTypeList(ancestors, baseStrings, stepTypeList);
-				}
-
-				// This is a normal value representing a StepType.
-				else
-				{
-					if (!Enum.TryParse(stepTypeStr, out StepType stepType))
-					{
-						throw new Exception($"Could not parse \"{stepTypeStr}\".");
-					}
-					stepTypeList.Add(stepType);
-				}
-			}
 		}
 
 		/// <summary>
@@ -530,31 +437,7 @@ namespace StepManiaLibrary.PerformedChart
 			errors = LateralTightening.Validate(pccId) || errors;
 			errors = StepTightening.Validate(pccId) || errors;
 			errors = Facing.Validate(pccId) || errors;
-			errors = ValidateStepTypeFallbacks(pccId) || errors;
 			return !errors;
-		}
-
-		/// <summary>
-		/// Lor errors if any StepType fallbacks aren't present.
-		/// </summary>
-		/// <param name="pccId">Identifier for logging.</param>
-		/// <returns>True if errors were found and false otherwise.</returns>
-		private bool ValidateStepTypeFallbacks(string pccId)
-		{
-			var stepTypes = Enum.GetValues(typeof(StepType)).Cast<StepType>().ToList();
-			var errors = false;
-			foreach (var stepType in stepTypes)
-			{
-				if (!StepTypeFallbacks.ContainsKey(stepType) || StepTypeFallbacks[stepType].Count == 0)
-				{
-					LogError($"No StepTypeFallbacks for {stepType:G}."
-							+ $" To ignore {stepType:G} steps, include an entry for it in StepTypeFallbacks and with an"
-							+ " array value containing at least one StepType to use as a replacement.",
-							pccId);
-					errors = true;
-				}
-			}
-			return errors;
 		}
 
 		/// <summary>
@@ -601,16 +484,6 @@ namespace StepManiaLibrary.PerformedChart
 			}
 
 			return !errors;
-		}
-
-		public List<StepType> GetFallbacks(StepType stepType)
-		{
-			return StepTypeFallbacks[stepType];
-		}
-
-		public int GetFallbackIndex(StepType stepType, StepType fallbackStepType)
-		{
-			return StepTypeFallbackIndexes[stepType][fallbackStepType];
 		}
 
 		#region Logging

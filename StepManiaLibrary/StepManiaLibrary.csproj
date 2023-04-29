@@ -77,6 +77,7 @@
     <Compile Include="PerformedChart\PerformedChart.cs" />
     <Compile Include="PerformedChart\Config.cs" />
     <Compile Include="PerformedChart\SearchNode.cs" />
+    <Compile Include="PerformedChart\StepTypeFallbacks.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StepData.cs" />
     <Compile Include="StepGraph.cs" />
@@ -88,75 +89,78 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="dance-double.json">
+    <None Include="dance-double.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="dance-single.json">
+    <None Include="dance-single.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="dance-double.fsg">
+    <None Include="dance-double.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="dance-single.fsg">
+    </None>
+    <None Include="dance-single.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="dance-solo.fsg">
+    </None>
+    <None Include="dance-solo.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="app.config" />
     <None Include="dance-solo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="dance-threepanel.fsg">
+    <None Include="dance-threepanel.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="dance-threepanel.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="packages.config" />
-    <Content Include="pump-double.fsg">
+    <None Include="default-steptype-fallbacks.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
+    <None Include="packages.config" />
+    <None Include="pump-double.fsg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="pump-double.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="pump-halfdouble.fsg">
+    <None Include="pump-halfdouble.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="pump-halfdouble.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="pump-single.fsg">
+    <None Include="pump-single.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="pump-single.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="smx-beginner.fsg">
+    <None Include="smx-beginner.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="smx-beginner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="smx-dual.fsg">
+    <None Include="smx-dual.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="smx-dual.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="smx-full.fsg">
+    <None Include="smx-full.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="smx-full.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="smx-single.fsg">
+    <None Include="smx-single.fsg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="smx-single.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
