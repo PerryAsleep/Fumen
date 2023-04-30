@@ -139,18 +139,11 @@ namespace StepManiaLibrary.PerformedChart
 		private readonly ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
 
 		/// <summary>
-		/// Cache of GraphLinkInstance to all replacement GraphLinkInstances when there are no StepTypeFallbacks.
-		/// Each value in this dictionary is a list containing only the key.
-		/// </summary>
-		private ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>> NullFallbacksCache;
-
-		/// <summary>
 		/// Constructor.
 		/// </summary>
 		public GraphLinkInstanceCache()
 		{
 			Cache = new ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
-			NullFallbacksCache = new ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>();
 		}
 
 		/// <summary>
@@ -408,11 +401,6 @@ namespace StepManiaLibrary.PerformedChart
 			return new ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>();
 		}
 
-		private static List<GraphLinkInstance> CreateNullbacksList(GraphLinkInstance link)
-		{
-			return new List<GraphLinkInstance>() { link };
-		}
-
 		/// <summary>
 		/// Given a GraphLinkInstance, return all acceptable GraphLinkInstances that can be used
 		/// in its place in the PerformedChart according to the given StepTypeFallbacks.
@@ -431,7 +419,11 @@ namespace StepManiaLibrary.PerformedChart
 		public List<GraphLinkInstance> GetGraphLinks(GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
 		{
 			if (fallbacks == null)
-				return NullFallbacksCache.GetOrAdd(sourceLink, CreateNullbacksList);
+			{
+				// It is faster in practice to allocate a new list and return it than it is to cache it when needing
+				// to be thread-safe.
+				return new List<GraphLinkInstance>(1) { sourceLink };
+			}
 
 			var cacheForFallbacks = Cache.GetOrAdd(fallbacks, CreateCache);
 			return cacheForFallbacks.GetOrAdd(sourceLink, FindAllReplacementLinks, fallbacks);
