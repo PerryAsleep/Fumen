@@ -552,7 +552,7 @@ namespace StepManiaLibrary
 		{
 			if (other == null)
 				return false;
-			if (GraphLink != other.GraphLink)
+			if (!GraphLink.Equals(other.GraphLink))
 				return false;
 			for (var f = 0; f < NumFeet; f++)
 				for (var p = 0; p < NumFootPortions; p++)
