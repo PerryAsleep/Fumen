@@ -32,9 +32,12 @@ namespace StepManiaLibrary
 		[JsonIgnore] public int NumArrows;
 
 		/// <summary>
-		/// Best starting position. Index is foot. Value is lane.
+		/// Valid starting positions.
+		/// First array is tier, with lower indices preferred to higher indices when choosing a start position.
+		/// Second array is all equally preferred positions of the same tier.
+		/// Third array is lane indices, one for each foot.
 		/// </summary>
-		[JsonInclude] public int[] StartingPosition;
+		[JsonInclude] public int[][][] StartingPositions;
 
 		/// <summary>
 		/// Data for each arrow on the pad.
@@ -137,23 +140,59 @@ namespace StepManiaLibrary
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInvertedStretch, lane, "OtherFootPairingsInvertedStretch");
 			}
 
-			if (StartingPosition == null || StartingPosition.Length != NumFeet)
+			if (StartingPositions == null || StartingPositions.Length < 1)
 			{
-				LogError($"{StartingPosition?.Length ?? 0} StartingPosition entries found. Expected {NumFeet}.");
+				LogError("Empty StartingPositions. At least one valid starting position is required.");
 				errors = true;
 			}
 			else
 			{
-				var laneIndex = 0;
-				foreach (var spLane in StartingPosition)
+				var tierIndex = 0;
+				foreach (var tier in StartingPositions)
 				{
-					if (spLane < 0 || spLane >= NumArrows)
+					if (tier == null || tier.Length < 1)
 					{
-						LogError(
-							$"StartingPosition[{laneIndex}] lane {spLane} out of bounds. Must be within [0, {NumArrows - 1}].");
+						LogError($"Empty array at StartingPositions[{tierIndex}].");
 						errors = true;
 					}
-					laneIndex++;
+					else
+					{
+						if (tierIndex == 0 && tier.Length != 1)
+						{
+							LogError($"The first tier of StartingPositions has {tier.Length} entries. It should only have 1.");
+							errors = true;
+						}
+
+						var positionIndex = 0;
+						foreach (var position in tier)
+						{
+							if (position == null || position.Length != NumFeet)
+							{
+								LogError(
+									$"StartingPositions[{tierIndex}][{positionIndex}] {position?.Length ?? 0} entries found. Expected {NumFeet}, one for each foot.");
+								errors = true;
+							}
+							else
+							{
+								var laneIndex = 0;
+								foreach (var spLane in position)
+								{
+									if (spLane < 0 || spLane >= NumArrows)
+									{
+										LogError(
+											$"StartingPositions[{tierIndex}][{positionIndex}][{laneIndex}] lane {spLane} out of bounds Must be within [0, {NumArrows - 1}].");
+										errors = true;
+									}
+
+									laneIndex++;
+								}
+							}
+
+							positionIndex++;
+						}
+					}
+
+					tierIndex++;
 				}
 			}
 
@@ -223,7 +262,7 @@ namespace StepManiaLibrary
 
 			for (var a = 0; a < NumArrows; a++)
 			{
-				for(var a2 = 0; a2 < NumArrows; a2++)
+				for (var a2 = 0; a2 < NumArrows; a2++)
 				{
 					if (mirror(ArrowData[a].X) == ArrowData[a2].X && ArrowData[a].Y == ArrowData[a2].Y)
 					{

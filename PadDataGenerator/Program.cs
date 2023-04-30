@@ -207,8 +207,8 @@ namespace PadDataGenerator
 				Logger.Info($"Creating {stepsType} StepGraph.");
 				var stepGraph = StepGraph.CreateStepGraph(
 					padData,
-					padData.StartingPosition[L],
-					padData.StartingPosition[R]);
+					padData.StartingPositions[0][0][L],
+					padData.StartingPositions[0][0][R]);
 
 				// Save the StepGraph.
 				Logger.Info($"Saving {stepsType} StepGraph.");
@@ -594,8 +594,8 @@ namespace PadDataGenerator
 				}
 			}
 
-			// Set starting position.
-			SetStartingPosition(input, padData);
+			// Set starting positions.
+			SetStartingPositions(input, padData);
 
 			return padData;
 		}
@@ -626,7 +626,7 @@ namespace PadDataGenerator
 			}
 		}
 
-		private static void SetStartingPosition(PadDataInput input, PadData padData)
+		private static void SetStartingPositions(PadDataInput input, PadData padData)
 		{
 			var numArrows = input.Positions.Count;
 
@@ -717,22 +717,18 @@ namespace PadDataGenerator
 			}
 
 			// Copied the tiered data to the PadData.
-			padData.StartingPosition = new int[NumFeet];
-			padData.StartingPosition[L] = tieredPositions[0][0].L;
-			padData.StartingPosition[R] = tieredPositions[0][0].R;
-
-			//padData.StartingPositions = new int[tieredPositions.Count][][];
-			//for (var tierIndex = 0; tierIndex < tieredPositions.Count; tierIndex++)
-			//{
-			//	var positionsAtTier = tieredPositions[tierIndex];
-			//	padData.StartingPositions[tierIndex] = new int[positionsAtTier.Count][];
-			//	for(var positionIndex = 0; positionIndex < positionsAtTier.Count; positionIndex++)
-			//	{
-			//		padData.StartingPositions[tierIndex][positionIndex] = new int[NumFeet];
-			//		padData.StartingPositions[tierIndex][positionIndex][L] = positionsAtTier[positionIndex].L;
-			//		padData.StartingPositions[tierIndex][positionIndex][R] = positionsAtTier[positionIndex].R;
-			//	}
-			//}
+			padData.StartingPositions = new int[tieredPositions.Count][][];
+			for (var tierIndex = 0; tierIndex < tieredPositions.Count; tierIndex++)
+			{
+				var positionsAtTier = tieredPositions[tierIndex];
+				padData.StartingPositions[tierIndex] = new int[positionsAtTier.Count][];
+				for (var positionIndex = 0; positionIndex < positionsAtTier.Count; positionIndex++)
+				{
+					padData.StartingPositions[tierIndex][positionIndex] = new int[NumFeet];
+					padData.StartingPositions[tierIndex][positionIndex][L] = positionsAtTier[positionIndex].L;
+					padData.StartingPositions[tierIndex][positionIndex][R] = positionsAtTier[positionIndex].R;
+				}
+			}
 		}
 
 		private static int CompareRatings(double r1, double r2)
