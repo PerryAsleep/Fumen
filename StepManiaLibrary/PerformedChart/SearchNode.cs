@@ -21,6 +21,16 @@ namespace StepManiaLibrary.PerformedChart
 		/// </summary>
 		private class SearchNode : IEquatable<SearchNode>, IComparable<SearchNode>
 		{
+			/// <summary>
+			/// Laterl movement direction for determining lateral tightening cost.
+			/// </summary>
+			private enum LateralMovementDirection
+			{
+				Left,
+				Right,
+				None
+			};
+			
 			private static long IdCounter;
 
 			/// <summary>
@@ -92,7 +102,7 @@ namespace StepManiaLibrary.PerformedChart
 			/// This SearchNode's cost for deviating from the configured DesiredArrowWeights.
 			/// Higher values are worse.
 			/// </summary>
-			private readonly double TotalDistributionCost;
+			private readonly float TotalDistributionCost;
 
 			/// <summary>
 			/// This SearchNode's cost for stretch moves.
@@ -128,7 +138,6 @@ namespace StepManiaLibrary.PerformedChart
 			/// orientation that they will likely need to double-step to correct from.
 			/// </summary>
 			private readonly int MisleadingStepCount;
-
 			/// <summary>
 			/// The total number of ambiguous steps for the path to to and including this SearchNode.
 			/// Ambiguous steps are steps which any reasonably player would interpret as having more
@@ -136,11 +145,6 @@ namespace StepManiaLibrary.PerformedChart
 			/// the next step is D, that could be done with either the left foot or the right foot.
 			/// </summary>
 			private readonly int AmbiguousStepCount;
-
-			/// <summary>
-			/// Whether or not this SearchNode represents a step with either foot.
-			/// </summary>
-			private bool Stepped;
 
 			/// <summary>
 			/// The time in seconds of the Events represented by this SearchNode.
@@ -151,7 +155,23 @@ namespace StepManiaLibrary.PerformedChart
 			/// Lateral position of the body on the pads at this SearchNode.
 			/// Units are in arrows.
 			/// </summary>
-			private double LateralBodyPosition;
+			private readonly float LateralBodyPosition;
+			/// <summary>
+			/// Lateral movement direction of this node from the previous node.
+			/// </summary>
+			private readonly LateralMovementDirection MovementDir = LateralMovementDirection.None;
+			/// <summary>
+			/// Time that we started moving in the current lateral direction.
+			/// </summary>
+			private readonly double LastLateralMovementStartTime;
+			/// <summary>
+			/// Position from which we started moving in the current lateral direction.
+			/// </summary>
+			private readonly float LastLateralMovementStartPosition;
+			/// <summary>
+			/// Number of steps in the current lateral move.
+			/// </summary>
+			private readonly int LateralMovementNumSteps;
 
 			/// <summary>
 			/// For each foot, the last time in seconds that it was stepped on.
@@ -159,7 +179,6 @@ namespace StepManiaLibrary.PerformedChart
 			/// if this SearchNode represents steps on any arrows.
 			/// </summary>
 			private readonly double[] LastTimeFootStepped;
-
 			/// <summary>
 			/// For each foot, the last time in seconds that it was released.
 			/// During construction, these values will be updated to this SearchNode's Time
@@ -204,8 +223,8 @@ namespace StepManiaLibrary.PerformedChart
 			/// <param name="time">
 			/// Time of the corresponding ExpressedChart event in seconds.
 			/// </param>
-			/// <param name="depth"> The 0-based depth of this SearchNode. </param>
-			/// <param name="previousNode"> The previous SearchNode. </param>
+			/// <param name="depth"> The 0-based depth of this SearchNode.</param>
+			/// <param name="previousNode"> The previous SearchNode.</param>
 			/// <param name="actions">
 			/// For each arrow, the PerformanceFootAction to take for this SearchNode.
 			/// </param>
@@ -237,7 +256,6 @@ namespace StepManiaLibrary.PerformedChart
 				PreviousNode = previousNode;
 				Time = time;
 				RandomWeight = randomWeight;
-				Stepped = false;
 				Actions = actions;
 
 				// Copy the previous SearchNode's ambiguous and misleading step counts.
@@ -276,13 +294,14 @@ namespace StepManiaLibrary.PerformedChart
 							?? GraphNode.State[f, p].Arrow;
 					}
 				}
-
-				var (travelSpeedCost, travelDistanceCost) = GetStepTravelCostsAndUpdateStepTracking(stepGraph, config);
+				var (travelSpeedCost, travelDistanceCost) = GetStepTravelCostsAndUpdateStepTracking(stepGraph, config, out var isStep);
 				TotalIndividualStepTravelSpeedCost = (PreviousNode?.TotalIndividualStepTravelSpeedCost ?? 0.0) + travelSpeedCost;
 				TotalIndividualStepTravelDistanceCost = (PreviousNode?.TotalIndividualStepTravelDistanceCost ?? 0.0) + travelDistanceCost;
 				TotalDistributionCost = GetDistributionCost(stepGraph, config);
 				TotalStretchCost = (PreviousNode?.TotalStretchCost ?? 0.0) + GetStretchCost(stepGraph, config);
+				
 				LateralBodyPosition = GetLateralBodyPosition(stepGraph);
+				UpdateLateralTracking(isStep, ref LateralMovementNumSteps, ref LastLateralMovementStartTime, ref LastLateralMovementStartPosition, ref MovementDir);
 				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + GetLateralMovementCost(config, nps);
 
 				UpdateStepCounts(
@@ -448,12 +467,12 @@ namespace StepManiaLibrary.PerformedChart
 			/// Value 1: Travel speed cost
 			/// Value 2: Travel distance cost
 			/// </returns>
-			private (double, double) GetStepTravelCostsAndUpdateStepTracking(StepGraph stepGraph, Config config)
+			private (double, double) GetStepTravelCostsAndUpdateStepTracking(StepGraph stepGraph, Config config, out bool isStep)
 			{
 				var speedCost = 0.0;
 				var distanceCost = 0.0;
-
 				var stepConfig = config.StepTightening;
+				isStep = false;
 
 				// Determine how the feet step at this SearchNode.
 				// While checking each foot, 
@@ -478,7 +497,7 @@ namespace StepManiaLibrary.PerformedChart
 								if (prevLinks[f, p].Action != FootAction.Release)
 								{
 									steppedWithThisFoot = true;
-									Stepped = true;
+									isStep = true;
 								}
 							}
 						}
@@ -560,18 +579,18 @@ namespace StepManiaLibrary.PerformedChart
 			/// the desired arrow weights from the Config.
 			/// </summary>
 			/// <returns>Distribution cost.</returns>
-			private double GetDistributionCost(StepGraph stepGraph, Config config)
+			private float GetDistributionCost(StepGraph stepGraph, Config config)
 			{
-				var distributionCost = 0.0;
+				var distributionCost = 0.0f;
 				var weights = config.GetArrowWeightsNormalized(stepGraph.PadData.StepsType);
 				var totalSteps = 0;
 				for (var a = 0; a < StepCounts.Length; a++)
 					totalSteps += StepCounts[a];
 				if (totalSteps > 0)
 				{
-					var totalDifferenceFromDesiredLanePercentage = 0.0;
+					var totalDifferenceFromDesiredLanePercentage = 0.0f;
 					for (var a = 0; a < StepCounts.Length; a++)
-						totalDifferenceFromDesiredLanePercentage += Math.Abs((double)StepCounts[a] / totalSteps - weights[a]);
+						totalDifferenceFromDesiredLanePercentage += Math.Abs((float)StepCounts[a] / totalSteps - (float)weights[a]);
 					distributionCost = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
 				}
 
@@ -610,85 +629,68 @@ namespace StepManiaLibrary.PerformedChart
 			}
 
 			/// <summary>
+			/// Updates tracking variables to support lateral movement cost calculation.
+			/// </summary>
+			private void UpdateLateralTracking(
+				bool isStep,
+				ref int lateralMovementNumSteps,
+				ref double lastLateralMovementStartTime,
+				ref float lastLateralMovementStartPosition,
+				ref LateralMovementDirection movementDir)
+			{
+				// Ignore releases.
+				if (!isStep)
+				{
+					lateralMovementNumSteps = PreviousNode.LateralMovementNumSteps;
+					lastLateralMovementStartTime = PreviousNode.LastLateralMovementStartTime;
+					lastLateralMovementStartPosition = PreviousNode.LastLateralMovementStartPosition;
+					movementDir = PreviousNode.MovementDir;
+					return;
+				}
+
+				lateralMovementNumSteps = 0;
+				if (PreviousNode != null)
+				{
+					lastLateralMovementStartTime = PreviousNode.LastLateralMovementStartTime;
+					lastLateralMovementStartPosition = PreviousNode.LastLateralMovementStartPosition;
+
+					var d = LateralBodyPosition - PreviousNode.LateralBodyPosition;
+					if (Math.Abs(d) > 0.0001)
+					{
+						movementDir = (d < 0) ? LateralMovementDirection.Left : LateralMovementDirection.Right;
+						if (PreviousNode.MovementDir != MovementDir)
+						{
+							lastLateralMovementStartTime = Time;
+							lastLateralMovementStartPosition = LateralBodyPosition;
+							lateralMovementNumSteps = 1;
+						}
+						else
+						{
+							lateralMovementNumSteps = PreviousNode.LateralMovementNumSteps + 1;
+						}
+					}
+				}
+			}
+
+			/// <summary>
 			/// Gets the lateral movement cost of this SearchNode.
 			/// </summary>
 			private double GetLateralMovementCost(Config config, double averageNps)
 			{
+				var lateralMovementSpeedCost = 0.0;
 				var lateralConfig = config.LateralTightening;
 
-				// Determine the lateral body movement cost.
-				// When notes are more dense the body should move side to side less.
-				var lateralMovementSpeedCost = 0.0;
-				if (lateralConfig.PatternLength > 0)
+				var t = Time - LastLateralMovementStartTime;
+				if (MovementDir != LateralMovementDirection.None && t > 0.0)
 				{
-					// Scan backwards over the previous LateralTighteningPatternLength steps.
-					var stepCounter = lateralConfig.PatternLength;
-					var node = PreviousNode;
-					bool? goingLeft = null;
-					var previousPosition = LateralBodyPosition;
-					var previousTime = Time;
-					while (stepCounter > 0 && node != null)
+					var nps = LateralMovementNumSteps / t;
+					var speed = Math.Abs(LateralBodyPosition - LastLateralMovementStartPosition) / t;
+					if (((averageNps > 0.0 && nps > averageNps * lateralConfig.RelativeNPS) || nps > lateralConfig.AbsoluteNPS)
+						&& speed > lateralConfig.Speed)
 					{
-						// Skip SearchNodes which aren't steps.
-						if (!node.Stepped)
-						{
-							node = node.PreviousNode;
-							continue;
-						}
-
-						// If we have already tracked lateral movement in one direction, make sure we do
-						// not start moving in the other direction.
-						if (goingLeft != null)
-						{
-							// If we were going left and are now going right, stop searching.
-							if (goingLeft.Value)
-							{
-								if (node.LateralBodyPosition > previousPosition)
-								{
-									break;
-								}
-							}
-							// If we were going right and are now going left, stop searching.
-							else
-							{
-								if (node.LateralBodyPosition < previousPosition)
-								{
-									break;
-								}
-							}
-						}
-
-						// If the body moved without changing directions, update the tracking
-						// variables and continue.
-						if (Math.Abs(previousPosition - node.LateralBodyPosition) > 0.0001)
-						{
-							// If we do not know yet whether we are moving right or left, set that now.
-							if (goingLeft == null)
-								goingLeft = node.LateralBodyPosition < previousPosition;
-
-							previousPosition = node.LateralBodyPosition;
-							previousTime = node.Time;
-							stepCounter--;
-						}
-
-						node = node.PreviousNode;
-					}
-
-					// If we scanned backwards the full amount and found an uninterrupted period of movement
-					// in one direction, then perform the nps and speed checks.
-					if (stepCounter == 0)
-					{
-						var nps = lateralConfig.PatternLength / (Time - previousTime);
-						var speed = Math.Abs(LateralBodyPosition - previousPosition) / (Time - previousTime);
-						if (((averageNps > 0.0 && nps > averageNps * lateralConfig.RelativeNPS)
-							 || nps > lateralConfig.AbsoluteNPS)
-							&& speed > lateralConfig.Speed)
-						{
-							lateralMovementSpeedCost = speed - lateralConfig.Speed;
-						}
+						lateralMovementSpeedCost = speed - lateralConfig.Speed;
 					}
 				}
-
 				return lateralMovementSpeedCost;
 			}
 
@@ -697,10 +699,10 @@ namespace StepManiaLibrary.PerformedChart
 			/// </summary>
 			/// <param name="stepGraph">StepGraph for the PerformedChart.</param>
 			/// <returns>Lateral position of the body for this SearchNode.</returns>
-			private double GetLateralBodyPosition(StepGraph stepGraph)
+			private float GetLateralBodyPosition(StepGraph stepGraph)
 			{
 				var numPoints = 0;
-				var x = 0.0;
+				var x = 0.0f;
 				for (var f = 0; f < NumFeet; f++)
 				{
 					for (var p = 0; p < NumFootPortions; p++)

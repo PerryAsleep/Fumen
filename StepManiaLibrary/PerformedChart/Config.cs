@@ -263,11 +263,6 @@ namespace StepManiaLibrary.PerformedChart
 		public class LateralTighteningConfig
 		{
 			/// <summary>
-			/// Pattern length at which to start apply lateral tightening.
-			/// </summary>
-			[JsonInclude] public int PatternLength = -1;
-
-			/// <summary>
 			/// The relative notes per second over which patterns should cost more.
 			/// </summary>
 			[JsonInclude] public double RelativeNPS = -1.0;
@@ -290,8 +285,6 @@ namespace StepManiaLibrary.PerformedChart
 			/// <param name="other">Other LateralTighteningConfig to use as as a base.</param>
 			public void SetAsOverrideOf(LateralTighteningConfig other)
 			{
-				if (PatternLength == -1)
-					PatternLength = other.PatternLength;
 				if (RelativeNPS.DoubleEquals(-1.0))
 					RelativeNPS = other.RelativeNPS;
 				if (AbsoluteNPS.DoubleEquals(-1.0))
@@ -308,14 +301,6 @@ namespace StepManiaLibrary.PerformedChart
 			public bool Validate(string pccId)
 			{
 				var errors = false;
-				if (PatternLength < 0)
-				{
-					LogError(
-						$"Negative value \"{PatternLength}\" specified for "
-						+ "PatternLength. Expected non-negative value.",
-						pccId);
-					errors = true;
-				}
 
 				if (RelativeNPS < 0.0)
 				{
