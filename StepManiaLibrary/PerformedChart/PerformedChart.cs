@@ -241,11 +241,15 @@ namespace StepManiaLibrary.PerformedChart
 									var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink, stepGraph.NumArrows);
 
 									// Set up the graph links leading out of this node to its next nodes.
-									var graphLinksToNextNode = new List<GraphLinkInstance>();
+									List<GraphLinkInstance> graphLinksToNextNode = null;
 									if (nextDepth < expressedChart.StepEvents.Count)
 									{
 										var sourceLinkKey = expressedChart.StepEvents[nextDepth].LinkInstance;
 										graphLinksToNextNode = LinkCache.GetGraphLinks(sourceLinkKey, fallbacks);
+									}
+									else
+									{
+										graphLinksToNextNode = new List<GraphLinkInstance>();
 									}
 
 									// Set up a new SearchNode.
