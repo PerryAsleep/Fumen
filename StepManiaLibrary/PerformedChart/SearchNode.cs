@@ -641,10 +641,13 @@ namespace StepManiaLibrary.PerformedChart
 				// Ignore releases.
 				if (!isStep)
 				{
-					lateralMovementNumSteps = PreviousNode.LateralMovementNumSteps;
-					lastLateralMovementStartTime = PreviousNode.LastLateralMovementStartTime;
-					lastLateralMovementStartPosition = PreviousNode.LastLateralMovementStartPosition;
-					movementDir = PreviousNode.MovementDir;
+					if (PreviousNode != null)
+					{
+						lateralMovementNumSteps = PreviousNode.LateralMovementNumSteps;
+						lastLateralMovementStartTime = PreviousNode.LastLateralMovementStartTime;
+						lastLateralMovementStartPosition = PreviousNode.LastLateralMovementStartPosition;
+						movementDir = PreviousNode.MovementDir;
+					}
 					return;
 				}
 
