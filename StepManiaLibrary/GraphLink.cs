@@ -292,7 +292,7 @@ namespace StepManiaLibrary
 			{
 				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, p].Valid && StepData.Steps[(int) Links[f, p].Step].IsBracket)
+					if (Links[f, p].Valid && Links[f, p].Action != FootAction.Release && StepData.Steps[(int)Links[f, p].Step].IsBracket)
 						return true;
 				}
 			}
@@ -312,7 +312,7 @@ namespace StepManiaLibrary
 				for (var p = 0; p < NumFootPortions; p++)
 				{
 					var sd = StepData.Steps[(int)Links[f, p].Step];
-					if (Links[f, p].Valid && (sd.IsBracket || sd.IsOneArrowBracket))
+					if (Links[f, p].Valid && Links[f, p].Action != FootAction.Release && (sd.IsBracket || sd.IsOneArrowBracket))
 						return true;
 				}
 			}
