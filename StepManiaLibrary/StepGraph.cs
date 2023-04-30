@@ -670,9 +670,6 @@ namespace StepManiaLibrary
 						// Update the state.
 						state[f, p] = new GraphNode.FootArrowState(arrow, gas);
 
-						inverted = IsInvertedWithOrWithoutStretch(state);
-						crossover = IsCrossoverWithOrWithoutStretch(state);
-
 						// And the end of the loop over feet and portions, determine if this is a valid combination.
 						if (f > 0 && p > 0)
 						{
@@ -702,6 +699,31 @@ namespace StepManiaLibrary
 								isValidState = false;
 								break;
 							}
+
+							// We don't currently support moves which invert or crossover and also stretch and bracket.
+							// We do however support holding one foot with a bracket and doing a normal stretch
+							// invert or crossover. We don't want to generate states which can't be linked to. To catch
+							// invert or crossover stretch brackets we need to disallow states where all four portions
+							// are down in that position, as the only way that state could be entered is through one of
+							// those disallowed moves.
+							if (totalNumArrowsOccupied == (NumFeet * NumFootPortions))
+							{
+								if (IsInvertedWithStretch(state))
+								{
+									LogState($"Stretch invert bracket.", f, p, state, arrow, gas);
+									isValidState = false;
+									break;
+								}
+								if (IsCrossoverWithStretch(state))
+								{
+									LogState($"Stretch crossover bracket.", f, p, state, arrow, gas);
+									isValidState = false;
+									break;
+								}
+							}
+
+							inverted = IsInvertedWithOrWithoutStretch(state);
+							crossover = IsCrossoverWithOrWithoutStretch(state);
 
 							// The steps must be an invert, crossover, stretch, or normal position.
 							if (!inverted && !crossover)
@@ -738,7 +760,7 @@ namespace StepManiaLibrary
 						else if (bo != BodyOrientation.Normal && !inverted)
 							continue;
 
-						LogState($"Valid!!!", 1, 1, state, state[1, 1].Arrow, state[1, 1].State);
+						LogState($"Valid", 1, 1, state, state[1, 1].Arrow, state[1, 1].State);
 						var gn = new GraphNode(state, bodyOrientations[b]);
 						allNodes.Add(gn);
 					}
@@ -2254,10 +2276,10 @@ namespace StepManiaLibrary
 		/// </summary>
 		private bool IsInvertedWithStretch(GraphNode.FootArrowState[,] state)
 		{
-			// For brackets, both feed must be inverted with stretch for it to be considered a stretch invert.
 			if (IsInvertedWithoutStretch(state))
 				return false;
 
+			// For brackets, both feet must be inverted with stretch for it to be considered a stretch invert.
 			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
 			{
 				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex && state[L, leftFootPortion].State != GraphArrowState.Lifted)
