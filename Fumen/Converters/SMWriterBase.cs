@@ -872,7 +872,8 @@ namespace Fumen.Converters
 			}
 
 			// Default to 4/4.
-			WriteSongProperty(SMCommon.TagTimeSignatures, $"{0.0.ToString(SMCommon.SMDoubleFormat)}=4=4", stepmaniaOmitted, false);
+			var beatStr = 0.0.ToString(SMCommon.SMDoubleFormat);
+			WriteSongProperty(SMCommon.TagTimeSignatures, $"{beatStr}=4=4", stepmaniaOmitted, false);
 		}
 
 		protected void WriteChartPropertyTimeSignatures(Chart chart, bool stepmaniaOmitted = false)

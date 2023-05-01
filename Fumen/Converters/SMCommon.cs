@@ -741,9 +741,11 @@ namespace Fumen.Converters
 					{
 						if (logOnErrors)
 						{
+							var beatStr = beatDouble.ToString(SMDoubleFormat);
+							var expectedBeatStr = 0.0.ToString(SMDoubleFormat);
 							logger.Warn(
-								$"First time signature occurs at {beatDouble.ToString(SMDoubleFormat)}." 
-								+ $" If explicit time signatures are defined the first must be at {0.0:SMDoubleFormat}."
+								$"First time signature occurs at {beatStr}." 
+								+ $" If explicit time signatures are defined the first must be at {expectedBeatStr}."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
 						useDefaultTimeSignature = true;
@@ -754,8 +756,9 @@ namespace Fumen.Converters
 					{
 						if (logOnErrors)
 						{
+							var beatStr = beatDouble.ToString(SMDoubleFormat);
 							logger.Warn(
-								$"Time signature at {beatDouble.ToString(SMDoubleFormat)} ({ts.Numerator}/{ts.Denominator}) is invalid."
+								$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) is invalid."
 								+ " Both values must be greater than 0."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
@@ -771,8 +774,9 @@ namespace Fumen.Converters
 					{
 						if (logOnErrors)
 						{
+							var beatStr = beatDouble.ToString(SMDoubleFormat);
 							logger.Warn(
-								$"Time signature at {beatDouble:SMDoubleFormat} ({ts.Numerator}/{ts.Denominator}) does not fall on a measure boundary."
+								$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) does not fall on a measure boundary."
 								+ " Time signatures can only change at the start of a measure."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
@@ -785,8 +789,9 @@ namespace Fumen.Converters
 					{
 						if (logOnErrors)
 						{
+							var beatStr = beatDouble.ToString(SMDoubleFormat);
 							logger.Warn(
-								$"Time signature at {beatDouble:SMDoubleFormat} ({ts.Numerator}/{ts.Denominator}) cannot be represented by StepMania."
+								$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) cannot be represented by StepMania."
 								+ $" The beat ({ts.Denominator}) must evenly divide {MaxValidDenominator * NumBeatsPerMeasure}."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
