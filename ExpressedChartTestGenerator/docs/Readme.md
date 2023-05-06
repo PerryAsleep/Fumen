@@ -1,7 +1,8 @@
 # ExpressedChartTestGenerator
-`ExpressedChartTestGenerator` is an application to generate test classes for [ChartGeneratorTests](../ChartGeneratorTests/README.md) for asserting that a song file's ExpressedChart representation matches expectations.
 
-The expected workflow is to first write a test `sm` or `ssc` chart, then convert it using [ChartGenerator](../ChartGenerator/README.md) with `OutputVisualizations` set to `true` (see [Config](../ChartGenerator/docs/Config.md)). After examining the [Visualization](../ChartGenerator/docs/Visualizations.md) for the test file to ensure it matches expectations, the chart's song folder should be added to `ChartGeneratorTests\TestData`, and then `ExpressedChartTestGenerator` should be run to generate the test class for it.
+`ExpressedChartTestGenerator` is an application to generate test classes for [ChartGeneratorTests](../../ChartGeneratorTests/docs/Readme.md) for asserting that a song file's [ExpressedChart](../../StepManiaLibrary/docs/ExpressedChart.md) representation matches expectations.
+
+The expected workflow is to first write a test `sm` or `ssc` chart, then convert it using [StepManiaChartGenerator](../../StepManiaChartGenerator/docs/Readme.md) with `OutputVisualizations` set to `true` (see [Config](../../StepManiaChartGenerator/docs/Config.md)). After examining the [Visualization](../../StepManiaChartGenerator/docs/Visualizations.md) for the test file to ensure it matches expectations, the chart's song folder should be added to `ChartGeneratorTests\TestData`, and then `ExpressedChartTestGenerator` should be run to generate the test class for it.
 
 ## Usage
 ```

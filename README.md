@@ -2,13 +2,13 @@
 Fumen (譜面) is a library for representing various music game charts in a generic way.
 
 ## Projects
-- [StepManiaEditor](StepManiaEditor/README.md): An editor for authoring [StepMania](https://www.stepmania.com/) charts.
-- [StepManiaChartGenerator](StepManiaChartGenerator/README.md): An application for converting [StepMania](https://www.stepmania.com/) charts into other StepMania charts.
+- [StepManiaEditor](StepManiaEditor/docs/Readme.md): An editor for authoring [StepMania](https://www.stepmania.com/) charts.
+- [StepManiaChartGenerator](StepManiaChartGenerator/docs/Readme.md): An application for converting [StepMania](https://www.stepmania.com/) charts into other StepMania charts.
 ### Misc
-- [PadDataGenerator](PadDataGenerator/README.md): An application for authoring PadData and StepGraph files.
-- [ChartGeneratorTests](ChartGeneratorTests/README.md): Unit test project for `StepManiaChartGenerator`.
-- [ExpressedChartTestGenerator](ExpressedChartTestGenerator/README.md): An application to generate `ChartGeneratorTests` tests.
-- [ChartStats](ChartStats/README.md): An application to generate `csv` files with doubles chart statistics.
+- [PadDataGenerator](PadDataGenerator/docs/Readme.md): An application for authoring PadData and StepGraph files.
+- [ChartGeneratorTests](ChartGeneratorTests/docs/Readme.md): Unit test project for `StepManiaChartGenerator`.
+- [ExpressedChartTestGenerator](ExpressedChartTestGenerator/docs/Readme.md): An application to generate `ChartGeneratorTests` tests.
+- [ChartStats](ChartStats/docs/Readme.md): An application to generate `csv` files with doubles chart statistics.
 
 ## Building From Source
 Building from source requires Windows 10 or greater and Microsoft Visual Studio Community 2022.
