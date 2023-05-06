@@ -67,7 +67,7 @@
     {
       "X": 0,
       "Y": 1,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           true,
@@ -83,7 +83,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
@@ -231,7 +231,7 @@
     {
       "X": 1,
       "Y": 2,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -247,7 +247,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           true,
           false,
@@ -395,7 +395,7 @@
     {
       "X": 1,
       "Y": 1,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           true,
           true,
@@ -411,7 +411,7 @@
           true
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           true,
           false,
@@ -559,7 +559,7 @@
     {
       "X": 1,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           true,
           false,
@@ -575,7 +575,7 @@
           true
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
@@ -723,7 +723,7 @@
     {
       "X": 2,
       "Y": 1,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           true,
@@ -739,7 +739,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,

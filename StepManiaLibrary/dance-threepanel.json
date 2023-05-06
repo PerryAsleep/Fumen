@@ -21,7 +21,7 @@
     {
       "X": 0,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -33,7 +33,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
@@ -145,7 +145,7 @@
     {
       "X": 1,
       "Y": 2,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -157,7 +157,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
@@ -269,7 +269,7 @@
     {
       "X": 2,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -281,7 +281,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,

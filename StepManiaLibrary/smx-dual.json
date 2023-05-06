@@ -51,7 +51,7 @@
     {
       "X": 0,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           true,
@@ -69,7 +69,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           true,
@@ -235,7 +235,7 @@
     {
       "X": 1,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           true,
           false,
@@ -253,7 +253,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           true,
           false,
@@ -419,7 +419,7 @@
     {
       "X": 2,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           true,
@@ -437,7 +437,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           true,
@@ -603,7 +603,7 @@
     {
       "X": 3,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -621,7 +621,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
@@ -787,7 +787,7 @@
     {
       "X": 4,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -805,7 +805,7 @@
           true
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
@@ -971,7 +971,7 @@
     {
       "X": 5,
       "Y": 0,
-      "BracketablePairingsOtherHeel": [
+      "BracketablePairingsHeel": [
         [
           false,
           false,
@@ -989,7 +989,7 @@
           false
         ]
       ],
-      "BracketablePairingsOtherToe": [
+      "BracketablePairingsToe": [
         [
           false,
           false,
