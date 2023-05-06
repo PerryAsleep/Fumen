@@ -376,9 +376,9 @@ namespace StepManiaLibrary.PerformedChart
 									for (var f = 0; f < NumFeet; f++)
 									{
 										if (stepGraph.PadData.ArrowData[steppedFromArrow]
-												.BracketablePairingsOtherHeel[f][steppedToArrow]
+												.BracketablePairingsHeel[f][steppedToArrow]
 											|| stepGraph.PadData.ArrowData[steppedFromArrow]
-												.BracketablePairingsOtherToe[f][steppedToArrow])
+												.BracketablePairingsToe[f][steppedToArrow])
 										{
 											totalNumBracketableNewArrowSteps++;
 											break;
@@ -826,16 +826,16 @@ namespace StepManiaLibrary.PerformedChart
 						{
 							var leftFrom = PreviousNode.LastArrowsSteppedOnByFoot[L][p];
 							leftBracketable =
-								stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[L][leftFrom]
-								|| stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[L][leftFrom];
+								stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsHeel[L][leftFrom]
+								|| stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsToe[L][leftFrom];
 						}
 
 						if (!rightBracketable && PreviousNode.LastArrowsSteppedOnByFoot[R][p] != InvalidArrowIndex)
 						{
 							var rightFrom = PreviousNode.LastArrowsSteppedOnByFoot[R][p];
 							rightBracketable =
-								stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherHeel[R][rightFrom]
-								|| stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsOtherToe[R][rightFrom];
+								stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsHeel[R][rightFrom]
+								|| stepGraph.PadData.ArrowData[arrowBeingSteppedOn].BracketablePairingsToe[R][rightFrom];
 						}
 					}
 

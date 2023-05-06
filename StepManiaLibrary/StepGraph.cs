@@ -659,7 +659,7 @@ namespace StepManiaLibrary
 						{
 							footInvolvesBracket[f] = true;
 							var heelArrow = state[f, Heel].Arrow;
-							if (!PadData.ArrowData[arrow].BracketablePairingsOtherHeel[f][heelArrow])
+							if (!PadData.ArrowData[arrow].BracketablePairingsHeel[f][heelArrow])
 							{
 								LogState($"Foot {f} Pair Not Bracketable", f, p, state, arrow, gas);
 								isValidState = false;

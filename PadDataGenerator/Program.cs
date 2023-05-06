@@ -50,7 +50,6 @@ namespace PadDataGenerator
 			public int MaxYSeparationBeforeStretch = 2;
 			public int MaxXSeparationCrossoverBeforeStretch = 1;
 			public int MaxYSeparationCrossoverBeforeStretch = 2;
-			public int MaxXSeparationInvertBeforeStretch = 2;
 			public int MaxXSeparationBracket = 1;
 			public int MaxYSeparationBracket = 1;
 			public double YTravelDistanceCompensation = 0.5;
@@ -273,7 +272,7 @@ namespace PadDataGenerator
 				// Bracketable pairings with the toe on this arrow and the heel on another.
 				for (var f = 0; f < NumFeet; f++)
 				{
-					ad.BracketablePairingsOtherHeel[f] = new bool[numArrows];
+					ad.BracketablePairingsHeel[f] = new bool[numArrows];
 					for (int a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
@@ -282,7 +281,7 @@ namespace PadDataGenerator
 						if (f == L)
 						{
 							// For this arrow to bracketable with the toe of the left foot...
-							ad.BracketablePairingsOtherHeel[f][a2] =
+							ad.BracketablePairingsHeel[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the right of these arrows so you aren't crossed over.
@@ -296,7 +295,7 @@ namespace PadDataGenerator
 						else
 						{
 							// For this arrow to bracketable with the toe of the right foot...
-							ad.BracketablePairingsOtherHeel[f][a2] =
+							ad.BracketablePairingsHeel[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the left of these arrows so you aren't crossed over.
@@ -313,7 +312,7 @@ namespace PadDataGenerator
 				// Bracketable pairings with the heel on this arrow and the toe on another.
 				for (var f = 0; f < NumFeet; f++)
 				{
-					ad.BracketablePairingsOtherToe[f] = new bool[numArrows];
+					ad.BracketablePairingsToe[f] = new bool[numArrows];
 					for (int a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
@@ -322,7 +321,7 @@ namespace PadDataGenerator
 						if (f == L)
 						{
 							// For this arrow to bracketable with the heel of the left foot...
-							ad.BracketablePairingsOtherToe[f][a2] =
+							ad.BracketablePairingsToe[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the right of these arrows so you aren't crossed over.
@@ -336,7 +335,7 @@ namespace PadDataGenerator
 						else
 						{
 							// For this arrow to bracketable with the heel of the right foot...
-							ad.BracketablePairingsOtherToe[f][a2] =
+							ad.BracketablePairingsToe[f][a2] =
 								// Arrows must be different.
 								(a != a2)
 								// There must be room to stand at the same X or to the left of these arrows so you aren't crossed over.

@@ -128,8 +128,8 @@ namespace StepManiaLibrary
 			{
 				arrowData.Lane = lane;
 				lane++;
-				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsOtherHeel, lane, "BracketablePairingsOtherHeel");
-				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsOtherToe, lane, "BracketablePairingsOtherToe");
+				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsHeel, lane, "BracketablePairingsHeel");
+				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsToe, lane, "BracketablePairingsToe");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairings, lane, "OtherFootPairings");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsStretch, lane, "OtherFootPairingsStretch");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFront, lane, "OtherFootPairingsCrossoverFront");
@@ -414,14 +414,14 @@ namespace StepManiaLibrary
 						{
 							for (var f = 0; f < NumFeet; f++)
 							{
-								if (ArrowData[a1].BracketablePairingsOtherHeel[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsOtherHeel[f][arrowMapping[a2]])
+								if (ArrowData[a1].BracketablePairingsHeel[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsHeel[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
-								if (ArrowData[a1].BracketablePairingsOtherToe[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsOtherToe[f][arrowMapping[a2]])
+								if (ArrowData[a1].BracketablePairingsToe[f][a2]
+									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsToe[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;

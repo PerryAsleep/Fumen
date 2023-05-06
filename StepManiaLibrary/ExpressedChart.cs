@@ -2206,8 +2206,8 @@ namespace StepManiaLibrary
 					{
 						anyHeld = true;
 						canBracketToNewArrow =
-							arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherHeel[foot][arrow]
-							|| arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherToe[foot][arrow];
+							arrowData[previousState[foot, p].Arrow].BracketablePairingsHeel[foot][arrow]
+							|| arrowData[previousState[foot, p].Arrow].BracketablePairingsToe[foot][arrow];
 					}
 					else
 					{
@@ -2217,8 +2217,8 @@ namespace StepManiaLibrary
 							if (!anyHeld)
 							{
 								canBracketToNewArrow =
-									arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherHeel[foot][arrow]
-									|| arrowData[previousState[foot, p].Arrow].BracketablePairingsOtherToe[foot][arrow];
+									arrowData[previousState[foot, p].Arrow].BracketablePairingsHeel[foot][arrow]
+									|| arrowData[previousState[foot, p].Arrow].BracketablePairingsToe[foot][arrow];
 							}
 
 							if (lastMines[previousState[foot, p].Arrow] >= 0
@@ -2378,8 +2378,8 @@ namespace StepManiaLibrary
 						}
 
 						if (newArrowBeingSteppedOnByThisFoot != InvalidArrowIndex
-						    && (arrowData[previousArrow].BracketablePairingsOtherHeel[foot][newArrowBeingSteppedOnByThisFoot]
-						        || arrowData[previousArrow].BracketablePairingsOtherToe[foot][newArrowBeingSteppedOnByThisFoot]))
+						    && (arrowData[previousArrow].BracketablePairingsHeel[foot][newArrowBeingSteppedOnByThisFoot]
+						        || arrowData[previousArrow].BracketablePairingsToe[foot][newArrowBeingSteppedOnByThisFoot]))
 						{
 							bracketableDistanceIfThisFootSteps = true;
 						}
@@ -2406,10 +2406,10 @@ namespace StepManiaLibrary
 						if (steppedArrow != InvalidArrowIndex)
 						{
 							var bracketable =
-								(arrowData[a].BracketablePairingsOtherHeel[foot][steppedArrow]
-								 && arrowData[steppedArrow].BracketablePairingsOtherToe[foot][a])
-								|| (arrowData[a].BracketablePairingsOtherToe[foot][steppedArrow]
-								    && arrowData[steppedArrow].BracketablePairingsOtherHeel[foot][a]);
+								(arrowData[a].BracketablePairingsHeel[foot][steppedArrow]
+								 && arrowData[steppedArrow].BracketablePairingsToe[foot][a])
+								|| (arrowData[a].BracketablePairingsToe[foot][steppedArrow]
+								    && arrowData[steppedArrow].BracketablePairingsHeel[foot][a]);
 							if (!bracketable)
 								couldBeBracketed = false;
 						}

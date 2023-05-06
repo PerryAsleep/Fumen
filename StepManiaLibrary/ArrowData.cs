@@ -43,14 +43,14 @@ namespace StepManiaLibrary
 		/// toes are on this arrow and the heel is on the other arrow.
 		/// First index is foot, second is arrow.
 		/// </summary>
-		[JsonInclude] public bool[][] BracketablePairingsOtherHeel = new bool[NumFeet][];
+		[JsonInclude] public bool[][] BracketablePairingsHeel = new bool[NumFeet][];
 
 		/// <summary>
 		/// Which arrows are bracketable with this arrow for the given foot when the
 		/// heel is on this arrow and the toes are on the other arrow.
 		/// First index is foot, second is arrow.
 		/// </summary>
-		[JsonInclude] public bool[][] BracketablePairingsOtherToe = new bool[NumFeet][];
+		[JsonInclude] public bool[][] BracketablePairingsToe = new bool[NumFeet][];
 
 		/// <summary>
 		/// Which arrows are valid pairings for the other foot.
