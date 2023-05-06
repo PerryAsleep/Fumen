@@ -436,6 +436,7 @@ namespace StepManiaLibrary.PerformedChart
 			// Determine the step type cost for this node.
 			// Assumption that the first GraphLink is the source from which the fallbacks were derived.
 			var sourceLink = parentNode.GraphLinks[0];
+			var stepRemovalCost = 0.0;
 			if (LinkCache.ContainsBlankLink(sourceLink, graphLinkToChild))
 			{
 				return BlankSingleStepCost;
@@ -445,13 +446,15 @@ namespace StepManiaLibrary.PerformedChart
 				var numStepsRemoved = LinkCache.GetNumStepsRemoved(parentNode.GraphLinks[0], graphLinkToChild);
 				if (numStepsRemoved > 0)
 				{
-					return numStepsRemoved * IndividualDroppedArrowStepCost;
+					stepRemovalCost += numStepsRemoved * IndividualDroppedArrowStepCost;
 				}
 			}
 
 			// The first link out of this search node is the most preferred node. The
 			// links at higher indexes are less preferred fallbacks that should cost more.
-			return (double)graphLinkIndexToChild / numLinks;
+			if (numLinks == 1)
+				return 0.0;
+			return stepRemovalCost + ((double)graphLinkIndexToChild / (numLinks - 1));
 		}
 
 		// TODO: Rewrite
