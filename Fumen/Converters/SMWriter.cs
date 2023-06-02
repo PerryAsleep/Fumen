@@ -25,7 +25,7 @@ namespace Fumen.Converters
 		/// <returns>True if saving was successful and false otherwise.</returns>
 		public async Task<bool> SaveAsync()
 		{
-			return await Task.Run(() => Save());
+			return await Task.Run(Save);
 		}
 
 		/// <summary>
@@ -69,10 +69,9 @@ namespace Fumen.Converters
 					if (Config.CustomProperties.CustomSongProperties != null)
 					{
 						foreach (var customProperty in Config.CustomProperties.CustomSongProperties)
-						{
-							WriteProperty($"{customProperty.Key}{SMCustomPropertySongMarker}", customProperty.Value, true);
-						}
+							WriteProperty($"{customProperty.Key}{SMCustomPropertySongMarker}", customProperty.Value);
 					}
+
 					if (Config.CustomProperties.CustomChartProperties != null)
 					{
 						var chartIndex = 0;
@@ -80,8 +79,11 @@ namespace Fumen.Converters
 						{
 							foreach (var chartProperty in chartPropertySet)
 							{
-								WriteProperty($"{chartProperty.Key}{SMCustomPropertyChartMarker}{chartIndex.ToString(SMCustomPropertyChartIndexFormat)}", chartProperty.Value, true);
+								WriteProperty(
+									$"{chartProperty.Key}{SMCustomPropertyChartMarker}{chartIndex.ToString(SMCustomPropertyChartIndexFormat)}",
+									chartProperty.Value);
 							}
+
 							chartIndex++;
 						}
 					}
@@ -106,7 +108,7 @@ namespace Fumen.Converters
 					WriteSongPropertyFromExtras(TagBGChanges2, false, false);
 				if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(TagFGChanges, false, false);
-				WriteSongPropertyFromExtras(TagKeySounds, false, false);		// TODO: Write keysounds properly
+				WriteSongPropertyFromExtras(TagKeySounds, false, false); // TODO: Write keysounds properly
 				WriteSongPropertyFromExtras(TagAttacks, false, false);
 
 				StreamWriter.WriteLine();
@@ -116,6 +118,7 @@ namespace Fumen.Converters
 					WriteChart(chart);
 				}
 			}
+
 			StreamWriter = null;
 
 			return true;

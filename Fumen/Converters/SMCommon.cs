@@ -77,7 +77,7 @@ namespace Fumen.Converters
 			Medium,
 			Hard,
 			Challenge,
-			Edit
+			Edit,
 		}
 
 		public enum NoteType
@@ -105,14 +105,17 @@ namespace Fumen.Converters
 		/// signature is just used for rendering.
 		/// </summary>
 		public const int NumBeatsPerMeasure = 4;
+
 		/// <summary>
 		/// In StepMania's representation there are a maximum of 48 rows per beat.
 		/// </summary>
 		public const int MaxValidDenominator = 48;
+
 		/// <summary>
 		/// The number of rows in a StepMania 4/4 measure.
 		/// </summary>
 		public const int RowsPerMeasure = NumBeatsPerMeasure * MaxValidDenominator;
+
 		/// <summary>
 		/// In sm or ssc files notes can only subdivide beats by fractions with these
 		/// denominators. For example, StepMania cannot handle a beat subdivided 24 times,
@@ -128,7 +131,7 @@ namespace Fumen.Converters
 			8,	// Thirty-second note
 			12,	// Thirty-second note triplet (Forty-eighth note)
 			16,	// Sixty-fourth note
-			48  // One-hundred-ninety-second note
+			48,	// One-hundred-ninety-second note
 		};
 
 		public static readonly char[] SMAllWhiteSpace = { '\r', '\n', ' ', '\t' };
@@ -137,9 +140,10 @@ namespace Fumen.Converters
 		public static readonly List<double> SubDivisionLengths = new List<double>();
 		public static readonly ChartProperties[] Properties;
 		public static readonly char[] NoteChars = { '0', '1', '2', '3', '4', 'M', 'L', 'F', 'K' };
+
 		public static readonly string[] NoteStrings =
 		{
-			"None", "Tap", "Hold Start", "Hold or Roll End", "Roll Start", "Mine", "Lift", "Fake", "KeySound"
+			"None", "Tap", "Hold Start", "Hold or Roll End", "Roll Start", "Mine", "Lift", "Fake", "KeySound",
 		};
 
 		public const string TagTitle = "TITLE";
@@ -156,6 +160,7 @@ namespace Fumen.Converters
 		public const string TagCDTitle = "CDTITLE";
 		public const string TagMusic = "MUSIC";
 		public const string TagOffset = "OFFSET";
+
 		// ReSharper disable once InconsistentNaming
 		public const string TagBPMs = "BPMS";
 		public const string TagStops = "STOPS";
@@ -336,10 +341,12 @@ namespace Fumen.Converters
 				{
 					// Value is between midpoint and adjacent.
 					if (midIndex > 0 && fractionAsDouble > SubDivisionLengths[midIndex - 1])
+					{
 						return fractionAsDouble - SubDivisionLengths[midIndex - 1] <
-							   SubDivisionLengths[midIndex] - fractionAsDouble
+						       SubDivisionLengths[midIndex] - fractionAsDouble
 							? SubDivisions[midIndex - 1]
 							: SubDivisions[midIndex];
+					}
 
 					// Advance search
 					rightIndex = midIndex;
@@ -350,10 +357,12 @@ namespace Fumen.Converters
 				{
 					// Value is between midpoint and adjacent.
 					if (midIndex < length - 1 && fractionAsDouble < SubDivisionLengths[midIndex + 1])
+					{
 						return fractionAsDouble - SubDivisionLengths[midIndex] <
-							   SubDivisionLengths[midIndex + 1] - fractionAsDouble
+						       SubDivisionLengths[midIndex + 1] - fractionAsDouble
 							? SubDivisions[midIndex]
 							: SubDivisions[midIndex + 1];
+					}
 
 					// Advance search
 					leftIndex = midIndex + 1;
@@ -365,6 +374,7 @@ namespace Fumen.Converters
 					return SubDivisions[midIndex];
 				}
 			}
+
 			return SubDivisions[midIndex];
 		}
 
@@ -379,15 +389,15 @@ namespace Fumen.Converters
 		/// The desired sub-division to use. In practice, the least common multiple of the reduced
 		/// sub-divisions for all notes in a particular measure.
 		/// </param>
-		/// <param name="lowestValidSMSubDivison">
+		/// <param name="lowestValidSMSubDivision">
 		/// Out parameter to hold the lowest valid sub-division which stepmania supports.
 		/// </param>
 		/// <returns>
 		/// True if a valid sub-division was found and false otherwise.
 		/// </returns>
-		public static bool GetLowestValidSMSubDivision(int desiredSubDivision, out int lowestValidSMSubDivison)
+		public static bool GetLowestValidSMSubDivision(int desiredSubDivision, out int lowestValidSMSubDivision)
 		{
-			lowestValidSMSubDivison = desiredSubDivision;
+			lowestValidSMSubDivision = desiredSubDivision;
 			var highestDenominator = ValidDenominators[ValidDenominators.Length - 1];
 			do
 			{
@@ -395,13 +405,14 @@ namespace Fumen.Converters
 				{
 					if (desiredSubDivision == validDenominator)
 					{
-						lowestValidSMSubDivison = desiredSubDivision;
+						lowestValidSMSubDivision = desiredSubDivision;
 						return true;
 					}
 				}
+
 				desiredSubDivision <<= 1;
-			}
-			while (desiredSubDivision <= highestDenominator);
+			} while (desiredSubDivision <= highestDenominator);
+
 			return false;
 		}
 
@@ -423,7 +434,8 @@ namespace Fumen.Converters
 
 			var subDivisionToUse =
 				Math.Abs(absoluteBeat - lowerEstimatedPosition) <= Math.Abs(absoluteBeat - higherEstimatedPosition)
-					? lowEstimateSubDivision : highEstimateSubDivision;
+					? lowEstimateSubDivision
+					: highEstimateSubDivision;
 
 			var subDivisionAsRow = subDivisionToUse.Numerator * (MaxValidDenominator / subDivisionToUse.Denominator);
 			return beatInt * MaxValidDenominator + subDivisionAsRow;
@@ -454,7 +466,7 @@ namespace Fumen.Converters
 			{
 				var tempoChangeEvent = new Tempo(tempo.Value)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tempo.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tempo.Key),
 				};
 
 				// Record the actual doubles.
@@ -478,7 +490,7 @@ namespace Fumen.Converters
 			{
 				var stopEvent = new Stop(stop.Value)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(stop.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(stop.Key),
 				};
 
 				// Record the actual doubles.
@@ -503,7 +515,7 @@ namespace Fumen.Converters
 			{
 				var stopEvent = new Stop(delay.Value, true)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(delay.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(delay.Key),
 				};
 
 				// Record the actual doubles.
@@ -529,7 +541,7 @@ namespace Fumen.Converters
 				// Convert warp beats to number of rows
 				var warpEvent = new Warp(ConvertAbsoluteBeatToIntegerPosition(warp.Value))
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(warp.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(warp.Key),
 				};
 
 				// Record the actual doubles.
@@ -554,7 +566,7 @@ namespace Fumen.Converters
 			{
 				var scrollRateEvent = new ScrollRate(scrollRate.Value)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key),
 				};
 
 				// Record the actual doubles.
@@ -573,7 +585,8 @@ namespace Fumen.Converters
 		/// Dictionary of time to value of scroll rates parsed from the Song or Chart.
 		/// </param>
 		/// <param name="chart">Chart to add ScrollRateInterpolation Events to.</param>
-		public static void AddScrollRateInterpolationEvents(Dictionary<double, Tuple<double, double, int>> scrollRateEvents, Chart chart)
+		public static void AddScrollRateInterpolationEvents(Dictionary<double, Tuple<double, double, int>> scrollRateEvents,
+			Chart chart)
 		{
 			foreach (var scrollRate in scrollRateEvents)
 			{
@@ -585,18 +598,15 @@ namespace Fumen.Converters
 				var periodAsTime = 0.0;
 				var periodAsIntegerPosition = 0;
 				if (lengthIsTimeInSeconds)
-				{
 					periodAsTime = length;
-				}
 				else
-				{
 					periodAsIntegerPosition = ConvertAbsoluteBeatToIntegerPosition(length);
-				}
 
-				var scrollRateEvent = new ScrollRateInterpolation(speed, periodAsIntegerPosition, periodAsTime, lengthIsTimeInSeconds)
-				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key)
-				};
+				var scrollRateEvent =
+					new ScrollRateInterpolation(speed, periodAsIntegerPosition, periodAsTime, lengthIsTimeInSeconds)
+					{
+						IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key),
+					};
 
 				// Record the actual doubles.
 				scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Key);
@@ -620,7 +630,7 @@ namespace Fumen.Converters
 			{
 				var tickCountEvent = new TickCount(tickCount.Value)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tickCount.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tickCount.Key),
 				};
 
 				// Record the actual doubles.
@@ -644,7 +654,7 @@ namespace Fumen.Converters
 			{
 				var labelEvent = new Label(label.Value)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(label.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(label.Key),
 				};
 
 				// Record the actual doubles.
@@ -668,7 +678,7 @@ namespace Fumen.Converters
 			{
 				var fakeSegmentEvent = new FakeSegment(fake.Value)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(fake.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(fake.Key),
 				};
 
 				// Record the actual doubles.
@@ -693,7 +703,7 @@ namespace Fumen.Converters
 			{
 				var multipliersEvent = new Multipliers(combo.Value.Item1, combo.Value.Item2)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(combo.Key)
+					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(combo.Key),
 				};
 
 				// Record the actual doubles.
@@ -744,10 +754,11 @@ namespace Fumen.Converters
 							var beatStr = beatDouble.ToString(SMDoubleFormat);
 							var expectedBeatStr = 0.0.ToString(SMDoubleFormat);
 							logger.Warn(
-								$"First time signature occurs at {beatStr}." 
+								$"First time signature occurs at {beatStr}."
 								+ $" If explicit time signatures are defined the first must be at {expectedBeatStr}."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
+
 						useDefaultTimeSignature = true;
 						break;
 					}
@@ -762,6 +773,7 @@ namespace Fumen.Converters
 								+ " Both values must be greater than 0."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
+
 						useDefaultTimeSignature = true;
 						break;
 					}
@@ -780,12 +792,13 @@ namespace Fumen.Converters
 								+ " Time signatures can only change at the start of a measure."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
+
 						useDefaultTimeSignature = true;
 						break;
 					}
 
 					// Make sure this time signature can be represented by StepMania's integer positions.
-					if ((MaxValidDenominator * NumBeatsPerMeasure) % ts.Denominator != 0)
+					if (MaxValidDenominator * NumBeatsPerMeasure % ts.Denominator != 0)
 					{
 						if (logOnErrors)
 						{
@@ -795,19 +808,20 @@ namespace Fumen.Converters
 								+ $" The beat ({ts.Denominator}) must evenly divide {MaxValidDenominator * NumBeatsPerMeasure}."
 								+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
 						}
+
 						useDefaultTimeSignature = true;
 						break;
 					}
 
 					// Record measure boundaries so we can check the next time signature.
-					var rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / ts.Denominator;
+					var rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / ts.Denominator;
 					var rowsPerMeasure = rowsPerBeat * ts.Numerator;
 					lastTimeSignatureRowsPerMeasure = rowsPerMeasure;
 					lastTimeSignatureIntegerPosition = integerPosition;
 
 					tsEvents.Add(new TimeSignature(ts)
 					{
-						IntegerPosition = integerPosition
+						IntegerPosition = integerPosition,
 					});
 
 					first = false;
@@ -817,9 +831,7 @@ namespace Fumen.Converters
 				if (!useDefaultTimeSignature)
 				{
 					foreach (var tsEvent in tsEvents)
-					{
 						chart.Layers[0].Events.Add(tsEvent);
-					}
 				}
 			}
 
@@ -828,7 +840,7 @@ namespace Fumen.Converters
 			{
 				chart.Layers[0].Events.Add(new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
 				{
-					IntegerPosition = 0
+					IntegerPosition = 0,
 				});
 			}
 		}
@@ -872,6 +884,7 @@ namespace Fumen.Converters
 			}
 			else if (tempos?.ContainsKey(0.0) ?? false)
 				displayTempo = tempos[0.0].ToString("N3");
+
 			return displayTempo;
 		}
 
@@ -885,15 +898,15 @@ namespace Fumen.Converters
 			foreach (var e in source)
 			{
 				if (e is TimeSignature
-					|| e is Tempo
-					|| e is Stop
-					|| e is Warp
-					|| e is ScrollRate
-					|| e is ScrollRateInterpolation
-					|| e is TickCount
-					|| e is Label
-					|| e is FakeSegment
-					|| e is Multipliers)
+				    || e is Tempo
+				    || e is Stop
+				    || e is Warp
+				    || e is ScrollRate
+				    || e is ScrollRateInterpolation
+				    || e is TickCount
+				    || e is Label
+				    || e is FakeSegment
+				    || e is Multipliers)
 					dest.Add(e.Clone());
 			}
 		}
@@ -959,11 +972,13 @@ namespace Fumen.Converters
 				var measureRelativeToLastTimeSigChange = beatRelativeToLastTimeSigChange / beatsPerMeasure;
 
 				var absoluteMeasure = lastTimeSigChangeMeasure + measureRelativeToLastTimeSigChange;
-				var beatInMeasure = beatRelativeToLastTimeSigChange - (measureRelativeToLastTimeSigChange * beatsPerMeasure);
-				var beatSubDivision = new Fraction((chartEvent.IntegerPosition - lastTimeSigChangeRow) % rowsPerBeat, rowsPerBeat).Reduce();
+				var beatInMeasure = beatRelativeToLastTimeSigChange - measureRelativeToLastTimeSigChange * beatsPerMeasure;
+				var beatSubDivision = new Fraction((chartEvent.IntegerPosition - lastTimeSigChangeRow) % rowsPerBeat, rowsPerBeat)
+					.Reduce();
 
-				var timeRelativeToLastTempoChange = lastTempo == null ? 0.0 :
-					(chartEvent.IntegerPosition - lastTempoChangeRow) * lastTempo.GetSecondsPerRow(MaxValidDenominator);
+				var timeRelativeToLastTempoChange = lastTempo == null
+					? 0.0
+					: (chartEvent.IntegerPosition - lastTempoChangeRow) * lastTempo.GetSecondsPerRow(MaxValidDenominator);
 				var absoluteTime = lastTempoChangeTime + timeRelativeToLastTempoChange;
 
 				// Handle a currently running warp.
@@ -973,8 +988,9 @@ namespace Fumen.Converters
 					// Figure out the amount of time elapsed during the current warp since the last event
 					// which altered the rate of time during this warp.
 					var endPosition = Math.Min(chartEvent.IntegerPosition, warpingEndPosition);
-					currentWarpTime = lastTempo == null ? 0.0 :
-						(endPosition - lastWarpBeatTimeChangeRow) * lastTempo.GetSecondsPerRow(MaxValidDenominator);
+					currentWarpTime = lastTempo == null
+						? 0.0
+						: (endPosition - lastWarpBeatTimeChangeRow) * lastTempo.GetSecondsPerRow(MaxValidDenominator);
 
 					// Warp section is complete.
 					if (chartEvent.IntegerPosition >= warpingEndPosition)
@@ -990,7 +1006,7 @@ namespace Fumen.Converters
 				}
 
 				chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
-				chartEvent.TimeSeconds = (absoluteTime - currentWarpTime - totalWarpTime + totalStopTimeSeconds);
+				chartEvent.TimeSeconds = absoluteTime - currentWarpTime - totalWarpTime + totalStopTimeSeconds;
 
 				// In the case of negative stop / bpm warps, we need to clamp the time of an event so it does not precede events which
 				// have lower IntegerPositions
@@ -1021,7 +1037,7 @@ namespace Fumen.Converters
 					lastTimeSigChangeRow = chartEvent.IntegerPosition;
 					lastTimeSigChangeMeasure = absoluteMeasure;
 					beatsPerMeasure = timeSignature.Numerator;
-					rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / timeSignature.Denominator;
+					rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / timeSignature.Denominator;
 
 					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
 					if (warpingEndPosition != -1)
@@ -1065,7 +1081,7 @@ namespace Fumen.Converters
 				var relativeMeasure = pos.Measure - lastBeatTimeChangeMeasure;
 				var relativeBeat = relativeMeasure * beatsPerMeasure + pos.Beat;
 				var subDivision = pos.SubDivision.Reduce();
-				var subDivisionRows = (subDivision.Numerator * rowsPerBeat) / subDivision.Denominator;
+				var subDivisionRows = subDivision.Numerator * rowsPerBeat / subDivision.Denominator;
 				var relativeRow = relativeBeat * rowsPerBeat + subDivisionRows;
 				var absoluteRow = lastBeatTimeChangeRow + relativeRow;
 				chartEvent.IntegerPosition = absoluteRow;
@@ -1076,7 +1092,7 @@ namespace Fumen.Converters
 					lastBeatTimeChangeRow = chartEvent.IntegerPosition;
 					lastBeatTimeChangeMeasure = pos.Measure;
 					beatsPerMeasure = timeSignature.Numerator;
-					rowsPerBeat = (MaxValidDenominator * NumBeatsPerMeasure) / timeSignature.Denominator;
+					rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / timeSignature.Denominator;
 				}
 			}
 		}
@@ -1091,7 +1107,7 @@ namespace Fumen.Converters
 		{
 			var measure = row / (MaxValidDenominator * NumBeatsPerMeasure);
 			var beat = row / MaxValidDenominator - measure * NumBeatsPerMeasure;
-			var subDivisionRow = row - (beat * MaxValidDenominator);
+			var subDivisionRow = row - beat * MaxValidDenominator;
 			var subDivision = new Fraction(subDivisionRow, MaxValidDenominator).Reduce();
 			return $"Row {row} (File Measure {measure} Beat {beat} SubDivision {subDivision})";
 		}
@@ -1104,10 +1120,10 @@ namespace Fumen.Converters
 		/// <returns>New Event.</returns>
 		public static Event CreateDummyFirstEventForRow(int integerPosition)
 		{
-			// Time Signarue events are sorted first.
+			// Time Signature events are sorted first.
 			return new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
 			{
-				IntegerPosition = integerPosition
+				IntegerPosition = integerPosition,
 			};
 		}
 
@@ -1119,6 +1135,7 @@ namespace Fumen.Converters
 			// Compare by string instead of Type Name in order to sort Delays separately from Stops.
 			private const string DelayString = "Delay";
 			private const string NegativeStopString = "NegativeStop";
+
 			private static readonly Dictionary<string, int> SMEventOrder = new Dictionary<string, int>
 			{
 				// If changing this such that TimeSignature is no longer first, adjust CreateDummyFirstEventForRow.
@@ -1176,6 +1193,7 @@ namespace Fumen.Converters
 					else if (s1.LengthSeconds < 0.0)
 						typeStr1 = NegativeStopString;
 				}
+
 				var typeStr2 = e2.GetType().Name;
 				if (e2 is Stop s2)
 				{
@@ -1184,6 +1202,7 @@ namespace Fumen.Converters
 					else if (s2.LengthSeconds < 0.0)
 						typeStr2 = NegativeStopString;
 				}
+
 				var e1Index = SMEventOrder[typeStr1];
 				var e2Index = SMEventOrder[typeStr2];
 				if (e1Index >= 0 && e2Index >= 0)

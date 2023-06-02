@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Fumen.ChartDefinition
+﻿namespace Fumen.ChartDefinition
 {
 	/// <summary>
 	/// Event within a Chart Layer.
@@ -16,6 +14,7 @@ namespace Fumen.ChartDefinition
 		/// Position of this Event represented as a MetricPosition.
 		/// </summary>
 		public MetricPosition MetricPosition { get; set; }
+
 		/// <summary>
 		/// Position of this Event represented as an integer value.
 		/// </summary>
@@ -25,6 +24,7 @@ namespace Fumen.ChartDefinition
 		/// Arbitrary string for storing the type of this Event from the source file.
 		/// </summary>
 		public string SourceType { get; set; }
+
 		/// <summary>
 		/// Arbitrary string for storing the type of this Event for the destination file.
 		/// </summary>
@@ -67,6 +67,7 @@ namespace Fumen.ChartDefinition
 		/// Length of the stop at this Stop Event as time in seconds.
 		/// </summary>
 		public double LengthSeconds;
+
 		/// <summary>
 		/// Delays are Stops which occur before other Events at the same time.
 		/// </summary>
@@ -85,7 +86,10 @@ namespace Fumen.ChartDefinition
 			IsDelay = other.IsDelay;
 		}
 
-		public override Event Clone() { return new Stop(this); }
+		public override Event Clone()
+		{
+			return new Stop(this);
+		}
 	}
 
 	/// <summary>
@@ -113,7 +117,10 @@ namespace Fumen.ChartDefinition
 			LengthIntegerPosition = other.LengthIntegerPosition;
 		}
 
-		public override Event Clone() { return new Warp(this); }
+		public override Event Clone()
+		{
+			return new Warp(this);
+		}
 	}
 
 	/// <summary>
@@ -137,7 +144,10 @@ namespace Fumen.ChartDefinition
 			Rate = other.Rate;
 		}
 
-		public override Event Clone() { return new ScrollRate(this); }
+		public override Event Clone()
+		{
+			return new ScrollRate(this);
+		}
 	}
 
 	/// <summary>
@@ -178,7 +188,10 @@ namespace Fumen.ChartDefinition
 			PreferPeriodAsTime = other.PreferPeriodAsTime;
 		}
 
-		public override Event Clone() { return new ScrollRateInterpolation(this); }
+		public override Event Clone()
+		{
+			return new ScrollRateInterpolation(this);
+		}
 	}
 
 	/// <summary>
@@ -202,12 +215,16 @@ namespace Fumen.ChartDefinition
 			TempoBPM = other.TempoBPM;
 		}
 
-		public override Event Clone() { return new Tempo(this); }
+		public override Event Clone()
+		{
+			return new Tempo(this);
+		}
 
 		public double GetRowsPerSecond(int rowsPerBeat)
 		{
 			return 1.0 / GetSecondsPerRow(rowsPerBeat);
 		}
+
 		public double GetSecondsPerRow(int rowsPerBeat)
 		{
 			return 60.0 / TempoBPM / rowsPerBeat;
@@ -235,7 +252,10 @@ namespace Fumen.ChartDefinition
 			Signature = new Fraction(other.Signature);
 		}
 
-		public override Event Clone() { return new TimeSignature(this); }
+		public override Event Clone()
+		{
+			return new TimeSignature(this);
+		}
 	}
 
 	/// <summary>
@@ -263,7 +283,10 @@ namespace Fumen.ChartDefinition
 			Ticks = other.Ticks;
 		}
 
-		public override Event Clone() { return new TickCount(this); }
+		public override Event Clone()
+		{
+			return new TickCount(this);
+		}
 	}
 
 	/// <summary>
@@ -290,7 +313,10 @@ namespace Fumen.ChartDefinition
 			Text = other.Text;
 		}
 
-		public override Event Clone() { return new Label(this); }
+		public override Event Clone()
+		{
+			return new Label(this);
+		}
 	}
 
 	/// <summary>
@@ -317,7 +343,10 @@ namespace Fumen.ChartDefinition
 			LengthSeconds = other.LengthSeconds;
 		}
 
-		public override Event Clone() { return new FakeSegment(this); }
+		public override Event Clone()
+		{
+			return new FakeSegment(this);
+		}
 	}
 
 	/// <summary>
@@ -332,6 +361,7 @@ namespace Fumen.ChartDefinition
 		/// Multiplier for hits. This is an int to match StepMania.
 		/// </summary>
 		public int HitMultiplier;
+
 		/// <summary>
 		/// Multiplier for misses. This is an int to match StepMania.
 		/// </summary>
@@ -350,6 +380,9 @@ namespace Fumen.ChartDefinition
 			MissMultiplier = other.MissMultiplier;
 		}
 
-		public override Event Clone() { return new Multipliers(this); }
+		public override Event Clone()
+		{
+			return new Multipliers(this);
+		}
 	}
 }

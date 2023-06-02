@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.IO;
+using System.Threading.Tasks;
 using Fumen.ChartDefinition;
 using static Fumen.Converters.SMCommon;
 
@@ -28,7 +28,7 @@ namespace Fumen.Converters
 		/// <returns>True if saving was successful and false otherwise.</returns>
 		public async Task<bool> SaveAsync()
 		{
-			return await Task.Run(() => Save());
+			return await Task.Run(Save);
 		}
 
 		/// <summary>
@@ -83,7 +83,7 @@ namespace Fumen.Converters
 				if (Config.CustomProperties?.CustomSongProperties != null)
 				{
 					foreach (var customProperty in Config.CustomProperties.CustomSongProperties)
-						WriteProperty(customProperty.Key, customProperty.Value, true);
+						WriteProperty(customProperty.Key, customProperty.Value);
 				}
 
 				// Timing data.
@@ -110,7 +110,7 @@ namespace Fumen.Converters
 					WriteSongPropertyFromExtras(TagBGChanges2, false, false);
 				if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(TagFGChanges, false, false);
-				WriteSongPropertyFromExtras(TagKeySounds, false, false);		// TODO: Write keysounds properly
+				WriteSongPropertyFromExtras(TagKeySounds, false, false); // TODO: Write keysounds properly
 				WriteSongPropertyFromExtras(TagAttacks, false, false);
 
 				// Cache
@@ -140,6 +140,7 @@ namespace Fumen.Converters
 					WriteChart(chart, customChartProperties);
 				}
 			}
+
 			StreamWriter = null;
 
 			return true;
@@ -173,7 +174,7 @@ namespace Fumen.Converters
 			if (customProperties != null)
 			{
 				foreach (var customProperty in customProperties)
-					WriteProperty(customProperty.Key, customProperty.Value, true);
+					WriteProperty(customProperty.Key, customProperty.Value);
 			}
 
 			// Timing
@@ -196,6 +197,7 @@ namespace Fumen.Converters
 				    || chart.Extras.TryGetExtra(TagLabels, out object _, matchesSource))
 					writeTimingData = true;
 			}
+
 			if (writeTimingData)
 			{
 				WriteChartProperty(chart, TagOffset, chart.ChartOffsetFromMusic);

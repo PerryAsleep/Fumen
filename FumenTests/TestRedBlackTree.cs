@@ -4,6 +4,8 @@ using System.Linq;
 using Fumen;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+// ReSharper disable AccessToModifiedClosure
+
 namespace FumenTests
 {
 	[TestClass]
@@ -34,7 +36,7 @@ namespace FumenTests
 			// Check every node.
 			var expectedLeafBlackCount = -1;
 			var numNodes = 0;
-			T previousValue = default(T);
+			var previousValue = default(T);
 			CheckNode(t, r, ref previousValue, ref numNodes, ref expectedLeafBlackCount, 0);
 
 			Assert.AreEqual(numNodes, t.Count);
@@ -305,7 +307,7 @@ namespace FumenTests
 
 			// Iterate over empty tree.
 			var numCounted = 0;
-			foreach (var i in t)
+			foreach (var _ in t)
 			{
 				numCounted++;
 			}
@@ -420,6 +422,7 @@ namespace FumenTests
 			{
 				Assert.IsTrue(e.IsCurrentValid());
 			}
+
 			Assert.IsFalse(e.IsCurrentValid());
 
 			e = t.Find(5);
@@ -439,8 +442,8 @@ namespace FumenTests
 			// Finding in an empty tree should return null.
 			var t = new RedBlackTree<int>();
 			Assert.IsNull(t.Find(0));
-			
-			for(var i = 0; i < 10; i+=2)
+
+			for (var i = 0; i < 10; i += 2)
 				t.Insert(i);
 
 			// Finding elements outside of the range of the tree should return null.
@@ -500,7 +503,7 @@ namespace FumenTests
 
 			// Find elements after the least element should return the greatest
 			// preceding element.
-			for (var i = 1; i < num; i ++)
+			for (var i = 1; i < num; i++)
 			{
 				// Check without equals.
 				var expected = i - 1;
@@ -558,7 +561,7 @@ namespace FumenTests
 			Assert.IsNotNull(e);
 			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
-			Assert.AreEqual(num-2, e.Current);
+			Assert.AreEqual(num - 2, e.Current);
 
 			// Find elements before the greatest element should return the least
 			// following element.

@@ -17,11 +17,11 @@ namespace Fumen
 			var parts = s.Split('/');
 			if (parts.Length != 2)
 				return null;
-			if (!int.TryParse(parts[0], out var num))
+			if (!int.TryParse(parts[0], out var numerator))
 				return null;
-			if (!int.TryParse(parts[1], out var denom))
+			if (!int.TryParse(parts[1], out var denominator))
 				return null;
-			return new Fraction(num, denom);
+			return new Fraction(numerator, denominator);
 		}
 
 		public Fraction(Fraction other)
@@ -47,6 +47,7 @@ namespace Fumen
 				a.Numerator * b.Denominator + b.Numerator * a.Denominator,
 				a.Denominator * b.Denominator).Reduce();
 		}
+
 		public static Fraction operator -(Fraction a, Fraction b)
 		{
 			return new Fraction(
@@ -125,19 +126,19 @@ namespace Fumen
 
 		public static int GreatestCommonDenominator(int a, int b)
 		{
-			int r;
 			while (b > 0)
 			{
-				r = a % b;
+				var r = a % b;
 				a = b;
 				b = r;
 			}
+
 			return a;
 		}
 
 		public static int LeastCommonMultiple(int a, int b)
 		{
-			return (a / GreatestCommonDenominator(a, b)) * b;
+			return a / GreatestCommonDenominator(a, b) * b;
 		}
 	}
 }

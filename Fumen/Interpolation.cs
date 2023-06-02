@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Fumen
+﻿namespace Fumen
 {
 	public class Interpolation
 	{
 		public static double Lerp(double startValue, double endValue, double startTime, double endTime, double currentTime)
 		{
-			if (endTime == startTime)
+			if (endTime.DoubleEquals(startTime))
 				return currentTime >= endTime ? endValue : startValue;
-			var ret = startValue + ((currentTime - startTime) / (endTime - startTime)) * (endValue - startValue);
+			var ret = startValue + (currentTime - startTime) / (endTime - startTime) * (endValue - startValue);
 			if (startValue < endValue)
 				return Clamp(ret, startValue, endValue);
 			return Clamp(ret, endValue, startValue);
@@ -24,9 +20,9 @@ namespace Fumen
 
 		public static float Lerp(float startValue, float endValue, float startTime, float endTime, float currentTime)
 		{
-			if (endTime == startTime)
+			if (endTime.FloatEquals(startTime))
 				return currentTime >= endTime ? endValue : startValue;
-			var ret = startValue + ((currentTime - startTime) / (endTime - startTime)) * (endValue - startValue);
+			var ret = startValue + (currentTime - startTime) / (endTime - startTime) * (endValue - startValue);
 			if (startValue < endValue)
 				return Clamp(ret, startValue, endValue);
 			return Clamp(ret, endValue, startValue);

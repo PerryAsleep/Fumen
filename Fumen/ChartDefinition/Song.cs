@@ -11,15 +11,15 @@ namespace Fumen.ChartDefinition
 		public FileFormatType SourceType { get; set; }
 
 		public string Title { get; set; }
-		public string TitleTransliteration{ get; set; }
-		public string SubTitle{ get; set; }
-		public string SubTitleTransliteration{ get; set; }
-		public string Artist{ get; set; }
-		public string ArtistTransliteration{ get; set; }
-		public string Genre{ get; set; }
-		public string GenreTransliteration{ get; set; }
+		public string TitleTransliteration { get; set; }
+		public string SubTitle { get; set; }
+		public string SubTitleTransliteration { get; set; }
+		public string Artist { get; set; }
+		public string ArtistTransliteration { get; set; }
+		public string Genre { get; set; }
+		public string GenreTransliteration { get; set; }
 
-		public string Description{ get; set; }
+		public string Description { get; set; }
 
 		public string SongSelectImage { get; set; }
 

@@ -51,7 +51,10 @@
 			Lane = other.Lane;
 		}
 
-		public override Event Clone() { return new LaneNote(this); }
+		public override Event Clone()
+		{
+			return new LaneNote(this);
+		}
 	}
 
 	/// <summary>
@@ -68,7 +71,10 @@
 		{
 		}
 
-		public override Event Clone() { return new LaneTapNote(this); }
+		public override Event Clone()
+		{
+			return new LaneTapNote(this);
+		}
 	}
 
 	/// <summary>
@@ -85,7 +91,10 @@
 		{
 		}
 
-		public override Event Clone() { return new LaneHoldStartNote(this); }
+		public override Event Clone()
+		{
+			return new LaneHoldStartNote(this);
+		}
 	}
 
 	/// <summary>
@@ -102,7 +111,10 @@
 		{
 		}
 
-		public override Event Clone() { return new LaneHoldEndNote(this); }
+		public override Event Clone()
+		{
+			return new LaneHoldEndNote(this);
+		}
 	}
 
 	/// <summary>
@@ -129,7 +141,10 @@
 			Height = other.Height;
 		}
 
-		public override Event Clone() { return new PositionalNote(this); }
+		public override Event Clone()
+		{
+			return new PositionalNote(this);
+		}
 	}
 
 	/// <summary>
@@ -146,7 +161,10 @@
 		{
 		}
 
-		public override Event Clone() { return new PositionalTapNote(this); }
+		public override Event Clone()
+		{
+			return new PositionalTapNote(this);
+		}
 	}
 
 	/// <summary>
@@ -163,7 +181,10 @@
 		{
 		}
 
-		public override Event Clone() { return new PositionalHoldStartNote(this); }
+		public override Event Clone()
+		{
+			return new PositionalHoldStartNote(this);
+		}
 	}
 
 	/// <summary>
@@ -180,6 +201,9 @@
 		{
 		}
 
-		public override Event Clone() { return new PositionalHoldEndNote(this); }
+		public override Event Clone()
+		{
+			return new PositionalHoldEndNote(this);
+		}
 	}
 }

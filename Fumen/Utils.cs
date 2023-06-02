@@ -2,27 +2,9 @@
 
 namespace Fumen
 {
-	public class Utils
-	{
-		public static double ToSeconds(long micros)
-		{
-			return micros * 0.000001;
-		}
-
-		public static long ToMicros(double seconds)
-		{
-			return (long)(seconds * 1000000);
-		}
-
-		public static long ToMicrosRounded(double seconds)
-		{
-			return Convert.ToInt64(seconds * 1000000.0);
-		}
-	}
-
 	public static class FumenExtensions
 	{
-		const float MinFloatDelta = 0.0000001f;
+		private const float MinFloatDelta = 0.0000001f;
 
 		public static bool FloatEquals(this float f, float other)
 		{
@@ -45,11 +27,12 @@ namespace Fumen
 		/// </remarks>
 		private static bool HasMinimalDifference(double value1, double value2, int units)
 		{
-			long lValue1 = BitConverter.DoubleToInt64Bits(value1);
-			long lValue2 = BitConverter.DoubleToInt64Bits(value2);
+			var lValue1 = BitConverter.DoubleToInt64Bits(value1);
+			var lValue2 = BitConverter.DoubleToInt64Bits(value2);
 
 			// If the signs are different, return false except for +0 and -0.
-			if ((lValue1 >> 63) != (lValue2 >> 63))
+			if (lValue1 >> 63 != lValue2 >> 63)
+				// ReSharper disable once CompareOfFloatsByEqualityOperator
 				return value1 == value2;
 
 			return Math.Abs(lValue1 - lValue2) <= units;

@@ -14,10 +14,12 @@ namespace Fumen
 		/// Measure within a piece of music. 0 indexed.
 		/// </summary>
 		public readonly int Measure;
+
 		/// <summary>
 		/// Beat within Measure. 0 indexed.
 		/// </summary>
 		public readonly int Beat;
+
 		/// <summary>
 		/// Subdivision within Beat.
 		/// </summary>
@@ -58,10 +60,12 @@ namespace Fumen
 		{
 			return a.CompareTo(b) > 0;
 		}
+
 		public static bool operator <(MetricPosition a, MetricPosition b)
 		{
 			return a.CompareTo(b) < 0;
 		}
+
 		public static bool operator ==(MetricPosition a, MetricPosition b)
 		{
 			if (a is null)
@@ -70,6 +74,7 @@ namespace Fumen
 				return false;
 			return a.CompareTo(b) == 0;
 		}
+
 		public static bool operator !=(MetricPosition a, MetricPosition b)
 		{
 			if (a is null)
@@ -78,10 +83,12 @@ namespace Fumen
 				return true;
 			return a.CompareTo(b) != 0;
 		}
+
 		public static bool operator >=(MetricPosition a, MetricPosition b)
 		{
 			return a.CompareTo(b) >= 0;
 		}
+
 		public static bool operator <=(MetricPosition a, MetricPosition b)
 		{
 			return a.CompareTo(b) <= 0;

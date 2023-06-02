@@ -17,29 +17,35 @@ namespace Fumen
 		/// The size of the circular buffer.
 		/// </summary>
 		private int BufferSize;
+
 		/// <summary>
 		/// Circular buffer.
 		/// </summary>
 		private List<T> Buffer;
+
 		/// <summary>
 		/// The absolute index of the current element.
 		/// It is expected for this to become larger than BufferSize.
 		/// </summary>
 		private int AbsoluteIndex;
+
 		/// <summary>
 		/// The current index in the circular buffer.
 		/// This is the index where the next element will be added, one beyond the last element.
 		/// </summary>
 		private int BufferIndex;
+
 		/// <summary>
 		/// The start index of the circular buffer.
 		/// This is the furthest back in the buffer that can be undone to.
 		/// </summary>
 		private int BufferStartIndex;
+
 		/// <summary>
 		/// Flag for whether or not the internal buffer is full.
 		/// </summary>
 		private bool IsFull;
+
 		/// <summary>
 		/// Number of elements currently Popped that can be Repushed.
 		/// </summary>
@@ -68,8 +74,8 @@ namespace Fumen
 			Buffer = new List<T>(BufferSize);
 			IsFull = false;
 			PopCount = 0;
-			for (int i = 0; i < size; i++)
-				Buffer.Add(default(T));
+			for (var i = 0; i < size; i++)
+				Buffer.Add(default);
 			ResetUnreachableElements = resetUnreachableElements;
 		}
 
@@ -95,7 +101,7 @@ namespace Fumen
 		/// If the new size is smaller this may result in some elements being removed.
 		/// Past elements will be prioritized first, with the most recent elements prioritized
 		/// above the oldest elements.
-		/// Future elements will be prioritzied after past elements, with the most recent
+		/// Future elements will be prioritized after past elements, with the most recent
 		/// elements being prioritized above the furthest future elements.
 		/// </summary>
 		/// <param name="size">The new size.</param>
@@ -111,7 +117,7 @@ namespace Fumen
 			var i = 0;
 			while (i < size)
 			{
-				newBuffer.Add(default(T));
+				newBuffer.Add(default);
 				i++;
 			}
 
@@ -129,7 +135,7 @@ namespace Fumen
 			// Determine the number of future elements in the current stack.
 			var numFutureElements = PopCount;
 
-			// Copy as many past elements as will fit into the new stack, prioriziting the
+			// Copy as many past elements as will fit into the new stack, prioritizing the
 			// most recent elements. This may result in throwing out the oldest elements.
 			var numPastElementsToCopy = Math.Min(numPastEvents, size);
 			i = numPastElementsToCopy - 1;
@@ -215,7 +221,7 @@ namespace Fumen
 		{
 			// If there are no elements, return the default.
 			if (!IsFull && BufferIndex == BufferStartIndex)
-				return default(T);
+				return default;
 			// Decrement the current buffer index as it is one beyond the most recent element.
 			var index = BufferIndex;
 			DecrementBufferIndex(ref index);
@@ -238,7 +244,7 @@ namespace Fumen
 		/// <returns>True if an element was Popped and false otherwise.</returns>
 		public bool Pop(out T val)
 		{
-			val = default(T);
+			val = default;
 			if (!CanPop())
 				return false;
 			DecrementBufferIndex(ref BufferIndex);
@@ -264,12 +270,12 @@ namespace Fumen
 		/// back onto the UndoStack
 		/// </summary>
 		/// <param name="val">
-		/// The element that was Repushed or default(T) if no elemeent could be Repushed.
+		/// The element that was Repushed or default(T) if no element could be Repushed.
 		/// </param>
 		/// <returns>True if an element was Repushed and false otherwise.</returns>
 		public bool Repush(out T val)
 		{
-			val = default(T);
+			val = default;
 			if (!CanRepush())
 				return false;
 			val = Buffer[BufferIndex];
@@ -289,7 +295,7 @@ namespace Fumen
 			var i = BufferIndex;
 			while (PopCount > 0)
 			{
-				Buffer[i] = default(T);
+				Buffer[i] = default;
 				PopCount--;
 				IncrementBufferIndex(ref i);
 			}

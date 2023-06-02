@@ -11,7 +11,7 @@ namespace Fumen
 		/// <summary>
 		/// All observers of this Notifier.
 		/// </summary>
-		private List<IObserver<T>> Observers = new List<IObserver<T>>();
+		private readonly List<IObserver<T>> Observers = new List<IObserver<T>>();
 
 		/// <summary>
 		/// Adds an Observer.
@@ -39,7 +39,7 @@ namespace Fumen
 		/// <param name="notifier">Object issuing notification. Typically this.</param>
 		protected void Notify(string eventId, T notifier)
 		{
-			foreach(var	observer in Observers)
+			foreach (var observer in Observers)
 			{
 				observer.OnNotify(eventId, notifier, null);
 			}

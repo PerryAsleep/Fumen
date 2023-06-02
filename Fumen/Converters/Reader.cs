@@ -11,10 +11,18 @@ namespace Fumen.Converters
 	public abstract class Reader
 	{
 		/// <summary>
+		/// Path to the ssc file to load.
+		/// </summary>
+		protected readonly string FilePath;
+
+		/// <summary>
 		/// Constructor requiring path to file.
 		/// </summary>
 		/// <param name="filePath">Path to file.</param>
-		protected Reader(string filePath) { }
+		protected Reader(string filePath)
+		{
+			FilePath = filePath;
+		}
 
 		/// <summary>
 		/// Load the file and return a Song.
@@ -35,7 +43,7 @@ namespace Fumen.Converters
 			var fileFormat = FileFormat.GetFileFormatByExtension(fileInfo.Extension.ToLower());
 			if (fileFormat == null)
 				return null;
-			var fullName = Fumen.Path.GetWin32FileSystemFullPath(fileInfo.FullName);
+			var fullName = Path.GetWin32FileSystemFullPath(fileInfo.FullName);
 			switch (fileFormat.Type)
 			{
 				case FileFormatType.SM:
@@ -43,6 +51,7 @@ namespace Fumen.Converters
 				case FileFormatType.SSC:
 					return new SSCReader(fullName);
 			}
+
 			return null;
 		}
 
@@ -62,7 +71,7 @@ namespace Fumen.Converters
 			var fileFormat = FileFormat.GetFileFormatByExtension(extension.ToLower());
 			if (fileFormat == null)
 				return null;
-			var fullName = Fumen.Path.GetWin32FileSystemFullPath(fileName);
+			var fullName = Path.GetWin32FileSystemFullPath(fileName);
 			switch (fileFormat.Type)
 			{
 				case FileFormatType.SM:
@@ -70,6 +79,7 @@ namespace Fumen.Converters
 				case FileFormatType.SSC:
 					return new SSCReader(fullName);
 			}
+
 			return null;
 		}
 	}

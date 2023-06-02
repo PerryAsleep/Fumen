@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
@@ -25,11 +26,6 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
-		/// Path to the sm file to load.
-		/// </summary>
-		private readonly string FilePath;
-
-		/// <summary>
 		/// Logger to help identify the Song in the logs.
 		/// </summary>
 		private readonly SMReaderLogger Logger;
@@ -41,7 +37,6 @@ namespace Fumen.Converters
 		public SMReader(string filePath)
 			: base(filePath)
 		{
-			FilePath = filePath;
 			Logger = new SMReaderLogger(FilePath);
 		}
 
@@ -73,9 +68,12 @@ namespace Fumen.Converters
 					[TagTitle] = new PropertyToSongPropertyParser(TagTitle, nameof(Song.Title), song),
 					[TagSubtitle] = new PropertyToSongPropertyParser(TagSubtitle, nameof(Song.SubTitle), song),
 					[TagArtist] = new PropertyToSongPropertyParser(TagArtist, nameof(Song.Artist), song),
-					[TagTitleTranslit] = new PropertyToSongPropertyParser(TagTitleTranslit, nameof(Song.TitleTransliteration), song),
-					[TagSubtitleTranslit] = new PropertyToSongPropertyParser(TagSubtitleTranslit, nameof(Song.SubTitleTransliteration), song),
-					[TagArtistTranslit] = new PropertyToSongPropertyParser(TagArtistTranslit, nameof(Song.ArtistTransliteration), song),
+					[TagTitleTranslit] =
+						new PropertyToSongPropertyParser(TagTitleTranslit, nameof(Song.TitleTransliteration), song),
+					[TagSubtitleTranslit] =
+						new PropertyToSongPropertyParser(TagSubtitleTranslit, nameof(Song.SubTitleTransliteration), song),
+					[TagArtistTranslit] =
+						new PropertyToSongPropertyParser(TagArtistTranslit, nameof(Song.ArtistTransliteration), song),
 					[TagGenre] = new PropertyToSongPropertyParser(TagGenre, nameof(Song.Genre), song),
 					[TagCredit] = new PropertyToSourceExtrasParser<string>(TagCredit, song.Extras),
 					[TagBanner] = new PropertyToSongPropertyParser(TagBanner, nameof(Song.SongSelectImage), song),
@@ -84,15 +82,20 @@ namespace Fumen.Converters
 					[TagCDTitle] = new PropertyToSourceExtrasParser<string>(TagCDTitle, song.Extras),
 					[TagMusic] = new PropertyToSourceExtrasParser<string>(TagMusic, song.Extras),
 					[TagOffset] = new PropertyToSourceExtrasParser<double>(TagOffset, song.Extras),
-					[TagBPMs] = new CSVListAtTimePropertyParser<double>(TagBPMs, timingProperties.Tempos, song.Extras, TagFumenRawBpmsStr),
-					[TagStops] = new CSVListAtTimePropertyParser<double>(TagStops, timingProperties.Stops, song.Extras, TagFumenRawStopsStr),
+					[TagBPMs] = new CSVListAtTimePropertyParser<double>(TagBPMs, timingProperties.Tempos, song.Extras,
+						TagFumenRawBpmsStr),
+					[TagStops] = new CSVListAtTimePropertyParser<double>(TagStops, timingProperties.Stops, song.Extras,
+						TagFumenRawStopsStr),
 					[TagFreezes] = new CSVListAtTimePropertyParser<double>(TagFreezes, timingProperties.Stops),
-					[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, timingProperties.Delays, song.Extras, TagFumenRawDelaysStr),
+					[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, timingProperties.Delays, song.Extras,
+						TagFumenRawDelaysStr),
 					// Removed, see https://github.com/stepmania/stepmania/issues/9
 					// SM files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 					// suggestions to a renderer for how to draw measure markers.
-					[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, timingProperties.TimeSignatures, song.Extras, TagFumenRawTimeSignaturesStr),
-					[TagTickCounts] = new CSVListAtTimePropertyParser<int>(TagTickCounts, timingProperties.TickCounts, song.Extras, TagFumenRawTickCountsStr),
+					[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, timingProperties.TimeSignatures,
+						song.Extras, TagFumenRawTimeSignaturesStr),
+					[TagTickCounts] = new CSVListAtTimePropertyParser<int>(TagTickCounts, timingProperties.TickCounts,
+						song.Extras, TagFumenRawTickCountsStr),
 					[TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(TagInstrumentTrack, song.Extras),
 					[TagSampleStart] = new PropertyToSongPropertyParser(TagSampleStart, nameof(Song.PreviewSampleStart), song),
 					[TagSampleLength] = new PropertyToSongPropertyParser(TagSampleLength, nameof(Song.PreviewSampleLength), song),
@@ -135,7 +138,7 @@ namespace Fumen.Converters
 
 						// Song custom property.
 						if (key.Length > SMCustomPropertySongMarkerLength
-							&& key.EndsWith(SMCustomPropertySongMarker))
+						    && key.EndsWith(SMCustomPropertySongMarker))
 						{
 							// Remove the song marker to get the original key.
 							var propertyKey = key.Substring(0, key.Length - SMCustomPropertySongMarkerLength);
@@ -148,10 +151,12 @@ namespace Fumen.Converters
 						// e.g. "CHART0001" in "CUSTOMPROPERTYCHART0001".
 						else if (key.Length > SMCustomPropertyChartIndexMarkerLength)
 						{
-							if (key.LastIndexOf(SMCustomPropertyChartMarker) == key.Length - SMCustomPropertyChartIndexMarkerLength)
+							if (key.LastIndexOf(SMCustomPropertyChartMarker, StringComparison.Ordinal) ==
+							    key.Length - SMCustomPropertyChartIndexMarkerLength)
 							{
 								// Parse the index out so we can associate this property with the correct chart later.
-								var indexString = key.Substring(key.Length - SMCustomPropertyChartIndexNumberLength, SMCustomPropertyChartIndexNumberLength);
+								var indexString = key.Substring(key.Length - SMCustomPropertyChartIndexNumberLength,
+									SMCustomPropertyChartIndexNumberLength);
 								if (int.TryParse(indexString, out var index))
 								{
 									// Remove the chart marker to get the original key.
@@ -196,19 +201,19 @@ namespace Fumen.Converters
 
 				var chartOffset = 0.0;
 				if (song.Extras.TryGetSourceExtra(TagOffset, out object offsetObj))
-					chartOffset = (double) offsetObj;
+					chartOffset = (double)offsetObj;
 
 				var chartMusicFile = "";
 				if (song.Extras.TryGetSourceExtra(TagMusic, out object chartMusicFileObj))
-					chartMusicFile = (string) chartMusicFileObj;
+					chartMusicFile = (string)chartMusicFileObj;
 
 				var chartAuthor = "";
 				if (song.Extras.TryGetSourceExtra(TagCredit, out object chartAuthorObj))
-					chartAuthor = (string) chartAuthorObj;
+					chartAuthor = (string)chartAuthorObj;
 
 				var chartDisplayTempo = GetDisplayBPMStringFromSourceExtrasList(song.Extras, timingProperties.Tempos);
 
-				for(var chartIndex = 0; chartIndex < song.Charts.Count; chartIndex++)
+				for (var chartIndex = 0; chartIndex < song.Charts.Count; chartIndex++)
 				{
 					var chart = song.Charts[chartIndex];
 					chart.MusicFile = chartMusicFile;
@@ -221,12 +226,10 @@ namespace Fumen.Converters
 					chart.Author = chartAuthor;
 
 					// Add any custom properties for this chart that were parsed earlier.
-					if (chartProperties.ContainsKey(chartIndex))
+					if (chartProperties.TryGetValue(chartIndex, out var chartProperty))
 					{
-						foreach(var extraKvp in chartProperties[chartIndex])
-						{
+						foreach (var extraKvp in chartProperty)
 							chart.Extras.AddSourceExtra(extraKvp.Key, extraKvp.Value);
-						}
 					}
 
 					SetEventTimeAndMetricPositionsFromRows(chart);

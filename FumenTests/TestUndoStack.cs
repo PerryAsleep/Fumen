@@ -23,7 +23,7 @@ namespace FumenTests
 		{
 			var us = new UndoStack<int>(1, true);
 
-			Action<int> verifyPushPopRepushOneElement = (int currentAbsoluteIndex) =>
+			void VerifyPushPopRepushOneElement(int currentAbsoluteIndex)
 			{
 				us.Push(10);
 				Assert.AreEqual(currentAbsoluteIndex + 1, us.GetAbsoluteIndex());
@@ -34,7 +34,7 @@ namespace FumenTests
 				Assert.IsTrue(us.Pop(out var popped));
 				Assert.AreEqual(10, popped);
 				Assert.AreEqual(currentAbsoluteIndex, us.GetAbsoluteIndex());
-				Assert.AreEqual(default(int), us.GetCurrent());
+				Assert.AreEqual(default, us.GetCurrent());
 				Assert.IsFalse(us.CanPop());
 				Assert.IsTrue(us.CanRepush());
 
@@ -46,15 +46,15 @@ namespace FumenTests
 				Assert.IsFalse(us.CanRepush());
 
 				Assert.IsTrue(us.Pop(out _));
-			};
+			}
 
 			// Verify state when the UndoStack has one element.
-			verifyPushPopRepushOneElement(us.GetAbsoluteIndex());
+			VerifyPushPopRepushOneElement(us.GetAbsoluteIndex());
 
 			// Verify state when the UndoStack has more elements than its size.
 			us.Push(11);
 			us.Push(12);
-			verifyPushPopRepushOneElement(us.GetAbsoluteIndex());
+			VerifyPushPopRepushOneElement(us.GetAbsoluteIndex());
 		}
 
 		[TestMethod]
@@ -63,11 +63,12 @@ namespace FumenTests
 			var expectedIndex = 0;
 			var us = new UndoStack<int>(5, false);
 			Assert.AreEqual(expectedIndex++, us.GetAbsoluteIndex());
-			for (int i = 0; i < 100; i++)
+			for (var i = 0; i < 100; i++)
 			{
 				us.Push(i);
 				Assert.AreEqual(expectedIndex++, us.GetAbsoluteIndex());
 			}
+
 			expectedIndex--;
 
 			while (us.CanPop())
@@ -80,49 +81,53 @@ namespace FumenTests
 		[TestMethod]
 		public void TestReset()
 		{
-			var stackSize = 5;
+			const int stackSize = 5;
 
 			var us = new UndoStack<int>(stackSize, false);
-			Action assertReset = () =>
+
+			void AssertReset()
 			{
 				us.Reset();
 				Assert.AreEqual(0, us.GetAbsoluteIndex());
-				Assert.AreEqual(default(int), us.GetCurrent());
+				Assert.AreEqual(default, us.GetCurrent());
 				Assert.IsFalse(us.CanPop());
 				Assert.IsFalse(us.CanRepush());
-			};
+			}
 
 			// Verify resetting a default UndoStack.
-			assertReset();
+			AssertReset();
 
 			// Verify resetting a full UndoStack.
-			for (int i = 0; i < stackSize; i++)
+			for (var i = 0; i < stackSize; i++)
 			{
 				us.Push(i + 1);
 			}
-			assertReset();
+
+			AssertReset();
 
 			// Verify resetting a full UndoStack with more elements than its size.
-			for (int i = 0; i < stackSize * 2; i++)
+			for (var i = 0; i < stackSize * 2; i++)
 			{
 				us.Push(i + 1);
 			}
-			assertReset();
+
+			AssertReset();
 
 			// Verify resetting an UndoStack that can be repushed.
-			for (int i = 0; i < stackSize; i++)
+			for (var i = 0; i < stackSize; i++)
 			{
 				us.Push(i + 1);
 			}
+
 			us.Pop(out _);
-			assertReset();
+			AssertReset();
 		}
 
 		[TestMethod]
 		public void TestPush()
 		{
 			var us = new UndoStack<int>(5, false);
-			for (int i = 0; i < 100; i++)
+			for (var i = 0; i < 100; i++)
 			{
 				us.Push(i);
 				Assert.AreEqual(i, us.GetCurrent());
@@ -137,7 +142,7 @@ namespace FumenTests
 			var us = new UndoStack<int>(stackSize, false);
 			Assert.IsFalse(us.CanPop());
 			Assert.IsFalse(us.Pop(out var val));
-			Assert.AreEqual(default(int), val);
+			Assert.AreEqual(default, val);
 
 			// Push some values and verify they can be popped.
 			us.Push(0);
@@ -171,26 +176,27 @@ namespace FumenTests
 			Assert.AreEqual(0, us.GetAbsoluteIndex());
 			Assert.IsFalse(us.CanPop());
 			Assert.IsFalse(us.Pop(out val));
-			Assert.AreEqual(default(int), val);
+			Assert.AreEqual(default, val);
 
 			// Push beyond the stack size.
-			for (int i = 0; i < stackSize * 2; i++)
+			for (var i = 0; i < stackSize * 2; i++)
 			{
 				us.Push(i);
 				Assert.AreEqual(i + 1, us.GetAbsoluteIndex());
 			}
 
 			// Pop the maximum number of poppable values.
-			for (int i = stackSize * 2 - 1; i >= stackSize; i--)
+			for (var i = stackSize * 2 - 1; i >= stackSize; i--)
 			{
 				Assert.IsTrue(us.CanPop());
 				Assert.IsTrue(us.Pop(out val));
 				Assert.AreEqual(i, val);
 				Assert.AreEqual(i, us.GetAbsoluteIndex());
 			}
+
 			Assert.IsFalse(us.CanPop());
 			Assert.IsFalse(us.Pop(out val));
-			Assert.AreEqual(default(int), val);
+			Assert.AreEqual(default, val);
 
 			// Push one more and verify it can be popped.
 			us.Push(stackSize);
@@ -203,7 +209,7 @@ namespace FumenTests
 		{
 			var stackSize = 5;
 
-			Action<int> verifyRepush = (int fillCount) =>
+			void VerifyRepush(int fillCount)
 			{
 				var us = new UndoStack<int>(stackSize, false);
 				for (var i = 0; i < fillCount; i++)
@@ -211,38 +217,37 @@ namespace FumenTests
 					us.Push(i);
 					Assert.IsFalse(us.CanRepush());
 				}
+
 				var maxPopCount = Math.Min(stackSize, fillCount);
-				for (int popCount = 0; popCount < maxPopCount; popCount++)
+				for (var popCount = 0; popCount < maxPopCount; popCount++)
 				{
 					for (var i = 0; i < popCount; i++)
 					{
 						Assert.IsTrue(us.Pop(out var popped));
 						Assert.AreEqual(fillCount - 1 - i, popped);
 					}
+
 					for (var i = 0; i < popCount; i++)
 					{
 						Assert.IsTrue(us.CanRepush());
 						Assert.IsTrue(us.Repush(out var repushed));
 						Assert.AreEqual(fillCount - (popCount - i), repushed);
 					}
+
 					Assert.IsFalse(us.CanRepush());
 				}
-			};
+			}
 
 			for (var testFillCount = 0; testFillCount < stackSize * 5; testFillCount++)
 			{
-				verifyRepush(testFillCount);
+				VerifyRepush(testFillCount);
 			}
 		}
 
 		[TestMethod]
 		public void TestResize()
 		{
-			Action<UndoStack<int>, int, int, int> verifyResize = (
-				UndoStack<int> undoStack,
-				int newSize,
-				int expectedRepushCount,
-				int expectedPopCount) =>
+			void VerifyResize(UndoStack<int> undoStack, int newSize, int expectedRepushCount, int expectedPopCount)
 			{
 				var beforeIndex = undoStack.GetAbsoluteIndex();
 				var beforeCurrent = undoStack.GetCurrent();
@@ -256,6 +261,7 @@ namespace FumenTests
 					undoStack.Repush(out var repushed);
 					Assert.AreEqual(beforeCurrent + i + 1, repushed);
 				}
+
 				Assert.IsFalse(undoStack.CanRepush());
 
 				for (var i = 0; i < expectedRepushCount + expectedPopCount; i++)
@@ -263,32 +269,33 @@ namespace FumenTests
 					Assert.IsTrue(undoStack.CanPop());
 					undoStack.Pop(out var popped);
 					Assert.AreEqual(beforeCurrent + expectedRepushCount - i, popped);
-				};
+				}
+
 				Assert.IsFalse(undoStack.CanPop());
-			};
+			}
 
 			// Resize larger - empty.
 			var us = new UndoStack<int>(5, false);
-			verifyResize(us, 10, 0, 0);
+			VerifyResize(us, 10, 0, 0);
 
 			// Resize larger - under size.
 			us = new UndoStack<int>(5, false);
 			for (var i = 0; i < 3; i++)
 				us.Push(i);
-			verifyResize(us, 10, 0, 3);
+			VerifyResize(us, 10, 0, 3);
 
 			// Resize larger - under size and repushable.
 			us = new UndoStack<int>(5, false);
 			for (var i = 0; i < 3; i++)
 				us.Push(i);
 			us.Pop(out _);
-			verifyResize(us, 10, 1, 2);
+			VerifyResize(us, 10, 1, 2);
 
 			// Resize larger - at size.
 			us = new UndoStack<int>(5, false);
 			for (var i = 0; i < 5; i++)
 				us.Push(i);
-			verifyResize(us, 10, 0, 5);
+			VerifyResize(us, 10, 0, 5);
 
 			// Resize larger - at size and repushable.
 			us = new UndoStack<int>(5, false);
@@ -296,13 +303,13 @@ namespace FumenTests
 				us.Push(i);
 			us.Pop(out _);
 			us.Pop(out _);
-			verifyResize(us, 10, 2, 3);
+			VerifyResize(us, 10, 2, 3);
 
 			// Resize larger - over size.
 			us = new UndoStack<int>(5, false);
 			for (var i = 0; i < 13; i++)
 				us.Push(i);
-			verifyResize(us, 10, 0, 5);
+			VerifyResize(us, 10, 0, 5);
 
 			// Resize larger - over size and repushable.
 			us = new UndoStack<int>(5, false);
@@ -310,30 +317,30 @@ namespace FumenTests
 				us.Push(i);
 			us.Pop(out _);
 			us.Pop(out _);
-			verifyResize(us, 10, 2, 3);
+			VerifyResize(us, 10, 2, 3);
 
 			// Resize smaller - empty.
 			us = new UndoStack<int>(10, false);
-			verifyResize(us, 5, 0, 0);
+			VerifyResize(us, 5, 0, 0);
 
 			// Resize smaller - under new size.
 			us = new UndoStack<int>(10, false);
 			for (var i = 0; i < 3; i++)
 				us.Push(i);
-			verifyResize(us, 5, 0, 3);
+			VerifyResize(us, 5, 0, 3);
 
 			// Resize smaller - under new size and repushable.
 			us = new UndoStack<int>(10, false);
 			for (var i = 0; i < 3; i++)
 				us.Push(i);
 			us.Pop(out _);
-			verifyResize(us, 5, 1, 2);
+			VerifyResize(us, 5, 1, 2);
 
 			// Resize smaller - at new size.
 			us = new UndoStack<int>(10, false);
 			for (var i = 0; i < 5; i++)
 				us.Push(i);
-			verifyResize(us, 5, 0, 5);
+			VerifyResize(us, 5, 0, 5);
 
 			// Resize smaller - at new size and repushable.
 			us = new UndoStack<int>(10, false);
@@ -341,13 +348,13 @@ namespace FumenTests
 				us.Push(i);
 			us.Pop(out _);
 			us.Pop(out _);
-			verifyResize(us, 5, 2, 3);
+			VerifyResize(us, 5, 2, 3);
 
 			// Resize smaller - over new size.
 			us = new UndoStack<int>(10, false);
 			for (var i = 0; i < 8; i++)
 				us.Push(i);
-			verifyResize(us, 5, 0, 5);
+			VerifyResize(us, 5, 0, 5);
 
 			// Resize smaller - over new size and repushable.
 			// This should prioritize the undo history over the future repushable history.
@@ -358,7 +365,7 @@ namespace FumenTests
 					us.Push(i);
 				for (var i = 0; i < 2; i++)
 					us.Pop(out _);
-				verifyResize(us, 5, 0, 5);
+				VerifyResize(us, 5, 0, 5);
 
 				// 4 past 2 future resized to 5 should be 4 past 1 future.
 				us = new UndoStack<int>(10, false);
@@ -366,7 +373,7 @@ namespace FumenTests
 					us.Push(i);
 				for (var i = 0; i < 2; i++)
 					us.Pop(out _);
-				verifyResize(us, 5, 1, 4);
+				VerifyResize(us, 5, 1, 4);
 
 				// 5 past 5 future resized to 5 should be 5 past 0 future.
 				us = new UndoStack<int>(10, false);
@@ -374,14 +381,14 @@ namespace FumenTests
 					us.Push(i);
 				for (var i = 0; i < 5; i++)
 					us.Pop(out _);
-				verifyResize(us, 5, 0, 5);
+				VerifyResize(us, 5, 0, 5);
 			}
 
 			// Resize smaller - over both new and old size.
 			us = new UndoStack<int>(10, false);
 			for (var i = 0; i < 15; i++)
 				us.Push(i);
-			verifyResize(us, 5, 0, 5);
+			VerifyResize(us, 5, 0, 5);
 
 			// Resize smaller - over both new and old size and repushable.
 			// This should prioritize the undo history over the future repushable history.
@@ -392,7 +399,7 @@ namespace FumenTests
 					us.Push(i);
 				for (var i = 0; i < 5; i++)
 					us.Pop(out _);
-				verifyResize(us, 5, 0, 5);
+				VerifyResize(us, 5, 0, 5);
 
 				// 1 past 9 future resized to 5 should be 1 past 4 future.
 				us = new UndoStack<int>(10, false);
@@ -400,7 +407,7 @@ namespace FumenTests
 					us.Push(i);
 				for (var i = 0; i < 9; i++)
 					us.Pop(out _);
-				verifyResize(us, 5, 4, 1);
+				VerifyResize(us, 5, 4, 1);
 
 				// 7 past 3 future resized to 5 should be 5 past 0 future.
 				us = new UndoStack<int>(10, false);
@@ -408,7 +415,7 @@ namespace FumenTests
 					us.Push(i);
 				for (var i = 0; i < 3; i++)
 					us.Pop(out _);
-				verifyResize(us, 5, 0, 5);
+				VerifyResize(us, 5, 0, 5);
 			}
 		}
 	}

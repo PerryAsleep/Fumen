@@ -44,6 +44,7 @@ namespace Fumen
 		/// Static Logger instance for logging to disk.
 		/// </summary>
 		private static Logger Instance;
+
 		/// <summary>
 		/// Static log level.
 		/// </summary>
@@ -67,17 +68,27 @@ namespace Fumen
 				string levelStr = null;
 				switch (Level)
 				{
-					case LogLevel.Info: levelStr = " [INFO]"; break;
-					case LogLevel.Warn: levelStr = " [WARN]"; break;
-					case LogLevel.Error: levelStr = " [ERROR]"; break;
+					case LogLevel.Info:
+						levelStr = " [INFO]";
+						break;
+					case LogLevel.Warn:
+						levelStr = " [WARN]";
+						break;
+					case LogLevel.Error:
+						levelStr = " [ERROR]";
+						break;
 				}
+
 				return $"{Time:yyyy-MM-dd HH:mm:ss.fff}{levelStr} {Message}";
 			}
 		}
 
+		/// <summary>
+		/// Configuration object for initializing the Logger.
+		/// </summary>
 		public class Config
 		{
-			public LogLevel LogLevel = LogLevel.Info;
+			public LogLevel Level = LogLevel.Info;
 
 			public bool WriteToFile;
 			public string LogFilePath;
@@ -96,27 +107,32 @@ namespace Fumen
 		/// Queue of messages to write to the StreamWriter.
 		/// </summary>
 		private readonly BlockingCollection<LogMessage> LogQueue;
+
 		/// <summary>
 		/// StreamWriter for writing messages to the FileStream.
 		/// </summary>
 		private readonly StreamWriter StreamWriter;
+
 		/// <summary>
 		/// FileStream for writing the messages to disk.
 		/// </summary>
 		private readonly FileStream FileStream;
+
 		/// <summary>
 		/// Task for writing enqueued messages to the StreamWriter.
 		/// </summary>
 		private readonly Task WriteQueueTask;
+
 		/// <summary>
 		/// Timer for periodically flushing the StreamWriter to disk.
 		/// </summary>
 		private readonly Timer Timer;
+
 		/// <summary>
 		/// Object for locking the StreamWriter.
 		/// </summary>
 		private readonly object StreamWriterLock = new object();
-		
+
 		/// <summary>
 		/// Whether or not to write to the console when logging.
 		/// </summary>
@@ -132,7 +148,7 @@ namespace Fumen
 		/// <param name="config">Config object for configuring the logger.</param>
 		public static void StartUp(Config config)
 		{
-			LogLevel = config.LogLevel;
+			LogLevel = config.Level;
 
 			Instance?.Dispose();
 			Instance = new Logger(config);
@@ -194,7 +210,7 @@ namespace Fumen
 				FileStream = new FileStream(config.LogFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
 				StreamWriter = new StreamWriter(FileStream, Encoding.UTF8, config.LogFileBufferSizeBytes)
 				{
-					AutoFlush = false
+					AutoFlush = false,
 				};
 			}
 
@@ -276,9 +292,7 @@ namespace Fumen
 			{
 				// Write to the console, if configured to do so.
 				if (WriteToConsole)
-				{
 					Console.WriteLine(message);
-				}
 
 				// Write to the StreamWriter for writing to a file, if configured to do so.
 				if (StreamWriter != null)
@@ -295,9 +309,7 @@ namespace Fumen
 					lock (BufferLock)
 					{
 						while (Buffer.Count >= BufferSize)
-						{
 							Buffer.RemoveLast();
-						}
 						Buffer.AddFirst(message);
 					}
 				}

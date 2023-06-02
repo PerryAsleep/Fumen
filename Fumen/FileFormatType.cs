@@ -1,10 +1,9 @@
-﻿
-namespace Fumen
+﻿namespace Fumen
 {
 	public enum FileFormatType
 	{
 		SM,
-		SSC
+		SSC,
 	}
 
 	public class FileFormat
@@ -24,10 +23,10 @@ namespace Fumen
 
 		static FileFormat()
 		{
-			Data = new []
+			Data = new[]
 			{
 				new FileFormat(FileFormatType.SM, "sm"),
-				new FileFormat(FileFormatType.SSC, "ssc")
+				new FileFormat(FileFormatType.SSC, "ssc"),
 			};
 		}
 
@@ -41,7 +40,8 @@ namespace Fumen
 				if (data.Extension == extension || data.ExtensionWithSeparator == extension)
 					return data;
 			}
+
 			return null;
 		}
-	};
+	}
 }

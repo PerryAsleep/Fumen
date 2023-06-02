@@ -43,6 +43,7 @@ namespace Fumen.ChartDefinition
 					SourceExtras[entry.Key] = entry.Value;
 				}
 			}
+
 			if (other?.DestExtras != null)
 			{
 				DestExtras = new Dictionary<string, object>();

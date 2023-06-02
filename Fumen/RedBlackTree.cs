@@ -36,6 +36,7 @@ namespace Fumen
 		/// Tree root node.
 		/// </summary>
 		private Node Root;
+
 		/// <summary>
 		/// Simple Red Black Tree algorithms rely on a sentinel null node. This node is modified when deleting.
 		/// </summary>
@@ -43,6 +44,7 @@ namespace Fumen
 		/// I personally do not like this approach as it feels extremely hacky and is not thread safe.
 		/// </remarks>
 		private readonly Node Nil;
+
 		/// <summary>
 		/// Number of elements in the Red Black Tree.
 		/// </summary>
@@ -170,7 +172,7 @@ namespace Fumen
 				Data = data,
 				Parent = Nil,
 				R = Nil,
-				L = Nil
+				L = Nil,
 			};
 			if (IsNull(Root))
 			{
@@ -179,7 +181,7 @@ namespace Fumen
 			}
 
 			var x = Root;
-			Node p = Nil;
+			var p = Nil;
 			while (x != Nil)
 			{
 				p = x;
@@ -313,6 +315,7 @@ namespace Fumen
 						return null;
 					return new Enumerator(this, prev);
 				}
+
 				p = n;
 				n = c < 0 ? n.L : n.R;
 			}
@@ -587,6 +590,7 @@ namespace Fumen
 							while (!Tree.IsNull(CurrentNode.L))
 								CurrentNode = CurrentNode.L;
 						}
+
 						BeforeFirst = false;
 					}
 					else
@@ -615,6 +619,7 @@ namespace Fumen
 							while (!Tree.IsNull(CurrentNode.R))
 								CurrentNode = CurrentNode.R;
 						}
+
 						AfterLast = false;
 					}
 					else

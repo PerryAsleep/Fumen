@@ -26,12 +26,14 @@ namespace Fumen.Converters
 			/// as it will preserve the spacing.
 			/// </summary>
 			UseSourceExtraOriginalMeasurePosition,
+
 			/// <summary>
 			/// Use the least common multiple of the sub-divisions. This will write the
 			/// least number of lines for the notes in the measure. This may write sub-divisions
 			/// that the stepmania editor does not support (like 24).
 			/// </summary>
 			UseLeastCommonMultiple,
+
 			/// <summary>
 			/// Use the least common multiple of the sub-divisions but do not write anything
 			/// that the stepmania editor does not support. This will increase the sub-division
@@ -47,7 +49,7 @@ namespace Fumen.Converters
 		public enum PropertyEmissionBehavior
 		{
 			/// <summary>
-			/// When writing properties, follow stepmania's rules to generate a chart that roughly
+			/// When writing properties, follow StepMania's rules to generate a chart that roughly
 			/// matches what stepmania would export. This means even if the source chart has a property
 			/// that stepmania understands but stepmania does not save (like the deprecated ANIMATIONS
 			/// property) that those properties will be ignored when exporting. This option should be
@@ -75,6 +77,7 @@ namespace Fumen.Converters
 			/// section of the MSD file. The values will be escaped.
 			/// </summary>
 			public Dictionary<string, string> CustomSongProperties = new Dictionary<string, string>();
+
 			/// <summary>
 			/// Custom properties per Chart. These will be written as individual MSD key value pairs.
 			/// If the save file format supports keys at the Chart level then these will be saved per Chart.
@@ -93,24 +96,29 @@ namespace Fumen.Converters
 			/// How to space the notes in each measure.
 			/// </summary>
 			public MeasureSpacingBehavior MeasureSpacingBehavior = MeasureSpacingBehavior.UseLeastCommonMultiple;
+
 			/// <summary>
 			/// How to emit properties.
 			/// </summary>
 			public PropertyEmissionBehavior PropertyEmissionBehavior = PropertyEmissionBehavior.Stepmania;
+
 			/// <summary>
 			/// The song to write.
 			/// </summary>
 			public Song Song;
+
 			/// <summary>
 			/// The Chart to use when writing properties that are defined at the Song level in an sm or ssc
 			/// file which need to be derived from a Chart. This includes, for example, stops and tempo changes
 			/// in an sm file and time signatures in both sm and ssc files.
 			/// </summary>
 			public Chart FallbackChart;
+
 			/// <summary>
 			/// The path of the file to write to.
 			/// </summary>
 			public string FilePath;
+
 			/// <summary>
 			/// When writing files, the Event IntegerPosition will be used to determine positioning.
 			/// Setting this variable to true will update every Event IntegerPosition based off of it's
@@ -118,6 +126,7 @@ namespace Fumen.Converters
 			/// Use this if the Rows have not been set but accurate MetricPositions are available.
 			/// </summary>
 			public bool UpdateEventRowsFromMetricPosition = false;
+
 			/// <summary>
 			/// Custom properties to write into the file as MSD key value pairs regardless of the specified
 			/// PropertyEmissionBehavior.
@@ -129,51 +138,61 @@ namespace Fumen.Converters
 			/// If false, write from the Chart's Tempo Events.
 			/// </summary>
 			public bool WriteTemposFromExtras = false;
+
 			/// <summary>
 			/// If true, write Stops from the Song or Chart's Extras.
 			/// If false, write from the Chart's Stop Events.
 			/// </summary>
 			public bool WriteStopsFromExtras = false;
+
 			/// <summary>
 			/// If true, write Delays from the Song or Chart's Extras.
 			/// If false, write from the Chart's Delay Events.
 			/// </summary>
 			public bool WriteDelaysFromExtras = false;
+
 			/// <summary>
 			/// If true, write Warps from the Song or Chart's Extras.
 			/// If false, write from the Chart's Warp Events.
 			/// </summary>
 			public bool WriteWarpsFromExtras = false;
+
 			/// <summary>
 			/// If true, write Scrolls from the Song or Chart's Extras.
 			/// If false, write from the Chart's ScrollRate Events.
 			/// </summary>
 			public bool WriteScrollsFromExtras = false;
+
 			/// <summary>
 			/// If true, write Speeds from the Song or Chart's Extras.
 			/// If false, write from the Chart's ScrollRateInterpolation Events.
 			/// </summary>
 			public bool WriteSpeedsFromExtras = false;
+
 			/// <summary>
 			/// If true, write BPMs from the Song or Chart's Extras.
 			/// If false, write from the Chart's TimeSignature Events.
 			/// </summary>
 			public bool WriteTimeSignaturesFromExtras = false;
+
 			/// <summary>
 			/// If true, write Tick Counts from the Song or Chart's Extras.
 			/// If false, write from the Chart's TickCount Events.
 			/// </summary>
 			public bool WriteTickCountsFromExtras = false;
+
 			/// <summary>
 			/// If true, write Labels from the Song or Chart's Extras.
 			/// If false, write from the Chart's Label Events.
 			/// </summary>
 			public bool WriteLabelsFromExtras = false;
+
 			/// <summary>
 			/// If true, write Fakes from the Song or Chart's Extras.
 			/// If false, write from the Chart's FakeSegment Events.
 			/// </summary>
 			public bool WriteFakesFromExtras = false;
+
 			/// <summary>
 			/// If true, write Combos from the Song or Chart's Extras.
 			/// If false, write from the Chart's Multipliers Events.
@@ -209,32 +228,38 @@ namespace Fumen.Converters
 			/// Used for writing the correct number of blank lines in the file.
 			/// </summary>
 			public int LCM = 1;
+
 			/// <summary>
 			/// Whether or not this is the first measure for the chart.
 			/// </summary>
 			public bool FirstMeasure;
+
 			/// <summary>
 			/// All LaneNotes in this measure.
 			/// </summary>
-			public List<LaneNote> Notes = new List<LaneNote>();
+			public readonly List<LaneNote> Notes = new List<LaneNote>();
 		}
 
 		/// <summary>
 		/// StreamWriter for writing the Song.
 		/// </summary>
 		protected StreamWriter StreamWriter;
+
 		/// <summary>
 		/// Logger to help identify the Song in the logs.
 		/// </summary>
 		protected ILogger Logger;
+
 		/// <summary>
 		/// Config for how to write the Song.
 		/// </summary>
 		protected SMWriterBaseConfig Config;
+
 		/// <summary>
 		/// The FileFormatType being written. Used to check SourceExtras.
 		/// </summary>
 		protected FileFormatType FileFormatType;
+
 		/// <summary>
 		/// The ChartDifficultyType to use for each Chart when writing.
 		/// </summary>
@@ -271,7 +296,11 @@ namespace Fumen.Converters
 			foreach (var chart in Config.Song.Charts)
 			{
 				if (chart.Layers.Count > 1)
-					Logger.Warn($"Chart [{chartIndex}]. Chart has {chart.Layers.Count} Layers. Only the first Layer will be used.");
+				{
+					Logger.Warn(
+						$"Chart [{chartIndex}]. Chart has {chart.Layers.Count} Layers. Only the first Layer will be used.");
+				}
+
 				chartIndex++;
 			}
 		}
@@ -306,6 +335,7 @@ namespace Fumen.Converters
 						chartsByType[smChartType] = new List<Chart>();
 					chartsByType[smChartType].Add(chart);
 				}
+
 				chartIndex++;
 			}
 
@@ -389,9 +419,7 @@ namespace Fumen.Converters
 				foreach (var entry in valAsList)
 				{
 					if (!first)
-					{
 						StreamWriter.Write(MSDFile.ParamMarker);
-					}
 					if (!string.IsNullOrEmpty(entry))
 						StreamWriter.Write(MSDFile.Escape(entry));
 					first = false;
@@ -422,6 +450,7 @@ namespace Fumen.Converters
 						return true;
 					break;
 			}
+
 			return false;
 		}
 
@@ -430,19 +459,22 @@ namespace Fumen.Converters
 			WritePropertyInternal(smPropertyName, value, escape);
 		}
 
-		protected void WriteChartProperty(Chart chart, string smPropertyName, object value, bool stepmaniaOmitted = false, bool escape = true)
+		protected void WriteChartProperty(Chart chart, string smPropertyName, object value, bool stepmaniaOmitted = false,
+			bool escape = true)
 		{
 			var inSource = chart.Extras.TryGetExtra(smPropertyName, out object _, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
 				WritePropertyInternal(smPropertyName, value, escape);
 		}
 
-		protected void WriteChartPropertyFromExtras(Chart chart, string smPropertyName, bool stepmaniaOmitted = false, bool escape = true)
+		protected void WriteChartPropertyFromExtras(Chart chart, string smPropertyName, bool stepmaniaOmitted = false,
+			bool escape = true)
 		{
 			var inSource = chart.Extras.TryGetExtra(smPropertyName, out object value, MatchesSourceFileFormatType());
 			if (ShouldWriteProperty(inSource, stepmaniaOmitted))
 				WritePropertyInternal(smPropertyName, value, escape);
 		}
+
 		protected void WriteSongProperty(string smPropertyName, object value, bool stepmaniaOmitted = false, bool escape = true)
 		{
 			var inSource = Config.Song.Extras.TryGetExtra(smPropertyName, out object _, MatchesSourceFileFormatType());
@@ -481,7 +513,7 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format BPMs and Stops over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteTemposFromExtras
+			    && Config.WriteTemposFromExtras
 			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted, false);
@@ -500,7 +532,7 @@ namespace Fumen.Converters
 		protected void WriteChartPropertyBPMs(Chart chart, bool stepmaniaOmitted = false)
 		{
 			// If we have a raw string from the source file, use it.
-			if (Config.WriteTemposFromExtras 
+			if (Config.WriteTemposFromExtras
 			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted, false);
@@ -546,7 +578,7 @@ namespace Fumen.Converters
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
 			    && Config.WriteStopsFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagStops, rawStr, stepmaniaOmitted, false);
 				return;
@@ -595,6 +627,7 @@ namespace Fumen.Converters
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(stop.IntegerPosition);
 				}
+
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
@@ -613,8 +646,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format these values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteDelaysFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr))
+			    && Config.WriteDelaysFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagDelays, rawStr, stepmaniaOmitted, false);
 				return;
@@ -633,7 +666,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteDelaysFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagDelays, rawStr, stepmaniaOmitted, false);
 				return;
@@ -648,8 +681,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format these values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteWarpsFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr))
+			    && Config.WriteWarpsFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagWarps, rawStr, stepmaniaOmitted, false);
 				return;
@@ -668,7 +701,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteWarpsFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagWarps, rawStr, stepmaniaOmitted, false);
 				return;
@@ -692,10 +725,11 @@ namespace Fumen.Converters
 				// If present, use the original double values from the source chart so as not to lose
 				// or alter the precision.
 				if (!warp.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
-						MatchesSourceFileFormatType()))
+					    MatchesSourceFileFormatType()))
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(warp.IntegerPosition);
 				}
+
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				if (!warp.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
@@ -718,8 +752,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format these values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteScrollsFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr))
+			    && Config.WriteScrollsFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagScrolls, rawStr, stepmaniaOmitted, false);
 				return;
@@ -738,7 +772,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteScrollsFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagScrolls, rawStr, stepmaniaOmitted, false);
 				return;
@@ -762,10 +796,11 @@ namespace Fumen.Converters
 				// If present, use the original double values from the source chart so as not to lose
 				// or alter the precision.
 				if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
-						MatchesSourceFileFormatType()))
+					    MatchesSourceFileFormatType()))
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(scroll.IntegerPosition);
 				}
+
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
@@ -784,8 +819,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format these values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteSpeedsFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr))
+			    && Config.WriteSpeedsFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagSpeeds, rawStr, stepmaniaOmitted, false);
 				return;
@@ -804,7 +839,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteSpeedsFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagSpeeds, rawStr, stepmaniaOmitted, false);
 				return;
@@ -828,15 +863,16 @@ namespace Fumen.Converters
 				// If present, use the original double values from the source chart so as not to lose
 				// or alter the precision.
 				if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
-						MatchesSourceFileFormatType()))
+					    MatchesSourceFileFormatType()))
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(scroll.IntegerPosition);
 				}
+
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				var modeStr = scroll.PreferPeriodAsTime ? "1" : "0";
 				var speedStr = scroll.Rate.ToString(SMCommon.SMDoubleFormat);
-				var lengthStr = "";
+				string lengthStr;
 				if (scroll.PreferPeriodAsTime)
 				{
 					lengthStr = scroll.PeriodTimeSeconds.ToString(SMCommon.SMDoubleFormat);
@@ -858,8 +894,8 @@ namespace Fumen.Converters
 			// If we have a raw string from the source file, use it.
 			// This is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteTimeSignaturesFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr))
+			    && Config.WriteTimeSignaturesFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted, false);
 				return;
@@ -880,13 +916,15 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteTimeSignaturesFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr,
+				    MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart), stepmaniaOmitted, false);
+			WriteChartProperty(chart, SMCommon.TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart),
+				stepmaniaOmitted, false);
 		}
 
 		private string CreateTimeSignaturesStringFromChartEvents(Chart chart)
@@ -904,10 +942,11 @@ namespace Fumen.Converters
 				// If present, use the original double values from the source chart so as not to lose
 				// or alter the precision.
 				if (!ts.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
-						MatchesSourceFileFormatType()))
+					    MatchesSourceFileFormatType()))
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(ts.IntegerPosition);
 				}
+
 				var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 				sb.Append($"{timeInBeatsStr}={ts.Signature.Numerator}={ts.Signature.Denominator}");
@@ -922,8 +961,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteTickCountsFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTickCountsStr, out string rawStr))
+			    && Config.WriteTickCountsFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTickCountsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagTickCounts, rawStr, stepmaniaOmitted, false);
 				return;
@@ -942,13 +981,14 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteTickCountsFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawTickCountsStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawTickCountsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagTickCounts, rawStr, stepmaniaOmitted, false);
 				return;
 			}
 
-			WriteChartProperty(chart, SMCommon.TagTickCounts, CreateTickCountStringFromChartEvents(chart), stepmaniaOmitted, false);
+			WriteChartProperty(chart, SMCommon.TagTickCounts, CreateTickCountStringFromChartEvents(chart), stepmaniaOmitted,
+				false);
 		}
 
 		private string CreateTickCountStringFromChartEvents(Chart chart)
@@ -965,7 +1005,7 @@ namespace Fumen.Converters
 
 				// If present, use the original double value from the source chart so as not to lose
 				// or alter the precision.
-				if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats, 
+				if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
 					    MatchesSourceFileFormatType()))
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(tc.IntegerPosition);
@@ -984,8 +1024,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteCombosFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawCombosStr, out string rawStr))
+			    && Config.WriteCombosFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawCombosStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagCombos, rawStr, stepmaniaOmitted, false);
 				return;
@@ -1004,7 +1044,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteCombosFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawCombosStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawCombosStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagCombos, rawStr, stepmaniaOmitted, false);
 				return;
@@ -1027,7 +1067,7 @@ namespace Fumen.Converters
 
 				// If present, use the original double value from the source chart so as not to lose
 				// or alter the precision.
-				if (!c.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats, 
+				if (!c.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
 					    MatchesSourceFileFormatType()))
 				{
 					timeInBeats = SMCommon.ConvertIntegerPositionToBeat(c.IntegerPosition);
@@ -1049,8 +1089,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteFakesFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawFakesStr, out string rawStr))
+			    && Config.WriteFakesFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawFakesStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagFakes, rawStr, stepmaniaOmitted, false);
 				return;
@@ -1069,7 +1109,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteFakesFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawFakesStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawFakesStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagFakes, rawStr, stepmaniaOmitted, false);
 				return;
@@ -1116,8 +1156,8 @@ namespace Fumen.Converters
 			// Stepmania files have changed how they format values over the years
 			// and this is to cut down on unnecessary diffs when exporting files.
 			if (MatchesSourceFileFormatType()
-				&& Config.WriteLabelsFromExtras
-				&& Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawLabelsStr, out string rawStr))
+			    && Config.WriteLabelsFromExtras
+			    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawLabelsStr, out string rawStr))
 			{
 				WriteSongProperty(SMCommon.TagLabels, rawStr, stepmaniaOmitted, false);
 				return;
@@ -1136,7 +1176,7 @@ namespace Fumen.Converters
 		{
 			// If we have a raw string from the source file, use it.
 			if (Config.WriteLabelsFromExtras
-				&& chart.Extras.TryGetExtra(SMCommon.TagFumenRawLabelsStr, out string rawStr, MatchesSourceFileFormatType()))
+			    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawLabelsStr, out string rawStr, MatchesSourceFileFormatType()))
 			{
 				WriteChartProperty(chart, SMCommon.TagLabels, rawStr, stepmaniaOmitted, false);
 				return;
@@ -1198,9 +1238,11 @@ namespace Fumen.Converters
 				if (playerIndex > 0)
 					StreamWriter.Write("&\r\n\r\n");
 
-				var measures = new List<MeasureData>();
-				// Add one measure so even blank charts write one empty measure.
-				measures.Add(new MeasureData { FirstMeasure = true });
+				var measures = new List<MeasureData>
+				{
+					// Add one measure so even blank charts write one empty measure.
+					new MeasureData { FirstMeasure = true },
+				};
 
 				// Accumulate data about each measure.
 				// Each measure here is forced 4/4.
@@ -1220,11 +1262,11 @@ namespace Fumen.Converters
 					var subDivisionFraction = new Fraction(
 						note.IntegerPosition % SMCommon.MaxValidDenominator,
 						SMCommon.MaxValidDenominator);
-					var subDivisionDenom = subDivisionFraction.Reduce().Denominator;
-					if (subDivisionDenom == 0)
-						subDivisionDenom = 1;
+					var subDivisionDenominator = subDivisionFraction.Reduce().Denominator;
+					if (subDivisionDenominator == 0)
+						subDivisionDenominator = 1;
 					measures[measure].LCM = Fraction.LeastCommonMultiple(
-						subDivisionDenom,
+						subDivisionDenominator,
 						measures[measure].LCM);
 				}
 
@@ -1259,9 +1301,10 @@ namespace Fumen.Converters
 								    out Fraction f,
 								    true))
 							{
-								Logger.Error($"Notes in measure {measureIndex} are missing Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition}."
-								             + $" Fractions must be present in the Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition} when using"
-								             + " UseSourceExtraOriginalMeasurePosition MeasureSpacingBehavior.");
+								Logger.Error(
+									$"Notes in measure {measureIndex} are missing Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition}."
+									+ $" Fractions must be present in the Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition} when using"
+									+ " UseSourceExtraOriginalMeasurePosition MeasureSpacingBehavior.");
 								return;
 							}
 
@@ -1283,6 +1326,7 @@ namespace Fumen.Converters
 					{
 						measureCharsDY = SMCommon.NumBeatsPerMeasure;
 					}
+
 					break;
 				}
 				case MeasureSpacingBehavior.UseLeastCommonMultiple:
@@ -1297,9 +1341,10 @@ namespace Fumen.Converters
 					if (!SMCommon.GetLowestValidSMSubDivision(measureData.LCM, out linesPerBeat))
 					{
 						Logger.Error($"Unsupported subdivisions {measureData.LCM} for notes in measure index {measureIndex}."
-							+ " Consider using UseLeastCommonMultiple MeasureSpacingBehavior.");
+						             + " Consider using UseLeastCommonMultiple MeasureSpacingBehavior.");
 						return;
 					}
+
 					measureCharsDY = SMCommon.NumBeatsPerMeasure * linesPerBeat;
 					break;
 				}
@@ -1334,19 +1379,22 @@ namespace Fumen.Converters
 				{
 					var totalBeat = measureNote.IntegerPosition / SMCommon.MaxValidDenominator;
 					var relativeBeat = totalBeat % SMCommon.NumBeatsPerMeasure;
-					var subDivision = new Fraction(measureNote.IntegerPosition % SMCommon.MaxValidDenominator, SMCommon.MaxValidDenominator);
+					var subDivision = new Fraction(measureNote.IntegerPosition % SMCommon.MaxValidDenominator,
+						SMCommon.MaxValidDenominator);
 					var reducedSubDivision = subDivision.Reduce();
 					measureEventPositionInMeasure = relativeBeat * linesPerBeat
-					                                + (linesPerBeat / Math.Max(1, reducedSubDivision.Denominator))
+					                                + linesPerBeat / Math.Max(1, reducedSubDivision.Denominator)
 					                                * reducedSubDivision.Numerator;
 				}
 
 				// Bounds checks.
 				if (measureNote.Lane < 0 || measureNote.Lane >= chart.NumInputs)
 				{
-					Logger.Error($"Note at {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)} has invalid lane {measureNote.Lane}.");
+					Logger.Error(
+						$"Note at {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)} has invalid lane {measureNote.Lane}.");
 					return;
 				}
+
 				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
 				{
 					Logger.Error($"Note has invalid position {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)}.");
@@ -1364,10 +1412,11 @@ namespace Fumen.Converters
 			{
 				for (var x = 0; x < measureCharsDX; x++)
 				{
-					StreamWriter.Write(measureChars[x, y] == '\0' ?
-						SMCommon.NoteChars[(int)SMCommon.NoteType.None]
+					StreamWriter.Write(measureChars[x, y] == '\0'
+						? SMCommon.NoteChars[(int)SMCommon.NoteType.None]
 						: measureChars[x, y]);
 				}
+
 				StreamWriter.WriteLine();
 			}
 		}
@@ -1426,22 +1475,26 @@ namespace Fumen.Converters
 					chartType = SMCommon.ChartType.dance_threepanel;
 					return true;
 				}
+
 				if (chart.NumInputs == 4)
 				{
 					chartType = SMCommon.ChartType.dance_single;
 					return true;
 				}
+
 				if (chart.NumInputs <= 6)
 				{
 					chartType = SMCommon.ChartType.dance_solo;
 					return true;
 				}
+
 				if (chart.NumInputs <= 8)
 				{
 					chartType = SMCommon.ChartType.dance_double;
 					return true;
 				}
 			}
+
 			if (chart.NumPlayers == 2)
 			{
 				if (chart.NumInputs <= 8)

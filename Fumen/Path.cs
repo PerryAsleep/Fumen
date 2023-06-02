@@ -34,6 +34,7 @@ namespace Fumen
 				path2 = path2.TrimStart(System.IO.Path.DirectorySeparatorChar);
 				path2 = path2.TrimStart(System.IO.Path.AltDirectorySeparatorChar);
 			}
+
 			return System.IO.Path.Combine(path1, path2);
 		}
 
@@ -65,6 +66,7 @@ namespace Fumen
 					cleanedPaths[i] = cleanedPaths[i].TrimStart(System.IO.Path.AltDirectorySeparatorChar);
 				}
 			}
+
 			return System.IO.Path.Combine(cleanedPaths);
 		}
 
@@ -115,7 +117,7 @@ namespace Fumen
 
 		/// <summary>
 		/// Given a file with an absolute path, and relative path to a second file relative to the first,
-		/// return an absolute path to the secod file.
+		/// return an absolute path to the second file.
 		/// </summary>
 		/// <param name="fullPathToBaseFile">Full path to a file.</param>
 		/// <param name="relativePath">Path to a second file relative to the first.</param>
@@ -141,15 +143,16 @@ namespace Fumen
 			try
 			{
 				extension = System.IO.Path.GetExtension(path);
-				if (string.IsNullOrEmpty(extension))
-				{
-					extension = null;
-					return false;
-				}
-				return true;
+				if (!string.IsNullOrEmpty(extension))
+					return true;
+				extension = null;
+				return false;
 			}
 			catch (Exception)
-			{ }
+			{
+				// Ignored
+			}
+
 			return false;
 		}
 
@@ -172,12 +175,16 @@ namespace Fumen
 					extension = null;
 					return false;
 				}
+
 				if (extension.StartsWith("."))
 					extension = extension.Substring(1);
 				return true;
 			}
 			catch (Exception)
-			{ }
+			{
+				// Ignored
+			}
+
 			return false;
 		}
 	}

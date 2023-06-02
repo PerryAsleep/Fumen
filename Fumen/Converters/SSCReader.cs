@@ -52,14 +52,9 @@ namespace Fumen.Converters
 		}
 
 		/// <summary>
-		/// Path to the ssc file to load.
-		/// </summary>
-		private readonly string FilePath;
-
-		/// <summary>
 		/// Logger to help identify the Song in the logs.
 		/// </summary>
-		private readonly SCCReaderLogger Logger;
+		private readonly SSCReaderLogger Logger;
 
 		/// <summary>
 		/// Constructor.
@@ -68,8 +63,7 @@ namespace Fumen.Converters
 		public SSCReader(string filePath)
 			: base(filePath)
 		{
-			FilePath = filePath;
-			Logger = new SCCReaderLogger(FilePath);
+			Logger = new SSCReaderLogger(FilePath);
 		}
 
 		/// <summary>
@@ -128,8 +122,7 @@ namespace Fumen.Converters
 								activeChartTimingProperties,
 								song,
 								songTimingProperties,
-								firstChart);
-							firstChart = false;
+								ref firstChart);
 						}
 
 						// Set up a new Chart.
@@ -174,8 +167,7 @@ namespace Fumen.Converters
 						activeChartTimingProperties,
 						song,
 						songTimingProperties,
-						firstChart);
-					firstChart = false;
+						ref firstChart);
 				}
 			}, token);
 
@@ -187,7 +179,7 @@ namespace Fumen.Converters
 			TimingProperties chartTimingProperties,
 			Song song,
 			TimingProperties songTimingProperties,
-			bool firstChart)
+			ref bool firstChart)
 		{
 			// Do not add this Chart if we failed to parse the type.
 			if (string.IsNullOrEmpty(chart.Type))
@@ -227,6 +219,7 @@ namespace Fumen.Converters
 				if (!string.IsNullOrEmpty(chartMusicFile))
 					chart.MusicFile = chartMusicFile;
 			}
+
 			if (string.IsNullOrEmpty(chart.Author))
 			{
 				var chartAuthor = "";
@@ -252,14 +245,18 @@ namespace Fumen.Converters
 			}
 
 			if (!chart.Extras.TryGetSourceExtra(TagDisplayBPM, out object _))
+			{
 				chart.Tempo = GetDisplayBPMStringFromSourceExtrasList(
 					song.Extras,
 					timingProperties.Tempos);
+			}
 
 			SetEventTimeAndMetricPositionsFromRows(chart);
 
 			// Add the Chart.
 			song.Charts.Add(chart);
+
+			firstChart = false;
 		}
 
 		private Dictionary<string, PropertyParser> GetSongPropertyParsers(
@@ -274,8 +271,10 @@ namespace Fumen.Converters
 				[TagSubtitle] = new PropertyToSongPropertyParser(TagSubtitle, nameof(Song.SubTitle), song),
 				[TagArtist] = new PropertyToSongPropertyParser(TagArtist, nameof(Song.Artist), song),
 				[TagTitleTranslit] = new PropertyToSongPropertyParser(TagTitleTranslit, nameof(Song.TitleTransliteration), song),
-				[TagSubtitleTranslit] = new PropertyToSongPropertyParser(TagSubtitleTranslit, nameof(Song.SubTitleTransliteration), song),
-				[TagArtistTranslit] = new PropertyToSongPropertyParser(TagArtistTranslit, nameof(Song.ArtistTransliteration), song),
+				[TagSubtitleTranslit] =
+					new PropertyToSongPropertyParser(TagSubtitleTranslit, nameof(Song.SubTitleTransliteration), song),
+				[TagArtistTranslit] =
+					new PropertyToSongPropertyParser(TagArtistTranslit, nameof(Song.ArtistTransliteration), song),
 				[TagGenre] = new PropertyToSongPropertyParser(TagGenre, nameof(Song.Genre), song),
 				[TagOrigin] = new PropertyToSourceExtrasParser<string>(TagOrigin, song.Extras),
 				[TagCredit] = new PropertyToSourceExtrasParser<string>(TagCredit, song.Extras),
@@ -307,20 +306,30 @@ namespace Fumen.Converters
 				[TagOffset] = new PropertyToSourceExtrasParser<double>(TagOffset, song.Extras),
 
 				// These tags are only used if the individual charts do not specify values.
-				[TagStops] = new CSVListAtTimePropertyParser<double>(TagStops, songTimingProperties.Stops, song.Extras, TagFumenRawStopsStr),
-				[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, songTimingProperties.Delays, song.Extras, TagFumenRawDelaysStr),
-				[TagBPMs] = new CSVListAtTimePropertyParser<double>(TagBPMs, songTimingProperties.Tempos, song.Extras, TagFumenRawBpmsStr),
-				[TagWarps] = new CSVListAtTimePropertyParser<double>(TagWarps, songTimingProperties.Warps, song.Extras, TagFumenRawWarpsStr),
-				[TagLabels] = new CSVListAtTimePropertyParser<string>(TagLabels, songTimingProperties.Labels, song.Extras, TagFumenRawLabelsStr),
+				[TagStops] = new CSVListAtTimePropertyParser<double>(TagStops, songTimingProperties.Stops, song.Extras,
+					TagFumenRawStopsStr),
+				[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, songTimingProperties.Delays, song.Extras,
+					TagFumenRawDelaysStr),
+				[TagBPMs] = new CSVListAtTimePropertyParser<double>(TagBPMs, songTimingProperties.Tempos, song.Extras,
+					TagFumenRawBpmsStr),
+				[TagWarps] = new CSVListAtTimePropertyParser<double>(TagWarps, songTimingProperties.Warps, song.Extras,
+					TagFumenRawWarpsStr),
+				[TagLabels] = new CSVListAtTimePropertyParser<string>(TagLabels, songTimingProperties.Labels, song.Extras,
+					TagFumenRawLabelsStr),
 				// Removed, see https://github.com/stepmania/stepmania/issues/9
 				// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 				// suggestions to a renderer for how to draw measure markers.
-				[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, songTimingProperties.TimeSignatures, song.Extras, TagFumenRawTimeSignaturesStr),
-				[TagTickCounts] = new CSVListAtTimePropertyParser<int>(TagTickCounts, songTimingProperties.TickCounts, song.Extras, TagFumenRawTickCountsStr),
+				[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, songTimingProperties.TimeSignatures,
+					song.Extras, TagFumenRawTimeSignaturesStr),
+				[TagTickCounts] = new CSVListAtTimePropertyParser<int>(TagTickCounts, songTimingProperties.TickCounts,
+					song.Extras, TagFumenRawTickCountsStr),
 				[TagCombos] = new ComboPropertyParser(TagCombos, songTimingProperties.Combos, song.Extras, TagFumenRawCombosStr),
-				[TagSpeeds] = new ScrollRateInterpolationPropertyParser(TagSpeeds, songTimingProperties.Speeds, song.Extras, TagFumenRawSpeedsStr),
-				[TagScrolls] = new CSVListAtTimePropertyParser<double>(TagScrolls, songTimingProperties.Scrolls, song.Extras, TagFumenRawScrollsStr),
-				[TagFakes] = new CSVListAtTimePropertyParser<double>(TagFakes, songTimingProperties.Fakes, song.Extras, TagFumenRawFakesStr),
+				[TagSpeeds] = new ScrollRateInterpolationPropertyParser(TagSpeeds, songTimingProperties.Speeds, song.Extras,
+					TagFumenRawSpeedsStr),
+				[TagScrolls] = new CSVListAtTimePropertyParser<double>(TagScrolls, songTimingProperties.Scrolls, song.Extras,
+					TagFumenRawScrollsStr),
+				[TagFakes] = new CSVListAtTimePropertyParser<double>(TagFakes, songTimingProperties.Fakes, song.Extras,
+					TagFumenRawFakesStr),
 				[TagFirstSecond] = new PropertyToSourceExtrasParser<string>(TagFirstSecond, song.Extras),
 				[TagLastSecond] = new PropertyToSourceExtrasParser<string>(TagLastSecond, song.Extras),
 				[TagSongFileName] = new PropertyToSourceExtrasParser<string>(TagSongFileName, song.Extras),
@@ -348,18 +357,26 @@ namespace Fumen.Converters
 				[TagRadarValues] = new PropertyToSourceExtrasParser<string>(TagRadarValues, chart.Extras),
 				[TagCredit] = new PropertyToChartPropertyParser(TagCredit, nameof(Chart.Author), chart),
 				[TagMusic] = new PropertyToChartPropertyParser(TagMusic, nameof(Chart.MusicFile), chart),
-				[TagBPMs] = new CSVListAtTimePropertyParser<double>(TagBPMs, chartTimingProperties.Tempos, chart.Extras, TagFumenRawBpmsStr),
-				[TagStops] = new CSVListAtTimePropertyParser<double>(TagStops, chartTimingProperties.Stops, chart.Extras, TagFumenRawStopsStr),
-				[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, chartTimingProperties.Delays, chart.Extras, TagFumenRawDelaysStr),
+				[TagBPMs] = new CSVListAtTimePropertyParser<double>(TagBPMs, chartTimingProperties.Tempos, chart.Extras,
+					TagFumenRawBpmsStr),
+				[TagStops] = new CSVListAtTimePropertyParser<double>(TagStops, chartTimingProperties.Stops, chart.Extras,
+					TagFumenRawStopsStr),
+				[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, chartTimingProperties.Delays, chart.Extras,
+					TagFumenRawDelaysStr),
 				// Removed, see https://github.com/stepmania/stepmania/issues/9
 				// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
 				// suggestions to a renderer for how to draw measure markers.
-				[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, chartTimingProperties.TimeSignatures, chart.Extras, TagFumenRawTimeSignaturesStr),
-				[TagTickCounts] = new CSVListAtTimePropertyParser<int>(TagTickCounts, chartTimingProperties.TickCounts, chart.Extras),
+				[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, chartTimingProperties.TimeSignatures,
+					chart.Extras, TagFumenRawTimeSignaturesStr),
+				[TagTickCounts] =
+					new CSVListAtTimePropertyParser<int>(TagTickCounts, chartTimingProperties.TickCounts, chart.Extras),
 				[TagCombos] = new ComboPropertyParser(TagCombos, chartTimingProperties.Combos, chart.Extras),
-				[TagWarps] = new CSVListAtTimePropertyParser<double>(TagWarps, chartTimingProperties.Warps, chart.Extras, TagFumenRawWarpsStr),
-				[TagSpeeds] = new ScrollRateInterpolationPropertyParser(TagSpeeds, chartTimingProperties.Speeds, chart.Extras, TagFumenRawSpeedsStr),
-				[TagScrolls] = new CSVListAtTimePropertyParser<double>(TagScrolls, chartTimingProperties.Scrolls, chart.Extras, TagFumenRawScrollsStr),
+				[TagWarps] = new CSVListAtTimePropertyParser<double>(TagWarps, chartTimingProperties.Warps, chart.Extras,
+					TagFumenRawWarpsStr),
+				[TagSpeeds] = new ScrollRateInterpolationPropertyParser(TagSpeeds, chartTimingProperties.Speeds, chart.Extras,
+					TagFumenRawSpeedsStr),
+				[TagScrolls] = new CSVListAtTimePropertyParser<double>(TagScrolls, chartTimingProperties.Scrolls, chart.Extras,
+					TagFumenRawScrollsStr),
 				[TagFakes] = new CSVListAtTimePropertyParser<double>(TagFakes, chartTimingProperties.Fakes, chart.Extras),
 				[TagLabels] = new CSVListAtTimePropertyParser<string>(TagLabels, chartTimingProperties.Labels, chart.Extras),
 				[TagAttacks] = new ListPropertyToSourceExtrasParser<string>(TagAttacks, chart.Extras),
@@ -380,12 +397,12 @@ namespace Fumen.Converters
 	/// <summary>
 	/// Logger to help identify the Song in the logs.
 	/// </summary>
-	public class SCCReaderLogger : ILogger
+	public class SSCReaderLogger : ILogger
 	{
 		private readonly string FilePath;
 		private const string Tag = "[SSC Reader]";
 
-		public SCCReaderLogger(string filePath)
+		public SSCReaderLogger(string filePath)
 		{
 			FilePath = filePath;
 		}
