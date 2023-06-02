@@ -7,7 +7,6 @@ using Fumen.ChartDefinition;
 using Fumen.Converters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static ChartGeneratorTests.Utils;
-using static Fumen.Utils;
 
 namespace ChartGeneratorTests
 {

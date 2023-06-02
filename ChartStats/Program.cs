@@ -40,7 +40,7 @@ namespace ChartStats
 			Logger.StartUp(new Logger.Config
 			{
 				WriteToConsole = true,
-				LogLevel = config.LogLevel
+				Level = config.LogLevel
 			});
 
 			// Write headers.
