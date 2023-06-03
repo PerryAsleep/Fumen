@@ -19,8 +19,6 @@ namespace PadDataGenerator
 	{
 		private const string InputFileName = "input.json";
 
-		// Silence warnings about unassigned fields. The fields are deserialized from JSON.
-#pragma warning disable 0649
 		/// <summary>
 		/// Input to this application.
 		/// </summary>
@@ -29,7 +27,8 @@ namespace PadDataGenerator
 			/// <summary>
 			/// StepsType to PadDataInput
 			/// </summary>
-			public Dictionary<string, PadDataInput> PadDataInput;
+			[JsonInclude] [JsonPropertyName("PadDataInput")]
+			public Dictionary<string, PadDataInput> PadDataInputByChartType;
 		}
 
 		/// <summary>
@@ -42,31 +41,30 @@ namespace PadDataGenerator
 			/// </summary>
 			public class Position
 			{
-				public int X;
-				public int Y;
+				[JsonInclude] public int X;
+				[JsonInclude] public int Y;
 			}
 
-			public int MaxXSeparationBeforeStretch = 2;
-			public int MaxYSeparationBeforeStretch = 2;
-			public int MaxXSeparationCrossoverBeforeStretch = 1;
-			public int MaxYSeparationCrossoverBeforeStretch = 2;
-			public int MaxXSeparationBracket = 1;
-			public int MaxYSeparationBracket = 1;
-			public double YTravelDistanceCompensation = 0.5;
-			public bool GenerateStepGraph = true;
+			[JsonInclude] public int MaxXSeparationBeforeStretch = 2;
+			[JsonInclude] public int MaxYSeparationBeforeStretch = 2;
+			[JsonInclude] public int MaxXSeparationCrossoverBeforeStretch = 1;
+			[JsonInclude] public int MaxYSeparationCrossoverBeforeStretch = 2;
+			[JsonInclude] public int MaxXSeparationBracket = 1;
+			[JsonInclude] public int MaxYSeparationBracket = 1;
+			[JsonInclude] public double YTravelDistanceCompensation = 0.5;
+			[JsonInclude] public bool GenerateStepGraph = true;
 
 			/// <summary>
 			/// Positions of all arrows.
 			/// </summary>
-			public List<Position> Positions;
+			[JsonInclude] public List<Position> Positions;
 		}
-#pragma warning restore 0649
 
-		private static JsonSerializerOptions SerializationOptions = new JsonSerializerOptions()
+		private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions()
 		{
 			Converters =
 			{
-				new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+				new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
 			},
 			ReadCommentHandling = JsonCommentHandling.Skip,
 			AllowTrailingCommas = true,
@@ -79,10 +77,10 @@ namespace PadDataGenerator
 			CreateLogger();
 
 			// Load input.
-			var input = new Input();
+			Input input;
 			try
 			{
-				using (FileStream openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, InputFileName)))
+				using (var openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, InputFileName)))
 				{
 					input = JsonSerializer.Deserialize<Input>(openStream, SerializationOptions);
 				}
@@ -95,7 +93,7 @@ namespace PadDataGenerator
 
 			// Create pad data for each input and write it to disk.
 			var numStepGraphs = 0;
-			foreach (var kvp in input.PadDataInput)
+			foreach (var kvp in input.PadDataInputByChartType)
 			{
 				// Create the pad data.
 				Logger.Info($"Creating {kvp.Key} PadData.");
@@ -114,6 +112,7 @@ namespace PadDataGenerator
 					Console.WriteLine($"Failed to write {outputFileName}: {e}");
 					continue;
 				}
+
 				Logger.Info($"Saved {outputFileName}.");
 
 				if (kvp.Value.GenerateStepGraph)
@@ -124,14 +123,15 @@ namespace PadDataGenerator
 			if (numStepGraphs > 0)
 			{
 				var stepGraphTasks = new Task<StepGraph>[numStepGraphs];
-				int i = 0;
-				foreach (var kvp in input.PadDataInput)
+				var i = 0;
+				foreach (var kvp in input.PadDataInputByChartType)
 				{
 					if (!kvp.Value.GenerateStepGraph)
 						continue;
 					stepGraphTasks[i] = CreateStepGraphAsync(kvp.Key);
 					i++;
 				}
+
 				await Task.WhenAll(stepGraphTasks);
 			}
 
@@ -140,15 +140,21 @@ namespace PadDataGenerator
 
 		private static void CreateLogger()
 		{
-			var programPath = System.Reflection.Assembly.GetEntryAssembly().Location;
-			var programDir = System.IO.Path.GetDirectoryName(programPath);
-			var appName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-			var logDirectory = Fumen.Path.Combine(programDir, "logs");
-
 			var canLogToFile = true;
 			var logToFileError = "";
 			try
 			{
+				var assembly = System.Reflection.Assembly.GetEntryAssembly();
+				if (assembly == null)
+				{
+					throw new Exception("Could not find assembly.");
+				}
+
+				var programPath = assembly.Location;
+				var programDir = System.IO.Path.GetDirectoryName(programPath);
+				var appName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+				var logDirectory = Fumen.Path.Combine(programDir, "logs");
+
 				// Make a log directory if one doesn't exist.
 				Directory.CreateDirectory(logDirectory);
 
@@ -198,7 +204,7 @@ namespace PadDataGenerator
 			return await Task.Run(async () =>
 			{
 				// Load pad data from disk.
-				// This guarantees all initialization has occured. When this application creates
+				// This guarantees all initialization has occurred. When this application creates
 				// PadData it bypasses most of the initialization.
 				var padData = await PadData.LoadPadData(stepsType, GetPadDataFileName(stepsType));
 
@@ -213,12 +219,12 @@ namespace PadDataGenerator
 				Logger.Info($"Saving {stepsType} StepGraph.");
 				var fileName = $"{stepsType}.fsg";
 				fileName = Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-				stepGraph.Save(fileName);
+				await stepGraph.SaveAsync(fileName);
 
 				Logger.Info($"Saved {fileName}.");
 
 				// Ensure it can be loaded properly.
-				var loadedGraph = StepGraph.Load(fileName, padData);
+				var loadedGraph = await StepGraph.LoadAsync(fileName, padData);
 				if (loadedGraph == null)
 				{
 					Logger.Error($"Failed to load saved StepGraph for {stepsType}.");
@@ -228,25 +234,27 @@ namespace PadDataGenerator
 			});
 		}
 
-		static PadData CreatePadData(PadDataInput input)
+		private static PadData CreatePadData(PadDataInput input)
 		{
 			var numArrows = input.Positions.Count;
 
-			var padData = new PadData();
-			padData.YTravelDistanceCompensation = input.YTravelDistanceCompensation;
-			padData.ArrowData = new ArrowData[numArrows];
-			for (int a = 0; a < numArrows; a++)
+			var padData = new PadData
+			{
+				YTravelDistanceCompensation = input.YTravelDistanceCompensation,
+				ArrowData = new ArrowData[numArrows],
+			};
+			for (var a = 0; a < numArrows; a++)
 				padData.ArrowData[a] = new ArrowData();
 
 			// Determine for each arrow if there is room to the left or right of it.
 			// This is helpful for determine valid brackets below.
 			var roomAtOrToLeft = new bool[numArrows];
 			var roomAtOrToRight = new bool[numArrows];
-			for (int a = 0; a < numArrows; a++)
+			for (var a = 0; a < numArrows; a++)
 			{
 				var roomAtOrToLeftOfA = false;
 				var roomAtOrToRightOfA = false;
-				for (int a2 = 0; a2 < numArrows; a2++)
+				for (var a2 = 0; a2 < numArrows; a2++)
 				{
 					if (a == a2)
 						continue;
@@ -256,12 +264,13 @@ namespace PadDataGenerator
 					if (input.Positions[a2].X >= input.Positions[a].X)
 						roomAtOrToRightOfA = true;
 				}
+
 				roomAtOrToLeft[a] = roomAtOrToLeftOfA;
 				roomAtOrToRight[a] = roomAtOrToRightOfA;
 			}
 
 			// Set data for every arrow.
-			for (int a = 0; a < numArrows; a++)
+			for (var a = 0; a < numArrows; a++)
 			{
 				var ad = padData.ArrowData[a];
 
@@ -273,7 +282,7 @@ namespace PadDataGenerator
 				for (var f = 0; f < NumFeet; f++)
 				{
 					ad.BracketablePairingsHeel[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -283,7 +292,7 @@ namespace PadDataGenerator
 							// For this arrow to bracketable with the toe of the left foot...
 							ad.BracketablePairingsHeel[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// There must be room to stand at the same X or to the right of these arrows so you aren't crossed over.
 								// No longer checking this as it prevents inverted brackets and crossover brackets.
 								//&& (roomAtOrToRight[a]) && (roomAtOrToRight[a2])
@@ -297,7 +306,7 @@ namespace PadDataGenerator
 							// For this arrow to bracketable with the toe of the right foot...
 							ad.BracketablePairingsHeel[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// There must be room to stand at the same X or to the left of these arrows so you aren't crossed over.
 								// No longer checking this as it prevents inverted brackets and crossover brackets.
 								//&& (roomAtOrToLeft[a]) && (roomAtOrToLeft[a2])
@@ -313,7 +322,7 @@ namespace PadDataGenerator
 				for (var f = 0; f < NumFeet; f++)
 				{
 					ad.BracketablePairingsToe[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -323,7 +332,7 @@ namespace PadDataGenerator
 							// For this arrow to bracketable with the heel of the left foot...
 							ad.BracketablePairingsToe[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// There must be room to stand at the same X or to the right of these arrows so you aren't crossed over.
 								// No longer checking this as it prevents inverted brackets and crossover brackets.
 								//&& (roomAtOrToRight[a]) && (roomAtOrToRight[a2])
@@ -337,7 +346,7 @@ namespace PadDataGenerator
 							// For this arrow to bracketable with the heel of the right foot...
 							ad.BracketablePairingsToe[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// There must be room to stand at the same X or to the left of these arrows so you aren't crossed over.
 								// No longer checking this as it prevents inverted brackets and crossover brackets.
 								//&& (roomAtOrToLeft[a]) && (roomAtOrToLeft[a2])
@@ -353,7 +362,7 @@ namespace PadDataGenerator
 				for (var f = 0; f < NumFeet; f++)
 				{
 					ad.OtherFootPairings[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -363,7 +372,7 @@ namespace PadDataGenerator
 							// For this arrow to be a valid other foot pairing...
 							ad.OtherFootPairings[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows cannot be too far apart.
 								&& xd <= input.MaxXSeparationBeforeStretch && yd <= input.MaxYSeparationBeforeStretch
 								// The arrow must not be to the left of your left foot, otherwise you would be crossed over.
@@ -374,7 +383,7 @@ namespace PadDataGenerator
 							// For this arrow to be a valid other foot pairing...
 							ad.OtherFootPairings[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows cannot be too far apart.
 								&& xd <= input.MaxXSeparationBeforeStretch && yd <= input.MaxYSeparationBeforeStretch
 								// The arrow must not be to the right of your right foot, otherwise you would be crossed over.
@@ -387,7 +396,7 @@ namespace PadDataGenerator
 				for (var f = 0; f < NumFeet; f++)
 				{
 					ad.OtherFootPairingsStretch[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -397,7 +406,7 @@ namespace PadDataGenerator
 							// For this arrow to be a valid other foot pairing with stretch...
 							ad.OtherFootPairingsStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be at least stretch distance apart in one dimension.
 								&& (xd > input.MaxXSeparationBeforeStretch || yd > input.MaxYSeparationBeforeStretch)
 								// The arrow must not be to the left of your left foot, otherwise you would be crossed over.
@@ -408,7 +417,7 @@ namespace PadDataGenerator
 							// For this arrow to be a valid other foot pairing with stretch...
 							ad.OtherFootPairingsStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be at least stretch distance apart in one dimension.
 								&& (xd > input.MaxXSeparationBeforeStretch || yd > input.MaxYSeparationBeforeStretch)
 								// The arrow must not be to the right of your right foot, otherwise you would be crossed over.
@@ -422,7 +431,7 @@ namespace PadDataGenerator
 				{
 					ad.OtherFootPairingsCrossoverFront[f] = new bool[numArrows];
 					ad.OtherFootPairingsCrossoverFrontStretch[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -432,9 +441,10 @@ namespace PadDataGenerator
 							// For the right foot to cross over in front of the left on this arrow...
 							ad.OtherFootPairingsCrossoverFront[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch &&
+								yd <= input.MaxYSeparationCrossoverBeforeStretch
 								// Right foot must be in front of left foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the left of your left foot.
@@ -443,9 +453,10 @@ namespace PadDataGenerator
 							// For the right foot to cross over in front of the left on this arrow with stretch...
 							ad.OtherFootPairingsCrossoverFrontStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be far enough apart.
-								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch ||
+								    yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Right foot must be in front of left foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the left of your left foot.
@@ -456,9 +467,10 @@ namespace PadDataGenerator
 							// For the left foot to cross over in front of the right on this arrow...
 							ad.OtherFootPairingsCrossoverFront[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch &&
+								yd <= input.MaxYSeparationCrossoverBeforeStretch
 								// Left foot must be in front of right foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the right of your right foot.
@@ -467,9 +479,10 @@ namespace PadDataGenerator
 							// For the left foot to cross over in front of the right on this arrow with stretch...
 							ad.OtherFootPairingsCrossoverFrontStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be far enough apart.
-								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch ||
+								    yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Left foot must be in front of right foot.
 								&& input.Positions[a2].Y < ad.Y
 								// The arrow must be to the right of your right foot.
@@ -483,7 +496,7 @@ namespace PadDataGenerator
 				{
 					ad.OtherFootPairingsCrossoverBehind[f] = new bool[numArrows];
 					ad.OtherFootPairingsCrossoverBehindStretch[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -493,9 +506,10 @@ namespace PadDataGenerator
 							// For the right foot to cross over in back of the left on this arrow...
 							ad.OtherFootPairingsCrossoverBehind[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch &&
+								yd <= input.MaxYSeparationCrossoverBeforeStretch
 								// Right foot must be in back of left foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the left of your left foot.
@@ -504,9 +518,10 @@ namespace PadDataGenerator
 							// For the right foot to cross over in back of the left on this arrow with stretch...
 							ad.OtherFootPairingsCrossoverBehindStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be far enough apart.
-								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch ||
+								    yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Right foot must be in back of left foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the left of your left foot.
@@ -517,9 +532,10 @@ namespace PadDataGenerator
 							// For the left foot to cross over in back of the right on this arrow...
 							ad.OtherFootPairingsCrossoverBehind[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows cannot be too far apart.
-								&& xd <= input.MaxXSeparationCrossoverBeforeStretch && yd <= input.MaxYSeparationCrossoverBeforeStretch
+								&& xd <= input.MaxXSeparationCrossoverBeforeStretch &&
+								yd <= input.MaxYSeparationCrossoverBeforeStretch
 								// Left foot must be in back of right foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the right of your right foot.
@@ -528,9 +544,10 @@ namespace PadDataGenerator
 							// For the left foot to cross over in back of the right on this arrow with stretch...
 							ad.OtherFootPairingsCrossoverBehindStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be far enough apart.
-								&& (xd > input.MaxXSeparationCrossoverBeforeStretch || yd > input.MaxYSeparationCrossoverBeforeStretch)
+								&& (xd > input.MaxXSeparationCrossoverBeforeStretch ||
+								    yd > input.MaxYSeparationCrossoverBeforeStretch)
 								// Left foot must be in back of right foot.
 								&& input.Positions[a2].Y > ad.Y
 								// The arrow must be to the right of your right foot.
@@ -544,7 +561,7 @@ namespace PadDataGenerator
 				{
 					ad.OtherFootPairingsInverted[f] = new bool[numArrows];
 					ad.OtherFootPairingsInvertedStretch[f] = new bool[numArrows];
-					for (int a2 = 0; a2 < numArrows; a2++)
+					for (var a2 = 0; a2 < numArrows; a2++)
 					{
 						var xd = Math.Abs(ad.X - input.Positions[a2].X);
 						var yd = Math.Abs(ad.Y - input.Positions[a2].Y);
@@ -554,7 +571,7 @@ namespace PadDataGenerator
 							// For the right foot to be inverted with the left foot...
 							ad.OtherFootPairingsInverted[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be at the same Y position and not too far apart in X.
 								&& xd <= input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the left of your left foot.
@@ -563,7 +580,7 @@ namespace PadDataGenerator
 							// For the right foot to be inverted with the left foot with stretch...
 							ad.OtherFootPairingsInvertedStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be at the same Y position and far enough apart in X.
 								&& xd > input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the left of your left foot.
@@ -574,7 +591,7 @@ namespace PadDataGenerator
 							// For the left foot to be inverted with the right foot...
 							ad.OtherFootPairingsInverted[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be at the same Y position and not too far apart in X.
 								&& xd <= input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the right of your right foot.
@@ -583,7 +600,7 @@ namespace PadDataGenerator
 							// For the left foot to be inverted with the right foot with stretch...
 							ad.OtherFootPairingsInvertedStretch[f][a2] =
 								// Arrows must be different.
-								(a != a2)
+								a != a2
 								// Arrows must be at the same Y position and far enough apart in X.
 								&& xd > input.MaxXSeparationBeforeStretch && yd <= 0
 								// The arrow must be to the right of your right foot.
@@ -601,17 +618,34 @@ namespace PadDataGenerator
 
 		private sealed class StartingPosition
 		{
-			public int L;
-			public int R;
+			/// <summary>
+			/// Left foot lane.
+			/// </summary>
+			public readonly int L;
+
+			/// <summary>
+			/// Right foot lane.
+			/// </summary>
+			public readonly int R;
+
 			/// <summary>
 			/// Rating to use for starting position tier.
 			/// Many starting positions may share the same tier rating.
 			/// </summary>
-			public double TierRating;
+			public readonly double TierRating;
+
 			/// <summary>
 			/// Unique overall rating for sorting within tiers.
 			/// </summary>
-			public double OverallRating;
+			public readonly double OverallRating;
+
+			public StartingPosition(int l, int r, double tierRating, double overallRating)
+			{
+				L = l;
+				R = r;
+				TierRating = tierRating;
+				OverallRating = overallRating;
+			}
 
 			public override bool Equals(object obj)
 			{
@@ -619,6 +653,7 @@ namespace PadDataGenerator
 					return false;
 				return sp.L == L && sp.R == R;
 			}
+
 			public override int GetHashCode()
 			{
 				return (L * 1000 + R).GetHashCode();
@@ -645,22 +680,20 @@ namespace PadDataGenerator
 				if (pos.Y > maxY)
 					maxY = pos.Y;
 			}
-			var widthOdd = ((maxX - minX) + 1) % 2 == 1;
-			var heightOdd = ((maxY - minY) + 1) % 2 == 1;
 
-			double centerX = minX + ((maxX - minX) * 0.5);
-			double centerY = minY + ((maxY - minY) * 0.5);
+			var centerX = minX + (maxX - minX) * 0.5;
+			var centerY = minY + (maxY - minY) * 0.5;
 
-			double ilx = centerX - 0.5;
-			double ily = centerY;
-			double irx = centerX + 0.5;
-			double iry = centerY;
+			var ilx = centerX - 0.5;
+			var ily = centerY;
+			var irx = centerX + 0.5;
+			var iry = centerY;
 
 			// Loop over every valid position and compute a rating of well it is for a starting position.
-			for (int a = 0; a < numArrows; a++)
+			for (var a = 0; a < numArrows; a++)
 			{
 				var ad = padData.ArrowData[a];
-				for (int a2 = 0; a2 < numArrows; a2++)
+				for (var a2 = 0; a2 < numArrows; a2++)
 				{
 					for (var f = 0; f < NumFeet; f++)
 					{
@@ -671,13 +704,7 @@ namespace PadDataGenerator
 							var (tierRating, overallRating) = GetStartPositionRating(centerX, maxY,
 								padData.ArrowData[l].X, padData.ArrowData[l].Y, padData.ArrowData[r].X, padData.ArrowData[r].Y,
 								ilx, ily, irx, iry);
-							startingPositions.Add(new StartingPosition
-							{
-								L = l,
-								R = r,
-								TierRating = tierRating,
-								OverallRating = overallRating,
-							});
+							startingPositions.Add(new StartingPosition(l, r, tierRating, overallRating));
 						}
 					}
 				}
@@ -690,13 +717,14 @@ namespace PadDataGenerator
 			// Convert the sorted list into a list of lists, where the inner lists
 			// share the same rating.
 			var tieredPositions = new List<List<StartingPosition>>();
-			double lastRating = double.MaxValue;
+			var lastRating = double.MaxValue;
 			foreach (var position in startingPositionsList)
 			{
-				if (position.TierRating != lastRating)
+				if (!position.TierRating.DoubleEquals(lastRating))
 				{
 					tieredPositions.Add(new List<StartingPosition>());
 				}
+
 				tieredPositions[tieredPositions.Count - 1].Add(position);
 				lastRating = position.TierRating;
 			}
@@ -708,7 +736,7 @@ namespace PadDataGenerator
 				{
 					var tierOne = tieredPositions[0];
 					var newTierTwo = new List<StartingPosition>(tierOne.Count - 1);
-					for(int i = 1; i < tierOne.Count; i++)
+					for (var i = 1; i < tierOne.Count; i++)
 						newTierTwo.Add(tierOne[i]);
 					tierOne.RemoveRange(1, tierOne.Count - 1);
 					tieredPositions.Insert(1, newTierTwo);
@@ -751,11 +779,11 @@ namespace PadDataGenerator
 			// Positions closest to the ideal starting position are preferred.
 			var dl = Math.Sqrt((lx - ilx) * (lx - ilx) + (ly - ily) * (ly - ily));
 			var dr = Math.Sqrt((rx - irx) * (rx - irx) + (ry - iry) * (ry - iry));
-			var distanceFromIdealRating = (dl + dr);
+			var distanceFromIdealRating = dl + dr;
 
 			// Positions which aren't centered are less preferred.
 			// This helps Left and Right be a better start than Left and Center for SMX.
-			var averageX = lx <= rx ? (lx + (rx - lx) * 0.5) : (rx + (lx - rx) * 0.5);
+			var averageX = lx <= rx ? lx + (rx - lx) * 0.5 : rx + (lx - rx) * 0.5;
 			var centeredXRating = Math.Abs(centerX - averageX);
 
 			// Positions where the feet are at different y values are less preferred.
@@ -764,23 +792,23 @@ namespace PadDataGenerator
 			// Positions off center and facing inwards are less preferred.
 			var inwardFacingRating = 0;
 			if ((lx < centerX && rx < centerX && ly < ry)
-				||(lx > centerX && rx > centerX && ly > ry))
+			    || (lx > centerX && rx > centerX && ly > ry))
 			{
 				inwardFacingRating = staggeredYRating;
 			}
 
 			// As a tie-breaker, prefer starting positions closer to the back of the pads.
-			var yRating = (maxY - ly) + (maxY - ry);
+			var yRating = maxY - ly + (maxY - ry);
 
 			// As a tie-breaker, prefer starting positions towards the left.
-			var xRating = (lx + rx);
+			var xRating = lx + rx;
 
 			var tierRating =
 				distanceFromIdealRating * 1000
 				+ centeredXRating * 100
 				+ staggeredYRating * 10
 				+ inwardFacingRating;
-			
+
 			var overallRating =
 				distanceFromIdealRating * 100000
 				+ centeredXRating * 10000
