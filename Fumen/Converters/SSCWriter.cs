@@ -41,7 +41,9 @@ namespace Fumen.Converters
 			{
 				// Version
 				if (!Config.Song.Extras.TryGetExtra(TagVersion, out object version, MatchesSourceFileFormatType()))
+				{
 					WriteSongProperty(TagVersion, Version.ToString("N2"));
+				}
 				else
 				{
 					if (version is double d)

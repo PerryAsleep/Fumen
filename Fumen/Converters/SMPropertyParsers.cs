@@ -714,35 +714,42 @@ namespace Fumen.Converters
 							}
 
 							// Validation.
-							if (noteType == SMCommon.NoteType.Tap
-							    || noteType == SMCommon.NoteType.Mine
-							    || noteType == SMCommon.NoteType.Lift
-							    || noteType == SMCommon.NoteType.Fake
-							    || noteType == SMCommon.NoteType.KeySound
-							    || noteType == SMCommon.NoteType.HoldStart
-							    || noteType == SMCommon.NoteType.RollStart)
+							switch (noteType)
 							{
-								if (holding[laneIndex])
+								case SMCommon.NoteType.Tap:
+								case SMCommon.NoteType.Mine:
+								case SMCommon.NoteType.Lift:
+								case SMCommon.NoteType.Fake:
+								case SMCommon.NoteType.KeySound:
+								case SMCommon.NoteType.HoldStart:
+								case SMCommon.NoteType.RollStart:
 								{
-									Logger?.Error(
-										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during hold on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
-									validChart = false;
-								}
+									if (holding[laneIndex])
+									{
+										Logger?.Error(
+											$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during hold on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+										validChart = false;
+									}
 
-								if (rolling[laneIndex])
-								{
-									Logger?.Error(
-										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during roll on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
-									validChart = false;
+									if (rolling[laneIndex])
+									{
+										Logger?.Error(
+											$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during roll on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+										validChart = false;
+									}
+
+									break;
 								}
-							}
-							else if (noteType == SMCommon.NoteType.HoldEnd)
-							{
-								if (!holding[laneIndex] && !rolling[laneIndex])
+								case SMCommon.NoteType.HoldEnd:
 								{
-									Logger?.Error(
-										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} while neither holding nor rolling on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
-									validChart = false;
+									if (!holding[laneIndex] && !rolling[laneIndex])
+									{
+										Logger?.Error(
+											$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} while neither holding nor rolling on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+										validChart = false;
+									}
+
+									break;
 								}
 							}
 
@@ -751,32 +758,30 @@ namespace Fumen.Converters
 
 							// Create a LaneNote based on the note type.
 							LaneNote note = null;
-							if (noteType == SMCommon.NoteType.Tap
-							    || noteType == SMCommon.NoteType.Fake
-							    || noteType == SMCommon.NoteType.Lift)
+							switch (noteType)
 							{
-								note = new LaneTapNote { SourceType = c.ToString() };
-							}
-							else if (noteType == SMCommon.NoteType.Mine
-							         || noteType == SMCommon.NoteType.KeySound)
-							{
-								note = new LaneNote { SourceType = c.ToString() };
-							}
-							else if (noteType == SMCommon.NoteType.HoldStart)
-							{
-								holding[laneIndex] = true;
-								note = new LaneHoldStartNote { SourceType = c.ToString() };
-							}
-							else if (noteType == SMCommon.NoteType.RollStart)
-							{
-								rolling[laneIndex] = true;
-								note = new LaneHoldStartNote { SourceType = c.ToString() };
-							}
-							else if (noteType == SMCommon.NoteType.HoldEnd)
-							{
-								note = new LaneHoldEndNote { SourceType = c.ToString() };
-								holding[laneIndex] = false;
-								rolling[laneIndex] = false;
+								case SMCommon.NoteType.Tap:
+								case SMCommon.NoteType.Fake:
+								case SMCommon.NoteType.Lift:
+									note = new LaneTapNote { SourceType = c.ToString() };
+									break;
+								case SMCommon.NoteType.Mine:
+								case SMCommon.NoteType.KeySound:
+									note = new LaneNote { SourceType = c.ToString() };
+									break;
+								case SMCommon.NoteType.HoldStart:
+									holding[laneIndex] = true;
+									note = new LaneHoldStartNote { SourceType = c.ToString() };
+									break;
+								case SMCommon.NoteType.RollStart:
+									rolling[laneIndex] = true;
+									note = new LaneHoldStartNote { SourceType = c.ToString() };
+									break;
+								case SMCommon.NoteType.HoldEnd:
+									note = new LaneHoldEndNote { SourceType = c.ToString() };
+									holding[laneIndex] = false;
+									rolling[laneIndex] = false;
+									break;
 							}
 
 							// Keysound parsing.

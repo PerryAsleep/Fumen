@@ -90,7 +90,9 @@ namespace Fumen
 				y.L.Parent = x;
 			y.Parent = x.Parent;
 			if (x.Parent == Nil)
+			{
 				Root = y;
+			}
 			else
 			{
 				if (x == x.Parent.L)
@@ -111,7 +113,9 @@ namespace Fumen
 				y.R.Parent = x;
 			y.Parent = x.Parent;
 			if (x.Parent == Nil)
+			{
 				Root = y;
+			}
 			else
 			{
 				if (x == x.Parent.L)

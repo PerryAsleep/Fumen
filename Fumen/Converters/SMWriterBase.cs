@@ -408,32 +408,33 @@ namespace Fumen.Converters
 
 		private void WritePropertyInternal(string smPropertyName, object value, bool escape)
 		{
-			if (value == null)
+			switch (value)
 			{
-				WritePropertyInternal(smPropertyName, "", false);
-			}
-			else if (value is List<string> valAsList)
-			{
-				StreamWriter.Write($"{MSDFile.ValueStartMarker}{smPropertyName}{MSDFile.ParamMarker}");
-				var first = true;
-				foreach (var entry in valAsList)
+				case null:
+					WritePropertyInternal(smPropertyName, "", false);
+					break;
+				case List<string> valAsList:
 				{
-					if (!first)
-						StreamWriter.Write(MSDFile.ParamMarker);
-					if (!string.IsNullOrEmpty(entry))
-						StreamWriter.Write(MSDFile.Escape(entry));
-					first = false;
-				}
+					StreamWriter.Write($"{MSDFile.ValueStartMarker}{smPropertyName}{MSDFile.ParamMarker}");
+					var first = true;
+					foreach (var entry in valAsList)
+					{
+						if (!first)
+							StreamWriter.Write(MSDFile.ParamMarker);
+						if (!string.IsNullOrEmpty(entry))
+							StreamWriter.Write(MSDFile.Escape(entry));
+						first = false;
+					}
 
-				StreamWriter.WriteLine(MSDFile.ValueEndMarker);
-			}
-			else if (value is double d)
-			{
-				WritePropertyInternal(smPropertyName, d.ToString(SMCommon.SMDoubleFormat), false);
-			}
-			else
-			{
-				WritePropertyInternal(smPropertyName, value.ToString(), escape);
+					StreamWriter.WriteLine(MSDFile.ValueEndMarker);
+					break;
+				}
+				case double d:
+					WritePropertyInternal(smPropertyName, d.ToString(SMCommon.SMDoubleFormat), false);
+					break;
+				default:
+					WritePropertyInternal(smPropertyName, value.ToString(), escape);
+					break;
 			}
 		}
 

@@ -590,11 +590,9 @@ namespace Fumen.Converters
 		{
 			foreach (var scrollRate in scrollRateEvents)
 			{
-				var parameters = scrollRate.Value;
-				var speed = parameters.Item1;
-				var length = parameters.Item2;
+				var (speed, length, secondsFlag) = scrollRate.Value;
 
-				var lengthIsTimeInSeconds = parameters.Item3 != 0;
+				var lengthIsTimeInSeconds = secondsFlag != 0;
 				var periodAsTime = 0.0;
 				var periodAsIntegerPosition = 0;
 				if (lengthIsTimeInSeconds)
@@ -732,7 +730,9 @@ namespace Fumen.Converters
 
 			// If there are no time signatures defined, use a default 4/4 signature.
 			if (timeSignatures.Count == 0)
+			{
 				useDefaultTimeSignature = true;
+			}
 
 			// Otherwise, try to parse the time signatures and ensure they are valid.
 			else
@@ -883,7 +883,9 @@ namespace Fumen.Converters
 				}
 			}
 			else if (tempos?.ContainsKey(0.0) ?? false)
+			{
 				displayTempo = tempos[0.0].ToString("N3");
+			}
 
 			return displayTempo;
 		}
@@ -1014,50 +1016,59 @@ namespace Fumen.Converters
 					chartEvent.TimeSeconds = previousEventTimeSeconds;
 				previousEventTimeSeconds = chartEvent.TimeSeconds;
 
-				// Stop handling. Just accrue more stop time.
-				if (chartEvent is Stop stop)
+				switch (chartEvent)
 				{
-					// Accrue Stop time whether it is positive or negative.
-					// Do not worry about overlapping negative stops as they stack in StepMania.
-					totalStopTimeSeconds += stop.LengthSeconds;
-				}
-				// Warp handling. Update warp start and stop rows so we can compute the warp time.
-				else if (chartEvent is Warp warp)
-				{
-					// If there is a currently running warp, just extend the Warp.
-					warpingEndPosition = Math.Max(warpingEndPosition, warp.IntegerPosition + warp.LengthIntegerPosition);
-					if (lastWarpBeatTimeChangeRow == -1)
-						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
-				}
-				// Time Signature change. Update time signature and beat time tracking.
-				else if (chartEvent is TimeSignature ts)
-				{
-					var timeSignature = ts.Signature;
-
-					lastTimeSigChangeRow = chartEvent.IntegerPosition;
-					lastTimeSigChangeMeasure = absoluteMeasure;
-					beatsPerMeasure = timeSignature.Numerator;
-					rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / timeSignature.Denominator;
-
-					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
-					if (warpingEndPosition != -1)
+					// Stop handling. Just accrue more stop time.
+					case Stop stop:
 					{
-						totalWarpTime += currentWarpTime;
-						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
+						// Accrue Stop time whether it is positive or negative.
+						// Do not worry about overlapping negative stops as they stack in StepMania.
+						totalStopTimeSeconds += stop.LengthSeconds;
+						break;
 					}
-				}
-				// Tempo change. Update beat time tracking.
-				else if (chartEvent is Tempo tc)
-				{
-					lastTempo = tc;
-					lastTempoChangeRow = chartEvent.IntegerPosition;
-					lastTempoChangeTime = absoluteTime;
-
-					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
-					if (warpingEndPosition != -1)
+					// Warp handling. Update warp start and stop rows so we can compute the warp time.
+					case Warp warp:
 					{
-						totalWarpTime += currentWarpTime;
-						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
+						// If there is a currently running warp, just extend the Warp.
+						warpingEndPosition = Math.Max(warpingEndPosition, warp.IntegerPosition + warp.LengthIntegerPosition);
+						if (lastWarpBeatTimeChangeRow == -1)
+							lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
+						break;
+					}
+					// Time Signature change. Update time signature and beat time tracking.
+					case TimeSignature ts:
+					{
+						var timeSignature = ts.Signature;
+
+						lastTimeSigChangeRow = chartEvent.IntegerPosition;
+						lastTimeSigChangeMeasure = absoluteMeasure;
+						beatsPerMeasure = timeSignature.Numerator;
+						rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / timeSignature.Denominator;
+
+						// If this alteration in beat time occurs during a warp, update our warp tracking variables.
+						if (warpingEndPosition != -1)
+						{
+							totalWarpTime += currentWarpTime;
+							lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
+						}
+
+						break;
+					}
+					// Tempo change. Update beat time tracking.
+					case Tempo tc:
+					{
+						lastTempo = tc;
+						lastTempoChangeRow = chartEvent.IntegerPosition;
+						lastTempoChangeTime = absoluteTime;
+
+						// If this alteration in beat time occurs during a warp, update our warp tracking variables.
+						if (warpingEndPosition != -1)
+						{
+							totalWarpTime += currentWarpTime;
+							lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
+						}
+
+						break;
 					}
 				}
 			}

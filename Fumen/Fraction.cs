@@ -78,8 +78,6 @@ namespace Fumen
 
 		public override bool Equals(object obj)
 		{
-			if (obj == null)
-				return false;
 			if (!(obj is Fraction fraction))
 				return false;
 			return Equals(fraction);
