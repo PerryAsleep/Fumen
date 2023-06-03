@@ -40,7 +40,7 @@ namespace StepManiaLibrary.PerformedChart
 		/// <returns>Loaded StepTypeFallbacks or null if the StepTypeFallbacks failed to load.</returns>
 		public static async Task<StepTypeFallbacks> Load(string fileName)
 		{
-			StepTypeFallbacks fallbacks = null;
+			StepTypeFallbacks fallbacks;
 			var options = new JsonSerializerOptions
 			{
 				Converters =
@@ -85,7 +85,7 @@ namespace StepManiaLibrary.PerformedChart
 				catch (Exception e)
 				{
 					e.Data.Add("StepTypeFallback", kvp.Key);
-					throw e;
+					throw;
 				}
 				Fallbacks.Add(kvp.Key, stepTypeList);
 			}
@@ -151,7 +151,7 @@ namespace StepManiaLibrary.PerformedChart
 		/// <summary>
 		/// Lor errors if any StepType fallbacks aren't present.
 		/// </summary>
-		/// <param name="pccId">Identifier for logging.</param>
+		/// <param name="id">Identifier for logging.</param>
 		/// <returns>True if errors were found and false otherwise.</returns>
 		public bool Validate(string id)
 		{

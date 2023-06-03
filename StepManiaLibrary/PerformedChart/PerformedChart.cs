@@ -86,11 +86,11 @@ namespace StepManiaLibrary.PerformedChart
 			LogIdentifier = logIdentifier;
 		}
 
-		private PerformedChart(int numArrows, string logIdentifier)
-		{
-			NumArrows = numArrows;
-			LogIdentifier = logIdentifier;
-		}
+		//private PerformedChart(int numArrows, string logIdentifier)
+		//{
+		//	NumArrows = numArrows;
+		//	LogIdentifier = logIdentifier;
+		//}
 
 		public List<PerformanceNode> GetRootNodes()
 		{
@@ -104,12 +104,14 @@ namespace StepManiaLibrary.PerformedChart
 		/// <param name="stepGraph">
 		/// StepGraph representing all possible states that can be traversed.
 		/// </param>
+		/// <param name="config">Config to use.</param>
 		/// <param name="rootNodes">
 		/// Tiers of root GraphNodes to try as the root.
 		/// Outer list expected to be sorted by how desirable the GraphNodes are with the
 		/// first List being the most desirable GraphNodes and the last List being the least
 		/// desirable GraphNodes. Inner Lists expected to contain GraphNodes of equal preference.
 		/// </param>
+		/// <param name="fallbacks">StepTypeFallbacks to use.</param>
 		/// <param name="expressedChart">ExpressedChart to search.</param>
 		/// <param name="randomSeed">
 		/// Random seed to use when needing to make random choices when creating the PerformedChart.
@@ -170,8 +172,7 @@ namespace StepManiaLibrary.PerformedChart
 							random.NextDouble(),
 							config,
 							null);
-						var currentSearchNodes = new HashSet<SearchNode>();
-						currentSearchNodes.Add(rootSearchNode);
+						var currentSearchNodes = new HashSet<SearchNode> { rootSearchNode };
 
 						while (true)
 						{
@@ -268,7 +269,7 @@ namespace StepManiaLibrary.PerformedChart
 											var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink, stepGraph.NumArrows);
 
 											// Set up the graph links leading out of this node to its next nodes.
-											List<GraphLinkInstance> graphLinksToNextNode = null;
+											List<GraphLinkInstance> graphLinksToNextNode;
 											if (nextDepth < expressedChart.StepEvents.Count)
 											{
 												var sourceLinkKey = expressedChart.StepEvents[nextDepth].LinkInstance;
@@ -1019,6 +1020,7 @@ namespace StepManiaLibrary.PerformedChart
 		/// Last StepPerformanceNode in the PerformedChart. Used to append MinePerformanceNodes to
 		/// the end.
 		/// </param>
+		/// <param name="random">Random to use when needing to select a random lane.</param>
 		private static void AddMinesToPerformedChart(
 			PerformedChart performedChart,
 			StepGraph stepGraph,
@@ -1369,6 +1371,7 @@ namespace StepManiaLibrary.PerformedChart
 
 		#region Logging
 
+		// ReSharper disable UnusedMember.Local
 		private static void LogError(string message, string logIdentifier)
 		{
 			if (!string.IsNullOrEmpty(logIdentifier))
@@ -1397,7 +1400,7 @@ namespace StepManiaLibrary.PerformedChart
 		{
 			LogError(message, LogIdentifier);
 		}
-
+		
 		private void LogWarn(string message)
 		{
 			LogWarn(message, LogIdentifier);
@@ -1407,6 +1410,7 @@ namespace StepManiaLibrary.PerformedChart
 		{
 			LogInfo(message, LogIdentifier);
 		}
+		// ReSharper restore UnusedMember.Local
 
 		#endregion Logging
 	}

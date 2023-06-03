@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using Fumen;
 using static StepManiaLibrary.Constants;
+using System;
 
 namespace StepManiaLibrary.PerformedChart
 {
@@ -26,8 +27,8 @@ namespace StepManiaLibrary.PerformedChart
 		/// </summary>
 		private class ReplacementGraphLinkComparer : IComparer<GraphLinkInstance>
 		{
-			private GraphLink SourceLink;
-			private StepTypeFallbacks Fallbacks;
+			private readonly GraphLink SourceLink;
+			private readonly StepTypeFallbacks Fallbacks;
 
 			public ReplacementGraphLinkComparer(GraphLink sourceLink, StepTypeFallbacks fallbacks)
 			{
@@ -35,7 +36,7 @@ namespace StepManiaLibrary.PerformedChart
 				Fallbacks = fallbacks;
 			}
 
-			public int Compare(GraphLinkInstance l1, GraphLinkInstance l2)
+			private int Compare(GraphLinkInstance l1, GraphLinkInstance l2)
 			{
 				if (l1.Equals(l2))
 					return 0;
@@ -46,10 +47,10 @@ namespace StepManiaLibrary.PerformedChart
 				if (l1Blank != l2Blank)
 					return l1Blank ? 1 : -1;
 
-				double l1LCost = 0.0;
-				double l1RCost = 0.0;
-				double l2LCost = 0.0;
-				double l2RCost = 0.0;
+				var l1LCost = 0.0;
+				var l1RCost = 0.0;
+				var l2LCost = 0.0;
+				var l2RCost = 0.0;
 
 				var sourceLHasAnyValid = false;
 				var sourceRHasAnyValid = false;
@@ -67,7 +68,7 @@ namespace StepManiaLibrary.PerformedChart
 				{
 					if (SourceLink.Links[L, p].Valid)
 					{
-						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[L, p].Step).Count();
+						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[L, p].Step).Count;
 						sourceLHasAnyValid = true;
 
 						if (!l1.GraphLink.Links[L, p].Valid)
@@ -86,7 +87,7 @@ namespace StepManiaLibrary.PerformedChart
 					}
 					if (SourceLink.Links[R, p].Valid)
 					{
-						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[R, p].Step).Count();
+						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[R, p].Step).Count;
 						sourceRHasAnyValid = true;
 
 						if (!l1.GraphLink.Links[R, p].Valid)
@@ -139,6 +140,11 @@ namespace StepManiaLibrary.PerformedChart
 		private readonly ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
 
 		/// <summary>
+		/// Cached MethodGroup for FindAllReplacementLinks to avoid allocation per invocation.
+		/// </summary>
+		private readonly Func<GraphLinkInstance, StepTypeFallbacks, List<GraphLinkInstance>> CachedFindAllReplacementLinks = FindAllReplacementLinks;
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		public GraphLinkInstanceCache()
@@ -157,7 +163,8 @@ namespace StepManiaLibrary.PerformedChart
 		/// <param name="sourceLink">Original GraphLinkInstance.</param>
 		/// <param name="fallbacks">StepTypeFallbacks.</param>
 		/// <returns>List of all valid replacement FootArrowStates.</returns>
-		private List<GraphLinkInstance> FindReplacementLinksForFoot(int foot, GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
+		[SuppressMessage("ReSharper", "UseObjectOrCollectionInitializer")]
+		private static List<GraphLinkInstance> FindReplacementLinksForFoot(int foot, GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
 		{
 			var stepTypeReplacements = fallbacks.GetFallbacks();
 			var originalLinks = sourceLink.GraphLink.Links;
@@ -193,7 +200,7 @@ namespace StepManiaLibrary.PerformedChart
 					// Single step.
 					// This could be creating a step that is technically impossible. For example replacing a
 					// single bracket step like BracketOneArrowToeNew from a state where you are holding with
-					// your heel with a stpe like NewArrow is impossible. But it is simpler to create this
+					// your heel with a step like NewArrow is impossible. But it is simpler to create this
 					// step and rely on there being link that matches it when searching.
 					if (!newStepData.IsBracket)
 					{
@@ -225,11 +232,12 @@ namespace StepManiaLibrary.PerformedChart
 						}
 
 						// Record the new state.
-						var newLink = new GraphLinkInstance();
-						newLink.InstanceTypes[foot, originalPortion] = sourceLink.InstanceTypes[foot, originalPortion];
-						newLink.GraphLink = new GraphLink();
-						newLink.GraphLink.Links[foot, newStepFootPortion] = new GraphLink.FootArrowState(newStep, originalLinks[foot, originalPortion].Action);
-						footLinks.Add(newLink);
+						var newLink = new GraphLink();
+						newLink.Links[foot, newStepFootPortion] = new GraphLink.FootArrowState(newStep, originalLinks[foot, originalPortion].Action);
+						var instanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
+						instanceTypes[foot, originalPortion] = sourceLink.InstanceTypes[foot, originalPortion];
+						var newLinkInstance = new GraphLinkInstance(newLink, instanceTypes);
+						footLinks.Add(newLinkInstance);
 					}
 
 					// Bracket.
@@ -266,7 +274,6 @@ namespace StepManiaLibrary.PerformedChart
 						var newLink = new GraphLinkInstance();
 						newLink.InstanceTypes[foot, Heel] = heelInstanceType;
 						newLink.InstanceTypes[foot, Toe] = toeInstanceType;
-						newLink.GraphLink = new GraphLink();
 						newLink.GraphLink.Links[foot, Heel] = new GraphLink.FootArrowState(newStep, heelAction);
 						newLink.GraphLink.Links[foot, Toe] = new GraphLink.FootArrowState(newStep, toeAction);
 						footLinks.Add(newLink);
@@ -277,7 +284,6 @@ namespace StepManiaLibrary.PerformedChart
 							newLink = new GraphLinkInstance();
 							newLink.InstanceTypes[foot, Heel] = toeInstanceType;
 							newLink.InstanceTypes[foot, Toe] = heelInstanceType;
-							newLink.GraphLink = new GraphLink();
 							newLink.GraphLink.Links[foot, Heel] = new GraphLink.FootArrowState(newStep, toeAction);
 							newLink.GraphLink.Links[foot, Toe] = new GraphLink.FootArrowState(newStep, heelAction);
 							footLinks.Add(newLink);
@@ -292,7 +298,6 @@ namespace StepManiaLibrary.PerformedChart
 
 			// Add a blank link.
 			var blankLink = new GraphLinkInstance();
-			blankLink.GraphLink = new GraphLink();
 			footLinks.Add(blankLink);
 
 			return footLinks;
@@ -305,7 +310,7 @@ namespace StepManiaLibrary.PerformedChart
 		/// <param name="sourceLink">Original GraphLink.</param>
 		/// <param name="fallbacks">StepTypeFallbacks.</param>
 		/// <returns>List of all valid GraphLink replacements sorted by how good they are.</returns>
-		private List<GraphLinkInstance> FindAllReplacementLinks(GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
+		private static List<GraphLinkInstance> FindAllReplacementLinks(GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
 		{
 			var replacementLinks = new List<GraphLinkInstance>();
 			if (sourceLink == null || sourceLink.GraphLink.IsBlank())
@@ -378,7 +383,6 @@ namespace StepManiaLibrary.PerformedChart
 							continue;
 
 						var newLink = new GraphLinkInstance();
-						newLink.GraphLink = new GraphLink();
 						for (var p = 0; p < NumFootPortions; p++)
 						{
 							newLink.GraphLink.Links[L, p] = leftLink.GraphLink.Links[L, p];
@@ -406,7 +410,7 @@ namespace StepManiaLibrary.PerformedChart
 		/// in its place in the PerformedChart according to the given StepTypeFallbacks.
 		/// This function can involve some heavy loops depending on how deep the StepTypeFallbacks
 		/// are and how many valid foot portions are present in the given link.
-		/// Results are cached for the given StepTypeFallbacksg and source link so subsequent call
+		/// Results are cached for the given StepTypeFallbacks and source link so subsequent call
 		/// with the same parameters return with an O(1) lookup.
 		/// Thread-safe.
 		/// </summary>
@@ -426,7 +430,7 @@ namespace StepManiaLibrary.PerformedChart
 			}
 
 			var cacheForFallbacks = Cache.GetOrAdd(fallbacks, CreateCache);
-			return cacheForFallbacks.GetOrAdd(sourceLink, FindAllReplacementLinks, fallbacks);
+			return cacheForFallbacks.GetOrAdd(sourceLink, CachedFindAllReplacementLinks, fallbacks);
 		}
 
 		/// <summary>

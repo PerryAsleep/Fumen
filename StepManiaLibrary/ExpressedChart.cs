@@ -59,21 +59,21 @@ namespace StepManiaLibrary
 		/// </summary>
 		public abstract class ChartEvent
 		{
-			protected ChartEvent(int position, double time)
-			{
-				Position = position;
-				Time = time;
-			}
-
 			/// <summary>
 			/// IntegerPosition of this event.
 			/// </summary>
-			public int Position = -1;
+			public int Position;
 
 			/// <summary>
 			/// Time in seconds of this event.
 			/// </summary>
 			public double Time;
+
+			protected ChartEvent(int position, double time)
+			{
+				Position = position;
+				Time = time;
+			}
 		}
 
 		/// <summary>
@@ -256,9 +256,10 @@ namespace StepManiaLibrary
 
 			/// <summary>
 			/// Sets the cost of this ChartSearchNode.
-			/// Will update the Cost and TotalCost.
+			/// Will update the Cost and, TotalCost, and TotalOrientationCost.
 			/// </summary>
 			/// <param name="cost">Cost of this ChartSearchNode.</param>
+			/// <param name="orientationCost">Orientation cost of this ChartSearchNode.</param>
 			public void SetCost(int cost, int orientationCost)
 			{
 				Cost = cost;
@@ -390,10 +391,10 @@ namespace StepManiaLibrary
 
 			public virtual int CompareTo(ChartSearchNode other, bool test = false)
 			{
-				if (this == other)
+				if (Equals(other))
 					return 0;
 
-				// Compare the total cost. Almost all comparisions should have different total costs.
+				// Compare the total cost. Almost all comparisons should have different total costs.
 				if (TotalCost != other.TotalCost)
 					return TotalCost.CompareTo(other.TotalCost);
 
@@ -415,7 +416,7 @@ namespace StepManiaLibrary
 				var otherNode = other;
 				var lastBestNonZeroCostComparison = 0;
 				// Iterate backwards until we find the common ancestor.
-				while (thisNode != null && otherNode != null && thisNode != otherNode)
+				while (thisNode != null && otherNode != null && !thisNode.Equals(otherNode))
 				{
 					if (thisNode.Cost != otherNode.Cost)
 						lastBestNonZeroCostComparison = thisNode.Cost.CompareTo(otherNode.Cost);
@@ -429,7 +430,7 @@ namespace StepManiaLibrary
 				// Compare links. This is only for extreme edge cases when all costs are equal.
 				thisNode = this;
 				otherNode = other;
-				while (thisNode != null && thisNode.PreviousLink != null && otherNode != null && otherNode.PreviousLink != null)
+				while (thisNode?.PreviousLink != null && otherNode?.PreviousLink != null)
 				{
 					var thisLink = thisNode.PreviousLink.GraphLink.Links;
 					var otherLink = otherNode.PreviousLink.GraphLink.Links;
@@ -457,8 +458,6 @@ namespace StepManiaLibrary
 
 			public override bool Equals(object obj)
 			{
-				if (obj == null)
-					return false;
 				if (obj is ChartSearchNode n)
 					return Equals(n);
 				return false;
@@ -830,21 +829,23 @@ namespace StepManiaLibrary
 					for (var s = 0; s < steps.Count; s++)
 					{
 						var stepEvent = steps[s];
-						if (stepEvent is LaneTapNote)
+						switch (stepEvent)
 						{
-							if (stepEvent.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Fake].ToString())
+							case LaneTapNote _ when stepEvent.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Fake].ToString():
 								currentState[stepEvent.Lane] = SearchState.Fake;
-							else if (stepEvent.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Lift].ToString())
+								break;
+							case LaneTapNote _ when stepEvent.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.Lift].ToString():
 								currentState[stepEvent.Lane] = SearchState.Lift;
-							else
+								break;
+							case LaneTapNote _:
 								currentState[stepEvent.Lane] = SearchState.Tap;
-						}
-						else if (stepEvent is LaneHoldStartNote lhsn)
-						{
-							if (lhsn.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.RollStart].ToString())
+								break;
+							case LaneHoldStartNote lhsn when lhsn.SourceType == SMCommon.NoteChars[(int) SMCommon.NoteType.RollStart].ToString():
 								currentState[stepEvent.Lane] = SearchState.Roll;
-							else
+								break;
+							case LaneHoldStartNote _:
 								currentState[stepEvent.Lane] = SearchState.Hold;
+								break;
 						}
 					}
 
@@ -922,18 +923,17 @@ namespace StepManiaLibrary
 				do
 				{
 					var smEvent = Events[i];
-					if (smEvent is LaneHoldStartNote lhsn)
+					switch (smEvent)
 					{
-						heldLanes[lhsn.Lane] = true;
-					}
-					else if (smEvent is LaneHoldEndNote lhen)
-					{
-						heldLanes[lhen.Lane] = false;
-					}
-
-					if (smEvent is LaneTapNote)
-					{
-						numTaps++;
+						case LaneHoldStartNote lhsn:
+							heldLanes[lhsn.Lane] = true;
+							break;
+						case LaneHoldEndNote lhen:
+							heldLanes[lhen.Lane] = false;
+							break;
+						case LaneTapNote _:
+							numTaps++;
+							break;
 					}
 
 					i++;
@@ -1030,6 +1030,7 @@ namespace StepManiaLibrary
 		/// <param name="timeSeconds">Time in seconds of the state.</param>
 		/// <param name="lastMines">IntegerPosition of last mines per arrow. Needed for cost determination.</param>
 		/// <param name="lastReleases">IntegerPosition of last releases per arrow. Needed for cost determination.</param>
+		/// <param name="isRelease">Whether or not the current step is a release.</param>
 		/// <returns>HashSet of all lowest cost ChartSearchNodes satisfying this state.</returns>
 		private HashSet<ChartSearchNode> AddChildrenAndPrune(
 			HashSet<ChartSearchNode> currentSearchNodes,
@@ -1050,12 +1051,19 @@ namespace StepManiaLibrary
 				var c = currentState[a];
 				if (c == SearchState.Tap || c == SearchState.Hold || c == SearchState.Roll || c == SearchState.Fake || c == SearchState.Lift)
 					numNewActions++;
-				if (c == SearchState.Roll || c == SearchState.Rolling)
-					instanceTypes[a] = InstanceStepType.Roll;
-				else if (c == SearchState.Fake)
-					instanceTypes[a] = InstanceStepType.Fake;
-				else if (c == SearchState.Lift)
-					instanceTypes[a] = InstanceStepType.Lift;
+				switch (c)
+				{
+					case SearchState.Roll:
+					case SearchState.Rolling:
+						instanceTypes[a] = InstanceStepType.Roll;
+						break;
+					case SearchState.Fake:
+						instanceTypes[a] = InstanceStepType.Fake;
+						break;
+					case SearchState.Lift:
+						instanceTypes[a] = InstanceStepType.Lift;
+						break;
+				}
 			}
 			var couldPossiblyBracket = numNewActions > 1;
 			var couldPossiblyJump = numNewActions > 1;
@@ -1202,7 +1210,7 @@ namespace StepManiaLibrary
 			}
 
 			// Apply InstanceStepTypes.
-			var instance = new GraphLinkInstance {GraphLink = link};
+			var instanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
 			for (var s = 0; s < searchState.Length; s++)
 			{
 				if (searchState[s] == SearchState.Fake)
@@ -1215,7 +1223,7 @@ namespace StepManiaLibrary
 							    && link.Links[f, p].Valid
 							    && link.Links[f, p].Action == FootAction.Tap)
 							{
-								instance.InstanceTypes[f, p] = InstanceStepType.Fake;
+								instanceTypes[f, p] = InstanceStepType.Fake;
 							}
 						}
 					}
@@ -1230,7 +1238,7 @@ namespace StepManiaLibrary
 							    && link.Links[f, p].Valid
 							    && link.Links[f, p].Action == FootAction.Tap)
 							{
-								instance.InstanceTypes[f, p] = InstanceStepType.Lift;
+								instanceTypes[f, p] = InstanceStepType.Lift;
 							}
 						}
 					}
@@ -1245,14 +1253,14 @@ namespace StepManiaLibrary
 							    && link.Links[f, p].Valid
 							    && link.Links[f, p].Action == FootAction.Hold)
 							{
-								instance.InstanceTypes[f, p] = InstanceStepType.Roll;
+								instanceTypes[f, p] = InstanceStepType.Roll;
 							}
 						}
 					}
 				}
 			}
 
-			return instance;
+			return new GraphLinkInstance(link, instanceTypes);
 		}
 
 		/// <summary>
@@ -1408,8 +1416,8 @@ namespace StepManiaLibrary
 				}
 			}
 
-			GraphLink previousStepLink = searchNode.PreviousNode.GetPreviousStepLink()?.GraphLink ?? null;
-			GraphLink previousPreviousStepLink = searchNode.PreviousNode.GetPreviousStepLink(2)?.GraphLink ?? null;
+			var previousStepLink = searchNode.PreviousNode.GetPreviousStepLink()?.GraphLink ?? null;
+			var previousPreviousStepLink = searchNode.PreviousNode.GetPreviousStepLink(2)?.GraphLink ?? null;
 
 			switch (numSteps)
 			{
@@ -1419,6 +1427,7 @@ namespace StepManiaLibrary
 					GetSingleStepStepAndFoot(link, out var step, out var thisFoot);
 					var otherFoot = OtherFoot(thisFoot);
 					var previousState = searchNode.PreviousNode.GraphNode.State;
+					// ReSharper disable UnusedVariable
 					GetOneArrowStepInfo(thisFoot, thisArrow, lastMines, lastReleases, padData, previousState,
 						out var thisAnyHeld,
 						out var thisAllHeld,
@@ -1443,8 +1452,9 @@ namespace StepManiaLibrary
 						out var otherFootPreviousArrows,
 						out var otherFootInBracketPosture,
 						out var otherLifted);
+					// ReSharper restore UnusedVariable
 
-					var doubleStep = previousStepLink != null && previousStepLink.IsStepWithFoot(thisFoot) && !otherAnyHeld;
+						var doubleStep = previousStepLink != null && previousStepLink.IsStepWithFoot(thisFoot) && !otherAnyHeld;
 					var doubleStepOtherFootReleasedAtSameTime = false;
 					var doubleStepOtherFootReleasedAfterThisFoot = false;
 					if (otherReleasePositionOfPreviousStep == position)
@@ -2014,7 +2024,9 @@ namespace StepManiaLibrary
 							if (holdingAny[f] && !holdingAll[f])
 							{
 								if (onlyFootHoldingOne == InvalidFoot)
+								{
 									onlyFootHoldingOne = f;
+								}
 								else
 								{
 									onlyFootHoldingOne = InvalidFoot;
@@ -2052,18 +2064,12 @@ namespace StepManiaLibrary
 
 						var bothNew = true;
 						var bothSame = true;
-						var lArrow = InvalidArrowIndex;
-						var rArrow = InvalidArrowIndex;
 						for (var f = 0; f < NumFeet; f++)
 						{
 							for (var p = 0; p < NumFootPortions; p++)
 							{
 								if (!link.Links[f, p].Valid)
 									continue;
-								if (f == L)
-									lArrow = searchNode.GraphNode.State[f, p].Arrow;
-								if (f == R)
-									rArrow = searchNode.GraphNode.State[f, p].Arrow;
 								if (link.Links[f, p].Step == StepType.NewArrow)
 									bothSame = false;
 								if (link.Links[f, p].Step == StepType.SameArrow)
@@ -2253,11 +2259,10 @@ namespace StepManiaLibrary
 			canStepToNewArrow = canCrossoverToNewArrow || canStepToNewArrowWithoutCrossover;
 		}
 
-		private static bool GetSingleStepStepAndFoot(GraphLink link, out StepType step, out int foot)
+		private static void GetSingleStepStepAndFoot(GraphLink link, out StepType step, out int foot)
 		{
 			step = StepType.SameArrow;
 			foot = 0;
-			var numValid = 0;
 			for (var f = 0; f < NumFeet; f++)
 			{
 				for (var p = 0; p < NumFootPortions; p++)
@@ -2266,12 +2271,9 @@ namespace StepManiaLibrary
 					{
 						step = link.Links[f, p].Step;
 						foot = f;
-						numValid++;
 					}
 				}
 			}
-
-			return numValid == 1;
 		}
 
 		private static bool GetBracketStepAndFoot(GraphLink link, out StepType step, out int foot)

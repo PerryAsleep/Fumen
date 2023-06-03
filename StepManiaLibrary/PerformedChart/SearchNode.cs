@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Fumen;
 using static StepManiaLibrary.Constants;
 
 namespace StepManiaLibrary.PerformedChart
@@ -22,7 +23,7 @@ namespace StepManiaLibrary.PerformedChart
 		private class SearchNode : IEquatable<SearchNode>, IComparable<SearchNode>
 		{
 			/// <summary>
-			/// Laterl movement direction for determining lateral tightening cost.
+			/// Lateral movement direction for determining lateral tightening cost.
 			/// </summary>
 			private enum LateralMovementDirection
 			{
@@ -233,6 +234,8 @@ namespace StepManiaLibrary.PerformedChart
 			/// <param name="randomWeight">
 			/// Random weight to use as a fallback for comparing SearchNodes with equal costs.
 			/// </param>
+			/// <param name="config">Config to use.</param>
+			/// <param name="fillSectionConfig">TODO</param>
 			public SearchNode(
 				GraphNode graphNode,
 				List<GraphLinkInstance> possibleGraphLinksToNextNode,
@@ -307,10 +310,10 @@ namespace StepManiaLibrary.PerformedChart
 				UpdateStepCounts(
 					stepGraph,
 					fillSectionConfig,
-					ref TotalNumSameArrowSteps,
-					ref TotalNumSameArrowStepsInARowPerFootOverMax,
-					ref TotalNumNewArrowSteps,
-					ref TotalNumBracketableNewArrowSteps);
+					out TotalNumSameArrowSteps,
+					out TotalNumSameArrowStepsInARowPerFootOverMax,
+					out TotalNumNewArrowSteps,
+					out TotalNumBracketableNewArrowSteps);
 
 				SectionStepTypeCost = DetermineSectionStepCost(fillSectionConfig);
 
@@ -345,10 +348,10 @@ namespace StepManiaLibrary.PerformedChart
 			private void UpdateStepCounts(
 				StepGraph stepGraph,
 				FillConfig fillSectionConfig,
-				ref int totalNumSameArrowSteps,
-				ref int totalNumSameArrowStepsInARowPerFootOverMax,
-				ref int totalNumNewArrowSteps,
-				ref int totalNumBracketableNewArrowSteps)
+				out int totalNumSameArrowSteps,
+				out int totalNumSameArrowStepsInARowPerFootOverMax,
+				out int totalNumNewArrowSteps,
+				out int totalNumBracketableNewArrowSteps)
 			{
 				totalNumSameArrowSteps = PreviousNode?.TotalNumSameArrowSteps ?? 0;
 				totalNumSameArrowStepsInARowPerFootOverMax = PreviousNode?.TotalNumSameArrowStepsInARowPerFootOverMax ?? 0;
@@ -506,10 +509,10 @@ namespace StepManiaLibrary.PerformedChart
 						// configured to use individual step tightening.
 						if (steppedWithThisFoot)
 						{
-							var (currX, currY) = stepGraph.GetFootPosition(GraphNode, f);
+							var (currentX, currentY) = stepGraph.GetFootPosition(GraphNode, f);
 							var (prevX, prevY) = stepGraph.GetFootPosition(LastArrowsSteppedOnByFoot[f]);
 							var time = Time - LastTimeFootStepped[f];
-							var distance = stepGraph.PadData.GetDistance(currX, currY, prevX, prevY);
+							var distance = stepGraph.PadData.GetDistance(currentX, currentY, prevX, prevY);
 
 							// Determine the speed cost for this foot.
 							if (stepConfig.TravelSpeedMinTimeSeconds > 0.0)
@@ -768,7 +771,9 @@ namespace StepManiaLibrary.PerformedChart
 						}
 						// We only care about single steps and jumps, not brackets.
 						else if (prevLinks[f, p].Valid)
+						{
 							return (false, false);
+						}
 					}
 				}
 
@@ -801,7 +806,7 @@ namespace StepManiaLibrary.PerformedChart
 					// Use the previous node since this node has already updated the LastTimeFootReleased for its step.
 					// If the feet were not released at the same time, we did not come from a jump, meaning this step
 					// is not ambiguous
-					if (PreviousNode.LastTimeFootReleased[L] != PreviousNode.LastTimeFootReleased[R])
+					if (!PreviousNode.LastTimeFootReleased[L].DoubleEquals(PreviousNode.LastTimeFootReleased[R]))
 						return (false, false);
 
 					// TODO: Mines
@@ -869,25 +874,40 @@ namespace StepManiaLibrary.PerformedChart
 					// DoesAnySiblingNodeFromLinkMatchActions will treat Steps and Holds equally as steps.
 
 					// Check left foot SameArrow right foot NewArrow.
-					var leftSameLink = new GraphLink();
-					leftSameLink.Links[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
-					leftSameLink.Links[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.NewArrow, FootAction.Tap);
+					var leftSameLink = new GraphLink
+					{
+						Links =
+						{
+							[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap),
+							[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.NewArrow, FootAction.Tap),
+						},
+					};
 					misleading = DoesAnySiblingNodeFromLinkMatchActions(leftSameLink, stepGraph);
 					if (misleading)
-						return (ambiguous, misleading);
+						return (ambiguous, true);
 
 					// Check right foot SameArrow left foot NewArrow.
-					var rightSameLink = new GraphLink();
-					rightSameLink.Links[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.NewArrow, FootAction.Tap);
-					rightSameLink.Links[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
+					var rightSameLink = new GraphLink
+					{
+						Links =
+						{
+							[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.NewArrow, FootAction.Tap),
+							[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap),
+						},
+					};
 					misleading = DoesAnySiblingNodeFromLinkMatchActions(rightSameLink, stepGraph);
 					if (misleading)
-						return (ambiguous, misleading);
+						return (ambiguous, true);
 
 					// Check SameArrow SameArrow.
-					var bothSameLink = new GraphLink();
-					bothSameLink.Links[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
-					bothSameLink.Links[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap);
+					var bothSameLink = new GraphLink
+					{
+						Links =
+						{
+							[L, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap),
+							[R, DefaultFootPortion] = new GraphLink.FootArrowState(StepType.SameArrow, FootAction.Tap),
+						},
+					};
 					misleading = DoesAnySiblingNodeFromLinkMatchActions(bothSameLink, stepGraph);
 				}
 

@@ -101,7 +101,7 @@ namespace StepManiaLibrary
 		/// This is normally not valid in a StepGraph and is used for fallbacks that
 		/// need to remove steps.
 		/// </summary>
-		/// <returns>True if this GraphLink represends a blank link and false otherwse.</returns>
+		/// <returns>True if this GraphLink represents a blank link and false otherwise.</returns>
 		public bool IsBlank()
 		{
 			for (var f = 0; f < NumFeet; f++)
@@ -504,8 +504,6 @@ namespace StepManiaLibrary
 
 		public override bool Equals(object obj)
 		{
-			if (obj == null)
-				return false;
 			if (!(obj is GraphLink g))
 				return false;
 			return Equals(g);
@@ -534,12 +532,26 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// Underlying GraphLink.
 		/// </summary>
-		public GraphLink GraphLink;
+		public readonly GraphLink GraphLink;
 
 		/// <summary>
 		/// Per foot and portion, any special instance types for the GraphLink.
 		/// </summary>
-		public InstanceStepType[,] InstanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
+		public readonly InstanceStepType[,] InstanceTypes;
+
+		public GraphLinkInstance()
+		{
+			GraphLink = new GraphLink();
+			InstanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
+		}
+
+		public GraphLinkInstance(GraphLink graphLink, InstanceStepType[,] instanceTypes)
+		{
+			GraphLink = graphLink;
+			InstanceTypes = instanceTypes;
+			Debug.Assert(InstanceTypes.GetLength(0) == NumFeet);
+			Debug.Assert(InstanceTypes.GetLength(1) == NumFootPortions);
+		}
 
 		public override string ToString()
 		{

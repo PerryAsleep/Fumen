@@ -251,24 +251,25 @@ namespace StepManiaLibrary
 			var numColumns = maxX - minX;
 			var numRows = maxY - minY;
 
-			Func<int, int> mirror = (int x) =>
+			int Mirror(int x)
 			{
 				return minX + (numColumns - x);
-			};
-			Func<int, int> flip = (int y) =>
+			}
+
+			int Flip(int y)
 			{
 				return minY + (numRows - y);
-			};
+			}
 
 			for (var a = 0; a < NumArrows; a++)
 			{
 				for (var a2 = 0; a2 < NumArrows; a2++)
 				{
-					if (mirror(ArrowData[a].X) == ArrowData[a2].X && ArrowData[a].Y == ArrowData[a2].Y)
+					if (Mirror(ArrowData[a].X) == ArrowData[a2].X && ArrowData[a].Y == ArrowData[a2].Y)
 					{
 						ArrowData[a].MirroredLane = a2;
 					}
-					if (ArrowData[a].X == ArrowData[a2].X && flip(ArrowData[a].Y) == ArrowData[a2].Y)
+					if (ArrowData[a].X == ArrowData[a2].X && Flip(ArrowData[a].Y) == ArrowData[a2].Y)
 					{
 						ArrowData[a].FlippedLane = a2;
 					}
@@ -374,9 +375,9 @@ namespace StepManiaLibrary
 				return false;
 
 			// Try every valid coordinate overlap.
-			for (int otherStartX = otherMinX; otherStartX <= otherMinX + xExtraRoom; otherStartX++)
+			for (var otherStartX = otherMinX; otherStartX <= otherMinX + xExtraRoom; otherStartX++)
 			{
-				for (int otherStartY = otherMinY; otherStartY <= otherMinY + yExtraRoom; otherStartY++)
+				for (var otherStartY = otherMinY; otherStartY <= otherMinY + yExtraRoom; otherStartY++)
 				{
 					// For this overlap coordinate, ensure this PadData's arrows can lay in the same
 					// pattern on the other PadData's arrows.

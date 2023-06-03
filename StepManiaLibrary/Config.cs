@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Fumen;
-using Fumen.Converters;
 using static StepManiaLibrary.Constants;
 
 namespace StepManiaLibrary
@@ -235,7 +233,7 @@ namespace StepManiaLibrary
 		[JsonInclude] public int SameArrowStepWeight;
 		[JsonInclude] public int NewArrowStepWeight;
 		[JsonInclude] public int NewArrowBracketableWeight = 1;
-		[JsonInclude] public int NewArrowNonBracketableWeight = 0;
+		[JsonInclude] public int NewArrowNonBracketableWeight;
 
 		[JsonInclude] public int MaxSameArrowsInARowPerFoot = -1;
 
@@ -249,12 +247,9 @@ namespace StepManiaLibrary
 
 		public bool Validate()
 		{
-			var errors = false;
 			// TODO: validate.
 
-			if (!PerformedChartConfig.Validate())
-				errors = true;
-			return !errors;
+			return PerformedChartConfig.Validate();
 		}
 
 		public void Init()

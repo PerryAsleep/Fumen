@@ -2,8 +2,6 @@
 using Fumen;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System;
-using System.Linq;
 
 namespace StepManiaLibrary.PerformedChart
 {
@@ -418,16 +416,18 @@ namespace StepManiaLibrary.PerformedChart
 		/// <returns>True if errors were found and false otherwise.</returns>
 		public bool Validate(string pccId = null)
 		{
-			var errors = false;
-			errors = LateralTightening.Validate(pccId) || errors;
+			var errors = LateralTightening.Validate(pccId);
 			errors = StepTightening.Validate(pccId) || errors;
 			errors = Facing.Validate(pccId) || errors;
 			return !errors;
 		}
 
 		/// <summary>
-		/// Lor errors if any ArrowWeights are misconfigured.
+		/// Log errors if any ArrowWeights are misconfigured.
 		/// </summary>
+		/// <param name="chartType">String identifier of the ChartType.</param>
+		/// <param name="smChartType">ChartType. May not be valid.</param>
+		/// <param name="smChartTypeValid">Whether the given ChartType is valid.</param>
 		/// <param name="pccId">Identifier for logging.</param>
 		/// <returns>True if errors were found and false otherwise.</returns>
 		public bool ValidateArrowWeights(

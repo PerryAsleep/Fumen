@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Fumen.Compression;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StepManiaLibrary
 {
@@ -114,7 +115,7 @@ namespace StepManiaLibrary
 
 		private static bool DoStructuresMatchSerializedV1Data()
 		{
-			var expectedStepTypes = new StepType[]
+			var expectedStepTypes = new[]
 			{
 				StepType.SameArrow,
 				StepType.NewArrow,
@@ -178,7 +179,7 @@ namespace StepManiaLibrary
 			if (!DoesEnumMatchExpectedValues(expectedStepTypes))
 				return false;
 
-			var expectedFootActions = new FootAction[]
+			var expectedFootActions = new[]
 			{
 				FootAction.Tap,
 				FootAction.Hold,
@@ -187,7 +188,7 @@ namespace StepManiaLibrary
 			if (!DoesEnumMatchExpectedValues(expectedFootActions))
 				return false;
 
-			var expectedGraphArrowStates = new GraphArrowState[]
+			var expectedGraphArrowStates = new[]
 			{
 				GraphArrowState.Resting,
 				GraphArrowState.Held,
@@ -332,7 +333,7 @@ namespace StepManiaLibrary
 
 		public static StepGraph Load(string filePath, PadData padData)
 		{
-			StepGraph stepGraph = null;
+			StepGraph stepGraph;
 			try
 			{
 				using (var fileStream = File.Open(filePath, FileMode.Open))
@@ -347,8 +348,10 @@ namespace StepManiaLibrary
 								throw new Exception($"Unsupported StepGraph version {version}. Expected 1.");
 							}
 							var root = ReadGraphV1(reader);
-							stepGraph = new StepGraph(padData);
-							stepGraph.Root = root;
+							stepGraph = new StepGraph(padData)
+							{
+								Root = root,
+							};
 						}
 					}
 				}
@@ -509,7 +512,7 @@ namespace StepManiaLibrary
 			// Create all the nodes in the graph.
 			var allNodes = CreateNodes();
 
-			// Craete all the links between nodes.
+			// Create all the links between nodes.
 			CreateLinks(allNodes);
 
 			// Assign the root.
@@ -538,8 +541,8 @@ namespace StepManiaLibrary
 		{
 			var allNodes = new List<GraphNode>();
 
-			var graphArrowStateValues = Enum.GetValues(typeof(GraphArrowState)).Cast<GraphArrowState>();
-			var numGasValues = graphArrowStateValues.Count();
+			var graphArrowStateValues = Enum.GetValues(typeof(GraphArrowState)).Cast<GraphArrowState>().ToArray();
+			var numGasValues = graphArrowStateValues.Length;
 			var graphArrowStates = new GraphArrowState[numGasValues];
 			var gasIndex = 0;
 			foreach (var gas in graphArrowStateValues)
@@ -548,8 +551,8 @@ namespace StepManiaLibrary
 				gasIndex++;
 			}
 
-			var bodyOrientationValues = Enum.GetValues(typeof(BodyOrientation)).Cast<BodyOrientation>();
-			var numBodyOrientationValues = bodyOrientationValues.Count();
+			var bodyOrientationValues = Enum.GetValues(typeof(BodyOrientation)).Cast<BodyOrientation>().ToArray();
+			var numBodyOrientationValues = bodyOrientationValues.Length;
 			var bodyOrientations = new BodyOrientation[numBodyOrientationValues];
 			var boIndex = 0;
 			foreach (var bo in bodyOrientationValues)
@@ -598,7 +601,6 @@ namespace StepManiaLibrary
 				var stateDigitIndex = 0;
 				var isValidState = true;
 				var inverted = false;
-				var crossover = false;
 				var totalNumArrowsOccupied = 0;
 				for (var f = 0; f < NumFeet; f++)
 				{
@@ -678,7 +680,7 @@ namespace StepManiaLibrary
 							{
 								if (liftedUnoccupiedArrows[a])
 								{
-									LogState($"Lifted foot with no other foot occupying arrow", f, p, state, arrow, gas);
+									LogState("Lifted foot with no other foot occupying arrow", f, p, state, arrow, gas);
 									isValidState = false;
 									break;
 								}
@@ -695,7 +697,7 @@ namespace StepManiaLibrary
 								&& footInvolvesLift[L] && footInvolvesLift[R]
 								&& footInvolvesBracket[L] && footInvolvesBracket[R])
 							{
-								LogState($"Jump with two one arrow bracket swaps.", f, p, state, arrow, gas);
+								LogState("Jump with two one arrow bracket swaps.", f, p, state, arrow, gas);
 								isValidState = false;
 								break;
 							}
@@ -710,20 +712,20 @@ namespace StepManiaLibrary
 							{
 								if (IsInvertedWithStretch(state))
 								{
-									LogState($"Stretch invert bracket.", f, p, state, arrow, gas);
+									LogState("Stretch invert bracket.", f, p, state, arrow, gas);
 									isValidState = false;
 									break;
 								}
 								if (IsCrossoverWithStretch(state))
 								{
-									LogState($"Stretch crossover bracket.", f, p, state, arrow, gas);
+									LogState("Stretch crossover bracket.", f, p, state, arrow, gas);
 									isValidState = false;
 									break;
 								}
 							}
 
 							inverted = IsInvertedWithOrWithoutStretch(state);
-							crossover = IsCrossoverWithOrWithoutStretch(state);
+							var crossover = IsCrossoverWithOrWithoutStretch(state);
 
 							// The steps must be an invert, crossover, stretch, or normal position.
 							if (!inverted && !crossover)
@@ -760,7 +762,7 @@ namespace StepManiaLibrary
 						else if (bo != BodyOrientation.Normal && !inverted)
 							continue;
 
-						LogState($"Valid", 1, 1, state, state[1, 1].Arrow, state[1, 1].State);
+						LogState("Valid", 1, 1, state, state[1, 1].Arrow, state[1, 1].State);
 						var gn = new GraphNode(state, bodyOrientations[b]);
 						allNodes.Add(gn);
 					}
@@ -795,7 +797,7 @@ namespace StepManiaLibrary
 		private void CreateLinks(List<GraphNode> allNodes)
 		{
 			// For every node, compare it to every other node and find the step that would link the two.
-			LogInfo($"Creating Links...");
+			LogInfo("Creating Links...");
 			var nodeCount = allNodes.Count;
 
 			var ad = PadData.ArrowData;
@@ -805,9 +807,9 @@ namespace StepManiaLibrary
 			var fromFootAnyHeld = new bool[NumFeet];
 			var toFootIsBracket = new bool[NumFeet];
 			var toStateHasLifts = new bool[NumFeet];
-			for (var n1i = 0; n1i < nodeCount; n1i++)
+			for (var node1Index = 0; node1Index < nodeCount; node1Index++)
 			{
-				var from = allNodes[n1i];
+				var from = allNodes[node1Index];
 				var fromState = from.State;
 
 				for (var f = 0; f < NumFeet; f++)
@@ -826,9 +828,9 @@ namespace StepManiaLibrary
 					}
 				}
 
-				for (var n2i = 0; n2i < nodeCount; n2i++)
+				for (var node2Index = 0; node2Index < nodeCount; node2Index++)
 				{
-					var to = allNodes[n2i];
+					var to = allNodes[node2Index];
 					var toState = to.State;
 
 					for (var f = 0; f < NumFeet; f++)
@@ -1618,7 +1620,6 @@ namespace StepManiaLibrary
 					}
 
 					// Take the links gathered above and add them as single foot steps if appropriate.
-					var validFeetCount = 0;
 					for (var f = 0; f < NumFeet; f++)
 					{
 						// The other foot must be in the same state before and after for a single step to be valid.
@@ -1627,7 +1628,6 @@ namespace StepManiaLibrary
 						if (!(footIsSame[of] || footPerformedValidFootSwap[f]))
 							continue;
 
-						validFeetCount++;
 						foreach (var link in linksPerFoot[f])
 							AddLink(from, to, link);
 					}
@@ -1654,12 +1654,12 @@ namespace StepManiaLibrary
 					}
 				}
 			}
-			LogInfo($"Created Links.");
+			LogInfo("Created Links.");
 		}
 
 		private void EnsureAllNodesReachable(List<GraphNode> allNodes)
 		{
-			var expectedCount = allNodes.Count();
+			var expectedCount = allNodes.Count;
 
 			var trackedNodes = new HashSet<GraphNode>();
 			var nodes = new HashSet<GraphNode> { Root };
@@ -1734,14 +1734,19 @@ namespace StepManiaLibrary
 			return FootAction.Tap;
 		}
 
-		private void RecordLink(List<GraphLink> links, int f, int p, StepType step, FootAction action)
+		private static void RecordLink(List<GraphLink> links, int f, int p, StepType step, FootAction action)
 		{
-			var link = new GraphLink();
-			link.Links[f, p] = new GraphLink.FootArrowState(step, action);
+			var link = new GraphLink
+			{
+				Links =
+				{
+					[f, p] = new GraphLink.FootArrowState(step, action),
+				},
+			};
 			links.Add(link);
 		}
 
-		private void RecordLink(List<GraphLink> links, int f, StepType step, FootAction[] actions)
+		private static void RecordLink(List<GraphLink> links, int f, StepType step, FootAction[] actions)
 		{
 			var link = new GraphLink();
 			for (var p = 0; p < NumFootPortions; p++)
@@ -2199,9 +2204,13 @@ namespace StepManiaLibrary
 					{
 						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex)
 						{
-							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverFront[L][state[R, rightFootPortion].Arrow]
-								|| PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverBehind[L][state[R, rightFootPortion].Arrow])
-							return true;
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverFront[L][
+								    state[R, rightFootPortion].Arrow]
+							    || PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverBehind[L][
+								    state[R, rightFootPortion].Arrow])
+							{
+								return true;
+							}
 						}
 					}
 				}
@@ -2361,7 +2370,7 @@ namespace StepManiaLibrary
 		/// given arrow in the previous state.
 		/// </summary>
 		private bool IsFootSwap(
-			GraphNode.FootArrowState[,] fromstate,
+			GraphNode.FootArrowState[,] fromState,
 			GraphNode.FootArrowState[,] toState,
 			int foot, int arrow, bool footIsSingleArrowStep)
 		{
@@ -2384,9 +2393,9 @@ namespace StepManiaLibrary
 				// The other foot needs to become lifted on this arrow during this transition.
 				if (toState[otherFoot, p].Arrow == arrow)
 				{
-					if (fromstate[otherFoot, p].Arrow != arrow)
+					if (fromState[otherFoot, p].Arrow != arrow)
 						return false;
-					if (toState[otherFoot, p].State == GraphArrowState.Lifted && fromstate[otherFoot, p].State != GraphArrowState.Lifted)
+					if (toState[otherFoot, p].State == GraphArrowState.Lifted && fromState[otherFoot, p].State != GraphArrowState.Lifted)
 						steppedOnLiftedArrow = true;
 				}
 
@@ -2394,7 +2403,7 @@ namespace StepManiaLibrary
 				else
 				{
 					// The arrow needs to be the same.
-					if (toState[otherFoot, p].Arrow != fromstate[otherFoot, p].Arrow)
+					if (toState[otherFoot, p].Arrow != fromState[otherFoot, p].Arrow)
 						return false;
 
 					// If the other foot other portion is actually on another arrow that hasn't changed...
@@ -2403,7 +2412,7 @@ namespace StepManiaLibrary
 						// With a single step, the other foot's other portion needs to be identical before and after.
 						if (footIsSingleArrowStep)
 						{
-							if(toState[otherFoot, p].State != fromstate[otherFoot, p].State)
+							if(toState[otherFoot, p].State != fromState[otherFoot, p].State)
 							{
 								return false;
 							}
@@ -2411,8 +2420,8 @@ namespace StepManiaLibrary
 						// With a bracket step, the other foot's other arrow could also lift.
 						else
 						{
-							if (!(toState[otherFoot, p].State == fromstate[otherFoot, p].State
-								|| (toState[otherFoot, p].State == GraphArrowState.Lifted && fromstate[otherFoot, p].State != GraphArrowState.Lifted)))
+							if (!(toState[otherFoot, p].State == fromState[otherFoot, p].State
+								|| (toState[otherFoot, p].State == GraphArrowState.Lifted && fromState[otherFoot, p].State != GraphArrowState.Lifted)))
 							{
 								return false;
 							}
@@ -2455,7 +2464,10 @@ namespace StepManiaLibrary
 				&& state[R, DefaultFootPortion].Arrow == rightArrow;
 		}
 
+#pragma warning disable IDE0051
+		// ReSharper disable once UnusedMember.Local
 		private bool StateMatches(
+#pragma warning restore IDE0051
 			GraphNode.FootArrowState[,] fromState, int lfa, GraphArrowState lfs, int rfa, GraphArrowState rfs,
 			GraphNode.FootArrowState[,] toState, int lta, GraphArrowState lts, int rta, GraphArrowState rts)
 		{
@@ -2475,7 +2487,8 @@ namespace StepManiaLibrary
 				da, ds);
 		}
 
-		private bool StateMatches(
+		[SuppressMessage("ReSharper", "IdentifierTypo")]
+		private static bool StateMatches(
 			GraphNode.FootArrowState[,] fromState,
 			int lhfa, GraphArrowState lhfs,
 			int ltfa, GraphArrowState ltfs,
@@ -2532,7 +2545,8 @@ namespace StepManiaLibrary
 			LogStateHelper(message, state, f, p);
 		}
 
-		private void LogStateHelper(string message, GraphNode.FootArrowState[,] state, int f, int p)
+		[SuppressMessage("ReSharper", "UnusedParameter.Local")]
+		private static void LogStateHelper(string message, GraphNode.FootArrowState[,] state, int f, int p)
 		{
 #if DEBUG_STEPGRAPH
 			var sb = new StringBuilder();
