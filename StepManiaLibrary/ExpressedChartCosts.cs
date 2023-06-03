@@ -1,4 +1,5 @@
 ﻿// ReSharper disable InconsistentNaming
+
 namespace StepManiaLibrary
 {
 	/// <summary>
@@ -31,7 +32,10 @@ namespace StepManiaLibrary
 		public const int CostNewArrow_OtherHoldingOne = 3;
 
 		public const int CostNewArrow_OtherHoldingNone_ThisHeld_ThisCannotBracket = 160;
-		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep_DoubleStep = 51; // worse than a mine indicated double step
+
+		public const int
+			CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep_DoubleStep = 51; // worse than a mine indicated double step
+
 		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCanStep = 31; // worse than crossover / inversion
 		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep_DoubleStep = 10;
 		public const int CostNewArrow_OtherHoldingNone_ThisHeld_OtherCannotStep = 9;
@@ -62,13 +66,13 @@ namespace StepManiaLibrary
 		public const int CostNewArrow_StepFromJump_Ambiguous = 2;
 
 		public const int CostNewArrow_Crossover_AfterJump = 20;
-		public const int CostNewArrow_Crossover_OtherHeld = 4;  // This needs to be worse than CostNewArrow_OtherHoldingOne
+		public const int CostNewArrow_Crossover_OtherHeld = 4; // This needs to be worse than CostNewArrow_OtherHoldingOne
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated = 100;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication = 200;
 		public const int CostNewArrow_Crossover = 5;
 
 		public const int CostNewArrow_Crossover_Stretch_AfterJump = 25;
-		public const int CostNewArrow_Crossover_Stretch_OtherHeld = 5;  // This needs to be worse than CostNewArrow_OtherHoldingOne
+		public const int CostNewArrow_Crossover_Stretch_OtherHeld = 5; // This needs to be worse than CostNewArrow_OtherHoldingOne
 		public const int CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_MineIndicated = 120;
 		public const int CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_NoIndication = 220;
 		public const int CostNewArrow_Crossover_Stretch = 6;

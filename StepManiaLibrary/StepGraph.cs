@@ -80,8 +80,9 @@ namespace StepManiaLibrary
 					state[R, p] = GraphNode.InvalidFootArrowState;
 				}
 			}
+
 			var root = new GraphNode(state, BodyOrientation.Normal);
-			
+
 			var stepGraph = new StepGraph(padData);
 			if (!stepGraph.CreateGraph(root))
 				return null;
@@ -108,6 +109,7 @@ namespace StepManiaLibrary
 					return false;
 				actualCount++;
 			}
+
 			if (actualCount != expectedCount)
 				return false;
 			return true;
@@ -183,7 +185,7 @@ namespace StepManiaLibrary
 			{
 				FootAction.Tap,
 				FootAction.Hold,
-				FootAction.Release
+				FootAction.Release,
 			};
 			if (!DoesEnumMatchExpectedValues(expectedFootActions))
 				return false;
@@ -227,6 +229,7 @@ namespace StepManiaLibrary
 				LogError($"Failed to save StepGraph: {e}");
 				return false;
 			}
+
 			return true;
 		}
 
@@ -347,6 +350,7 @@ namespace StepManiaLibrary
 							{
 								throw new Exception($"Unsupported StepGraph version {version}. Expected 1.");
 							}
+
 							var root = ReadGraphV1(reader);
 							stepGraph = new StepGraph(padData)
 							{
@@ -375,7 +379,7 @@ namespace StepManiaLibrary
 				throw new Exception("Programmer Error: Data required for StepGraph V1 deserialization has changed.");
 
 			var numNodes = reader.ReadInt32();
-			for(var nodeIndex = 0; nodeIndex < numNodes; nodeIndex++)
+			for (var nodeIndex = 0; nodeIndex < numNodes; nodeIndex++)
 			{
 				var id = reader.ReadInt32();
 				var orientation = (BodyOrientation)reader.ReadByte();
@@ -391,12 +395,13 @@ namespace StepManiaLibrary
 						state[f, p] = new GraphNode.FootArrowState(arrow, graphArrowState);
 					}
 				}
+
 				var node = new GraphNode(state, orientation);
 				nodes.Add(id, node);
 				nodesList.Add(node);
 			}
 
-			foreach(var node in nodesList)
+			foreach (var node in nodesList)
 			{
 				var numLinks = reader.ReadInt32();
 				for (var linkIndex = 0; linkIndex < numLinks; linkIndex++)
@@ -420,6 +425,7 @@ namespace StepManiaLibrary
 						var linkedNodeId = reader.ReadInt32();
 						linkedNodesList.Add(nodes[linkedNodeId]);
 					}
+
 					node.Links.Add(graphLink, linkedNodesList);
 				}
 			}
@@ -445,7 +451,7 @@ namespace StepManiaLibrary
 			int rightArrow, GraphArrowState rightState)
 		{
 			var trackedNodes = new HashSet<GraphNode>();
-			var nodes = new HashSet<GraphNode> {Root};
+			var nodes = new HashSet<GraphNode> { Root };
 			trackedNodes.Add(Root);
 			while (true)
 			{
@@ -516,7 +522,7 @@ namespace StepManiaLibrary
 			CreateLinks(allNodes);
 
 			// Assign the root.
-			foreach(var node in allNodes)
+			foreach (var node in allNodes)
 			{
 				if (node.Equals(root))
 				{
@@ -524,6 +530,7 @@ namespace StepManiaLibrary
 					break;
 				}
 			}
+
 			if (Root == null)
 			{
 				LogError("Could not find root.");
@@ -591,6 +598,7 @@ namespace StepManiaLibrary
 					occupiedArrows[a] = false;
 					liftedUnoccupiedArrows[a] = false;
 				}
+
 				for (var f = 0; f < NumFeet; f++)
 				{
 					footInvolvesLift[f] = false;
@@ -607,7 +615,7 @@ namespace StepManiaLibrary
 					for (var p = 0; p < NumFootPortions; p++)
 					{
 						var arrow = digits[stateDigitIndex] / numGasValues;
-						var gas = graphArrowStates[digits[stateDigitIndex] - (arrow * numGasValues)];
+						var gas = graphArrowStates[digits[stateDigitIndex] - arrow * numGasValues];
 						// Subtract one because we include the InvalidArrowIndex in the number of total arrows to consider.
 						arrow--;
 
@@ -629,6 +637,7 @@ namespace StepManiaLibrary
 								isValidState = false;
 								break;
 							}
+
 							totalNumArrowsOccupied++;
 							occupiedArrows[arrow] = true;
 							liftedUnoccupiedArrows[arrow] = false;
@@ -642,6 +651,7 @@ namespace StepManiaLibrary
 								isValidState = false;
 								break;
 							}
+
 							if (!occupiedArrows[arrow])
 								liftedUnoccupiedArrows[arrow] = true;
 							footInvolvesLift[f] = true;
@@ -676,7 +686,7 @@ namespace StepManiaLibrary
 						if (f > 0 && p > 0)
 						{
 							// There can only be a lifted foot portion if the arrow has the other foot resting or holding on it.
-							for (int a = 0; a < NumArrows; a++)
+							for (var a = 0; a < NumArrows; a++)
 							{
 								if (liftedUnoccupiedArrows[a])
 								{
@@ -694,8 +704,8 @@ namespace StepManiaLibrary
 							// We already know from above checks that two lifts can't occur on the same arrow, so we can check for
 							// two brackets on the same two arrows where each foot has one lift.
 							if (totalNumArrowsOccupied == NumFootPortions
-								&& footInvolvesLift[L] && footInvolvesLift[R]
-								&& footInvolvesBracket[L] && footInvolvesBracket[R])
+							    && footInvolvesLift[L] && footInvolvesLift[R]
+							    && footInvolvesBracket[L] && footInvolvesBracket[R])
 							{
 								LogState("Jump with two one arrow bracket swaps.", f, p, state, arrow, gas);
 								isValidState = false;
@@ -708,7 +718,7 @@ namespace StepManiaLibrary
 							// invert or crossover stretch brackets we need to disallow states where all four portions
 							// are down in that position, as the only way that state could be entered is through one of
 							// those disallowed moves.
-							if (totalNumArrowsOccupied == (NumFeet * NumFootPortions))
+							if (totalNumArrowsOccupied == NumFeet * NumFootPortions)
 							{
 								if (IsInvertedWithStretch(state))
 								{
@@ -716,6 +726,7 @@ namespace StepManiaLibrary
 									isValidState = false;
 									break;
 								}
+
 								if (IsCrossoverWithStretch(state))
 								{
 									LogState("Stretch crossover bracket.", f, p, state, arrow, gas);
@@ -736,7 +747,9 @@ namespace StepManiaLibrary
 									{
 										if (IsInvalidNormalPairing(state, lfp, rfp))
 										{
-											LogState($"L,{lfp} [{state[L, lfp].Arrow}] to R,{rfp} [{state[R, rfp].Arrow}] Not Valid", f, p, state, arrow, gas);
+											LogState(
+												$"L,{lfp} [{state[L, lfp].Arrow}] to R,{rfp} [{state[R, rfp].Arrow}] Not Valid",
+												f, p, state, arrow, gas);
 											isValidState = false;
 											break;
 										}
@@ -747,6 +760,7 @@ namespace StepManiaLibrary
 
 						stateDigitIndex++;
 					}
+
 					if (!isValidState)
 						break;
 				}
@@ -783,6 +797,7 @@ namespace StepManiaLibrary
 						break;
 					}
 				}
+
 				if (done)
 					break;
 			}
@@ -823,6 +838,7 @@ namespace StepManiaLibrary
 							fromFootIsBracket[f] = false;
 							toFootIsBracket[f] = false;
 						}
+
 						if (fromState[f, p].Arrow != InvalidArrowIndex && fromState[f, p].State == GraphArrowState.Held)
 							fromFootAnyHeld[f] = true;
 					}
@@ -847,7 +863,7 @@ namespace StepManiaLibrary
 							}
 
 							if (fromState[f, p].Arrow != toState[f, p].Arrow ||
-								(fromState[f, p].State != toState[f, p].State && toState[f, p].State != GraphArrowState.Lifted))
+							    (fromState[f, p].State != toState[f, p].State && toState[f, p].State != GraphArrowState.Lifted))
 							{
 								footIsSameExceptForLifts[f] = false;
 							}
@@ -898,7 +914,8 @@ namespace StepManiaLibrary
 								continue;
 							var action = GetActionForStates(fs.State, ts.State);
 
-							var isValidFootSwap = IsFootSwap(fromState, toState, f, ts.Arrow, true) && action != FootAction.Release;
+							var isValidFootSwap = IsFootSwap(fromState, toState, f, ts.Arrow, true) &&
+							                      action != FootAction.Release;
 
 							// Swing
 							if (swing)
@@ -958,6 +975,7 @@ namespace StepManiaLibrary
 												}
 											}
 										}
+
 										// Inverting right over left when moving the right foot requires
 										// bringing the right foot from a position further up on the pads
 										// downwards and in front of the left foot.
@@ -1004,6 +1022,7 @@ namespace StepManiaLibrary
 												}
 											}
 										}
+
 										// Inverting left over right when moving the right foot requires
 										// bringing the right foot from a position further back on the pads
 										// upwards and behind the left foot.
@@ -1111,7 +1130,7 @@ namespace StepManiaLibrary
 								&& fromState[f, Heel].State == toState[f, Heel].State
 								&& fromState[f, Heel].Arrow == toState[f, Heel].Arrow
 								&& (fromState[f, Toe].State != toState[f, Toe].State
-								|| fromState[f, Toe].Arrow != toState[f, Toe].Arrow);
+								    || fromState[f, Toe].Arrow != toState[f, Toe].Arrow);
 							var heelUnchangedHeelSameArrow =
 								fromFootIsBracket[f]
 								&& toFootIsBracket[f]
@@ -1144,7 +1163,7 @@ namespace StepManiaLibrary
 								&& fromState[f, Toe].State == toState[f, Toe].State
 								&& fromState[f, Toe].Arrow == toState[f, Toe].Arrow
 								&& (fromState[f, Heel].State != toState[f, Heel].State
-								|| fromState[f, Heel].Arrow != toState[f, Heel].Arrow);
+								    || fromState[f, Heel].Arrow != toState[f, Heel].Arrow);
 							var toeUnchangedHeelSameArrow =
 								fromFootIsBracket[f]
 								&& toFootIsBracket[f]
@@ -1154,12 +1173,12 @@ namespace StepManiaLibrary
 
 							// Holding with Heel and bracketing with the Toe.
 							if ((heelUnchangedToeChanged && fromFootAnyHeld[f])
-								|| (toState[f, Heel].State == GraphArrowState.Held
-								&& (holdingWithDefaultPortionInNonBracketFromStateWithToStateHeelArrow
-								|| holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow
-								|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
-								|| holdingWithOnlyToeInBracketFromStateWithToStateHeelArrow
-								|| heelUnchangedToeChanged)))
+							    || (toState[f, Heel].State == GraphArrowState.Held
+							        && (holdingWithDefaultPortionInNonBracketFromStateWithToStateHeelArrow
+							            || holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow
+							            || holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
+							            || holdingWithOnlyToeInBracketFromStateWithToStateHeelArrow
+							            || heelUnchangedToeChanged)))
 							{
 								// The from state for the toe depends on how the from state was oriented.
 								// If we were coming from a state where only the toe was holding and now we
@@ -1168,9 +1187,9 @@ namespace StepManiaLibrary
 								var toeFromState = GraphArrowState.Resting;
 								var toeFromArrow = InvalidArrowIndex;
 								if (heelUnchangedToeChanged
-									|| heelUnchangedHeelSameArrow
-									|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
-									|| holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow)
+								    || heelUnchangedHeelSameArrow
+								    || holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
+								    || holdingWithBothPortionsInBracketFromStateWithHeelMatchingToStateHeelArrow)
 								{
 									toeFromState = fromState[f, Toe].State;
 									toeFromArrow = fromState[f, Toe].Arrow;
@@ -1182,7 +1201,8 @@ namespace StepManiaLibrary
 								var toeAction = GetActionForStates(toeFromState, toState[f, Toe].State);
 								var toeArrow = toState[f, Toe].Arrow;
 
-								var isValidFootSwap = IsFootSwap(fromState, toState, f, toeArrow, true) && toeAction != FootAction.Release;
+								var isValidFootSwap = IsFootSwap(fromState, toState, f, toeArrow, true) &&
+								                      toeAction != FootAction.Release;
 
 								// Swing
 								if (swing)
@@ -1274,11 +1294,11 @@ namespace StepManiaLibrary
 
 							// Holding with Toe and bracketing with the Heel.
 							else if ((toeUnchangedHeelChanged && fromFootAnyHeld[f])
-								|| (toState[f, Toe].State == GraphArrowState.Held
-								&& (holdingWithDefaultPortionInNonBracketFromStateWithToStateToeArrow
-								|| holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow
-								|| holdingWithOnlyHeelInBracketFromStateWithToStateToeArrow
-								|| holdingWithOnlyToeInBracketFromStateWithToStateToeArrow)))
+							         || (toState[f, Toe].State == GraphArrowState.Held
+							             && (holdingWithDefaultPortionInNonBracketFromStateWithToStateToeArrow
+							                 || holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow
+							                 || holdingWithOnlyHeelInBracketFromStateWithToStateToeArrow
+							                 || holdingWithOnlyToeInBracketFromStateWithToStateToeArrow)))
 							{
 								// The from state for the heel depends on how the from state was oriented.
 								// If we were coming from a state where only the heel was holding and now we
@@ -1287,9 +1307,9 @@ namespace StepManiaLibrary
 								var heelFromState = GraphArrowState.Resting;
 								var heelFromArrow = InvalidArrowIndex;
 								if (toeUnchangedHeelChanged
-									|| toeUnchangedHeelSameArrow
-									|| holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
-									|| holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow)
+								    || toeUnchangedHeelSameArrow
+								    || holdingWithOnlyHeelInBracketFromStateWithToStateHeelArrow
+								    || holdingWithBothPortionsInBracketFromStateWithToeMatchingToStateToeArrow)
 								{
 									heelFromState = fromState[f, Heel].State;
 									heelFromArrow = fromState[f, Heel].Arrow;
@@ -1301,7 +1321,8 @@ namespace StepManiaLibrary
 								var heelAction = GetActionForStates(heelFromState, toState[f, Heel].State);
 								var heelArrow = toState[f, Heel].Arrow;
 
-								var isValidFootSwap = IsFootSwap(fromState, toState, f, heelArrow, true) && heelAction != FootAction.Release;
+								var isValidFootSwap = IsFootSwap(fromState, toState, f, heelArrow, true) &&
+								                      heelAction != FootAction.Release;
 
 								// Swing
 								if (swing)
@@ -1337,17 +1358,21 @@ namespace StepManiaLibrary
 										if (to.Orientation == BodyOrientation.InvertedRightOverLeft)
 										{
 											if (f == L)
-												RecordLink(links, f, Heel, StepType.BracketInvertBehindOneArrowHeelNew, heelAction);
+												RecordLink(links, f, Heel, StepType.BracketInvertBehindOneArrowHeelNew,
+													heelAction);
 											else
-												RecordLink(links, f, Heel, StepType.BracketInvertFrontOneArrowHeelNew, heelAction);
+												RecordLink(links, f, Heel, StepType.BracketInvertFrontOneArrowHeelNew,
+													heelAction);
 										}
 										// Inverting heel bracket left over right.
 										else if (to.Orientation == BodyOrientation.InvertedLeftOverRight)
 										{
 											if (f == L)
-												RecordLink(links, f, Heel, StepType.BracketInvertFrontOneArrowHeelNew, heelAction);
+												RecordLink(links, f, Heel, StepType.BracketInvertFrontOneArrowHeelNew,
+													heelAction);
 											else
-												RecordLink(links, f, Heel, StepType.BracketInvertBehindOneArrowHeelNew, heelAction);
+												RecordLink(links, f, Heel, StepType.BracketInvertBehindOneArrowHeelNew,
+													heelAction);
 										}
 									}
 
@@ -1368,7 +1393,8 @@ namespace StepManiaLibrary
 									if (xoBack || xoBackStr)
 									{
 										if (otherFootUnchanged && xoBack)
-											RecordLink(links, f, Heel, StepType.BracketCrossoverBehindOneArrowHeelNew, heelAction);
+											RecordLink(links, f, Heel, StepType.BracketCrossoverBehindOneArrowHeelNew,
+												heelAction);
 									}
 									else if (xoFront || xoFrontStr)
 									{
@@ -1407,6 +1433,7 @@ namespace StepManiaLibrary
 										break;
 									}
 								}
+
 								if (!canTransition)
 									continue;
 
@@ -1431,12 +1458,17 @@ namespace StepManiaLibrary
 									|| (fromFootIsBracket[f] && toeArrow == fromState[f, Toe].Arrow);
 
 								var isHeelValidIndependentSwap =
-									actions[Heel] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow, true);
+									actions[Heel] != FootAction.Release &&
+									IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow, true);
 								var isToeValidIndependentSwap =
-									actions[Toe] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow, true);
+									actions[Toe] != FootAction.Release &&
+									IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow, true);
 								var isValidFullBracketSwap =
-									actions[Heel] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Heel].Arrow, false)
-									&& actions[Toe] != FootAction.Release && IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow, false);
+									actions[Heel] != FootAction.Release && IsFootSwap(fromState, toState, f,
+										                                    toState[f, Heel].Arrow, false)
+									                                    && actions[Toe] != FootAction.Release &&
+									                                    IsFootSwap(fromState, toState, f, toState[f, Toe].Arrow,
+										                                    false);
 
 								// Swing
 								if (swing)
@@ -1649,11 +1681,13 @@ namespace StepManiaLibrary
 								jumpLink.Links[L, p] = leftLink.Links[L, p];
 								jumpLink.Links[R, p] = rightLink.Links[R, p];
 							}
+
 							AddLink(from, to, jumpLink);
 						}
 					}
 				}
 			}
+
 			LogInfo("Created Links.");
 		}
 
@@ -1711,6 +1745,7 @@ namespace StepManiaLibrary
 						return false;
 				}
 			}
+
 			return true;
 		}
 
@@ -1802,9 +1837,11 @@ namespace StepManiaLibrary
 
 		public bool IsTransitionBetweenOpposingInverts(GraphNode from, GraphNode to)
 		{
-			if (from.Orientation == BodyOrientation.InvertedRightOverLeft && to.Orientation == BodyOrientation.InvertedLeftOverRight)
+			if (from.Orientation == BodyOrientation.InvertedRightOverLeft &&
+			    to.Orientation == BodyOrientation.InvertedLeftOverRight)
 				return true;
-			if (from.Orientation == BodyOrientation.InvertedLeftOverRight && to.Orientation == BodyOrientation.InvertedRightOverLeft)
+			if (from.Orientation == BodyOrientation.InvertedLeftOverRight &&
+			    to.Orientation == BodyOrientation.InvertedRightOverLeft)
 				return true;
 			return false;
 		}
@@ -1812,8 +1849,8 @@ namespace StepManiaLibrary
 		public bool IsSwing(GraphNode from, GraphNode to)
 		{
 			return IsTransitionBetweenInvertAndOpposingCrossover(from, to)
-				|| IsTransitionBetweenOpposingCrossovers(from, to)
-				|| IsTransitionBetweenInvertAndStepOnOtherSide(from, to);
+			       || IsTransitionBetweenOpposingCrossovers(from, to)
+			       || IsTransitionBetweenInvertAndStepOnOtherSide(from, to);
 		}
 
 		public bool IsTransitionBetweenInvertAndOpposingCrossover(GraphNode from, GraphNode to)
@@ -1847,6 +1884,7 @@ namespace StepManiaLibrary
 				if (ly < ry)
 					return true;
 			}
+
 			if (to.Orientation == BodyOrientation.InvertedRightOverLeft && from.Orientation == BodyOrientation.Normal)
 			{
 				var (_, ly) = GetFootPosition(from, L);
@@ -1854,6 +1892,7 @@ namespace StepManiaLibrary
 				if (ly < ry)
 					return true;
 			}
+
 			if (from.Orientation == BodyOrientation.InvertedLeftOverRight && to.Orientation == BodyOrientation.Normal)
 			{
 				var (_, ly) = GetFootPosition(to, L);
@@ -1861,6 +1900,7 @@ namespace StepManiaLibrary
 				if (ly > ry)
 					return true;
 			}
+
 			if (to.Orientation == BodyOrientation.InvertedLeftOverRight && from.Orientation == BodyOrientation.Normal)
 			{
 				var (_, ly) = GetFootPosition(from, L);
@@ -1868,6 +1908,7 @@ namespace StepManiaLibrary
 				if (ly > ry)
 					return true;
 			}
+
 			return false;
 		}
 
@@ -1915,11 +1956,13 @@ namespace StepManiaLibrary
 					y += PadData.ArrowData[node.State[foot, p].Arrow].Y;
 				}
 			}
+
 			if (num > 1)
 			{
 				x /= num;
 				y /= num;
 			}
+
 			return (x, y);
 		}
 
@@ -1943,11 +1986,13 @@ namespace StepManiaLibrary
 					y += PadData.ArrowData[footArrows[p]].Y;
 				}
 			}
+
 			if (num > 1)
 			{
 				x /= num;
 				y /= num;
 			}
+
 			return (x, y);
 		}
 
@@ -1958,9 +2003,9 @@ namespace StepManiaLibrary
 		private bool IsInvalidNormalPairing(GraphNode.FootArrowState[,] state, int lfp, int rfp)
 		{
 			if (state[L, lfp].Arrow != InvalidArrowIndex
-				&& state[L, lfp].State != GraphArrowState.Lifted
-				&& state[R, rfp].Arrow != InvalidArrowIndex
-				&& state[R, lfp].State != GraphArrowState.Lifted)
+			    && state[L, lfp].State != GraphArrowState.Lifted
+			    && state[R, rfp].Arrow != InvalidArrowIndex
+			    && state[R, lfp].State != GraphArrowState.Lifted)
 			{
 				// It is valid if the feet are on the same arrow (due to e.g. a swap).
 				if (state[L, lfp].Arrow == state[R, rfp].Arrow)
@@ -1968,7 +2013,7 @@ namespace StepManiaLibrary
 
 				// It is valid if the combination is a valid other foot pairing with or without stretch.
 				if (PadData.ArrowData[state[L, lfp].Arrow].OtherFootPairings[L][state[R, rfp].Arrow]
-					|| PadData.ArrowData[state[L, lfp].Arrow].OtherFootPairingsStretch[L][state[R, rfp].Arrow])
+				    || PadData.ArrowData[state[L, lfp].Arrow].OtherFootPairingsStretch[L][state[R, rfp].Arrow])
 				{
 					return false;
 				}
@@ -1988,6 +2033,7 @@ namespace StepManiaLibrary
 				if (fromState[foot, p].Arrow == arrow)
 					return true;
 			}
+
 			return false;
 		}
 
@@ -1999,6 +2045,7 @@ namespace StepManiaLibrary
 				if (state[otherFoot, p].Arrow == arrow)
 					return true;
 			}
+
 			return false;
 		}
 
@@ -2010,6 +2057,7 @@ namespace StepManiaLibrary
 				if (state[otherFoot, p].Arrow == arrow && state[otherFoot, p].State != GraphArrowState.Lifted)
 					return true;
 			}
+
 			return false;
 		}
 
@@ -2027,9 +2075,10 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairings[otherFoot][arrow])
 					return true;
 			}
+
 			return false;
 		}
 
@@ -2050,13 +2099,15 @@ namespace StepManiaLibrary
 					{
 						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex)
 						{
-							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsStretch[L][state[R, rightFootPortion].Arrow])
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsStretch[L][
+								    state[R, rightFootPortion].Arrow])
 								numStretchPairs++;
 							numTotalPairs++;
 						}
 					}
 				}
 			}
+
 			return numStretchPairs == numTotalPairs || numStretchPairs > 1;
 		}
 
@@ -2099,8 +2150,8 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverFrontStretch[otherFoot][arrow])
+				    && state[otherFoot, p].State != GraphArrowState.Lifted
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverFrontStretch[otherFoot][arrow])
 					return true;
 			}
 
@@ -2117,8 +2168,8 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverFront[otherFoot][arrow])
+				    && state[otherFoot, p].State != GraphArrowState.Lifted
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverFront[otherFoot][arrow])
 					return true;
 			}
 
@@ -2164,8 +2215,8 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverBehindStretch[otherFoot][arrow])
+				    && state[otherFoot, p].State != GraphArrowState.Lifted
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverBehindStretch[otherFoot][arrow])
 					return true;
 			}
 
@@ -2182,8 +2233,8 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverBehind[otherFoot][arrow])
+				    && state[otherFoot, p].State != GraphArrowState.Lifted
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsCrossoverBehind[otherFoot][arrow])
 					return true;
 			}
 
@@ -2215,6 +2266,7 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+
 			return false;
 		}
 
@@ -2236,13 +2288,16 @@ namespace StepManiaLibrary
 					{
 						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex)
 						{
-							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverFrontStretch[L][state[R, rightFootPortion].Arrow]
-								|| PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverBehindStretch[L][state[R, rightFootPortion].Arrow])
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverFrontStretch[L][
+								    state[R, rightFootPortion].Arrow]
+							    || PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsCrossoverBehindStretch[L][
+								    state[R, rightFootPortion].Arrow])
 								return true;
 						}
 					}
 				}
 			}
+
 			return false;
 		}
 
@@ -2270,8 +2325,8 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsInvertedStretch[otherFoot][arrow])
+				    && state[otherFoot, p].State != GraphArrowState.Lifted
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsInvertedStretch[otherFoot][arrow])
 					return true;
 			}
 
@@ -2291,18 +2346,22 @@ namespace StepManiaLibrary
 			// For brackets, both feet must be inverted with stretch for it to be considered a stretch invert.
 			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
 			{
-				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex && state[L, leftFootPortion].State != GraphArrowState.Lifted)
+				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex &&
+				    state[L, leftFootPortion].State != GraphArrowState.Lifted)
 				{
 					for (var rightFootPortion = 0; rightFootPortion < NumFootPortions; rightFootPortion++)
 					{
-						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex && state[R, rightFootPortion].State != GraphArrowState.Lifted)
+						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex &&
+						    state[R, rightFootPortion].State != GraphArrowState.Lifted)
 						{
-							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsInvertedStretch[L][state[R, rightFootPortion].Arrow])
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsInvertedStretch[L][
+								    state[R, rightFootPortion].Arrow])
 								return true;
 						}
 					}
 				}
 			}
+
 			return false;
 		}
 
@@ -2321,8 +2380,8 @@ namespace StepManiaLibrary
 			{
 				var otherFootArrowIndex = state[otherFoot, p].Arrow;
 				if (otherFootArrowIndex != InvalidArrowIndex
-					&& state[otherFoot, p].State != GraphArrowState.Lifted
-					&& PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsInverted[otherFoot][arrow])
+				    && state[otherFoot, p].State != GraphArrowState.Lifted
+				    && PadData.ArrowData[otherFootArrowIndex].OtherFootPairingsInverted[otherFoot][arrow])
 					return true;
 			}
 
@@ -2338,18 +2397,22 @@ namespace StepManiaLibrary
 		{
 			for (var leftFootPortion = 0; leftFootPortion < NumFootPortions; leftFootPortion++)
 			{
-				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex && state[L, leftFootPortion].State != GraphArrowState.Lifted)
+				if (state[L, leftFootPortion].Arrow != InvalidArrowIndex &&
+				    state[L, leftFootPortion].State != GraphArrowState.Lifted)
 				{
 					for (var rightFootPortion = 0; rightFootPortion < NumFootPortions; rightFootPortion++)
 					{
-						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex && state[R, rightFootPortion].State != GraphArrowState.Lifted)
+						if (state[R, rightFootPortion].Arrow != InvalidArrowIndex &&
+						    state[R, rightFootPortion].State != GraphArrowState.Lifted)
 						{
-							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsInverted[L][state[R, rightFootPortion].Arrow])
+							if (PadData.ArrowData[state[L, leftFootPortion].Arrow].OtherFootPairingsInverted[L][
+								    state[R, rightFootPortion].Arrow])
 								return true;
 						}
 					}
 				}
 			}
+
 			return false;
 		}
 
@@ -2395,7 +2458,8 @@ namespace StepManiaLibrary
 				{
 					if (fromState[otherFoot, p].Arrow != arrow)
 						return false;
-					if (toState[otherFoot, p].State == GraphArrowState.Lifted && fromState[otherFoot, p].State != GraphArrowState.Lifted)
+					if (toState[otherFoot, p].State == GraphArrowState.Lifted &&
+					    fromState[otherFoot, p].State != GraphArrowState.Lifted)
 						steppedOnLiftedArrow = true;
 				}
 
@@ -2412,7 +2476,7 @@ namespace StepManiaLibrary
 						// With a single step, the other foot's other portion needs to be identical before and after.
 						if (footIsSingleArrowStep)
 						{
-							if(toState[otherFoot, p].State != fromState[otherFoot, p].State)
+							if (toState[otherFoot, p].State != fromState[otherFoot, p].State)
 							{
 								return false;
 							}
@@ -2421,7 +2485,8 @@ namespace StepManiaLibrary
 						else
 						{
 							if (!(toState[otherFoot, p].State == fromState[otherFoot, p].State
-								|| (toState[otherFoot, p].State == GraphArrowState.Lifted && fromState[otherFoot, p].State != GraphArrowState.Lifted)))
+							      || (toState[otherFoot, p].State == GraphArrowState.Lifted &&
+							          fromState[otherFoot, p].State != GraphArrowState.Lifted)))
 							{
 								return false;
 							}
@@ -2429,6 +2494,7 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+
 			if (!steppedOnLiftedArrow)
 				return false;
 
@@ -2443,9 +2509,12 @@ namespace StepManiaLibrary
 		{
 			return
 				state[L, Heel].Arrow == leftHeelArrow && state[L, Heel].State == leftHeelState
-				&& state[L, Toe].Arrow == leftToeArrow && state[L, Toe].State == leftToeState
-				&& state[R, Heel].Arrow == rightHeelArrow && state[R, Heel].State == rightHeelState
-				&& state[R, Toe].Arrow == rightToeArrow && state[R, Toe].State == rightToeState;
+				                                      && state[L, Toe].Arrow == leftToeArrow &&
+				                                      state[L, Toe].State == leftToeState
+				                                      && state[R, Heel].Arrow == rightHeelArrow &&
+				                                      state[R, Heel].State == rightHeelState
+				                                      && state[R, Toe].Arrow == rightToeArrow &&
+				                                      state[R, Toe].State == rightToeState;
 		}
 
 		private static bool StateMatches(GraphNode.FootArrowState[,] state,
@@ -2454,7 +2523,8 @@ namespace StepManiaLibrary
 		{
 			return
 				state[L, DefaultFootPortion].Arrow == leftArrow && state[L, DefaultFootPortion].State == leftState
-				&& state[R, DefaultFootPortion].Arrow == rightArrow && state[R, DefaultFootPortion].State == rightState;
+				                                                && state[R, DefaultFootPortion].Arrow == rightArrow &&
+				                                                state[R, DefaultFootPortion].State == rightState;
 		}
 
 		private static bool StateMatches(GraphNode.FootArrowState[,] state, int leftArrow, int rightArrow)
@@ -2500,14 +2570,14 @@ namespace StepManiaLibrary
 			int rhta, GraphArrowState rhts,
 			int rtta, GraphArrowState rtts)
 		{
-			return (fromState[L, Heel].Arrow == lhfa && fromState[L, Heel].State == lhfs
-				&& fromState[L, Toe].Arrow == ltfa && fromState[L, Toe].State == ltfs
-				&& toState[L, Heel].Arrow == lhta && toState[L, Heel].State == lhts
-				&& toState[L, Toe].Arrow == ltta && toState[L, Toe].State == ltts
-				&& fromState[R, Heel].Arrow == rhfa && fromState[R, Heel].State == rhfs
-				&& fromState[R, Toe].Arrow == rtfa && fromState[R, Toe].State == rtfs
-				&& toState[R, Heel].Arrow == rhta && toState[R, Heel].State == rhts
-				&& toState[R, Toe].Arrow == rtta && toState[R, Toe].State == rtts);
+			return fromState[L, Heel].Arrow == lhfa && fromState[L, Heel].State == lhfs
+			                                        && fromState[L, Toe].Arrow == ltfa && fromState[L, Toe].State == ltfs
+			                                        && toState[L, Heel].Arrow == lhta && toState[L, Heel].State == lhts
+			                                        && toState[L, Toe].Arrow == ltta && toState[L, Toe].State == ltts
+			                                        && fromState[R, Heel].Arrow == rhfa && fromState[R, Heel].State == rhfs
+			                                        && fromState[R, Toe].Arrow == rtfa && fromState[R, Toe].State == rtfs
+			                                        && toState[R, Heel].Arrow == rhta && toState[R, Heel].State == rhts
+			                                        && toState[R, Toe].Arrow == rtta && toState[R, Toe].State == rtts;
 		}
 
 		#endregion Fill Helpers

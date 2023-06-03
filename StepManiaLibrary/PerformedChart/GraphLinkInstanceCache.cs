@@ -81,10 +81,13 @@ namespace StepManiaLibrary.PerformedChart
 							l2LHasAnyValid = true;
 
 						if (l1LCost.DoubleEquals(0.0) && l1.GraphLink.Links[L, p].Valid)
-							l1LCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[L, p].Step, l1.GraphLink.Links[L, p].Step) / numFallbacks;
+							l1LCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[L, p].Step,
+								l1.GraphLink.Links[L, p].Step) / numFallbacks;
 						if (l2LCost.DoubleEquals(0.0) && l2.GraphLink.Links[L, p].Valid)
-							l2LCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[L, p].Step, l2.GraphLink.Links[L, p].Step) / numFallbacks;
+							l2LCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[L, p].Step,
+								l2.GraphLink.Links[L, p].Step) / numFallbacks;
 					}
+
 					if (SourceLink.Links[R, p].Valid)
 					{
 						var numFallbacks = Fallbacks.GetFallbacks(SourceLink.Links[R, p].Step).Count;
@@ -100,15 +103,17 @@ namespace StepManiaLibrary.PerformedChart
 							l2RHasAnyValid = true;
 
 						if (l1RCost.DoubleEquals(0.0) && l1.GraphLink.Links[R, p].Valid)
-							l1RCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[R, p].Step, l1.GraphLink.Links[R, p].Step) / numFallbacks;
+							l1RCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[R, p].Step,
+								l1.GraphLink.Links[R, p].Step) / numFallbacks;
 						if (l2RCost.DoubleEquals(0.0) && l2.GraphLink.Links[R, p].Valid)
-							l2RCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[R, p].Step, l2.GraphLink.Links[R, p].Step) / numFallbacks;
+							l2RCost = (double)Fallbacks.GetFallbackIndex(SourceLink.Links[R, p].Step,
+								l2.GraphLink.Links[R, p].Step) / numFallbacks;
 					}
 				}
 
 				// Dropping a single foot is next worst.
-				var l1DroppedFoot = ((sourceLHasAnyValid && !l1LHasAnyValid) || (sourceRHasAnyValid && !l1RHasAnyValid));
-				var l2DroppedFoot = ((sourceLHasAnyValid && !l2LHasAnyValid) || (sourceRHasAnyValid && !l2RHasAnyValid));
+				var l1DroppedFoot = (sourceLHasAnyValid && !l1LHasAnyValid) || (sourceRHasAnyValid && !l1RHasAnyValid);
+				var l2DroppedFoot = (sourceLHasAnyValid && !l2LHasAnyValid) || (sourceRHasAnyValid && !l2RHasAnyValid);
 				if (l1DroppedFoot != l2DroppedFoot)
 					return l1DroppedFoot ? 1 : -1;
 
@@ -137,19 +142,22 @@ namespace StepManiaLibrary.PerformedChart
 		/// Cache of GraphLinkInstance to all replacement GraphLinkInstances which can be used in a PerformedChart
 		/// based on the StepTypeFallbacks.
 		/// </summary>
-		private readonly ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>> Cache;
+		private readonly ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>
+			Cache;
 
 		/// <summary>
 		/// Cached MethodGroup for FindAllReplacementLinks to avoid allocation per invocation.
 		/// </summary>
-		private readonly Func<GraphLinkInstance, StepTypeFallbacks, List<GraphLinkInstance>> CachedFindAllReplacementLinks = FindAllReplacementLinks;
+		private readonly Func<GraphLinkInstance, StepTypeFallbacks, List<GraphLinkInstance>> CachedFindAllReplacementLinks =
+			FindAllReplacementLinks;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		public GraphLinkInstanceCache()
 		{
-			Cache = new ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
+			Cache =
+				new ConcurrentDictionary<StepTypeFallbacks, ConcurrentDictionary<GraphLinkInstance, List<GraphLinkInstance>>>();
 		}
 
 		/// <summary>
@@ -164,7 +172,8 @@ namespace StepManiaLibrary.PerformedChart
 		/// <param name="fallbacks">StepTypeFallbacks.</param>
 		/// <returns>List of all valid replacement FootArrowStates.</returns>
 		[SuppressMessage("ReSharper", "UseObjectOrCollectionInitializer")]
-		private static List<GraphLinkInstance> FindReplacementLinksForFoot(int foot, GraphLinkInstance sourceLink, StepTypeFallbacks fallbacks)
+		private static List<GraphLinkInstance> FindReplacementLinksForFoot(int foot, GraphLinkInstance sourceLink,
+			StepTypeFallbacks fallbacks)
 		{
 			var stepTypeReplacements = fallbacks.GetFallbacks();
 			var originalLinks = sourceLink.GraphLink.Links;
@@ -191,8 +200,8 @@ namespace StepManiaLibrary.PerformedChart
 
 					// Don't create invalid releases.
 					if (!newStepData.CanBeUsedInRelease
-						&& ((originalLinks[foot, Heel].Valid && originalLinks[foot, Heel].Action == FootAction.Release)
-						|| (originalLinks[foot, Toe].Valid && originalLinks[foot, Toe].Action == FootAction.Release)))
+					    && ((originalLinks[foot, Heel].Valid && originalLinks[foot, Heel].Action == FootAction.Release)
+					        || (originalLinks[foot, Toe].Valid && originalLinks[foot, Toe].Action == FootAction.Release)))
 					{
 						continue;
 					}
@@ -227,13 +236,15 @@ namespace StepManiaLibrary.PerformedChart
 									break;
 								}
 							}
+
 							if (originalPortion == -1)
 								originalPortion = DefaultFootPortion;
 						}
 
 						// Record the new state.
 						var newLink = new GraphLink();
-						newLink.Links[foot, newStepFootPortion] = new GraphLink.FootArrowState(newStep, originalLinks[foot, originalPortion].Action);
+						newLink.Links[foot, newStepFootPortion] =
+							new GraphLink.FootArrowState(newStep, originalLinks[foot, originalPortion].Action);
 						var instanceTypes = new InstanceStepType[NumFeet, NumFootPortions];
 						instanceTypes[foot, originalPortion] = sourceLink.InstanceTypes[foot, originalPortion];
 						var newLinkInstance = new GraphLinkInstance(newLink, instanceTypes);
@@ -358,12 +369,14 @@ namespace StepManiaLibrary.PerformedChart
 					var invalidJump = false;
 					for (var p = 0; p < NumFootPortions; p++)
 					{
-						if (leftLink.GraphLink.Links[L, p].Valid && !StepData.Steps[(int)leftLink.GraphLink.Links[L, p].Step].CanBeUsedInJump)
+						if (leftLink.GraphLink.Links[L, p].Valid &&
+						    !StepData.Steps[(int)leftLink.GraphLink.Links[L, p].Step].CanBeUsedInJump)
 						{
 							invalidJump = true;
 							break;
 						}
 					}
+
 					if (invalidJump)
 						continue;
 
@@ -373,12 +386,14 @@ namespace StepManiaLibrary.PerformedChart
 						invalidJump = false;
 						for (var p = 0; p < NumFootPortions; p++)
 						{
-							if (rightLink.GraphLink.Links[R, p].Valid && !StepData.Steps[(int)rightLink.GraphLink.Links[R, p].Step].CanBeUsedInJump)
+							if (rightLink.GraphLink.Links[R, p].Valid &&
+							    !StepData.Steps[(int)rightLink.GraphLink.Links[R, p].Step].CanBeUsedInJump)
 							{
 								invalidJump = true;
 								break;
 							}
 						}
+
 						if (invalidJump)
 							continue;
 
@@ -390,6 +405,7 @@ namespace StepManiaLibrary.PerformedChart
 							newLink.GraphLink.Links[R, p] = rightLink.GraphLink.Links[R, p];
 							newLink.InstanceTypes[R, p] = rightLink.InstanceTypes[R, p];
 						}
+
 						replacementLinks.Add(newLink);
 					}
 				}
@@ -453,9 +469,11 @@ namespace StepManiaLibrary.PerformedChart
 					if (replacementLink.GraphLink.Links[f, p].Valid)
 						replacementFootValid = true;
 				}
+
 				if (sourceFootValid && !replacementFootValid)
 					return true;
 			}
+
 			return false;
 		}
 
@@ -482,6 +500,7 @@ namespace StepManiaLibrary.PerformedChart
 					}
 				}
 			}
+
 			return numStepsRemoved;
 		}
 	}

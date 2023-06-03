@@ -28,7 +28,7 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// Always overwrite any existing charts.
 		/// </summary>
-		Always
+		Always,
 	}
 
 	/// <summary>
@@ -53,7 +53,7 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// Never user brackets unless there is no other option.
 		/// </summary>
-		NoBrackets
+		NoBrackets,
 	}
 
 	/// <summary>
@@ -91,9 +91,9 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// Always copy the file.
 		/// </summary>
-		Always
+		Always,
 	}
-	
+
 	/// <summary>
 	/// Configuration data for ExpressedChart behavior.
 	/// </summary>
@@ -112,7 +112,8 @@ namespace StepManiaLibrary
 		/// <summary>
 		/// How to make the determination of which BracketParsingMethod to use.
 		/// </summary>
-		[JsonInclude] public BracketParsingDetermination BracketParsingDetermination = BracketParsingDetermination.ChooseMethodDynamically;
+		[JsonInclude]
+		public BracketParsingDetermination BracketParsingDetermination = BracketParsingDetermination.ChooseMethodDynamically;
 
 		/// <summary>
 		/// When using the ChooseMethodDynamically BracketParsingDetermination, a level under which BracketParsingMethod NoBrackets
@@ -190,7 +191,7 @@ namespace StepManiaLibrary
 	{
 		AutomaticSameLane,
 		AutomaticNewLane,
-		SpecifiedLane
+		SpecifiedLane,
 	}
 
 	public enum FillConfigEndFootChoice
@@ -198,14 +199,14 @@ namespace StepManiaLibrary
 		AutomaticIgnoreFollowingSteps,
 		AutomaticSameLaneAsFollowing,
 		AutomaticNewLaneFromFollowing,
-		SpecifiedLane
+		SpecifiedLane,
 	}
 
 	public enum FillConfigStartingFootChoice
 	{
 		Random,
 		Automatic,
-		Specified
+		Specified,
 	}
 
 	public class FillConfig

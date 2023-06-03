@@ -61,7 +61,7 @@ namespace StepManiaLibrary
 			{
 				var hash = 17;
 				hash = unchecked(hash * 31 + Arrow);
-				hash = unchecked(hash * 31 + (int) State);
+				hash = unchecked(hash * 31 + (int)State);
 				return hash;
 			}
 
@@ -137,7 +137,7 @@ namespace StepManiaLibrary
 		{
 			var sb = new StringBuilder();
 
-			for (int f = 0; f < NumFeet; f++)
+			for (var f = 0; f < NumFeet; f++)
 			{
 				if (f == 0)
 				{
@@ -148,7 +148,7 @@ namespace StepManiaLibrary
 					sb.Append(" R:");
 				}
 
-				for (int p = 0; p < NumFootPortions; p++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
 					if (State[f, p].Arrow == InvalidArrowIndex)
 						continue;

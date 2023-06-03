@@ -1,5 +1,4 @@
-﻿
-namespace StepManiaLibrary.PerformedChart
+﻿namespace StepManiaLibrary.PerformedChart
 {
 	/// <summary>
 	/// A PerformedChart contains a series of PerformanceNodes.

@@ -19,7 +19,7 @@ namespace StepManiaLibrary
 
 		Roll,
 		Fake,
-		Lift
+		Lift,
 	}
 
 	/// <summary>
@@ -77,8 +77,8 @@ namespace StepManiaLibrary
 			public override int GetHashCode()
 			{
 				var hash = 17;
-				hash = unchecked(hash * 31 + (int) Step);
-				hash = unchecked(hash * 31 + (int) Action);
+				hash = unchecked(hash * 31 + (int)Step);
+				hash = unchecked(hash * 31 + (int)Action);
 				hash = unchecked(hash * 31 + (Valid ? 1 : 0));
 				return hash;
 			}
@@ -114,6 +114,7 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+
 			return true;
 		}
 
@@ -216,6 +217,7 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+
 			return foundStep;
 		}
 
@@ -269,7 +271,7 @@ namespace StepManiaLibrary
 			{
 				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, p].Valid && StepData.Steps[(int) Links[f, p].Step].IsFootSwap[p])
+					if (Links[f, p].Valid && StepData.Steps[(int)Links[f, p].Step].IsFootSwap[p])
 					{
 						foot = f;
 						portion = p;
@@ -292,7 +294,8 @@ namespace StepManiaLibrary
 			{
 				for (var p = 0; p < NumFootPortions; p++)
 				{
-					if (Links[f, p].Valid && Links[f, p].Action != FootAction.Release && StepData.Steps[(int)Links[f, p].Step].IsBracket)
+					if (Links[f, p].Valid && Links[f, p].Action != FootAction.Release &&
+					    StepData.Steps[(int)Links[f, p].Step].IsBracket)
 						return true;
 				}
 			}
@@ -332,9 +335,9 @@ namespace StepManiaLibrary
 			var hasRight = false;
 			var isRelease = false;
 
-			for (int f = 0; f < NumFeet; f++)
+			for (var f = 0; f < NumFeet; f++)
 			{
-				for (int p = 0; p < NumFootPortions; p++)
+				for (var p = 0; p < NumFootPortions; p++)
 				{
 					if (Links[f, p].Valid)
 					{
@@ -366,9 +369,11 @@ namespace StepManiaLibrary
 						break;
 					}
 				}
+
 				if (hasRight)
 					sb.Append(" ");
 			}
+
 			if (hasRight)
 			{
 				sb.Append("R: ");
@@ -381,6 +386,7 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+
 			if (!hasLeft && !hasRight)
 				sb.Append("Nothing");
 
@@ -392,7 +398,7 @@ namespace StepManiaLibrary
 		/// </summary>
 		private static string GetSimpleString(StepType stepType)
 		{
-			switch(stepType)
+			switch (stepType)
 			{
 				case StepType.SameArrow:
 					return "Same";

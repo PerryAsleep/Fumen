@@ -25,10 +25,12 @@ namespace StepManiaLibrary.PerformedChart
 		/// StepType cost for falling back to a completely blank link, dropping all steps for all portions of all feet.
 		/// </summary>
 		private const double BlankStepCost = 1000.0;
+
 		/// <summary>
 		/// StepType cost for falling back to a link with at least one foot having all of its steps dropped.
 		/// </summary>
 		private const double BlankSingleStepCost = 900.0;
+
 		/// <summary>
 		/// StepType cost for falling back to a link with dropped steps.
 		/// </summary>
@@ -46,7 +48,7 @@ namespace StepManiaLibrary.PerformedChart
 			Lift,
 			Hold,
 			Roll,
-			Release
+			Release,
 		}
 
 		/// <summary>
@@ -248,7 +250,8 @@ namespace StepManiaLibrary.PerformedChart
 										);
 
 										// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
-										if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
+										if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph,
+											    expressedChart))
 											continue;
 										deadEnd = false;
 									}
@@ -266,7 +269,8 @@ namespace StepManiaLibrary.PerformedChart
 											var nextGraphNode = nextNodes[n];
 
 											// Determine new step information.
-											var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink, stepGraph.NumArrows);
+											var actions = GetActionsForNode(nextGraphNode, graphLink.GraphLink,
+												stepGraph.NumArrows);
 
 											// Set up the graph links leading out of this node to its next nodes.
 											List<GraphLinkInstance> graphLinksToNextNode;
@@ -298,12 +302,14 @@ namespace StepManiaLibrary.PerformedChart
 											);
 
 											// Hook up the new SearchNode and store it in the nextSearchNodes for pruning.
-											if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph, expressedChart))
+											if (!AddChildNode(searchNode, nextSearchNode, graphLink, nextSearchNodes, stepGraph,
+												    expressedChart))
 												continue;
 											deadEnd = false;
 										}
 									}
 								}
+
 								// This SearchNode has no valid children. Prune it.
 								if (deadEnd)
 									Prune(searchNode);
@@ -345,7 +351,7 @@ namespace StepManiaLibrary.PerformedChart
 				new StepPerformanceNode
 				{
 					Position = 0,
-					GraphNodeInstance = new GraphNodeInstance {Node = rootGraphNodeToUse ?? rootNodes[0][0] },
+					GraphNodeInstance = new GraphNodeInstance { Node = rootGraphNodeToUse ?? rootNodes[0][0] },
 				},
 				logIdentifier);
 
@@ -364,7 +370,7 @@ namespace StepManiaLibrary.PerformedChart
 				// Create GraphNodeInstance.
 				var graphLinkInstance = currentSearchNode.GraphLinkFromPreviousNode;
 				var stepEventIndex = currentSearchNode.Depth - 1;
-				var graphNodeInstance = new GraphNodeInstance {Node = currentSearchNode.GraphNode};
+				var graphNodeInstance = new GraphNodeInstance { Node = currentSearchNode.GraphNode };
 				for (var f = 0; f < NumFeet; f++)
 					for (var p = 0; p < NumFootPortions; p++)
 						graphNodeInstance.InstanceTypes[f, p] = graphLinkInstance.InstanceTypes[f, p];
@@ -375,7 +381,7 @@ namespace StepManiaLibrary.PerformedChart
 					Position = expressedChart.StepEvents[stepEventIndex].Position,
 					GraphLinkInstance = graphLinkInstance,
 					GraphNodeInstance = graphNodeInstance,
-					Prev = currentPerformanceNode
+					Prev = currentPerformanceNode,
 				};
 				currentPerformanceNode.Next = newNode;
 				currentPerformanceNode = newNode;
@@ -455,7 +461,7 @@ namespace StepManiaLibrary.PerformedChart
 			// links at higher indexes are less preferred fallbacks that should cost more.
 			if (numLinks == 1)
 				return 0.0;
-			return stepRemovalCost + ((double)graphLinkIndexToChild / (numLinks - 1));
+			return stepRemovalCost + (double)graphLinkIndexToChild / (numLinks - 1);
 		}
 
 		// TODO: Rewrite
@@ -1137,13 +1143,14 @@ namespace StepManiaLibrary.PerformedChart
 							{
 								Position = mineEvent.Position,
 								Arrow = bestArrow,
-								Prev = lastPerformanceNode
+								Prev = lastPerformanceNode,
 							};
 							lastPerformanceNode.Next = newNode;
 							lastPerformanceNode = newNode;
 
 							arrowsOccupiedByMines[bestArrow] = true;
 						}
+
 						break;
 					}
 					case MineType.NoArrow:
@@ -1156,13 +1163,14 @@ namespace StepManiaLibrary.PerformedChart
 							{
 								Position = mineEvent.Position,
 								Arrow = firstLaneWithNoArrow,
-								Prev = lastPerformanceNode
+								Prev = lastPerformanceNode,
 							};
 							lastPerformanceNode.Next = newNode;
 							lastPerformanceNode = newNode;
 
 							arrowsOccupiedByMines[firstLaneWithNoArrow] = true;
 						}
+
 						break;
 					}
 				}
@@ -1308,7 +1316,7 @@ namespace StepManiaLibrary.PerformedChart
 										IntegerPosition = stepNode.Position,
 										Lane = arrow,
 										Player = 0,
-										SourceType = SMCommon.NoteChars[(int) SMCommon.NoteType.HoldEnd].ToString()
+										SourceType = SMCommon.NoteChars[(int)SMCommon.NoteType.HoldEnd].ToString(),
 									});
 									break;
 								case PerformanceFootAction.Tap:
@@ -1325,7 +1333,7 @@ namespace StepManiaLibrary.PerformedChart
 										IntegerPosition = stepNode.Position,
 										Lane = arrow,
 										Player = 0,
-										SourceType = SMCommon.NoteChars[(int) instanceAction].ToString()
+										SourceType = SMCommon.NoteChars[(int)instanceAction].ToString(),
 									});
 									break;
 								}
@@ -1341,7 +1349,7 @@ namespace StepManiaLibrary.PerformedChart
 										IntegerPosition = stepNode.Position,
 										Lane = arrow,
 										Player = 0,
-										SourceType = SMCommon.NoteChars[(int) holdRollType].ToString()
+										SourceType = SMCommon.NoteChars[(int)holdRollType].ToString(),
 									});
 									break;
 								}
@@ -1357,7 +1365,7 @@ namespace StepManiaLibrary.PerformedChart
 							IntegerPosition = mineNode.Position,
 							Lane = mineNode.Arrow,
 							Player = 0,
-							SourceType = SMCommon.NoteChars[(int) SMCommon.NoteType.Mine].ToString()
+							SourceType = SMCommon.NoteChars[(int)SMCommon.NoteType.Mine].ToString(),
 						});
 					}
 
@@ -1400,7 +1408,7 @@ namespace StepManiaLibrary.PerformedChart
 		{
 			LogError(message, LogIdentifier);
 		}
-		
+
 		private void LogWarn(string message)
 		{
 			LogWarn(message, LogIdentifier);

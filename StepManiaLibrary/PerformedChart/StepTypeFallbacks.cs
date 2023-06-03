@@ -24,15 +24,19 @@ namespace StepManiaLibrary.PerformedChart
 		/// <summary>
 		/// StepTypeFallbacks from config as strings.
 		/// </summary>
-		[JsonInclude, JsonPropertyName("StepTypeFallbacks")] public Dictionary<StepType, List<string>> FallbacksStrings = new Dictionary<StepType, List<string>>();
+		[JsonInclude] [JsonPropertyName("StepTypeFallbacks")]
+		public Dictionary<StepType, List<string>> FallbacksStrings = new Dictionary<StepType, List<string>>();
+
 		/// <summary>
 		/// Parsed StepTypeFallbacks.
 		/// </summary>
 		[JsonIgnore] private Dictionary<StepType, List<StepType>> Fallbacks = new Dictionary<StepType, List<StepType>>();
+
 		/// <summary>
 		/// Cached indexes of StepType fallbacks per StepType.
 		/// </summary>
-		[JsonIgnore] private Dictionary<StepType, Dictionary<StepType, int>> FallbackIndexes = new Dictionary<StepType, Dictionary<StepType, int>>();
+		[JsonIgnore] private Dictionary<StepType, Dictionary<StepType, int>> FallbackIndexes =
+			new Dictionary<StepType, Dictionary<StepType, int>>();
 
 		/// <summary>
 		/// Loads StepTypeFallbacks from the given file.
@@ -45,7 +49,7 @@ namespace StepManiaLibrary.PerformedChart
 			{
 				Converters =
 				{
-					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
 				},
 				ReadCommentHandling = JsonCommentHandling.Skip,
 				AllowTrailingCommas = true,
@@ -54,7 +58,7 @@ namespace StepManiaLibrary.PerformedChart
 
 			try
 			{
-				using (FileStream openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName)))
+				using (var openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName)))
 				{
 					fallbacks = await JsonSerializer.DeserializeAsync<StepTypeFallbacks>(openStream, options);
 					fallbacks?.Init();
@@ -87,6 +91,7 @@ namespace StepManiaLibrary.PerformedChart
 					e.Data.Add("StepTypeFallback", kvp.Key);
 					throw;
 				}
+
 				Fallbacks.Add(kvp.Key, stepTypeList);
 			}
 
@@ -100,6 +105,7 @@ namespace StepManiaLibrary.PerformedChart
 					order.Add(fallback, index);
 					index++;
 				}
+
 				FallbackIndexes.Add(kvp.Key, order);
 			}
 		}
@@ -122,10 +128,12 @@ namespace StepManiaLibrary.PerformedChart
 					{
 						throw new Exception($"Could not parse \"{stepTypeStr}\".");
 					}
+
 					if (!FallbacksStrings.TryGetValue(baseStepType, out var baseStrings))
 					{
 						throw new Exception($"No \"{baseStepType:G}\" entry found for \"{stepTypeStr}\".");
 					}
+
 					if (ancestors.Contains(baseStepType))
 					{
 						throw new Exception($"Cycle detected on {stepTypeStr}.");
@@ -143,6 +151,7 @@ namespace StepManiaLibrary.PerformedChart
 					{
 						throw new Exception($"Could not parse \"{stepTypeStr}\".");
 					}
+
 					stepTypeList.Add(stepType);
 				}
 			}
@@ -162,12 +171,13 @@ namespace StepManiaLibrary.PerformedChart
 				if (!Fallbacks.ContainsKey(stepType) || Fallbacks[stepType].Count == 0)
 				{
 					LogError($"No StepTypeFallbacks for {stepType:G}."
-							+ $" To ignore {stepType:G} steps, include an entry for it in StepTypeFallbacks and with an"
-							+ " array value containing at least one StepType to use as a replacement.",
-							id);
+					         + $" To ignore {stepType:G} steps, include an entry for it in StepTypeFallbacks and with an"
+					         + " array value containing at least one StepType to use as a replacement.",
+						id);
 					errors = true;
 				}
 			}
+
 			return errors;
 		}
 

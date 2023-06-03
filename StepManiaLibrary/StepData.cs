@@ -103,7 +103,7 @@ namespace StepManiaLibrary
 	{
 		Tap,
 		Hold,
-		Release
+		Release,
 		// This enum is serialized as an integer in StepGraph.
 		// When changing this enum update serialization logic accordingly.
 	}
@@ -116,7 +116,7 @@ namespace StepManiaLibrary
 	{
 		Normal,
 		InvertedRightOverLeft,
-		InvertedLeftOverRight
+		InvertedLeftOverRight,
 		// This enum is serialized as an integer in StepGraph.
 		// When changing this enum update serialization logic accordingly.
 	}
@@ -256,9 +256,9 @@ namespace StepManiaLibrary
 			// Initialize StateAfterAction.
 			var footActions = Enum.GetValues(typeof(FootAction)).Cast<FootAction>().ToList();
 			StateAfterAction = new GraphArrowState[footActions.Count];
-			StateAfterAction[(int) FootAction.Tap] = GraphArrowState.Resting;
-			StateAfterAction[(int) FootAction.Hold] = GraphArrowState.Held;
-			StateAfterAction[(int) FootAction.Release] = GraphArrowState.Resting;
+			StateAfterAction[(int)FootAction.Tap] = GraphArrowState.Resting;
+			StateAfterAction[(int)FootAction.Hold] = GraphArrowState.Held;
+			StateAfterAction[(int)FootAction.Release] = GraphArrowState.Resting;
 
 			var steps = Enum.GetValues(typeof(StepType)).Cast<StepType>().ToList();
 
@@ -280,8 +280,10 @@ namespace StepManiaLibrary
 			// Configure the Steps.
 			Steps = new StepData[steps.Count];
 
+			// ReSharper disable ArgumentsStyleNamedExpression
+
 			// Simple step types.
-			Steps[(int) StepType.SameArrow] = new StepData(
+			Steps[(int)StepType.SameArrow] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: true,
 				isFootSwap: noFootSwap,
@@ -293,7 +295,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 0
 			);
-			Steps[(int) StepType.NewArrow] = new StepData(
+			Steps[(int)StepType.NewArrow] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -305,7 +307,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.CrossoverFront] = new StepData(
+			Steps[(int)StepType.CrossoverFront] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -317,7 +319,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.CrossoverBehind] = new StepData(
+			Steps[(int)StepType.CrossoverBehind] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -329,7 +331,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.InvertFront] = new StepData(
+			Steps[(int)StepType.InvertFront] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -341,7 +343,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.InvertBehind] = new StepData(
+			Steps[(int)StepType.InvertBehind] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -353,7 +355,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.FootSwap] = new StepData(
+			Steps[(int)StepType.FootSwap] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: defaultFootSwap,
@@ -491,7 +493,7 @@ namespace StepManiaLibrary
 			);
 
 			// Brackets.
-			Steps[(int) StepType.BracketHeelNewToeNew] = new StepData(
+			Steps[(int)StepType.BracketHeelNewToeNew] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -503,7 +505,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 2
 			);
-			Steps[(int) StepType.BracketHeelNewToeSame] = new StepData(
+			Steps[(int)StepType.BracketHeelNewToeSame] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -515,7 +517,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.BracketHeelSameToeNew] = new StepData(
+			Steps[(int)StepType.BracketHeelSameToeNew] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -527,7 +529,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.BracketHeelSameToeSame] = new StepData(
+			Steps[(int)StepType.BracketHeelSameToeSame] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: true,
 				isFootSwap: noFootSwap,
@@ -539,7 +541,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 0
 			);
-			Steps[(int) StepType.BracketHeelSameToeSwap] = new StepData(
+			Steps[(int)StepType.BracketHeelSameToeSwap] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: toeFootSwap,
@@ -551,7 +553,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.BracketHeelNewToeSwap] = new StepData(
+			Steps[(int)StepType.BracketHeelNewToeSwap] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: toeFootSwap,
@@ -563,7 +565,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 2
 			);
-			Steps[(int) StepType.BracketHeelSwapToeSame] = new StepData(
+			Steps[(int)StepType.BracketHeelSwapToeSame] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: heelFootSwap,
@@ -575,7 +577,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.BracketHeelSwapToeNew] = new StepData(
+			Steps[(int)StepType.BracketHeelSwapToeNew] = new StepData(
 				canBeUsedInJump: false,
 				canBeUsedInRelease: false,
 				isFootSwap: heelFootSwap,
@@ -799,7 +801,7 @@ namespace StepManiaLibrary
 			);
 
 			// Single arrow brackets.
-			Steps[(int) StepType.BracketOneArrowHeelSame] = new StepData(
+			Steps[(int)StepType.BracketOneArrowHeelSame] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: true,
 				isFootSwap: noFootSwap,
@@ -811,7 +813,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 0
 			);
-			Steps[(int) StepType.BracketOneArrowHeelNew] = new StepData(
+			Steps[(int)StepType.BracketOneArrowHeelNew] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -835,7 +837,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
-			Steps[(int) StepType.BracketOneArrowToeSame] = new StepData(
+			Steps[(int)StepType.BracketOneArrowToeSame] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: true,
 				isFootSwap: noFootSwap,
@@ -847,7 +849,7 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 0
 			);
-			Steps[(int) StepType.BracketOneArrowToeNew] = new StepData(
+			Steps[(int)StepType.BracketOneArrowToeNew] = new StepData(
 				canBeUsedInJump: true,
 				canBeUsedInRelease: false,
 				isFootSwap: noFootSwap,
@@ -997,6 +999,8 @@ namespace StepManiaLibrary
 				isSwing: false,
 				numPossibleNewArrows: 1
 			);
+
+			// ReSharper restore ArgumentsStyleNamedExpression
 		}
 	}
 }

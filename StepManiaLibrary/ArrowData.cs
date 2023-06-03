@@ -17,11 +17,13 @@ namespace StepManiaLibrary
 		/// Set after deserialization based on index of this ArrowData in the containing array.
 		/// </summary>
 		[JsonIgnore] public int Lane = InvalidArrowIndex;
+
 		/// <summary>
 		/// The lane / index of this arrow when all arrows are mirrored.
 		/// Set after deserialization.
 		/// </summary>
 		[JsonIgnore] public int MirroredLane = InvalidArrowIndex;
+
 		/// <summary>
 		/// The lane / index of this arrow when all arrows are flipped.
 		/// Set after deserialization.

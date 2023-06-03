@@ -27,7 +27,7 @@ namespace StepManiaLibrary
 		/// In the rare case that a mine is in a lane with no arrows then it is expressed
 		/// as occurring with no arrow.
 		/// </summary>
-		NoArrow
+		NoArrow,
 	}
 
 	/// <summary>
@@ -126,14 +126,15 @@ namespace StepManiaLibrary
 						// Starting a hold
 						else if (currentState[f, arrow] == (int)GraphArrowState.Held
 						         && (previousState[f, arrow] == (int)GraphArrowState.Resting
-								 || previousState[f, arrow] == -1
-								 || previousState[f, arrow] == (int)GraphArrowState.Lifted))
+						             || previousState[f, arrow] == -1
+						             || previousState[f, arrow] == (int)GraphArrowState.Lifted))
 						{
 							addStep = true;
 						}
 						// Tapping on the same arrow
 						else if (currentState[f, arrow] == (int)GraphArrowState.Resting
-							&& (previousState[f, arrow] == (int)GraphArrowState.Resting || previousState[f, arrow] == (int)GraphArrowState.Lifted) )
+						         && (previousState[f, arrow] == (int)GraphArrowState.Resting ||
+						             previousState[f, arrow] == (int)GraphArrowState.Lifted))
 						{
 							for (var p = 0; p < NumFootPortions; p++)
 							{
@@ -152,7 +153,7 @@ namespace StepManiaLibrary
 							{
 								Position = node.GetPosition(),
 								Foot = f,
-								Arrow = arrow
+								Arrow = arrow,
 							});
 						}
 
@@ -162,7 +163,7 @@ namespace StepManiaLibrary
 							{
 								Position = node.GetPosition(),
 								Foot = f,
-								Arrow = arrow
+								Arrow = arrow,
 							});
 						}
 					}
@@ -248,7 +249,7 @@ namespace StepManiaLibrary
 				{
 					Type = MineType.AfterArrow,
 					ArrowIsNthClosest = n,
-					FootAssociatedWithPairedNote = f
+					FootAssociatedWithPairedNote = f,
 				};
 			}
 
@@ -261,7 +262,7 @@ namespace StepManiaLibrary
 				{
 					Type = MineType.BeforeArrow,
 					ArrowIsNthClosest = n,
-					FootAssociatedWithPairedNote = f
+					FootAssociatedWithPairedNote = f,
 				};
 			}
 
@@ -301,7 +302,7 @@ namespace StepManiaLibrary
 		{
 			var currentN = 0;
 			var consideredArrows = new bool[numArrows];
-			int currentNPosition = -1;
+			var currentNPosition = -1;
 			while (searchBackwards ? searchIndex >= 0 : searchIndex < events.Count)
 			{
 				if (!consideredArrows[events[searchIndex].Arrow])
@@ -436,7 +437,7 @@ namespace StepManiaLibrary
 					{
 						// If this arrow free then we can use it.
 						if (IsArrowFreeAtPosition(arrow, minePosition, releases, releaseIndex, steps, stepIndex,
-							arrowsOccupiedByMines))
+							    arrowsOccupiedByMines))
 						{
 							// Record this arrow as the best arrow.
 							bestArrow = arrow;

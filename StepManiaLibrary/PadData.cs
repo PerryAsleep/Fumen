@@ -64,7 +64,7 @@ namespace StepManiaLibrary
 			{
 				Converters =
 				{
-					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
 				},
 				ReadCommentHandling = JsonCommentHandling.Skip,
 				AllowTrailingCommas = true,
@@ -82,7 +82,7 @@ namespace StepManiaLibrary
 					return null;
 				}
 
-				using (FileStream openStream = File.OpenRead(fileFileName))
+				using (var openStream = File.OpenRead(fileFileName))
 				{
 					padData = await JsonSerializer.DeserializeAsync<PadData>(openStream, options);
 					if (padData == null)
@@ -132,12 +132,17 @@ namespace StepManiaLibrary
 				errors |= !ValidateArrowDataArrays(arrowData.BracketablePairingsToe, lane, "BracketablePairingsToe");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairings, lane, "OtherFootPairings");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsStretch, lane, "OtherFootPairingsStretch");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFront, lane, "OtherFootPairingsCrossoverFront");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFrontStretch, lane, "OtherFootPairingsCrossoverFrontStretch");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverBehind, lane, "OtherFootPairingsCrossoverBehind");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverBehindStretch, lane, "OtherFootPairingsCrossoverBehindStretch");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFront, lane,
+					"OtherFootPairingsCrossoverFront");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverFrontStretch, lane,
+					"OtherFootPairingsCrossoverFrontStretch");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverBehind, lane,
+					"OtherFootPairingsCrossoverBehind");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsCrossoverBehindStretch, lane,
+					"OtherFootPairingsCrossoverBehindStretch");
 				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInverted, lane, "OtherFootPairingsInverted");
-				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInvertedStretch, lane, "OtherFootPairingsInvertedStretch");
+				errors |= !ValidateArrowDataArrays(arrowData.OtherFootPairingsInvertedStretch, lane,
+					"OtherFootPairingsInvertedStretch");
 			}
 
 			if (StartingPositions == null || StartingPositions.Length < 1)
@@ -248,6 +253,7 @@ namespace StepManiaLibrary
 				minY = Math.Min(minY, ArrowData[a].Y);
 				maxY = Math.Max(maxY, ArrowData[a].Y);
 			}
+
 			var numColumns = maxX - minX;
 			var numRows = maxY - minY;
 
@@ -269,6 +275,7 @@ namespace StepManiaLibrary
 					{
 						ArrowData[a].MirroredLane = a2;
 					}
+
 					if (ArrowData[a].X == ArrowData[a2].X && Flip(ArrowData[a].Y) == ArrowData[a2].Y)
 					{
 						ArrowData[a].FlippedLane = a2;
@@ -336,7 +343,7 @@ namespace StepManiaLibrary
 
 		private int FindArrowAt(int x, int y)
 		{
-			for (int a = 0; a < NumArrows; a++)
+			for (var a = 0; a < NumArrows; a++)
 				if (ArrowData[a].X == x && ArrowData[a].Y == y)
 					return a;
 			return InvalidArrowIndex;
@@ -396,11 +403,14 @@ namespace StepManiaLibrary
 								validOverlap = false;
 								break;
 							}
+
 							arrowMapping[thisA] = otherA;
 						}
+
 						if (!validOverlap)
 							break;
 					}
+
 					if (!validOverlap)
 						continue;
 
@@ -416,69 +426,82 @@ namespace StepManiaLibrary
 							for (var f = 0; f < NumFeet; f++)
 							{
 								if (ArrowData[a1].BracketablePairingsHeel[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsHeel[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].BracketablePairingsHeel[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].BracketablePairingsToe[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].BracketablePairingsToe[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].BracketablePairingsToe[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairings[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairings[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairings[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsStretch[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsStretch[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsStretch[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsCrossoverFront[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverFront[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverFront[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsCrossoverFrontStretch[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverFrontStretch[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverFrontStretch[f][
+									    arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsCrossoverBehind[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverBehind[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverBehind[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsCrossoverBehindStretch[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverBehindStretch[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsCrossoverBehindStretch[f][
+									    arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsInverted[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsInverted[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsInverted[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
+
 								if (ArrowData[a1].OtherFootPairingsInvertedStretch[f][a2]
-									&& !other.ArrowData[arrowMapping[a1]].OtherFootPairingsInvertedStretch[f][arrowMapping[a2]])
+								    && !other.ArrowData[arrowMapping[a1]].OtherFootPairingsInvertedStretch[f][arrowMapping[a2]])
 								{
 									pairingsMatch = false;
 									break;
 								}
 							}
+
 							if (!pairingsMatch)
 								break;
 						}
+
 						if (!pairingsMatch)
 							break;
 					}

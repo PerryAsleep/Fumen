@@ -29,9 +29,9 @@ namespace StepManiaLibrary.PerformedChart
 			{
 				Left,
 				Right,
-				None
+				None,
 			};
-			
+
 			private static long IdCounter;
 
 			/// <summary>
@@ -139,6 +139,7 @@ namespace StepManiaLibrary.PerformedChart
 			/// orientation that they will likely need to double-step to correct from.
 			/// </summary>
 			private readonly int MisleadingStepCount;
+
 			/// <summary>
 			/// The total number of ambiguous steps for the path to to and including this SearchNode.
 			/// Ambiguous steps are steps which any reasonably player would interpret as having more
@@ -157,18 +158,22 @@ namespace StepManiaLibrary.PerformedChart
 			/// Units are in arrows.
 			/// </summary>
 			private readonly float LateralBodyPosition;
+
 			/// <summary>
 			/// Lateral movement direction of this node from the previous node.
 			/// </summary>
 			private readonly LateralMovementDirection MovementDir = LateralMovementDirection.None;
+
 			/// <summary>
 			/// Time that we started moving in the current lateral direction.
 			/// </summary>
 			private readonly double LastLateralMovementStartTime;
+
 			/// <summary>
 			/// Position from which we started moving in the current lateral direction.
 			/// </summary>
 			private readonly float LastLateralMovementStartPosition;
+
 			/// <summary>
 			/// Number of steps in the current lateral move.
 			/// </summary>
@@ -180,6 +185,7 @@ namespace StepManiaLibrary.PerformedChart
 			/// if this SearchNode represents steps on any arrows.
 			/// </summary>
 			private readonly double[] LastTimeFootStepped;
+
 			/// <summary>
 			/// For each foot, the last time in seconds that it was released.
 			/// During construction, these values will be updated to this SearchNode's Time
@@ -273,7 +279,9 @@ namespace StepManiaLibrary.PerformedChart
 				for (var a = 0; a < Actions.Length; a++)
 				{
 					StepCounts[a] = (previousNode?.StepCounts[a] ?? 0)
-						+ (Actions[a] == PerformanceFootAction.Tap || Actions[a] == PerformanceFootAction.Hold ? 1 : 0);
+					                + (Actions[a] == PerformanceFootAction.Tap || Actions[a] == PerformanceFootAction.Hold
+						                ? 1
+						                : 0);
 				}
 
 				// Copy the previous SearchNode's last step times to this nodes last step times.
@@ -294,18 +302,23 @@ namespace StepManiaLibrary.PerformedChart
 					for (var p = 0; p < NumFootPortions; p++)
 					{
 						LastArrowsSteppedOnByFoot[f][p] = previousNode?.LastArrowsSteppedOnByFoot[f][p]
-							?? GraphNode.State[f, p].Arrow;
+						                                  ?? GraphNode.State[f, p].Arrow;
 					}
 				}
-				var (travelSpeedCost, travelDistanceCost) = GetStepTravelCostsAndUpdateStepTracking(stepGraph, config, out var isStep);
+
+				var (travelSpeedCost, travelDistanceCost) =
+					GetStepTravelCostsAndUpdateStepTracking(stepGraph, config, out var isStep);
 				TotalIndividualStepTravelSpeedCost = (PreviousNode?.TotalIndividualStepTravelSpeedCost ?? 0.0) + travelSpeedCost;
-				TotalIndividualStepTravelDistanceCost = (PreviousNode?.TotalIndividualStepTravelDistanceCost ?? 0.0) + travelDistanceCost;
+				TotalIndividualStepTravelDistanceCost =
+					(PreviousNode?.TotalIndividualStepTravelDistanceCost ?? 0.0) + travelDistanceCost;
 				TotalDistributionCost = GetDistributionCost(stepGraph, config);
 				TotalStretchCost = (PreviousNode?.TotalStretchCost ?? 0.0) + GetStretchCost(stepGraph, config);
-				
+
 				LateralBodyPosition = GetLateralBodyPosition(stepGraph);
-				UpdateLateralTracking(isStep, ref LateralMovementNumSteps, ref LastLateralMovementStartTime, ref LastLateralMovementStartPosition, ref MovementDir);
-				TotalLateralMovementSpeedCost = (PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + GetLateralMovementCost(config, nps);
+				UpdateLateralTracking(isStep, ref LateralMovementNumSteps, ref LastLateralMovementStartTime,
+					ref LastLateralMovementStartPosition, ref MovementDir);
+				TotalLateralMovementSpeedCost =
+					(PreviousNode?.TotalLateralMovementSpeedCost ?? 0.0) + GetLateralMovementCost(config, nps);
 
 				UpdateStepCounts(
 					stepGraph,
@@ -379,9 +392,9 @@ namespace StepManiaLibrary.PerformedChart
 									for (var f = 0; f < NumFeet; f++)
 									{
 										if (stepGraph.PadData.ArrowData[steppedFromArrow]
-												.BracketablePairingsHeel[f][steppedToArrow]
-											|| stepGraph.PadData.ArrowData[steppedFromArrow]
-												.BracketablePairingsToe[f][steppedToArrow])
+											    .BracketablePairingsHeel[f][steppedToArrow]
+										    || stepGraph.PadData.ArrowData[steppedFromArrow]
+											    .BracketablePairingsToe[f][steppedToArrow])
 										{
 											totalNumBracketableNewArrowSteps++;
 											break;
@@ -389,6 +402,7 @@ namespace StepManiaLibrary.PerformedChart
 									}
 								}
 							}
+
 							break;
 						}
 						case StepType.SameArrow:
@@ -402,8 +416,9 @@ namespace StepManiaLibrary.PerformedChart
 								var previousNodeToCheck = PreviousNode;
 								while (previousNodeToCheck != null && previousNodeToCheck.GraphLinkFromPreviousNode != null)
 								{
-									if (previousNodeToCheck.GraphLinkFromPreviousNode.GraphLink.IsSingleStep(out var previousStepType, out var previousFoot)
-										&& previousFoot == footPerformingStep)
+									if (previousNodeToCheck.GraphLinkFromPreviousNode.GraphLink.IsSingleStep(
+										    out var previousStepType, out var previousFoot)
+									    && previousFoot == footPerformingStep)
 									{
 										if (previousStepType == StepType.SameArrow)
 										{
@@ -419,6 +434,7 @@ namespace StepManiaLibrary.PerformedChart
 									{
 										break;
 									}
+
 									previousNodeToCheck = previousNodeToCheck.PreviousNode;
 								}
 
@@ -427,6 +443,7 @@ namespace StepManiaLibrary.PerformedChart
 									totalNumSameArrowStepsInARowPerFootOverMax++;
 								}
 							}
+
 							break;
 						}
 					}
@@ -492,7 +509,7 @@ namespace StepManiaLibrary.PerformedChart
 							if (prevLinks[f, p].Valid)
 							{
 								if (prevLinks[f, p].Action == FootAction.Release
-									|| prevLinks[f, p].Action == FootAction.Tap)
+								    || prevLinks[f, p].Action == FootAction.Tap)
 								{
 									LastTimeFootReleased[f] = Time;
 								}
@@ -593,7 +610,8 @@ namespace StepManiaLibrary.PerformedChart
 				{
 					var totalDifferenceFromDesiredLanePercentage = 0.0f;
 					for (var a = 0; a < StepCounts.Length; a++)
-						totalDifferenceFromDesiredLanePercentage += Math.Abs((float)StepCounts[a] / totalSteps - (float)weights[a]);
+						totalDifferenceFromDesiredLanePercentage +=
+							Math.Abs((float)StepCounts[a] / totalSteps - (float)weights[a]);
 					distributionCost = totalDifferenceFromDesiredLanePercentage / StepCounts.Length;
 				}
 
@@ -651,6 +669,7 @@ namespace StepManiaLibrary.PerformedChart
 						lastLateralMovementStartPosition = PreviousNode.LastLateralMovementStartPosition;
 						movementDir = PreviousNode.MovementDir;
 					}
+
 					return;
 				}
 
@@ -663,7 +682,7 @@ namespace StepManiaLibrary.PerformedChart
 					var d = LateralBodyPosition - PreviousNode.LateralBodyPosition;
 					if (Math.Abs(d) > 0.0001)
 					{
-						movementDir = (d < 0) ? LateralMovementDirection.Left : LateralMovementDirection.Right;
+						movementDir = d < 0 ? LateralMovementDirection.Left : LateralMovementDirection.Right;
 						if (PreviousNode.MovementDir != MovementDir)
 						{
 							lastLateralMovementStartTime = Time;
@@ -692,11 +711,12 @@ namespace StepManiaLibrary.PerformedChart
 					var nps = LateralMovementNumSteps / t;
 					var speed = Math.Abs(LateralBodyPosition - LastLateralMovementStartPosition) / t;
 					if (((averageNps > 0.0 && nps > averageNps * lateralConfig.RelativeNPS) || nps > lateralConfig.AbsoluteNPS)
-						&& speed > lateralConfig.Speed)
+					    && speed > lateralConfig.Speed)
 					{
 						lateralMovementSpeedCost = speed - lateralConfig.Speed;
 					}
 				}
+
 				return lateralMovementSpeedCost;
 			}
 
@@ -957,7 +977,7 @@ namespace StepManiaLibrary.PerformedChart
 				{
 					// At this point in the search only Tap and Hold are in use for steps.
 					if ((actions[a] == PerformanceFootAction.Tap || actions[a] == PerformanceFootAction.Hold)
-						!= (otherActions[a] == PerformanceFootAction.Tap || otherActions[a] == PerformanceFootAction.Hold))
+					    != (otherActions[a] == PerformanceFootAction.Tap || otherActions[a] == PerformanceFootAction.Hold))
 					{
 						return false;
 					}

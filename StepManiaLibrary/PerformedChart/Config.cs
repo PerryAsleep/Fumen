@@ -88,6 +88,7 @@ namespace StepManiaLibrary.PerformedChart
 						pccId);
 					errors = true;
 				}
+
 				return errors;
 			}
 		}
@@ -104,6 +105,7 @@ namespace StepManiaLibrary.PerformedChart
 			/// See Config.md for more information.
 			/// </summary>
 			[JsonInclude] public double TravelSpeedMinTimeSeconds = -1.0;
+
 			/// <summary>
 			/// When limiting travel speed, the higher time for the tightening range.
 			/// Time in seconds between steps for one foot.
@@ -117,6 +119,7 @@ namespace StepManiaLibrary.PerformedChart
 			/// See Config.md for more information.
 			/// </summary>
 			[JsonInclude] public double TravelDistanceMin = -1.0;
+
 			/// <summary>
 			/// When limiting travel distance, the higher distance for the tightening range.
 			/// Distance is in panel widths.
@@ -130,6 +133,7 @@ namespace StepManiaLibrary.PerformedChart
 			/// See Config.md for more information.
 			/// </summary>
 			[JsonInclude] public double StretchDistanceMin = -1.0;
+
 			/// <summary>
 			/// When limiting stretch, the higher distance for the tightening range.
 			/// Distance is in panels width.
@@ -250,6 +254,7 @@ namespace StepManiaLibrary.PerformedChart
 						pccId);
 					errors = true;
 				}
+
 				return errors;
 			}
 		}
@@ -326,6 +331,7 @@ namespace StepManiaLibrary.PerformedChart
 						pccId);
 					errors = true;
 				}
+
 				return errors;
 			}
 		}
@@ -334,10 +340,12 @@ namespace StepManiaLibrary.PerformedChart
 		/// FacingConfig.
 		/// </summary>
 		[JsonInclude] public FacingConfig Facing = new FacingConfig();
+
 		/// <summary>
 		/// LateralTighteningConfig.
 		/// </summary>
 		[JsonInclude] public LateralTighteningConfig LateralTightening = new LateralTighteningConfig();
+
 		/// <summary>
 		/// StepTighteningConfig.
 		/// </summary>
@@ -349,6 +357,7 @@ namespace StepManiaLibrary.PerformedChart
 		/// for distributing arrows.
 		/// </summary>
 		[JsonInclude] public Dictionary<string, List<int>> ArrowWeights = new Dictionary<string, List<int>>();
+
 		/// <summary>
 		/// Normalized ArrowWeights.
 		/// Values sum to 1.0.
@@ -439,7 +448,7 @@ namespace StepManiaLibrary.PerformedChart
 			var errors = false;
 
 			var desiredWeightsValid = ArrowWeights != null
-									  && ArrowWeights.ContainsKey(chartType);
+			                          && ArrowWeights.ContainsKey(chartType);
 			if (!desiredWeightsValid)
 			{
 				LogError($"No ArrowWeights specified for \"{chartType}\".", pccId);
@@ -452,7 +461,7 @@ namespace StepManiaLibrary.PerformedChart
 				if (ArrowWeights[chartType].Count != expectedNumArrows)
 				{
 					LogError($"ArrowWeights[\"{chartType}\"] has "
-							 + $"{ArrowWeights[chartType].Count} entries. Expected {expectedNumArrows}.",
+					         + $"{ArrowWeights[chartType].Count} entries. Expected {expectedNumArrows}.",
 						pccId);
 					errors = true;
 				}
