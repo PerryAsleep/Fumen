@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Fumen;
 using Fumen.Converters;
 using StepManiaLibrary;
-using static StepManiaLibrary.Constants;
 
 namespace StepManiaChartFiller
 {
@@ -42,7 +41,7 @@ namespace StepManiaChartFiller
 		/// <summary>
 		/// Whether the application should close automatically or wait for input when it completes.
 		/// </summary>
-		[JsonInclude] public bool CloseAutomaticallyWhenComplete = false;
+		[JsonInclude] public bool CloseAutomaticallyWhenComplete;
 
 		/// <summary>
 		/// Directory to recursively search through for finding Charts to convert.
@@ -76,7 +75,7 @@ namespace StepManiaChartFiller
 			{
 				Converters =
 				{
-					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
 				},
 				ReadCommentHandling = JsonCommentHandling.Skip,
 				AllowTrailingCommas = true,
@@ -85,7 +84,7 @@ namespace StepManiaChartFiller
 
 			try
 			{
-				using (FileStream openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
+				using (var openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
 				{
 					Instance = await JsonSerializer.DeserializeAsync<Config>(openStream, options);
 					Instance?.Init();

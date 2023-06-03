@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -14,9 +12,14 @@ using Fumen.ChartDefinition;
 using Fumen.Converters;
 using StepManiaLibrary;
 
+// ReSharper disable UnusedMember.Local
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
+// ReSharper disable HeuristicUnreachableCode
+// ReSharper disable UnusedParameter.Local
+
 namespace StepManiaChartFiller
 {
-	class Program
+	internal class Program
 	{
 		/// <summary>
 		/// Tag for logging messages.
@@ -45,7 +48,7 @@ namespace StepManiaChartFiller
 			Logger.StartUp(new Logger.Config
 			{
 				WriteToConsole = true,
-				Level = LogLevel.Error
+				Level = LogLevel.Error,
 			});
 
 			// Load Config.
@@ -57,6 +60,7 @@ namespace StepManiaChartFiller
 			var loggerSuccess = CreateLogger();
 
 			// Validate Config, even if creating the logger failed. This will still log errors to the console.
+			// ReSharper disable once PossibleNullReferenceException
 			if (!config.Validate() || !loggerSuccess)
 				Exit(false);
 
@@ -64,15 +68,6 @@ namespace StepManiaChartFiller
 			var stepGraphCreationSuccess = await LoadPadDataAndCreateStepGraph();
 			if (!stepGraphCreationSuccess)
 				Exit(false);
-
-			// Cache the replacement GraphLinks from the OutputStepGraph.
-			var stepTypeReplacments = new Dictionary<StepType, HashSet<StepType>>();
-			foreach (var stepType in Enum.GetValues(typeof(StepType)).Cast<StepType>())
-			{
-				var values = new HashSet<StepType>();
-				values.Add(stepType);
-				stepTypeReplacments[stepType] = values;
-			}
 
 			await ProcessChart();
 
@@ -118,7 +113,7 @@ namespace StepManiaChartFiller
 						LogFilePath = logFilePath,
 						LogFileFlushIntervalSeconds = config.LogFlushIntervalSeconds,
 						LogFileBufferSizeBytes = config.LogBufferSizeBytes,
-						WriteToBuffer = false
+						WriteToBuffer = false,
 					});
 				}
 				else if (config.LogToConsole)
@@ -128,7 +123,7 @@ namespace StepManiaChartFiller
 						Level = config.LogLevel,
 						WriteToConsole = true,
 						WriteToFile = false,
-						WriteToBuffer = false
+						WriteToBuffer = false,
 					});
 				}
 			}
@@ -220,16 +215,16 @@ namespace StepManiaChartFiller
 				FilePath = fi.FullName,
 				Song = song,
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseLeastCommonMultipleFromStepmaniaEditor,
-				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource
+				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource,
 			};
 			var fileFormat = FileFormat.GetFileFormatByExtension(fi.Extension);
 			switch (fileFormat.Type)
 			{
 				case FileFormatType.SM:
-					new SMWriter(config).Save();
+					await new SMWriter(config).SaveAsync();
 					break;
 				case FileFormatType.SSC:
-					new SSCWriter(config).Save();
+					await new SSCWriter(config).SaveAsync();
 					break;
 				default:
 					LogError($"Unsupported file format. Cannot save {fi.FullName}");
@@ -311,7 +306,7 @@ namespace StepManiaChartFiller
 						{
 							resultEvents.Add(sourceEvent);
 						}
-						
+
 						// Do not add any tap or hold notes. If this is a hold end note that occurred during the 
 						// fill section, remove the start so we do not add it later.
 						if (sourceEvent is LaneHoldEndNote lhen)
@@ -319,6 +314,7 @@ namespace StepManiaChartFiller
 							// do not add.
 							holdStartEvents[lhen.Lane] = null;
 						}
+
 						break;
 					}
 				}
@@ -347,12 +343,14 @@ namespace StepManiaChartFiller
 									break;
 								}
 							}
+
 							if (!holdOverlapsFill)
 							{
 								resultEvents.Add(holdStartEvents[lhen.Lane]);
 								resultEvents.Add(sourceEvent);
 							}
 						}
+
 						holdStartEvents[lhen.Lane] = null;
 					}
 
