@@ -12,7 +12,7 @@ namespace StepManiaLibraryTests
 	[TestClass]
 	public class TestArrowData
 	{
-		private static ChartType[] PadDataTypes = new ChartType[]
+		private static readonly ChartType[] PadDataTypes = new ChartType[]
 		{
 			ChartType.dance_single,
 			ChartType.dance_double,
@@ -27,7 +27,7 @@ namespace StepManiaLibraryTests
 			ChartType.smx_full,
 		};
 
-		private static Dictionary<ChartType, PadData> TestPadData;
+		private static readonly Dictionary<ChartType, PadData> TestPadData;
 
 		static TestArrowData()
 		{
@@ -38,6 +38,7 @@ namespace StepManiaLibraryTests
 				var typeStr = ChartTypeString(PadDataTypes[i]);
 				tasks[i] = PadData.LoadPadData(typeStr, $"{typeStr}.json");
 			}
+			// ReSharper disable once CoVariantArrayConversion
 			Task.WaitAll(tasks);
 			for (var i = 0; i < PadDataTypes.Length; i++)
 			{
@@ -56,36 +57,38 @@ namespace StepManiaLibraryTests
 				Assert.IsTrue(kvp.Value.CanFitWithin(kvp.Value));
 			}
 
-			var expectedFits = new Dictionary<ChartType, HashSet<ChartType>>();
-			expectedFits[ChartType.dance_single] = new HashSet<ChartType> {
-				ChartType.dance_double,
-				ChartType.dance_solo,
-				ChartType.smx_single,
-				ChartType.smx_full,
-			};
-			expectedFits[ChartType.dance_double] = new HashSet<ChartType> {
-				ChartType.smx_full,
-			};
-			expectedFits[ChartType.dance_threepanel] = new HashSet<ChartType> {
-				ChartType.dance_solo
-			};
-			expectedFits[ChartType.pump_single] = new HashSet<ChartType> {
-				ChartType.pump_double
-			};
-			expectedFits[ChartType.pump_halfdouble] = new HashSet<ChartType> {
-				ChartType.pump_double
-			};
-			expectedFits[ChartType.smx_beginner] = new HashSet<ChartType> {
-				ChartType.dance_solo,
-				ChartType.smx_single,
-				ChartType.smx_dual,
-				ChartType.smx_full,
-			};
-			expectedFits[ChartType.smx_single] = new HashSet<ChartType> {
-				ChartType.smx_full,
-			};
-			expectedFits[ChartType.smx_dual] = new HashSet<ChartType> {
-				ChartType.smx_full,
+			var expectedFits = new Dictionary<ChartType, HashSet<ChartType>>
+			{
+				[ChartType.dance_single] = new HashSet<ChartType> {
+					ChartType.dance_double,
+					ChartType.dance_solo,
+					ChartType.smx_single,
+					ChartType.smx_full,
+				},
+				[ChartType.dance_double] = new HashSet<ChartType> {
+					ChartType.smx_full,
+				},
+				[ChartType.dance_threepanel] = new HashSet<ChartType> {
+					ChartType.dance_solo
+				},
+				[ChartType.pump_single] = new HashSet<ChartType> {
+					ChartType.pump_double
+				},
+				[ChartType.pump_halfdouble] = new HashSet<ChartType> {
+					ChartType.pump_double
+				},
+				[ChartType.smx_beginner] = new HashSet<ChartType> {
+					ChartType.dance_solo,
+					ChartType.smx_single,
+					ChartType.smx_dual,
+					ChartType.smx_full,
+				},
+				[ChartType.smx_single] = new HashSet<ChartType> {
+					ChartType.smx_full,
+				},
+				[ChartType.smx_dual] = new HashSet<ChartType> {
+					ChartType.smx_full,
+				},
 			};
 
 			for (var t1 = 0; t1 < PadDataTypes.Length; t1++)
