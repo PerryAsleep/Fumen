@@ -18,18 +18,19 @@ namespace ChartStats
 	/// Some hardcoded assumptions that the time signature will be 4/4.
 	/// Some copy-paste file system parsing from StepManiaChartGenerator.
 	/// </summary>
-	class Program
+	internal class Program
 	{
 		/// <summary>
 		/// StringBuilder for accumulating csv data for a song stats spreadsheet.
 		/// </summary>
-		private static StringBuilder SBStats = new StringBuilder();
+		private static readonly StringBuilder SBStats = new StringBuilder();
+
 		/// <summary>
 		/// StringBuilder for accumulating csv data about steps taken on each side of the pads.
 		/// </summary>
-		private static StringBuilder SBStepsPerSide = new StringBuilder();
+		private static readonly StringBuilder SBStepsPerSide = new StringBuilder();
 
-		static async Task Main(string[] args)
+		public static async Task Main()
 		{
 			// Load Config.
 			var config = await Config.Load();
@@ -40,14 +41,15 @@ namespace ChartStats
 			Logger.StartUp(new Logger.Config
 			{
 				WriteToConsole = true,
-				Level = config.LogLevel
+				Level = config.LogLevel,
 			});
 
 			// Write headers.
 			// Assumption that charts are doubles.
-			SBStats.AppendLine("Path,File,Song,Type,Difficulty,Rating,NPS,Peak NPS,% Under .5x NPS,% Over 2x NPS,% Over 3x NPS,% Over 4x NPS,Total Steps,L,D,U,R,L,D,U,R,%L,%D,%U,%R,%L,%D,%U,%R");
+			SBStats.AppendLine(
+				"Path,File,Song,Type,Difficulty,Rating,NPS,Peak NPS,% Under .5x NPS,% Over 2x NPS,% Over 3x NPS,% Over 4x NPS,Total Steps,L,D,U,R,L,D,U,R,%L,%D,%U,%R,%L,%D,%U,%R");
 			SBStepsPerSide.Append("Path,File,Song,Type,Difficulty,Rating,Time");
-			foreach(var denominator in SMCommon.ValidDenominators)
+			foreach (var denominator in SMCommon.ValidDenominators)
 				SBStepsPerSide.Append($",1_{denominator * SMCommon.NumBeatsPerMeasure} Steps");
 			SBStepsPerSide.Append(",Variable Steps");
 			SBStepsPerSide.Append(",NPS");
@@ -71,7 +73,7 @@ namespace ChartStats
 		/// Loops over all files specified by the Config and records stats
 		/// into the appropriate CSV StringBuilders for matching Charts.
 		/// </summary>
-		static async Task FindCharts()
+		private static async Task FindCharts()
 		{
 			if (!Directory.Exists(Config.Instance.InputDirectory))
 			{
@@ -128,7 +130,7 @@ namespace ChartStats
 					// Check if the matches the expression for files to convert.
 					if (!Config.Instance.InputNameMatches(fi.DirectoryName, fi.Name))
 						continue;
-					
+
 					await ProcessSong(fi);
 				}
 			}
@@ -139,7 +141,7 @@ namespace ChartStats
 		/// Record stats for each chart into the appropriate CSV StringBuilders.
 		/// </summary>
 		/// <param name="fileInfo">FileInfo representing a song.</param>
-		static async Task ProcessSong(FileInfo fileInfo)
+		private static async Task ProcessSong(FileInfo fileInfo)
 		{
 			Logger.Info($"Processing {fileInfo.Name}.");
 
@@ -165,8 +167,8 @@ namespace ChartStats
 					// Tuple first value is time for the series of steps.
 					// Tuple second value is hte number of steps in the series.
 					var stepsBetweenSideChanges = new Dictionary<int, List<Tuple<double, int>>>();
-					foreach (var denom in SMCommon.ValidDenominators)
-						stepsBetweenSideChanges[denom] = new List<Tuple<double, int>>();
+					foreach (var denominator in SMCommon.ValidDenominators)
+						stepsBetweenSideChanges[denominator] = new List<Tuple<double, int>>();
 
 					var totalSteps = 0;
 					var steps = new int[chart.NumInputs];
@@ -303,7 +305,7 @@ namespace ChartStats
 
 						var currentStepIsFullyOnLeft = currentStepsOnLeft && !currentStepsOnRight;
 						var currentStepIsFullyOnRight = currentStepsOnRight && !currentStepsOnLeft;
-						
+
 						// Determine if any are held on each side so we don't consider steps on the other side
 						// to be the start of a new sequence.
 						var anyHeldOnLeft = false;
@@ -381,35 +383,36 @@ namespace ChartStats
 					SBStats.Append($"{CSVEscape(fileInfo.Directory.FullName)},{CSVEscape(fileInfo.Name)},");
 					SBStats.Append(
 						$"{CSVEscape(song.Title)},{CSVEscape(chart.Type)},{CSVEscape(chart.DifficultyType)},{chart.DifficultyRating},");
-					
+
 					// NPS
 					SBStats.Append($"{nps},");
 					SBStats.Append($"{peakNPS},");
 					var numUnderHalf = 0;
-					var numOver2x = 0;
-					var numOver3x = 0;
-					var numOver4x = 0;
+					var numOver2X = 0;
+					var numOver3X = 0;
+					var numOver4X = 0;
 					foreach (var noteNPS in npsPerNote)
 					{
 						if (noteNPS < 0.5 * nps)
 							numUnderHalf++;
 						else if (noteNPS > 2.0 * nps && noteNPS <= 3.0 * nps)
-							numOver2x++;
+							numOver2X++;
 						else if (noteNPS > 3.0 * nps && noteNPS <= 4.0 * nps)
-							numOver3x++;
+							numOver3X++;
 						else if (noteNPS > 4.0 * nps)
-							numOver4x++;
+							numOver4X++;
 					}
+
 					SBStats.Append($"{(double)numUnderHalf / totalSteps},");
-					SBStats.Append($"{(double)numOver2x / totalSteps},");
-					SBStats.Append($"{(double)numOver3x / totalSteps},");
-					SBStats.Append($"{(double)numOver4x / totalSteps},");
+					SBStats.Append($"{(double)numOver2X / totalSteps},");
+					SBStats.Append($"{(double)numOver3X / totalSteps},");
+					SBStats.Append($"{(double)numOver4X / totalSteps},");
 
 					SBStats.Append($"{totalSteps},");
 					for (var i = 0; i < chart.NumInputs; i++)
 						SBStats.Append($"{steps[i]},");
 					for (var i = 0; i < chart.NumInputs; i++)
-						SBStats.Append($"{(double) steps[i] / totalSteps},");
+						SBStats.Append($"{(double)steps[i] / totalSteps},");
 					SBStats.AppendLine("");
 
 					// Record data about the steps taken per each side of the pads.
@@ -430,6 +433,7 @@ namespace ChartStats
 								else
 									SBStepsPerSide.Append(",");
 							}
+
 							SBStepsPerSide.Append(",");
 
 							// NPS pass
@@ -441,9 +445,11 @@ namespace ChartStats
 								else
 									SBStepsPerSide.Append(",");
 							}
+
 							SBStepsPerSide.AppendLine(",");
 						}
 					}
+
 					foreach (var sideChange in stepsBetweenSideChangesVariableSpacing)
 					{
 						SBStepsPerSide.Append($"{CSVEscape(fileInfo.Directory.FullName)},{CSVEscape(fileInfo.Name)},");
@@ -506,8 +512,8 @@ namespace ChartStats
 
 			if (currentStepsBetweenSideUseVariableTiming)
 				stepsBetweenSideChangesVariableSpacing.Add(entry);
-			else if (stepsBetweenSideChanges.ContainsKey(currentStepsBetweenSideGreatestDenominator))
-				stepsBetweenSideChanges[currentStepsBetweenSideGreatestDenominator].Add(entry);
+			else if (stepsBetweenSideChanges.TryGetValue(currentStepsBetweenSideGreatestDenominator, out var change))
+				change.Add(entry);
 			// If we recorded a time signature, but it isn't a valid subdivision, just use the highest subdivision.
 			else
 				stepsBetweenSideChanges[48].Add(entry);

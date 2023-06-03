@@ -24,7 +24,7 @@ namespace ChartStats
 
 		[JsonInclude] public string InputDirectory;
 		[JsonInclude] public string InputNameRegex;
-		[JsonInclude] public List<string> InputBlacklist;
+		[JsonInclude] public List<string> InputDisallowList;
 		[JsonInclude] public string InputChartType;
 		[JsonInclude] public string DifficultyRegex;
 		[JsonInclude] public string OutputFileStats;
@@ -39,12 +39,12 @@ namespace ChartStats
 		{
 			if (Instance != null)
 				return Instance;
-			
+
 			var options = new JsonSerializerOptions
 			{
 				Converters =
 				{
-					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+					new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
 				},
 				ReadCommentHandling = JsonCommentHandling.Skip,
 				AllowTrailingCommas = true,
@@ -53,7 +53,7 @@ namespace ChartStats
 
 			try
 			{
-				using (FileStream openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
+				using (var openStream = File.OpenRead(Fumen.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName)))
 				{
 					Instance = await JsonSerializer.DeserializeAsync<Config>(openStream, options);
 				}
@@ -63,6 +63,7 @@ namespace ChartStats
 				LogError($"Failed to load {FileName}. {e}");
 				Instance = null;
 			}
+
 			return Instance;
 		}
 
@@ -81,8 +82,10 @@ namespace ChartStats
 			}
 			catch (Exception e)
 			{
-				LogError($"Failed to determine if difficulty \"{difficulty}\" matches DifficultyRegex \"{DifficultyRegex}\". {e}");
+				LogError(
+					$"Failed to determine if difficulty \"{difficulty}\" matches DifficultyRegex \"{DifficultyRegex}\". {e}");
 			}
+
 			return matches;
 		}
 
@@ -90,13 +93,14 @@ namespace ChartStats
 		/// Determines whether the file name represented by the given string
 		/// matches the Config InputNameRegex.
 		/// </summary>
+		/// <param name="fullPath">File full path.</param>
 		/// <param name="inputFileName">String representing the input file name to check.</param>
 		/// <returns>True if this file name matches and false otherwise.</returns>
 		public bool InputNameMatches(string fullPath, string inputFileName)
 		{
-			foreach (var blackList in InputBlacklist)
+			foreach (var disallowList in InputDisallowList)
 			{
-				if (fullPath.StartsWith(blackList))
+				if (fullPath.StartsWith(disallowList))
 					return false;
 			}
 
@@ -109,10 +113,12 @@ namespace ChartStats
 			{
 				LogError($"Failed to determine if file \"{inputFileName}\" matches InputNameRegex \"{InputNameRegex}\". {e}");
 			}
+
 			return matches;
 		}
 
 		#region Logging
+
 		private static void LogError(string message)
 		{
 			Logger.Error($"[{LogTag}] {message}");
@@ -127,6 +133,7 @@ namespace ChartStats
 		{
 			Logger.Info($"[{LogTag}] {message}");
 		}
+
 		#endregion Logging
 	}
 }

@@ -2,7 +2,7 @@
 	"LogLevel": "Info",
 	"InputDirectory": "C:\\Games\\StepMania 5\\Songs",
 	"InputNameRegex": ".*\\.(sm|ssc)$",
-	"InputBlacklist": [
+	"InputDisallowList": [
 		"C:\\Games\\StepMania 5\\Songs\\In The Groove 3\\Heel and Toe",
 		"C:\\Games\\StepMania 5\\Songs\\Couples",
 		"C:\\Games\\StepMania 5\\Songs\\Customs"
