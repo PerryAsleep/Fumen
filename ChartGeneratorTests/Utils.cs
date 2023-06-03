@@ -10,7 +10,7 @@ namespace ChartGeneratorTests
 	/// <summary>
 	/// Unit Test Utilities.
 	/// </summary>
-	class Utils
+	internal class Utils
 	{
 		/// <summary>
 		/// Gets the path with extension to a test sm or ssc file in the given folder.
@@ -24,9 +24,11 @@ namespace ChartGeneratorTests
 		/// <returns>String representation of path to sm file with extension.</returns>
 		public static string GetTestChartPath(string songFolder, string fileName = "test", string extension = "sm")
 		{
-			return Path.Combine(new[]{
+			return Path.Combine(new[]
+			{
 				AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "ChartGeneratorTests", "TestData", songFolder,
-				$"{fileName}.{extension}"});
+				$"{fileName}.{extension}",
+			});
 		}
 
 		/// <summary>
@@ -144,7 +146,8 @@ namespace ChartGeneratorTests
 		{
 			Assert.AreEqual(chartEvent.IntegerPosition, expectedIntegerPosition);
 			Assert.IsTrue(chartEvent.TimeSeconds.DoubleEquals(expectedTimeSeconds));
-			Assert.AreEqual(chartEvent.MetricPosition, new MetricPosition(expectedMeasure, expectedBeat, expectedSubDivisionNumerator, expectedSubDivisionDenominator));
+			Assert.AreEqual(chartEvent.MetricPosition,
+				new MetricPosition(expectedMeasure, expectedBeat, expectedSubDivisionNumerator, expectedSubDivisionDenominator));
 		}
 	}
 }
