@@ -7,7 +7,7 @@ using static StepManiaLibrary.Constants;
 
 namespace ExpressedChartTestGenerator
 {
-	class Program
+	internal class Program
 	{
 		/// <summary>
 		/// Generate test code to assert that an ExpressedChart matches the current state of the ExpressedChart generated from an sm file.
@@ -32,7 +32,7 @@ namespace ExpressedChartTestGenerator
 		/// Write a new cs file containing the full test for the chart.
 		/// Otherwise log the test as a method to the console to be copied.
 		/// </param>
-		static void Main(
+		public static void Main(
 			string argument,
 			string file = "test",
 			string extension = "sm",
@@ -68,6 +68,9 @@ namespace ExpressedChartTestGenerator
 				sb.AppendLine("using StepManiaLibrary;");
 				sb.AppendLine("using Fumen.Converters;");
 				sb.AppendLine("using static ChartGeneratorTests.TestExpressedChart;");
+				sb.AppendLine("// ReSharper disable RedundantAssignment");
+				sb.AppendLine("// ReSharper disable InconsistentNaming");
+				sb.AppendLine("// ReSharper disable IdentifierTypo");
 				sb.AppendLine("");
 				sb.AppendLine("namespace ChartGeneratorTests");
 				sb.AppendLine("{");

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using static Fumen.Converters.SMCommon;
 using System.Linq;
+// ReSharper disable RedundantAssignment
+// ReSharper disable RedundantArgumentDefaultValue
 
 namespace ChartGeneratorTests
 {
@@ -19,12 +21,12 @@ namespace ChartGeneratorTests
 		/// <summary>
 		/// Locks for loading StepGraphs for tests.
 		/// </summary>
-		private static Dictionary<ChartType, object> StepGraphLocks;
+		private static readonly Dictionary<ChartType, object> StepGraphLocks;
 
 		/// <summary>
 		/// Loaded StepGraphs for tests.
 		/// </summary>
-		private static Dictionary<ChartType, StepGraph> StepGraphs;
+		private static readonly Dictionary<ChartType, StepGraph> StepGraphs;
 
 		/// <summary>
 		/// Static initializer.
@@ -40,7 +42,7 @@ namespace ChartGeneratorTests
 		/// <summary>
 		/// Helper to asynchronously load a StepGraph for the given ChartType.
 		/// </summary>
-		/// <param name="type">ChartType of the StephGraph.</param>
+		/// <param name="type">ChartType of the StepGraph.</param>
 		/// <returns>StepGraph.</returns>
 		private static async Task<StepGraph> LoadStepGraph(ChartType type)
 		{
@@ -53,14 +55,14 @@ namespace ChartGeneratorTests
 		/// Memoized accessor for tests to get a StepGraph of the given type.
 		/// The first call will load the StepGraph from disk. Subsequent calls retrieve the cached version.
 		/// </summary>
-		/// <param name="type">ChartType of the StephGraph.</param>
+		/// <param name="type">ChartType of the StepGraph.</param>
 		/// <returns>StepGraph.</returns>
 		private static StepGraph GetStepGraph(ChartType type)
 		{
 			lock (StepGraphLocks[type])
 			{
-				if (StepGraphs.ContainsKey(type))
-					return StepGraphs[type];
+				if (StepGraphs.TryGetValue(type, out var graph))
+					return graph;
 
 				var stepGraphTask = LoadStepGraph(type);
 				stepGraphTask.Wait();
@@ -86,17 +88,18 @@ namespace ChartGeneratorTests
 		/// <summary>
 		/// Load an sm file and return the ExpressedChart representation.
 		/// </summary>
-		/// <param name="smFile">SM file with path and extension.</param>
+		/// <param name="file">Song file with path and extension.</param>
 		/// <param name="chartDifficultyType">
 		/// Optional difficulty type string of chart in SM file to load.
 		/// If omitted, the first chart found will be used.
 		/// </param>
-		/// <returns></returns>
-		public static ExpressedChart Load(string smFile, string chartDifficultyType = null, ChartType chartType = ChartType.dance_single)
+		/// <param name="chartType">ChartType of the chart to load.</param>
+		/// <returns>ExpressedChart of the chart from the file.</returns>
+		public static ExpressedChart Load(string file, string chartDifficultyType = null, ChartType chartType = ChartType.dance_single)
 		{
 			var stepGraph = GetStepGraph(chartType);
 
-			var chart = Utils.LoadChart(smFile, chartDifficultyType);
+			var chart = Utils.LoadChart(file, chartDifficultyType);
 			
 			var events = chart.Layers[0].Events;
 			var difficultyRating = chart.DifficultyRating;
@@ -332,6 +335,7 @@ namespace ChartGeneratorTests
 		/// steps with explicit feet and foot portion. Can be used for
 		/// e.g. bracket releases on a toes.
 		/// </summary>
+		/// <param name="link">GraphLinkInstance.</param>
 		/// <param name="foot1">Step 1. The foot expected to perform the step.</param>
 		/// <param name="footPortion1">Step 1. The portion of the foot expected to perform the step.</param>
 		/// <param name="step1">Step 1. The StepType that the foot is expected to perform.</param>
@@ -1379,7 +1383,6 @@ namespace ChartGeneratorTests
 		public void TestJumpStepNoCrossovers()
 		{
 			var ec = Load(GetTestChartPath("TestJumpStepNoCrossovers"));
-			int i = 0;
 			foreach (var step in ec.StepEvents)
 			{
 				var links = step.LinkInstance.GraphLink.Links;
@@ -1396,8 +1399,6 @@ namespace ChartGeneratorTests
 						}
 					}
 				}
-
-				i++;
 			}
 		}
 
@@ -1903,7 +1904,7 @@ namespace ChartGeneratorTests
 			Assert.AreEqual(28, ec.StepEvents.Count);
 			var i = 0;
 
-			// Orient to force a consistent quad choice (LLRR instead of LRLR)
+			// Orient to force a consistent quad choice (L L R R instead of L R L R)
 			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, L, StepType.SameArrow, FootAction.Tap);
 			AssertLinkMatchesStep(ec.StepEvents[i++].LinkInstance, R, StepType.NewArrow, FootAction.Tap);

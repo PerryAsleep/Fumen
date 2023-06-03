@@ -8,6 +8,8 @@ using Fumen.Converters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static ChartGeneratorTests.Utils;
 
+// ReSharper disable RedundantArgumentDefaultValue
+
 namespace ChartGeneratorTests
 {
 	/// <summary>
@@ -39,6 +41,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
+
 			i++;
 
 			if (e[i] is Tempo t)
@@ -50,6 +53,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
+
 			i++;
 
 			// SM Files do not have the remaining events.
@@ -65,6 +69,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
+
 			i++;
 
 			if (e[i] is ScrollRateInterpolation sri)
@@ -78,6 +83,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
+
 			i++;
 
 			if (e[i] is TickCount tc)
@@ -89,6 +95,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
+
 			i++;
 
 			if (e[i] is Multipliers m)
@@ -101,6 +108,7 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
+
 			i++;
 
 			if (e[i] is Label l)
@@ -111,8 +119,8 @@ namespace ChartGeneratorTests
 			{
 				Assert.Fail();
 			}
-			i++;
 
+			i++;
 		}
 
 		/// <summary>
@@ -131,7 +139,7 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 			var numNonTapEvents = i;
 			for (var eventIndex = numNonTapEvents; eventIndex < numEvents; eventIndex++)
 			{
@@ -139,10 +147,11 @@ namespace ChartGeneratorTests
 				var integerPos = noteIndex * 12;
 				var time = noteIndex * secondsBetweenSixteenths;
 				var measure = noteIndex / 16;
-				var beat = noteIndex / 4 - (measure * 4);
+				var beat = noteIndex / 4 - measure * 4;
 				var subDivisionNumerator = noteIndex % 4;
 				var subDivisionDenominator = 4;
-				AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator, subDivisionDenominator);
+				AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator,
+					subDivisionDenominator);
 			}
 		}
 
@@ -161,8 +170,9 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd)
 			{
 				AssertPositionMatches(
@@ -203,6 +213,7 @@ namespace ChartGeneratorTests
 				{
 					Assert.Fail();
 				}
+
 				numNonTapEvents++;
 			}
 			CheckPos(ref i, numNonTapEvents, 1, 0, 0, 4);
@@ -232,6 +243,7 @@ namespace ChartGeneratorTests
 				{
 					Assert.Fail();
 				}
+
 				numNonTapEvents++;
 			}
 			CheckPos(ref i, numNonTapEvents, 2, 0, 0, 4);
@@ -273,6 +285,7 @@ namespace ChartGeneratorTests
 				{
 					Assert.Fail();
 				}
+
 				numNonTapEvents++;
 			}
 			CheckPos(ref i, numNonTapEvents, 4, 0, 0, 16);
@@ -354,6 +367,7 @@ namespace ChartGeneratorTests
 				{
 					Assert.Fail();
 				}
+
 				numNonTapEvents++;
 			}
 			CheckPos(ref i, numNonTapEvents, 6, 0, 0, 4);
@@ -383,8 +397,9 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd)
 			{
 				AssertPositionMatches(
@@ -400,7 +415,7 @@ namespace ChartGeneratorTests
 			{
 				var noteIndex = i - numNonTapEvents;
 				var measure = noteIndex / 16;
-				var beat = noteIndex / 4 - (measure * 4);
+				var beat = noteIndex / 4 - measure * 4;
 				var subDivisionNumerator = noteIndex % 4;
 				var subDivisionDenominator = 4;
 				CheckPos(ref i, numNonTapEvents, measure, beat, subDivisionNumerator, subDivisionDenominator);
@@ -421,8 +436,9 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd)
 			{
 				AssertPositionMatches(
@@ -438,7 +454,7 @@ namespace ChartGeneratorTests
 			{
 				var noteIndex = i - numNonTapEvents;
 				var measure = noteIndex / 16;
-				var beat = noteIndex / 4 - (measure * 4);
+				var beat = noteIndex / 4 - measure * 4;
 				var subDivisionNumerator = noteIndex % 4;
 				var subDivisionDenominator = 4;
 				CheckPos(ref i, numNonTapEvents, measure, beat, subDivisionNumerator, subDivisionDenominator);
@@ -459,8 +475,9 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tst)
 			{
 				AssertPositionMatches(
@@ -562,8 +579,9 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tst)
 			{
 				AssertPositionMatches(
@@ -582,7 +600,7 @@ namespace ChartGeneratorTests
 					Assert.AreEqual(stop.LengthSeconds, 1.111);
 					Assert.IsTrue(stop.IsDelay);
 					CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, stopTime);
-					numNonTapEvents++; 
+					numNonTapEvents++;
 					stopTime += stop.LengthSeconds;
 				}
 				else
@@ -668,6 +686,7 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tm)
 			{
 				AssertPositionMatches(
@@ -677,7 +696,7 @@ namespace ChartGeneratorTests
 					lm, lb, lfn, lfd);
 				li++;
 			}
-			
+
 			CheckPos(ref i, numNonTapEvents, 0, 0, 0, 4, 0.0);
 			CheckPos(ref i, numNonTapEvents, 0, 0, 1, 4, 0.125000);
 			CheckPos(ref i, numNonTapEvents, 0, 0, 2, 4, 0.250000);
@@ -767,22 +786,23 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i, 240.0);
 
 			var bpm = 120.0;
-			var secondsBetweenSixteenths = (60.0 / bpm) / 4;
+			var secondsBetweenSixteenths = 60.0 / bpm / 4;
 
 			var numNonTapEvents = i;
 			var eventIndex = numNonTapEvents;
-			while(eventIndex < numEvents)
+			while (eventIndex < numEvents)
 			{
 				var noteIndex = eventIndex - numNonTapEvents;
 				var integerPos = noteIndex * 12;
 				var time = noteIndex * secondsBetweenSixteenths;
 				var measure = noteIndex / 16;
-				var beat = noteIndex / 4 - (measure * 4);
+				var beat = noteIndex / 4 - measure * 4;
 				var subDivisionNumerator = noteIndex % 4;
 				var subDivisionDenominator = 4;
 
 				// Tap note
-				AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator, subDivisionDenominator);
+				AssertPositionMatches(e[eventIndex], integerPos, time, measure, beat, subDivisionNumerator,
+					subDivisionDenominator);
 				eventIndex++;
 
 				// Stop
@@ -799,6 +819,7 @@ namespace ChartGeneratorTests
 					{
 						Assert.Fail();
 					}
+
 					eventIndex++;
 				}
 			}
@@ -819,6 +840,7 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i);
 
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double tm)
 			{
 				AssertPositionMatches(
@@ -924,6 +946,7 @@ namespace ChartGeneratorTests
 			CheckExpectedChartStartingTimingEvents(e, ref i, 120.0, true);
 
 			var numNonTapEvents = i;
+
 			void CheckPos(ref int li, int ln, int lm, int lb, int lfn, int lfd, double ts)
 			{
 				AssertPositionMatches(
@@ -1045,10 +1068,10 @@ namespace ChartGeneratorTests
 					var notesInMeasure = measure + 1;
 					for (var note = 0; note < notesInMeasure; note++)
 					{
-						var rowInMeasure = Convert.ToInt32(((double)note / notesInMeasure) * 192.0);
+						var rowInMeasure = Convert.ToInt32((double)note / notesInMeasure * 192.0);
 						var integerPosition = rowInMeasure + measure * 192;
-						var beat = (integerPosition - (measure * 192)) / 48;
-						var numerator = integerPosition - (measure * 192) - (beat * 48);
+						var beat = (integerPosition - measure * 192) / 48;
+						var numerator = integerPosition - measure * 192 - beat * 48;
 						var time = integerPosition * (60.0 / bpm / 48);
 
 						if (e[i].Extras.TryGetSourceExtra(SMCommon.TagFumenNoteOriginalMeasurePosition, out Fraction f))
@@ -1081,10 +1104,10 @@ namespace ChartGeneratorTests
 			CheckSong(song, true);
 
 			// Save this file with UseSourceExtraOriginalMeasurePosition reload it to ensure we preserve the spacing.
-			var newFile = System.IO.Path.GetTempFileName();
+			var newFileOriginalMeasurePosition = System.IO.Path.GetTempFileName();
 			var config = new SMWriterBase.SMWriterBaseConfig
 			{
-				FilePath = newFile,
+				FilePath = newFileOriginalMeasurePosition,
 				Song = song,
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseSourceExtraOriginalMeasurePosition,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource,
@@ -1101,14 +1124,17 @@ namespace ChartGeneratorTests
 				WriteCombosFromExtras = true,
 			};
 			new SSCWriter(config).Save();
-			Task.Run(async () => { song = await new SSCReader(newFile).LoadAsync(CancellationToken.None); }).Wait();
+			Task.Run(async () =>
+			{
+				song = await new SSCReader(newFileOriginalMeasurePosition).LoadAsync(CancellationToken.None);
+			}).Wait();
 			CheckSong(song, true);
 
 			// Save this file with UseLeastCommonMultipleFromStepmaniaEditor reload it to ensure use altered spacing.
-			newFile = System.IO.Path.GetTempFileName();
+			var newFileLeastCommonMultiple = System.IO.Path.GetTempFileName();
 			config = new SMWriterBase.SMWriterBaseConfig
 			{
-				FilePath = newFile,
+				FilePath = newFileLeastCommonMultiple,
 				Song = song,
 				MeasureSpacingBehavior = SMWriterBase.MeasureSpacingBehavior.UseLeastCommonMultipleFromStepmaniaEditor,
 				PropertyEmissionBehavior = SMWriterBase.PropertyEmissionBehavior.MatchSource,
@@ -1125,7 +1151,8 @@ namespace ChartGeneratorTests
 				WriteCombosFromExtras = true,
 			};
 			new SSCWriter(config).Save();
-			Task.Run(async () => { song = await new SSCReader(newFile).LoadAsync(CancellationToken.None); }).Wait();
+			Task.Run(async () => { song = await new SSCReader(newFileLeastCommonMultiple).LoadAsync(CancellationToken.None); })
+				.Wait();
 			CheckSong(song, false);
 		}
 	}

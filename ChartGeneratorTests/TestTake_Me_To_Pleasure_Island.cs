@@ -2,6 +2,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StepManiaLibrary;
 using Fumen.Converters;
 using static ChartGeneratorTests.TestExpressedChart;
+// ReSharper disable RedundantAssignment
+// ReSharper disable InconsistentNaming
+// ReSharper disable IdentifierTypo
 
 namespace ChartGeneratorTests
 {
