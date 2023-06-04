@@ -1,7 +1,25 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Fumen
 {
+	public static class Utils
+	{
+		/// <summary>
+		/// Perform an action and return how much time it takes.
+		/// </summary>
+		/// <param name="action">Action to perform</param>
+		/// <returns>Time in seconds of performing action.</returns>
+		public static double Timed(Action action)
+		{
+			var s = new Stopwatch();
+			s.Start();
+			action.Invoke();
+			s.Stop();
+			return s.Elapsed.TotalSeconds;
+		}
+	}
+
 	public static class FumenExtensions
 	{
 		private const float MinFloatDelta = 0.0000001f;
