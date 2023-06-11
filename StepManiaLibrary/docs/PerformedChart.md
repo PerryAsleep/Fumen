@@ -109,17 +109,17 @@ Stretch distance calculation takes into account the [PadData](PadData.md)'s `YTr
 
 ### Lateral Tightening
 
-Lateral Tightening can be disabled by setting `LateralTighteningSpeed` to large value.
+Lateral Tightening can be disabled by setting `Speed` to a large value.
 
-For each step the application will consider the preceding steps which move the body in the same lateral direction without changing direction. If as a whole they move over `LateralTighteningSpeed` arrows per second, then the notes per second of this segment will be compared against `LateralTighteningRelativeNPS` and `LateralTighteningAbsoluteNPS`. If the notes per second is faster than `LateralTighteningAbsoluteNPS` or if the notes per second is faster than the average notes per second of the chart as a whole multiplied by `LateralTighteningAbsoluteNPS`, then the step at the end of the section will accrue a cost based on the lateral body speed of section.
+For each step the application will consider the preceding steps which move the body in the same lateral direction without changing direction. If as a whole they move over `Speed` arrows per second, then the notes per second of this segment will be compared against `RelativeNPS` and `AbsoluteNPS`. If the notes per second is faster than `AbsoluteNPS` or if the notes per second is faster than the average notes per second of the chart as a whole multiplied by `AbsoluteNPS`, then the step at the end of the section will accrue a cost based on the lateral body speed of section.
 
 Note that in this context "same lateral direction" means steps which do not change directions. For example, steps which move left and keep the body stationary are both valid for a section to be considered all moving in the left direction.
 
-Note also that in this context "arrows per second" for `LateralTighteningSpeed` refers to the width of the arrow panels on the pad. For example in a `dance-double` chart if the body moved from centered over the player 1 arrows to centered over the player 2 arrows in 1 second then it would be moving at 3 arrows per second since the centers are 3 arrows apart.
+Note also that in this context "arrows per second" for `Speed` refers to the width of the arrow panels on the pad. For example in a `dance-double` chart if the body moved from centered over the player 1 arrows to centered over the player 2 arrows in 1 second then it would be moving at 3 arrows per second since the centers are 3 arrows apart.
 
-- **LateralTighteningRelativeNPS**: Number (double) type. Multiplier. If the notes per second of a section of steps is over the chart's average notes per second multiplied by this value then the section is considered to be fast enough to apply a lateral body movement cost to.
-- **LateralTighteningAbsoluteNPS**: Number (double) type. Absolute notes per section value. If the notes per second of a section of steps is over this value then the section is considered to be fast enough to apply a lateral body movement cost to.
-- **LateralTighteningSpeed**: Number (double) type. Body speed in arrows per second over which fast sections will accrue costs.
+- **RelativeNPS**: Number (double) type. Multiplier. If the notes per second of a section of steps is over the chart's average notes per second multiplied by this value then the section is considered to be fast enough to apply a lateral body movement cost to.
+- **AbsoluteNPS**: Number (double) type. Absolute notes per second value. If the notes per second of a section of steps is over this value then the section is considered to be fast enough to apply a lateral body movement cost to.
+- **Speed**: Number (double) type. Body speed in arrows per second over which fast sections will accrue costs.
 
 ### Facing
 
