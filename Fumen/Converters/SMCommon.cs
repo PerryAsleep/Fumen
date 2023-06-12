@@ -60,9 +60,13 @@ namespace Fumen.Converters
 			smx_team,
 		}
 
+		private static readonly Dictionary<ChartType, string> ChartTypeStings;
+
 		public static string ChartTypeString(ChartType type)
 		{
-			return type.ToString().Replace("_", "-");
+			if (ChartTypeStings.TryGetValue(type, out var chartTypeString))
+				return chartTypeString;
+			return null;
 		}
 
 		public static bool TryGetChartType(string chartTypeString, out ChartType smChartType)
@@ -247,6 +251,13 @@ namespace Fumen.Converters
 		/// </summary>
 		static SMCommon()
 		{
+			// Initialize ChartType strings.
+			ChartTypeStings = new Dictionary<ChartType, string>();
+			foreach (var chartType in Enum.GetValues(typeof(ChartType)).Cast<ChartType>())
+			{
+				ChartTypeStings[chartType] = chartType.ToString().Replace("_", "-");
+			}
+
 			// Initialize valid SM SubDivisions.
 			SubDivisions.Add(new Fraction(0, 1));
 			foreach (var denominator in ValidDenominators)
