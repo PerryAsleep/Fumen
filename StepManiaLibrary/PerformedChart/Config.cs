@@ -409,12 +409,24 @@ namespace StepManiaLibrary.PerformedChart
 				foreach (var entry in ArrowWeights)
 				{
 					ArrowWeightsNormalized[entry.Key] = new List<double>();
-					var sum = 0;
-					foreach (var weight in entry.Value)
-						sum += weight;
-					foreach (var weight in entry.Value)
-						ArrowWeightsNormalized[entry.Key].Add((double)weight / sum);
 				}
+
+				RefreshArrowWeightsNormalized();
+			}
+		}
+
+		/// <summary>
+		/// Refreshes the normalized arrow weights from their non-normalized values.
+		/// </summary>
+		public void RefreshArrowWeightsNormalized()
+		{
+			foreach (var entry in ArrowWeights)
+			{
+				var sum = 0;
+				foreach (var weight in entry.Value)
+					sum += weight;
+				foreach (var weight in entry.Value)
+					ArrowWeightsNormalized[entry.Key].Add((double)weight / sum);
 			}
 		}
 
