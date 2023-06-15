@@ -55,18 +55,18 @@ namespace Fumen
 
 		public static bool operator ==(SemanticVersion lhs, SemanticVersion rhs)
 		{
-			if (lhs == null && rhs == null)
+			if (lhs is null && rhs is null)
 				return true;
-			if (lhs == null || rhs == null)
+			if (lhs is null || rhs is null)
 				return false;
 			return lhs.CompareTo(rhs) == 0;
 		}
 
 		public static bool operator !=(SemanticVersion lhs, SemanticVersion rhs)
 		{
-			if (lhs == null && rhs == null)
+			if (lhs is null && rhs is null)
 				return false;
-			if (lhs == null || rhs == null)
+			if (lhs is null || rhs is null)
 				return true;
 			return lhs.CompareTo(rhs) != 0;
 		}
