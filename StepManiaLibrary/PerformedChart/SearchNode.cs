@@ -496,7 +496,7 @@ namespace StepManiaLibrary.PerformedChart
 
 				// Determine how the feet step at this SearchNode.
 				// While checking each foot, 
-				if (PreviousNode != null && PreviousNode.GraphNode != null)
+				if (PreviousNode?.GraphNode != null)
 				{
 					var prevLinks = GraphLinkFromPreviousNode.GraphLink.Links;
 					var footSpeedCost = 0.0;
@@ -584,10 +584,10 @@ namespace StepManiaLibrary.PerformedChart
 								}
 							}
 						}
-					}
 
-					speedCost += footSpeedCost;
-					distanceCost += footDistanceCost;
+						speedCost += footSpeedCost;
+						distanceCost += footDistanceCost;
+					}
 				}
 
 				return (speedCost, distanceCost);
