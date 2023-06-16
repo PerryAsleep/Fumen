@@ -66,12 +66,14 @@ namespace StepManiaLibrary
 		public const int CostNewArrow_StepFromJump_Ambiguous = 2;
 
 		public const int CostNewArrow_Crossover_AfterJump = 20;
+		public const int CostNewArrow_Crossover_OtherInBracketPosture = 7;
 		public const int CostNewArrow_Crossover_OtherHeld = 4; // This needs to be worse than CostNewArrow_OtherHoldingOne
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_MineIndicated = 100;
 		public const int CostNewArrow_Crossover_OtherFree_DoubleStep_NoIndication = 200;
 		public const int CostNewArrow_Crossover = 5;
 
 		public const int CostNewArrow_Crossover_Stretch_AfterJump = 25;
+		public const int CostNewArrow_Crossover_Stretch_OtherInBracketPosture = 8;
 		public const int CostNewArrow_Crossover_Stretch_OtherHeld = 5; // This needs to be worse than CostNewArrow_OtherHoldingOne
 		public const int CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_MineIndicated = 120;
 		public const int CostNewArrow_Crossover_Stretch_OtherFree_DoubleStep_NoIndication = 220;
@@ -79,6 +81,7 @@ namespace StepManiaLibrary
 
 		// TODO: Balance
 		public const int CostNewArrow_Bracket_Crossover_AfterJump = 50;
+		public const int CostNewArrow_Bracket_Crossover_OtherInBracketPosture = 36;
 		public const int CostNewArrow_Bracket_Crossover_OtherHeld = 33;
 		public const int CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_MineIndicated = 130;
 		public const int CostNewArrow_Bracket_Crossover_OtherFree_DoubleStep_NoIndication = 230;
@@ -106,12 +109,14 @@ namespace StepManiaLibrary
 		public const int CostSameArrow_FootSwap_DoubleSwap = 6;
 
 		public const int CostNewArrow_Invert_FromSwap = 200;
+		public const int CostNewArrow_Invert_OtherInBracketPosture = 8;
 		public const int CostNewArrow_Invert_OtherHeld = 5;
 		public const int CostNewArrow_Invert_OtherFree_DoubleStep_MineIndicated = 300;
 		public const int CostNewArrow_Invert_OtherFree_DoubleStep_NoIndication = 400;
 		public const int CostNewArrow_Invert = 6;
 
 		public const int CostNewArrow_Stretch_Invert_FromSwap = 250;
+		public const int CostNewArrow_Stretch_Invert_OtherInBracketPosture = 9;
 		public const int CostNewArrow_Stretch_Invert_OtherHeld = 6;
 		public const int CostNewArrow_Stretch_Invert_OtherFree_DoubleStep_MineIndicated = 350;
 		public const int CostNewArrow_Stretch_Invert_OtherFree_DoubleStep_NoIndication = 450;
@@ -119,6 +124,7 @@ namespace StepManiaLibrary
 
 		// TODO: Balance
 		public const int CostNewArrow_Bracket_Invert_FromSwap = 600;
+		public const int CostNewArrow_Bracket_Invert_OtherInBracketPosture = 210;
 		public const int CostNewArrow_Bracket_Invert_OtherHeld = 190;
 		public const int CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_MineIndicated = 400;
 		public const int CostNewArrow_Bracket_Invert_OtherFree_DoubleStep_NoIndication = 500;
@@ -132,6 +138,8 @@ namespace StepManiaLibrary
 		public const int CostTwoArrows_Bracket_PreferredDueToMovement_Swap = 8;
 		public const int CostTwoArrows_Bracket = 10;
 		public const int CostTwoArrows_Bracket_BothSame = 2;
+		public const int CostTwoArrows_Bracket_Swap_BothNew = 14;
+		public const int CostTwoArrows_Bracket_Swap_OneNew = 12;
 		public const int CostTwoArrows_Bracket_Swap = 11;
 
 		// TODO: Balance
