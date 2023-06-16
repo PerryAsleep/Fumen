@@ -1806,16 +1806,6 @@ namespace StepManiaLibrary
 							                        && (previousStepNode.GraphNode.State[thisFoot, Heel].Arrow == thisArrow
 							                            || previousStepNode.GraphNode.State[thisFoot, Toe].Arrow == thisArrow);
 
-							// Mine indicated
-							if (mineIndicatedOnThisFootsArrow)
-								return thisSameArrowStep
-									? CostSameArrow_FootSwap_MineIndicationOnThisFootsArrow
-									: CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
-							if (mineIndicatedOnFreeLaneArrow)
-								return thisSameArrowStep
-									? CostSameArrow_FootSwap_MineIndicationOnFreeLaneArrow
-									: CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
-
 							// Swapping after a same arrow step with the other foot should be penalized to promote
 							// alternating swaps or no swaps at all
 							var previousPreviousStepNode = searchNode.GetPreviousStepSearchNode(2);
@@ -1849,6 +1839,16 @@ namespace StepManiaLibrary
 									return Cost_FootSwap_AfterOtherFootJack;
 								}
 							}
+
+							// Mine indicated
+							if (mineIndicatedOnThisFootsArrow)
+								return thisSameArrowStep
+									? CostSameArrow_FootSwap_MineIndicationOnThisFootsArrow
+									: CostNewArrow_FootSwap_MineIndicationOnThisFootsArrow;
+							if (mineIndicatedOnFreeLaneArrow)
+								return thisSameArrowStep
+									? CostSameArrow_FootSwap_MineIndicationOnFreeLaneArrow
+									: CostNewArrow_FootSwap_MineIndicationOnFreeLaneArrow;
 
 							// If the other foot is already lifted then we are swapping twice with the same foot.
 							if (otherLifted)
