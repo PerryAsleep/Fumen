@@ -117,6 +117,27 @@ namespace StepManiaLibrary.PerformedChart
 			/// </summary>
 			private readonly double TotalFallbackStepCost;
 
+			/// <summary>
+			/// This note's total cost for orientations which exceed unwanted inward or outward
+			/// facing cutoffs.
+			/// </summary>
+			private readonly double TotalFacingCost;
+
+			/// <summary>
+			/// Total number of steps up to and including this SearchNode.
+			/// </summary>
+			private readonly int TotalSteps;
+
+			/// <summary>
+			/// Total number of steps in an inward facing orientation up to and including this SearchNode.
+			/// </summary>
+			private readonly int TotalNumInwardSteps;
+
+			/// <summary>
+			/// Total number of steps in an outward facing orientation up to and including this SearchNode.
+			/// </summary>
+			private readonly int TotalNumOutwardSteps;
+
 			// TODO
 			private readonly double SectionStepTypeCost;
 			private readonly int TotalNumSameArrowSteps;
@@ -267,12 +288,16 @@ namespace StepManiaLibrary.PerformedChart
 				RandomWeight = randomWeight;
 				Actions = actions;
 
+				var isRelease = graphLinkFromPreviousNode?.GraphLink?.IsRelease() ?? false;
+				TotalSteps = PreviousNode?.TotalSteps ?? 0 + (isRelease ? 1 : 0);
+
 				// Copy the previous SearchNode's ambiguous and misleading step counts.
 				// We will update them later after determining if this SearchNode represents
 				// an ambiguous or misleading step.
 				AmbiguousStepCount = previousNode?.AmbiguousStepCount ?? 0;
 				MisleadingStepCount = previousNode?.MisleadingStepCount ?? 0;
 				TotalFallbackStepCost = stepTypeFallbackCost + (previousNode?.TotalFallbackStepCost ?? 0.0);
+				TotalFacingCost = previousNode?.TotalFacingCost ?? 0;
 
 				// Copy the previous SearchNode's StepCounts and update them.
 				StepCounts = new int[Actions.Length];
@@ -305,6 +330,9 @@ namespace StepManiaLibrary.PerformedChart
 						                                  ?? GraphNode.State[f, p].Arrow;
 					}
 				}
+
+				UpdateFacingCost(stepGraph, config, isRelease, out TotalNumInwardSteps, out TotalNumOutwardSteps,
+					out TotalFacingCost);
 
 				var (travelSpeedCost, travelDistanceCost) =
 					GetStepTravelCostsAndUpdateStepTracking(stepGraph, config, out var isStep);
@@ -591,6 +619,37 @@ namespace StepManiaLibrary.PerformedChart
 				}
 
 				return (speedCost, distanceCost);
+			}
+
+			/// <summary>
+			/// Updates the Facing cost of this SearchNode.
+			/// </summary>
+			private void UpdateFacingCost(
+				StepGraph stepGraph,
+				Config config,
+				bool isRelease,
+				out int totalNumInwardSteps,
+				out int totalNumOutwardSteps,
+				out double totalFacingCost)
+			{
+				totalNumInwardSteps = PreviousNode?.TotalNumInwardSteps ?? 0;
+				if (!isRelease && stepGraph.IsFacingInward(GraphNode, config.Facing.InwardPercentageCutoff))
+					totalNumInwardSteps++;
+				totalNumOutwardSteps = PreviousNode?.TotalNumOutwardSteps ?? 0;
+				if (!isRelease && stepGraph.IsFacingOutward(GraphNode, config.Facing.OutwardPercentageCutoff))
+					totalNumOutwardSteps++;
+				totalFacingCost = PreviousNode?.TotalFacingCost ?? 0;
+				if (config.Facing.MaxInwardPercentage < 1.0)
+				{
+					if (totalNumInwardSteps / (double)TotalSteps > config.Facing.MaxInwardPercentage)
+						totalFacingCost++;
+				}
+
+				if (config.Facing.MaxOutwardPercentage < 1.0)
+				{
+					if (totalNumOutwardSteps / (double)TotalSteps > config.Facing.MaxOutwardPercentage)
+						totalFacingCost++;
+				}
 			}
 
 			/// <summary>
@@ -1009,6 +1068,11 @@ namespace StepManiaLibrary.PerformedChart
 
 				if (Math.Abs(TotalStretchCost - other.TotalStretchCost) > 0.00001)
 					return TotalStretchCost < other.TotalStretchCost ? -1 : 1;
+
+				// Next consider the facing cost. These are steps which face the player in orientations
+				// which are not desired.
+				if (Math.Abs(TotalFacingCost - other.TotalFacingCost) > 0.00001)
+					return TotalFacingCost < other.TotalFacingCost ? -1 : 1;
 
 				// Next consider individual step cost. This is a measure of how uncomfortably energetic
 				// the individual steps are.

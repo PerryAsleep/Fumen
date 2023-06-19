@@ -1996,6 +1996,161 @@ namespace StepManiaLibrary
 			return (x, y);
 		}
 
+		/// <summary>
+		/// Helper method for determining if a node is facing inward or outward.
+		/// </summary>
+		/// <param name="node">The node in question.</param>
+		/// <param name="cutoffPercentage">
+		/// Value to use for comparing arrow positions, representing a percentage of
+		/// the total width of the pads.
+		/// </param>
+		/// <param name="leftSide">
+		/// If set, this node is completely on one half of the pads.
+		/// If true, the node is on the left half.
+		/// If false, the node is on the right half.
+		/// </param>
+		/// <param name="leftFootY">The average Y position of the left foot.</param>
+		/// <param name="rightFootY">The average Y position of the right foot.</param>
+		/// <returns>Whether or not the node represents a position fully on one half of the pads.</returns>
+		private bool FacingHelper(
+			GraphNode node,
+			double cutoffPercentage,
+			out bool? leftSide,
+			out double leftFootY,
+			out double rightFootY)
+		{
+			// Determine if all arrows are on the left or if all arrows are on the right.
+			leftSide = null;
+			leftFootY = 0.0;
+			var numLeftPortions = 0;
+			rightFootY = 0.0;
+			var numRightPortions = 0;
+			for (var f = 0; f < NumFeet; f++)
+			{
+				for (var p = 0; p < NumFootPortions; p++)
+				{
+					var a = node.State[f, p].Arrow;
+					if (a != InvalidArrowIndex)
+					{
+						var l = PadData.IsArrowOnLeftSideOfPads(a, cutoffPercentage);
+						var r = PadData.IsArrowOnRightSideOfPads(a, cutoffPercentage);
+
+						// This arrow is not in the center.
+						if (l || r)
+						{
+							// If this is the first arrow we are tracking, store whether it is left or right.
+							if (leftSide == null)
+							{
+								leftSide = l;
+							}
+
+							// If we have already tracked an arrow as being on the left or right, ensure this
+							// arrow is on the same side.
+							else if (leftSide != l)
+								return false;
+						}
+
+						// This foot is in the center.
+						// This means the body is not fully on the left or the right.
+						else
+						{
+							return false;
+						}
+
+						// Record the Y position if this foot.
+						if (f == L)
+						{
+							numLeftPortions++;
+							leftFootY += PadData.ArrowData[a].Y;
+						}
+						else
+						{
+							numRightPortions++;
+							rightFootY += PadData.ArrowData[a].Y;
+						}
+					}
+				}
+			}
+
+			// Finalize the Y positions.
+			leftFootY /= numLeftPortions;
+			rightFootY /= numRightPortions;
+
+			// No arrow was fully on the left or the right.
+			if (leftSide == null)
+				return false;
+
+			return true;
+		}
+
+		/// <summary>
+		/// Returns whether or not the given node represents an inward facing posture.
+		/// To be considered facing inward both feet be completely on one side of the
+		/// pads, at or beyond the given cutoff percentage, and the feet must be on
+		/// different arrows such that the outer foot is further up the pads than the
+		/// inner foot, angling the body inward.
+		/// </summary>
+		/// <param name="node">The node in question.</param>
+		/// <param name="cutoffPercentage">
+		/// Value to use for comparing arrow positions, representing a percentage of
+		/// the total width of the pads.
+		/// </param>
+		/// <returns>
+		/// True if this node represents an inward facing posture and false otherwise.
+		/// </returns>
+		public bool IsFacingInward(GraphNode node, double cutoffPercentage)
+		{
+			if (!FacingHelper(node, cutoffPercentage, out var leftSide, out var leftFootY, out var rightFootY))
+				return false;
+
+			// All arrows are on the left.
+			// ReSharper disable once PossibleInvalidOperationException
+			if (leftSide.Value)
+			{
+				// We are facing inward if all arrows are on the left and the left foot is further up the pads
+				// than the right foot.
+				return leftFootY < rightFootY;
+			}
+
+			// We are facing inward if all arrows are on the right and the left foot is further down the pads
+			// than the right foot.
+			return leftFootY > rightFootY;
+		}
+
+		/// <summary>
+		/// Returns whether or not the given node represents an outward facing posture.
+		/// To be considered facing outward both feet be completely on one side of the
+		/// pads, at or beyond the given cutoff percentage, and the feet must be on
+		/// different arrows such that the outer foot is down up the pads than the
+		/// inner foot, angling the body inward.
+		/// </summary>
+		/// <param name="node">The node in question.</param>
+		/// <param name="cutoffPercentage">
+		/// Value to use for comparing arrow positions, representing a percentage of
+		/// the total width of the pads.
+		/// </param>
+		/// <returns>
+		/// True if this node represents an outward facing posture and false otherwise.
+		/// </returns>
+		public bool IsFacingOutward(GraphNode node, double cutoffPercentage)
+		{
+			if (!FacingHelper(node, cutoffPercentage, out var leftSide, out var leftFootY, out var rightFootY))
+				return false;
+
+			// All arrows are on the left.
+			// ReSharper disable once PossibleInvalidOperationException
+			if (leftSide.Value)
+			{
+				// We are facing outward if all arrows are on the left and the left foot is further down the pads
+				// than the right foot.
+				return leftFootY > rightFootY;
+			}
+
+			// We are facing outward if all arrows are on the right and the left foot is further up the pads
+			// than the right foot.
+			return leftFootY < rightFootY;
+		}
+
 		#endregion Public State Helpers
 
 		#region Fill Helpers

@@ -53,6 +53,26 @@ namespace StepManiaLibrary
 		[JsonInclude] public double YTravelDistanceCompensation = 0.5;
 
 		/// <summary>
+		/// Cached bounds value for the minimum X position of any arrow.
+		/// </summary>
+		[JsonIgnore] private int MinX;
+
+		/// <summary>
+		/// Cached bounds value for the maximum X position of any arrow.
+		/// </summary>
+		[JsonIgnore] private int MaxX;
+
+		/// <summary>
+		/// Cached bounds value for the minimum Y position of any arrow.
+		/// </summary>
+		[JsonIgnore] private int MinY;
+
+		/// <summary>
+		/// Cached bounds value for the maximum X position of any arrow.
+		/// </summary>
+		[JsonIgnore] private int MaxY;
+
+		/// <summary>
 		/// Loads the PadData from the given file.
 		/// </summary>
 		/// <param name="stepsType">Stepmania StepsType for the PadData.</param>
@@ -90,7 +110,7 @@ namespace StepManiaLibrary
 					padData.StepsType = stepsType;
 					if (!padData.Validate())
 						return null;
-					padData.SetFlippedAndMirroredPositions();
+					padData.Init();
 				}
 			}
 			catch (Exception e)
@@ -237,34 +257,50 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
+		/// Initialize PadData, caching values.
+		/// </summary>
+		private void Init()
+		{
+			InitBounds();
+			InitializeFlippedAndMirroredPositions();
+		}
+
+		/// <summary>
+		/// Initialize the cached bounds of the arrows.
+		/// </summary>
+		private void InitBounds()
+		{
+			MinX = int.MaxValue;
+			MaxX = int.MinValue;
+			MinY = int.MaxValue;
+			MaxY = int.MinValue;
+
+			for (var i = 0; i < NumArrows; i++)
+			{
+				MinX = Math.Min(MinX, ArrowData[i].X);
+				MaxX = Math.Max(MaxX, ArrowData[i].X);
+				MinY = Math.Min(MinY, ArrowData[i].Y);
+				MaxY = Math.Max(MaxY, ArrowData[i].Y);
+			}
+		}
+
+		/// <summary>
 		/// Sets MirroredLane and FlippedLane on the ArrowData based on the individual ArrowData
 		/// X and Y values.
 		/// </summary>
-		private void SetFlippedAndMirroredPositions()
+		private void InitializeFlippedAndMirroredPositions()
 		{
-			var minX = int.MaxValue;
-			var maxX = int.MinValue;
-			var minY = int.MaxValue;
-			var maxY = int.MinValue;
-			for (var a = 0; a < NumArrows; a++)
-			{
-				minX = Math.Min(minX, ArrowData[a].X);
-				maxX = Math.Max(maxX, ArrowData[a].X);
-				minY = Math.Min(minY, ArrowData[a].Y);
-				maxY = Math.Max(maxY, ArrowData[a].Y);
-			}
-
-			var numColumns = maxX - minX;
-			var numRows = maxY - minY;
+			var numColumns = MaxX - MinX;
+			var numRows = MaxY - MinY;
 
 			int Mirror(int x)
 			{
-				return minX + (numColumns - x);
+				return MinX + (numColumns - x);
 			}
 
 			int Flip(int y)
 			{
-				return minY + (numRows - y);
+				return MinY + (numRows - y);
 			}
 
 			for (var a = 0; a < NumArrows; a++)
@@ -282,6 +318,36 @@ namespace StepManiaLibrary
 					}
 				}
 			}
+		}
+
+		/// <summary>
+		/// Returns whether the given arrow is on the left side of the pads.
+		/// </summary>
+		/// <param name="arrow">The arrow in question.</param>
+		/// <param name="cutoffPercentage">
+		/// Value to use for comparing arrow position, representing a percentage of the total width
+		/// of the pads. For example if this value is 0.5, then the arrow must be on the left half
+		/// of the pads. If it is 0.33, it must be on the left third of the pads, etc.
+		/// </param>
+		/// <returns>True if the given arrow is on the left side of the pads and false otherwise.</returns>
+		public bool IsArrowOnLeftSideOfPads(int arrow, double cutoffPercentage)
+		{
+			return (double)(ArrowData[arrow].X - MinX) / (MaxX - MinX) <= cutoffPercentage;
+		}
+
+		/// <summary>
+		/// Returns whether the given arrow is on the right side of the pads.
+		/// </summary>
+		/// <param name="arrow">The arrow in question.</param>
+		/// <param name="cutoffPercentage">
+		/// Value to use for comparing arrow position, representing a percentage of the total width
+		/// of the pads. For example if this value is 0.5, then the arrow must be on the right half
+		/// of the pads. If it is 0.33, it must be on the right third of the pads, etc.
+		/// </param>
+		/// <returns>True if the given arrow is on the left side of the pads and false otherwise.</returns>
+		public bool IsArrowOnRightSideOfPads(int arrow, double cutoffPercentage)
+		{
+			return (double)(ArrowData[arrow].X - MinX) / (MaxX - MinX) >= 1.0f - cutoffPercentage;
 		}
 
 		/// <summary>
@@ -323,24 +389,12 @@ namespace StepManiaLibrary
 			return Math.Sqrt(dx * dx + dy * dy);
 		}
 
-		private (int, int, int, int) GetBounds()
-		{
-			var minX = int.MaxValue;
-			var maxX = int.MinValue;
-			var minY = int.MaxValue;
-			var maxY = int.MinValue;
-
-			for (var i = 0; i < NumArrows; i++)
-			{
-				minX = Math.Min(minX, ArrowData[i].X);
-				maxX = Math.Max(maxX, ArrowData[i].X);
-				minY = Math.Min(minY, ArrowData[i].Y);
-				maxY = Math.Max(maxY, ArrowData[i].Y);
-			}
-
-			return (minX, maxX, minY, maxY);
-		}
-
+		/// <summary>
+		/// Finds the arrow index at the given x,y position.
+		/// </summary>
+		/// <param name="x">X coordinate of position.</param>
+		/// <param name="y">Y coordinate of position.</param>
+		/// <returns>The arrow index at this coordinate or InvalidArrowIndex if no arrow exists at this coordinate.</returns>
 		private int FindArrowAt(int x, int y)
 		{
 			for (var a = 0; a < NumArrows; a++)
@@ -370,29 +424,27 @@ namespace StepManiaLibrary
 				return false;
 
 			// Get the bounds and ensure the bounds of this PadData fit within the other's bounds.
-			var (minX, maxX, minY, maxY) = GetBounds();
-			var dx = maxX + 1 - minX;
-			var dy = maxY + 1 - minY;
-			var (otherMinX, otherMaxX, otherMinY, otherMaxY) = other.GetBounds();
-			var otherDx = otherMaxX + 1 - otherMinX;
-			var otherDy = otherMaxY + 1 - otherMinY;
+			var dx = MaxX + 1 - MinX;
+			var dy = MaxY + 1 - MinY;
+			var otherDx = other.MaxX + 1 - other.MinX;
+			var otherDy = other.MaxY + 1 - other.MinY;
 			var xExtraRoom = otherDx - dx;
 			var yExtraRoom = otherDy - dy;
 			if (xExtraRoom < 0 || yExtraRoom < 0)
 				return false;
 
 			// Try every valid coordinate overlap.
-			for (var otherStartX = otherMinX; otherStartX <= otherMinX + xExtraRoom; otherStartX++)
+			for (var otherStartX = other.MinX; otherStartX <= other.MinX + xExtraRoom; otherStartX++)
 			{
-				for (var otherStartY = otherMinY; otherStartY <= otherMinY + yExtraRoom; otherStartY++)
+				for (var otherStartY = other.MinY; otherStartY <= other.MinY + yExtraRoom; otherStartY++)
 				{
 					// For this overlap coordinate, ensure this PadData's arrows can lay in the same
 					// pattern on the other PadData's arrows.
 					var validOverlap = true;
 					var arrowMapping = new Dictionary<int, int>();
-					for (int thisX = minX, otherX = otherStartX; thisX <= maxX; thisX++, otherX++)
+					for (int thisX = MinX, otherX = otherStartX; thisX <= MaxX; thisX++, otherX++)
 					{
-						for (int thisY = minY, otherY = otherStartY; thisY <= maxY; thisY++, otherY++)
+						for (int thisY = MinY, otherY = otherStartY; thisY <= MaxY; thisY++, otherY++)
 						{
 							var thisA = FindArrowAt(thisX, thisY);
 							if (thisA == InvalidArrowIndex)

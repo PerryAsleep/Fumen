@@ -22,14 +22,24 @@ namespace StepManiaLibrary.PerformedChart
 		public class FacingConfig
 		{
 			/// <summary>
-			/// Maximum percentage of steps which should be Inward Facing.
+			/// Maximum percentage of steps which should be inward facing.
 			/// </summary>
 			[JsonInclude] public double MaxInwardPercentage = -1.0;
 
 			/// <summary>
-			/// Maximum percentage of steps which should be Outward Facing.
+			/// Cutoff percentage to use for inward facing checks.
+			/// </summary>
+			[JsonInclude] public double InwardPercentageCutoff = 0.5;
+
+			/// <summary>
+			/// Maximum percentage of steps which should be outward facing.
 			/// </summary>
 			[JsonInclude] public double MaxOutwardPercentage = -1.0;
+
+			/// <summary>
+			/// Cutoff percentage to use for outward facing checks.
+			/// </summary>
+			[JsonInclude] public double OutwardPercentageCutoff = 0.5;
 
 			/// <summary>
 			/// Sets this FacingConfig to be an override of the the given other FacingConfig.
@@ -71,6 +81,24 @@ namespace StepManiaLibrary.PerformedChart
 					errors = true;
 				}
 
+				if (InwardPercentageCutoff < 0.0)
+				{
+					LogError(
+						$"Negative value \"{InwardPercentageCutoff}\" specified for "
+						+ "InwardPercentageCutoff. Expected non-negative value.",
+						pccId);
+					errors = true;
+				}
+
+				if (InwardPercentageCutoff > 1.0)
+				{
+					LogError(
+						$"InwardPercentageCutoff \"{InwardPercentageCutoff}\" is greater 1.0. "
+						+ "InwardPercentageCutoff must be less than or equal to 1.0.",
+						pccId);
+					errors = true;
+				}
+
 				if (MaxOutwardPercentage < 0.0)
 				{
 					LogError(
@@ -85,6 +113,24 @@ namespace StepManiaLibrary.PerformedChart
 					LogError(
 						$"MaxOutwardPercentage \"{MaxOutwardPercentage}\" is greater 1.0. "
 						+ "MaxOutwardPercentage must be less than or equal to 1.0.",
+						pccId);
+					errors = true;
+				}
+
+				if (OutwardPercentageCutoff < 0.0)
+				{
+					LogError(
+						$"Negative value \"{OutwardPercentageCutoff}\" specified for "
+						+ "OutwardPercentageCutoff. Expected non-negative value.",
+						pccId);
+					errors = true;
+				}
+
+				if (OutwardPercentageCutoff > 1.0)
+				{
+					LogError(
+						$"OutwardPercentageCutoff \"{OutwardPercentageCutoff}\" is greater 1.0. "
+						+ "OutwardPercentageCutoff must be less than or equal to 1.0.",
 						pccId);
 					errors = true;
 				}
@@ -408,25 +454,25 @@ namespace StepManiaLibrary.PerformedChart
 				ArrowWeightsNormalized = new Dictionary<string, List<double>>();
 				foreach (var entry in ArrowWeights)
 				{
-					ArrowWeightsNormalized[entry.Key] = new List<double>();
+					RefreshArrowWeightsNormalized(entry.Key);
 				}
-
-				RefreshArrowWeightsNormalized();
 			}
 		}
 
 		/// <summary>
 		/// Refreshes the normalized arrow weights from their non-normalized values.
 		/// </summary>
-		public void RefreshArrowWeightsNormalized()
+		public void RefreshArrowWeightsNormalized(string chartTypeString)
 		{
-			foreach (var entry in ArrowWeights)
+			if (ArrowWeights.TryGetValue(chartTypeString, out var weights))
 			{
+				var normalizedWeights = new List<double>();
 				var sum = 0;
-				foreach (var weight in entry.Value)
+				foreach (var weight in weights)
 					sum += weight;
-				foreach (var weight in entry.Value)
-					ArrowWeightsNormalized[entry.Key].Add((double)weight / sum);
+				foreach (var weight in weights)
+					normalizedWeights.Add((double)weight / sum);
+				ArrowWeightsNormalized[chartTypeString] = normalizedWeights;
 			}
 		}
 

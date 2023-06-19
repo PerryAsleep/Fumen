@@ -13,13 +13,15 @@ When comparing paths through a chart a series of comparisons are made to determi
 	- Paths with the fewest number of ambiguous steps are preferred. An ambiguous step is a step which could be performed with more than one equally valid choice. For example after a jump, stepping on a new arrow that is of equal distance between the two arrows that were jumped on.
 4. Stretch
 	- Paths with the least aggressive stretch are preferred. Wider stretch is considered more aggressive. See [Stretch Distance](#stretch-distance) below for configuring or disabling this check
-5. Individual Step Travel Distance
+5. Facing
+	- Paths which exceed desired bounds for facing the body inward or outward are preferred less. See [Facing](#facing) below for configuring or disabling this check. 
+6. Individual Step Travel Distance
 	- Paths with lower individual step distances are preferred. See [Travel Distance](#travel-distance) below for configuring or disabling this check.
-6. Individual Step Travel Speed
+7. Individual Step Travel Speed
 	- Paths with lower individual step speeds are preferred. See [Travel Speed](#travel-speed) below for configuring or disabling this check.
-7. Lateral Movement Speed
+8. Lateral Movement Speed
 	- Paths with the least aggressive lateral movement are preferred. See [Lateral Tightening](#lateral-tightening) below for configuring or disabling this check.
-8. Arrow Distribution
+9. Arrow Distribution
 	- Paths which more closely match the desired arrow distribution are preferred. See [Arrow Weights](#arrow-weights) below for configuring this behavior.
 
 ## PerformedChart Configuration
@@ -34,6 +36,17 @@ When comparing paths through a chart a series of comparisons are made to determi
 	{
 		"dance-single": [25, 25, 25, 25],
 		"dance-double": [6, 12, 10, 22, 22, 12, 10, 6],
+		"dance-solo": [13, 12, 25, 25, 12, 13],
+		"dance-threepanel": [25, 50, 25],
+
+		"pump-single": [17, 16, 34, 16, 17],
+		"pump-halfdouble": [25, 12, 13, 13, 12, 25],
+		"pump-double": [4, 4, 17, 12, 13, 13, 12, 17, 4, 4],
+
+		"smx-beginner": [25, 50, 25],
+		"smx-single": [25, 21, 8, 21, 25],
+		"smx-dual": [8, 17, 25, 25, 17, 8],
+		"smx-full": [6, 8, 7, 8, 22, 22, 8, 7, 8, 6],
 	},
 
 	"StepTightening":
@@ -56,7 +69,9 @@ When comparing paths through a chart a series of comparisons are made to determi
 	"Facing":
 	{
 		"MaxInwardPercentage": 1.0,
+		"InwardPercentageCutoff": 0.5,
 		"MaxOutwardPercentage": 1.0,
+		"OutwardPercentageCutoff": 0.5,
 	},
 },
 ```
@@ -123,5 +138,28 @@ Note also that in this context "arrows per second" for `Speed` refers to the wid
 
 ### Facing
 
-TODO
+Facing tightening reduces the number of steps which face inward or outward to not exceed desired maximum percentages. This can be disabled by setting these desired maximum values, `MaxInwardPercentage` and `MaxOutwardPercentage`, to `1.0`. For a step to be considered facing inwards or facing outwards both feet must be beyond a specified cutoff point in X, and one foot must be further up the pads than the other.
 
+- **MaxInwardPercentage**: Number (double) type. Maximum desired percentage of steps which face inward.
+- **InwardPercentageCutoff**: Number (double) type. Cutoff percentage to use for determining which steps are considered inward facing.
+- **MaxOutwardPercentage**: Number (double) type. Maximum desired percentage of steps which face outward.
+- **OutwardPercentageCutoff**: Number (double) type. Cutoff percentage to use for determining which steps are considered outward facing.
+
+#### Example
+
+To limit all inward facing orientations on the outer third of the pads set `MaxInwardPercentage` to `0.0` and `InwardPercentageCutoff` to `0.34`. The positions below represent orientations for `dance-double` which would have costs associated with them with these settings.
+
+```
+                | 1/3 cutoff                                       | 1/3 cutoff                    
+         _______|                _______                    _______|                _______        
+        |       |               |       |                  |       |               |       |       
+        |   L   |               |       |                  |       |               |       |       
+ _______|_______|_______ _______|_______|_______    _______|_______|_______ _______|_______|_______
+|       |       |       |       |       |       |  |       |       |       |       |       |       |
+|       |       |       |       |       |       |  |   L   |       |       |       |       |       |
+|_______|_______|_______|_______|_______|_______|  |_______|_______|_______|_______|_______|_______|
+        |       |               |       |                  |       |               |       |       
+        |   R   |               |       |                  |   R   |               |       |       
+        |_______|               |_______|                  |_______|               |_______|       
+                |                                                  |                               
+```
