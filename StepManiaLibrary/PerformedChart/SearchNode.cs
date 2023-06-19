@@ -708,7 +708,7 @@ namespace StepManiaLibrary.PerformedChart
 				var t = Time - LastLateralMovementStartTime;
 				if (MovementDir != LateralMovementDirection.None && t > 0.0)
 				{
-					var nps = LateralMovementNumSteps / t;
+					var nps = (LateralMovementNumSteps - 1) / t;
 					var speed = Math.Abs(LateralBodyPosition - LastLateralMovementStartPosition) / t;
 					if (((averageNps > 0.0 && nps > averageNps * lateralConfig.RelativeNPS) || nps > lateralConfig.AbsoluteNPS)
 					    && speed > lateralConfig.Speed)
