@@ -15,14 +15,8 @@ namespace Fumen
 				return currentTime >= endTime ? endValue : startValue;
 			var ret = startValue + (currentTime - startTime) / (endTime - startTime) * (endValue - startValue);
 			if (startValue < endValue)
-				return Clamp(ret, startValue, endValue);
-			return Clamp(ret, endValue, startValue);
-		}
-
-		// TODO: Move
-		public static double Clamp(double value, double min, double max)
-		{
-			return value < min ? min : value > max ? max : value;
+				return MathUtils.Clamp(ret, startValue, endValue);
+			return MathUtils.Clamp(ret, endValue, startValue);
 		}
 
 		/// <summary>
@@ -36,14 +30,8 @@ namespace Fumen
 				return currentTime >= endTime ? endValue : startValue;
 			var ret = startValue + (currentTime - startTime) / (endTime - startTime) * (endValue - startValue);
 			if (startValue < endValue)
-				return Clamp(ret, startValue, endValue);
-			return Clamp(ret, endValue, startValue);
-		}
-
-		// TODO: Move
-		public static float Clamp(float value, float min, float max)
-		{
-			return value < min ? min : value > max ? max : value;
+				return MathUtils.Clamp(ret, startValue, endValue);
+			return MathUtils.Clamp(ret, endValue, startValue);
 		}
 
 		/// <summary>
@@ -54,7 +42,7 @@ namespace Fumen
 		/// </summary>
 		public static float LogarithmicInterpolate(float startValue, float endValue, float startTime, float endTime, float currentTime)
 		{
-			return (float)Lerp(startValue, endValue, Math.Log(startTime), Math.Log(endTime), Math.Log(currentTime));
+			return (float)Lerp(startValue, endValue, System.Math.Log(startTime), System.Math.Log(endTime), System.Math.Log(currentTime));
 		}
 
 		/// <summary>
@@ -65,7 +53,7 @@ namespace Fumen
 		/// </summary>
 		public static double LogarithmicInterpolate(double startValue, double endValue, double startTime, double endTime, double currentTime)
 		{
-			return Lerp(startValue, endValue, Math.Log(startTime), Math.Log(endTime), Math.Log(currentTime));
+			return Lerp(startValue, endValue, System.Math.Log(startTime), System.Math.Log(endTime), System.Math.Log(currentTime));
 		}
 	}
 }
