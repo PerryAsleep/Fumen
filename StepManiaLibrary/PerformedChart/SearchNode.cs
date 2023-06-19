@@ -527,10 +527,10 @@ namespace StepManiaLibrary.PerformedChart
 				if (PreviousNode?.GraphNode != null)
 				{
 					var prevLinks = GraphLinkFromPreviousNode.GraphLink.Links;
-					var footSpeedCost = 0.0;
-					var footDistanceCost = 0.0;
 					for (var f = 0; f < NumFeet; f++)
 					{
+						var footSpeedCost = 0.0;
+						var footDistanceCost = 0.0;
 						var steppedWithThisFoot = false;
 						for (var p = 0; p < NumFootPortions; p++)
 						{
