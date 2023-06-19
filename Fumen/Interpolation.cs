@@ -42,7 +42,7 @@ namespace Fumen
 		/// </summary>
 		public static float LogarithmicInterpolate(float startValue, float endValue, float startTime, float endTime, float currentTime)
 		{
-			return (float)Lerp(startValue, endValue, System.Math.Log(startTime), System.Math.Log(endTime), System.Math.Log(currentTime));
+			return (float)Lerp(startValue, endValue, Math.Log(startTime), Math.Log(endTime), Math.Log(currentTime));
 		}
 
 		/// <summary>
@@ -53,7 +53,7 @@ namespace Fumen
 		/// </summary>
 		public static double LogarithmicInterpolate(double startValue, double endValue, double startTime, double endTime, double currentTime)
 		{
-			return Lerp(startValue, endValue, System.Math.Log(startTime), System.Math.Log(endTime), System.Math.Log(currentTime));
+			return Lerp(startValue, endValue, Math.Log(startTime), Math.Log(endTime), Math.Log(currentTime));
 		}
 	}
 }
