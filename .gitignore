@@ -4,16 +4,8 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Fumen
-/Logs/
-/Visualizations/
-/Exports/
-DoublesSongStats.csv
-DoublesStepsPerSide.csv
 notes.txt
 message.txt
-StepManiaChartGeneratorConfig-*.json
-!StepManiaChartGeneratorConfig.json
-!StepManiaChartGeneratorConfig-ship.json
 
 # User-specific files
 *.rsuser
@@ -38,10 +30,6 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
-
-# Fuman exceptions
-!/StepManiaEditor/fmod/lib/x86/
-!/StepManiaEditor/fmod/lib/x64/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
