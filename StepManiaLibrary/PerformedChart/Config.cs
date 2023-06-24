@@ -188,6 +188,18 @@ namespace StepManiaLibrary.PerformedChart
 			[JsonInclude] public double StretchDistanceMax = -1.0;
 
 			/// <summary>
+			/// Distance compensation X value.
+			/// See Config.md for more information.
+			/// </summary>
+			[JsonInclude] public double DistanceCompensationX = -1.0;
+
+			/// <summary>
+			/// Distance compensation Y value.
+			/// See Config.md for more information.
+			/// </summary>
+			[JsonInclude] public double DistanceCompensationY = -1.0;
+
+			/// <summary>
 			/// Sets this StepTighteningConfig to be an override of the the given other StepTighteningConfig.
 			/// Any values in this StepTighteningConfig which are at their default, invalid values will
 			/// be replaced with the corresponding values in the given other StepTighteningConfig.
@@ -207,6 +219,10 @@ namespace StepManiaLibrary.PerformedChart
 					StretchDistanceMin = other.StretchDistanceMin;
 				if (StretchDistanceMax.DoubleEquals(-1.0))
 					StretchDistanceMax = other.StretchDistanceMax;
+				if (DistanceCompensationX.DoubleEquals(-1.0))
+					DistanceCompensationX = other.DistanceCompensationX;
+				if (DistanceCompensationY.DoubleEquals(-1.0))
+					DistanceCompensationY = other.DistanceCompensationY;
 			}
 
 			/// <summary>
@@ -297,6 +313,24 @@ namespace StepManiaLibrary.PerformedChart
 						$"StretchDistanceMin \"{StretchDistanceMin}\" "
 						+ $"is greater than StretchDistanceMax \"{StretchDistanceMax}\". "
 						+ "StretchDistanceMin must be less than or equal to StretchDistanceMax.",
+						pccId);
+					errors = true;
+				}
+
+				if (DistanceCompensationX < 0.0)
+				{
+					LogError(
+						$"Negative value \"{DistanceCompensationX}\" "
+						+ "specified for DistanceCompensationX. Expected non-negative value.",
+						pccId);
+					errors = true;
+				}
+
+				if (DistanceCompensationY < 0.0)
+				{
+					LogError(
+						$"Negative value \"{DistanceCompensationY}\" "
+						+ "specified for DistanceCompensationX. Expected non-negative value.",
 						pccId);
 					errors = true;
 				}

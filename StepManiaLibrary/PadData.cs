@@ -45,14 +45,6 @@ namespace StepManiaLibrary
 		[JsonInclude] public ArrowData[] ArrowData;
 
 		/// <summary>
-		/// When the foot travels in Y it needs to travel less than when it travels in X
-		/// since the foot is longer than it is wide. Movements in Y are substantially shorter
-		/// as a result.
-		/// values.
-		/// </summary>
-		[JsonInclude] public double YTravelDistanceCompensation = 0.5;
-
-		/// <summary>
 		/// Cached bounds value for the minimum X position of any arrow.
 		/// </summary>
 		[JsonIgnore] private int MinX;
@@ -351,31 +343,7 @@ namespace StepManiaLibrary
 		}
 
 		/// <summary>
-		/// Gets the X distance between two points on the pads.
-		/// </summary>
-		/// <param name="x1">Point 1 X.</param>
-		/// <param name="x2">Point 2 X.</param>
-		/// <returns>X distance between the two points.</returns>
-		public double GetXDistance(double x1, double x2)
-		{
-			return Math.Abs(x1 - x2);
-		}
-
-		/// <summary>
-		/// Gets the Y distance between two points on the pads, taking into account the configured
-		/// YTravelDistanceCompensation.
-		/// </summary>
-		/// <param name="y1">Point 1 Y.</param>
-		/// <param name="y2">Point 2 Y.</param>
-		/// <returns>Y distance between the two points.</returns>
-		public double GetYDistance(double y1, double y2)
-		{
-			return Math.Max(0.0, Math.Abs(y1 - y2) - YTravelDistanceCompensation);
-		}
-
-		/// <summary>
-		/// Gets the distance between two points on the pads, taking into account the configured
-		/// YTravelDistanceCompensation.
+		/// Gets the distance between two points on the pads.
 		/// </summary>
 		/// <param name="x1">Point 1 X.</param>
 		/// <param name="y1">Point 1 Y.</param>
@@ -384,8 +352,25 @@ namespace StepManiaLibrary
 		/// <returns>Distance between the two points.</returns>
 		public double GetDistance(double x1, double y1, double x2, double y2)
 		{
-			var dx = GetXDistance(x1, x2);
-			var dy = GetYDistance(y1, y2);
+			var dx = x1 - x2;
+			var dy = y1 - y2;
+			return Math.Sqrt(dx * dx + dy * dy);
+		}
+
+		/// <summary>
+		/// Gets the distance between two points on the pads with compensation values.
+		/// </summary>
+		/// <param name="x1">Point 1 X.</param>
+		/// <param name="y1">Point 1 Y.</param>
+		/// <param name="x2">Point 2 X.</param>
+		/// <param name="y2">Point 2 Y.</param>
+		/// <param name="xCompensation">X distance compensation.</param>
+		/// <param name="yCompensation">Y distance compensation.</param>
+		/// <returns>Distance between the two points.</returns>
+		public double GetDistanceWithCompensation(double x1, double y1, double x2, double y2, double xCompensation, double yCompensation)
+		{
+			var dx = Math.Max(0.0, Math.Abs(x1 - x2) - xCompensation);
+			var dy = Math.Max(0.0, Math.Abs(y1 - y2) - yCompensation);
 			return Math.Sqrt(dx * dx + dy * dy);
 		}
 

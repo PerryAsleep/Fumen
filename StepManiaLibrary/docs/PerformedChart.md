@@ -57,6 +57,8 @@ When comparing paths through a chart a series of comparisons are made to determi
 		"TravelDistanceMax": 4.0,
 		"StretchDistanceMin": 3.0,
 		"StretchDistanceMax": 4.0,
+		"DistanceCompensationX": 0.0,
+		"DistanceCompensationY": 0.5,
 	},
 
 	"LateralTightening":
@@ -106,7 +108,7 @@ Travel distance tightening can be disabled by setting `TravelDistanceMax` to `0.
 
 `TravelDistanceMin` and `TravelDistanceMax` represent a range of distances in panel lengths. If an individual step moves greater than `TravelDistanceMin` in one step then it will have a cost associated with it. This cost will be scaled by the distance magnitude up to `TravelDistanceMax`, beyond which all distances will use the same cost.
 
-Travel distance calculation takes into account the [PadData](PadData.md)'s `YTravelDistanceCompensation`.
+Travel distance calculation takes into account the specified `DistanceCompensationX` and `DistanceCompensationY` values.
 
 - **TravelDistanceMin**: Number (double) type. Distance in panel lengths. See above explanation.
 - **TravelDistanceMax**: Number (double) type. Distance in panel lengths. See above explanation.
@@ -117,10 +119,17 @@ Stretch distance tightening can be disabled by setting `StretchDistanceMax` to `
 
 `StretchDistanceMin` and `StretchDistanceMax` represent a range of distances in panel lengths. If an individual stretch step moves greater than `StretchDistanceMin` in one step then it will have a cost associated with it. This cost will be scaled by the distance magnitude up to `StretchDistanceMax`, beyond which all distances will use the same cost.
 
-Stretch distance calculation takes into account the [PadData](PadData.md)'s `YTravelDistanceCompensation`.
+Stretch distance calculation takes into account the specified `DistanceCompensationX` and `DistanceCompensationY` values.
 
 - **StretchDistanceMin**: Number (double) type. Distance in panel lengths. See above explanation.
 - **StretchDistanceMax**: Number (double) type. Distance in panel lengths. See above explanation.
+
+#### Distance Compensation
+
+Values can be defined to shorten distances in one dimension for the distance calculations performed with other `StepTightening` options by setting `DistanceCompensationX` or `DistanceCompensationY` to non-zero values. This can be useful when wanting to treat movements between arrows in one dimension as taking less movement than movements of equal length in another dimension, which may be preferable given that a foot typically has to move less distance in Y than it does in X to move between equally spaced arrows because a foot is significantly longer than it is wide.
+
+- **DistanceCompensationX**: Number (double) type. Value to subtract from X distances in `StepTightening` calculations.
+- **DistanceCompensationY**: Number (double) type. Value to subtract from Y distances in `StepTightening` calculations.
 
 ### Lateral Tightening
 
