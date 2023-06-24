@@ -51,7 +51,6 @@ namespace PadDataGenerator
 			[JsonInclude] public int MaxYSeparationCrossoverBeforeStretch = 2;
 			[JsonInclude] public int MaxXSeparationBracket = 1;
 			[JsonInclude] public int MaxYSeparationBracket = 1;
-			[JsonInclude] public double YTravelDistanceCompensation = 0.5;
 			[JsonInclude] public bool GenerateStepGraph = true;
 
 			/// <summary>
@@ -240,7 +239,6 @@ namespace PadDataGenerator
 
 			var padData = new PadData
 			{
-				YTravelDistanceCompensation = input.YTravelDistanceCompensation,
 				ArrowData = new ArrowData[numArrows],
 			};
 			for (var a = 0; a < numArrows; a++)
