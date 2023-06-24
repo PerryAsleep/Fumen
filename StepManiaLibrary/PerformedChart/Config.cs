@@ -42,6 +42,15 @@ namespace StepManiaLibrary.PerformedChart
 			[JsonInclude] public double OutwardPercentageCutoff = 0.5;
 
 			/// <summary>
+			/// Returns a new FacingConfig that is a clone of this FacingConfig.
+			/// </summary>
+			public FacingConfig Clone()
+			{
+				// All members are value types.
+				return (FacingConfig)MemberwiseClone();
+			}
+
+			/// <summary>
 			/// Sets this FacingConfig to be an override of the the given other FacingConfig.
 			/// Any values in this FacingConfig which are at their default, invalid values will
 			/// be replaced with the corresponding values in the given other FacingConfig.
@@ -198,6 +207,15 @@ namespace StepManiaLibrary.PerformedChart
 			/// See Config.md for more information.
 			/// </summary>
 			[JsonInclude] public double DistanceCompensationY = -1.0;
+
+			/// <summary>
+			/// Returns a new StepTighteningConfig that is a clone of this StepTighteningConfig.
+			/// </summary>
+			public StepTighteningConfig Clone()
+			{
+				// All members are value types.
+				return (StepTighteningConfig)MemberwiseClone();
+			}
 
 			/// <summary>
 			/// Sets this StepTighteningConfig to be an override of the the given other StepTighteningConfig.
@@ -361,6 +379,15 @@ namespace StepManiaLibrary.PerformedChart
 			[JsonInclude] public double Speed = -1.0;
 
 			/// <summary>
+			/// Returns a new LateralTighteningConfig that is a clone of this LateralTighteningConfig.
+			/// </summary>
+			public LateralTighteningConfig Clone()
+			{
+				// All members are value types.
+				return (LateralTighteningConfig)MemberwiseClone();
+			}
+
+			/// <summary>
 			/// Sets this LateralTighteningConfig to be an override of the the given other LateralTighteningConfig.
 			/// Any values in this LateralTighteningConfig which are at their default, invalid values will
 			/// be replaced with the corresponding values in the given other LateralTighteningConfig.
@@ -443,6 +470,37 @@ namespace StepManiaLibrary.PerformedChart
 		/// Values sum to 1.0.
 		/// </summary>
 		[JsonIgnore] public Dictionary<string, List<double>> ArrowWeightsNormalized = new Dictionary<string, List<double>>();
+
+		/// <summary>
+		/// Returns a new Config that is a clone of this Config.
+		/// </summary>
+		public Config Clone()
+		{
+			var newConfig = new Config
+			{
+				Facing = Facing.Clone(),
+				LateralTightening = LateralTightening.Clone(),
+				StepTightening = StepTightening.Clone(),
+				ArrowWeights = new Dictionary<string, List<int>>(),
+				ArrowWeightsNormalized = new Dictionary<string, List<double>>(),
+			};
+
+			foreach (var kvp in ArrowWeights)
+			{
+				var newList = new List<int>();
+				newList.AddRange(kvp.Value);
+				newConfig.ArrowWeights.Add(kvp.Key, newList);
+			}
+
+			foreach (var kvp in ArrowWeightsNormalized)
+			{
+				var newList = new List<double>();
+				newList.AddRange(kvp.Value);
+				newConfig.ArrowWeightsNormalized.Add(kvp.Key, newList);
+			}
+
+			return newConfig;
+		}
 
 		/// <summary>
 		/// Gets the desired arrow weights for the given chart type.

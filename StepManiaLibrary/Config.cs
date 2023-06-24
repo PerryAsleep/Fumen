@@ -139,6 +139,15 @@ namespace StepManiaLibrary
 		/// </summary>
 		[JsonInclude] public double BalancedBracketsPerMinuteForNoBrackets;
 
+		/// <summary>
+		/// Returns a new ExpressedChartConfig that is a clone of this ExpressedChartConfig.
+		/// </summary>
+		public ExpressedChartConfig Clone()
+		{
+			// All members are value types.
+			return (ExpressedChartConfig)MemberwiseClone();
+		}
+
 		public bool Validate(string eccId = null)
 		{
 			var errors = false;
