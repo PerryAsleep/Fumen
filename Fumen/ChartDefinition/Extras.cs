@@ -65,8 +65,7 @@ namespace Fumen.ChartDefinition
 		/// </param>
 		public void AddSourceExtra(string key, object value, bool overwrite = false)
 		{
-			if (SourceExtras == null)
-				SourceExtras = new Dictionary<string, object>();
+			SourceExtras ??= new Dictionary<string, object>();
 			if (overwrite)
 				SourceExtras[key] = value;
 			else
@@ -93,8 +92,7 @@ namespace Fumen.ChartDefinition
 		/// </param>
 		public void AddDestExtra(string key, object value, bool overwrite = false)
 		{
-			if (DestExtras == null)
-				DestExtras = new Dictionary<string, object>();
+			DestExtras ??= new Dictionary<string, object>();
 			if (overwrite)
 				DestExtras[key] = value;
 			else

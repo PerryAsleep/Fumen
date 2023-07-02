@@ -18,11 +18,11 @@ namespace Fumen.Converters
 		/// </summary>
 		private class TimingProperties
 		{
-			public readonly Dictionary<double, double> Tempos = new Dictionary<double, double>();
-			public readonly Dictionary<double, double> Stops = new Dictionary<double, double>();
-			public readonly Dictionary<double, double> Delays = new Dictionary<double, double>();
-			public readonly Dictionary<double, Fraction> TimeSignatures = new Dictionary<double, Fraction>();
-			public readonly Dictionary<double, int> TickCounts = new Dictionary<double, int>();
+			public readonly Dictionary<double, double> Tempos = new ();
+			public readonly Dictionary<double, double> Stops = new ();
+			public readonly Dictionary<double, double> Delays = new ();
+			public readonly Dictionary<double, Fraction> TimeSignatures = new ();
+			public readonly Dictionary<double, int> TickCounts = new ();
 		}
 
 		/// <summary>

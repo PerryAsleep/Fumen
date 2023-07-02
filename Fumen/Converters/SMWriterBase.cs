@@ -76,7 +76,7 @@ namespace Fumen.Converters
 			/// Custom song properties. These will be written as individual MSD key value pairs in the song's
 			/// section of the MSD file. The values will be escaped.
 			/// </summary>
-			public Dictionary<string, string> CustomSongProperties = new Dictionary<string, string>();
+			public Dictionary<string, string> CustomSongProperties = new ();
 
 			/// <summary>
 			/// Custom properties per Chart. These will be written as individual MSD key value pairs.
@@ -84,7 +84,7 @@ namespace Fumen.Converters
 			/// Otherwise they will be saved at the Song level with modified tags to identify which Chart
 			/// they are for.
 			/// </summary>
-			public List<Dictionary<string, string>> CustomChartProperties = new List<Dictionary<string, string>>();
+			public List<Dictionary<string, string>> CustomChartProperties = new ();
 		}
 
 		/// <summary>
@@ -237,7 +237,7 @@ namespace Fumen.Converters
 			/// <summary>
 			/// All LaneNotes in this measure.
 			/// </summary>
-			public readonly List<LaneNote> Notes = new List<LaneNote>();
+			public readonly List<LaneNote> Notes = new ();
 		}
 
 		/// <summary>
@@ -1242,7 +1242,7 @@ namespace Fumen.Converters
 				var measures = new List<MeasureData>
 				{
 					// Add one measure so even blank charts write one empty measure.
-					new MeasureData { FirstMeasure = true },
+					new() { FirstMeasure = true },
 				};
 
 				// Accumulate data about each measure.

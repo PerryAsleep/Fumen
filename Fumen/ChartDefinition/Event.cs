@@ -33,7 +33,7 @@
 		/// <summary>
 		/// Miscellaneous extra information associated with this Event.
 		/// </summary>
-		public Extras Extras { get; set; } = new Extras();
+		public Extras Extras { get; set; } = new ();
 
 		protected Event()
 		{

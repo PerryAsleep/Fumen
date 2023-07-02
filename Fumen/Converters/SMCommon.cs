@@ -140,8 +140,8 @@ namespace Fumen.Converters
 
 		public static readonly char[] SMAllWhiteSpace = { '\r', '\n', ' ', '\t' };
 
-		public static readonly List<Fraction> SubDivisions = new List<Fraction>();
-		public static readonly List<double> SubDivisionLengths = new List<double>();
+		public static readonly List<Fraction> SubDivisions = new ();
+		public static readonly List<double> SubDivisionLengths = new ();
 		public static readonly ChartProperties[] Properties;
 		public static readonly char[] NoteChars = { '0', '1', '2', '3', '4', 'M', 'L', 'F', 'K' };
 
@@ -409,7 +409,7 @@ namespace Fumen.Converters
 		public static bool GetLowestValidSMSubDivision(int desiredSubDivision, out int lowestValidSMSubDivision)
 		{
 			lowestValidSMSubDivision = desiredSubDivision;
-			var highestDenominator = ValidDenominators[ValidDenominators.Length - 1];
+			var highestDenominator = ValidDenominators[^1];
 			do
 			{
 				foreach (var validDenominator in ValidDenominators)
@@ -1158,7 +1158,7 @@ namespace Fumen.Converters
 			private const string DelayString = "Delay";
 			private const string NegativeStopString = "NegativeStop";
 
-			private static readonly Dictionary<string, int> SMEventOrder = new Dictionary<string, int>
+			private static readonly Dictionary<string, int> SMEventOrder = new ()
 			{
 				// If changing this such that TimeSignature is no longer first, adjust CreateDummyFirstEventForRow.
 				{"TimeSignature", 0},

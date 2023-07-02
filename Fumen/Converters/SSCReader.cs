@@ -16,7 +16,7 @@ namespace Fumen.Converters
 		/// In StepMania parsing, if one of these values is present on a Chart then the Chart is considered
 		/// to use its own set of timing data and should not fall back to Song timing data.
 		/// </summary>
-		private static readonly HashSet<string> ChartTimingDataTags = new HashSet<string>()
+		private static readonly HashSet<string> ChartTimingDataTags = new ()
 		{
 			TagBPMs,
 			TagStops,
@@ -38,17 +38,17 @@ namespace Fumen.Converters
 		/// </summary>
 		private class TimingProperties
 		{
-			public readonly Dictionary<double, double> Tempos = new Dictionary<double, double>();
-			public readonly Dictionary<double, double> Stops = new Dictionary<double, double>();
-			public readonly Dictionary<double, double> Delays = new Dictionary<double, double>();
-			public readonly Dictionary<double, double> Warps = new Dictionary<double, double>();
-			public readonly Dictionary<double, double> Scrolls = new Dictionary<double, double>();
-			public readonly Dictionary<double, Tuple<double, double, int>> Speeds = new Dictionary<double, Tuple<double, double, int>>();
-			public readonly Dictionary<double, Fraction> TimeSignatures = new Dictionary<double, Fraction>();
-			public readonly Dictionary<double, int> TickCounts = new Dictionary<double, int>();
-			public readonly Dictionary<double, string> Labels = new Dictionary<double, string>();
-			public readonly Dictionary<double, Tuple<int, int>> Combos = new Dictionary<double, Tuple<int, int>>();
-			public readonly Dictionary<double, double> Fakes = new Dictionary<double, double>();
+			public readonly Dictionary<double, double> Tempos = new ();
+			public readonly Dictionary<double, double> Stops = new ();
+			public readonly Dictionary<double, double> Delays = new ();
+			public readonly Dictionary<double, double> Warps = new ();
+			public readonly Dictionary<double, double> Scrolls = new ();
+			public readonly Dictionary<double, Tuple<double, double, int>> Speeds = new ();
+			public readonly Dictionary<double, Fraction> TimeSignatures = new();
+			public readonly Dictionary<double, int> TickCounts = new ();
+			public readonly Dictionary<double, string> Labels = new ();
+			public readonly Dictionary<double, Tuple<int, int>> Combos = new ();
+			public readonly Dictionary<double, double> Fakes = new ();
 		}
 
 		/// <summary>
@@ -190,7 +190,7 @@ namespace Fumen.Converters
 			var timingProperties = songTimingProperties;
 			if (chart.Extras.TryGetSourceExtra(TagFumenChartUsesOwnTimingData, out object useTimingDataObject))
 			{
-				if (useTimingDataObject is bool b && b)
+				if (useTimingDataObject is true)
 					timingProperties = chartTimingProperties;
 			}
 

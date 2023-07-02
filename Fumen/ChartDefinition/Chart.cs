@@ -71,11 +71,11 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// Layers of Events, including the Notes of the Chart.
 		/// </summary>
-		public List<Layer> Layers { get; set; } = new List<Layer>();
+		public List<Layer> Layers { get; set; } = new ();
 
 		/// <summary>
 		/// Miscellaneous extra information associated with this Chart.
 		/// </summary>
-		public Extras Extras { get; set; } = new Extras();
+		public Extras Extras { get; set; } = new ();
 	}
 }

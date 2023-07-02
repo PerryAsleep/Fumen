@@ -30,11 +30,11 @@ namespace Fumen.ChartDefinition
 		/// <summary>
 		/// The Charts making up this Song.
 		/// </summary>
-		public List<Chart> Charts { get; set; } = new List<Chart>();
+		public List<Chart> Charts { get; set; } = new ();
 
 		/// <summary>
 		/// Miscellaneous extra information associated with this Song.
 		/// </summary>
-		public Extras Extras { get; set; } = new Extras();
+		public Extras Extras { get; set; } = new ();
 	}
 }

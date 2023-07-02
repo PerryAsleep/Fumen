@@ -23,7 +23,7 @@ namespace Fumen
 		/// <summary>
 		/// Subdivision within Beat.
 		/// </summary>
-		public readonly Fraction SubDivision = new Fraction(0, 0);
+		public readonly Fraction SubDivision = new (0, 0);
 
 		public MetricPosition()
 		{

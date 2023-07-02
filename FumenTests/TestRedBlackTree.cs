@@ -235,7 +235,7 @@ namespace FumenTests
 				deleteList.Add(val);
 			}
 
-			deleteList = deleteList.OrderBy(x => random.Next()).ToList();
+			deleteList = deleteList.OrderBy(_ => random.Next()).ToList();
 			var expectedCount = 0;
 			foreach (var val in insertList)
 			{
@@ -286,7 +286,7 @@ namespace FumenTests
 				deleteList.Add(i % 2 == 0 ? val : random.Next());
 			}
 
-			deleteList = deleteList.OrderBy(x => random.Next()).ToList();
+			deleteList = deleteList.OrderBy(_ => random.Next()).ToList();
 			foreach (var val in insertList)
 			{
 				t.Insert(val);
@@ -366,7 +366,7 @@ namespace FumenTests
 			var insertList = new List<int>();
 			for (var i = 0; i < num; i++)
 				insertList.Add(i);
-			insertList = insertList.OrderBy(x => random.Next()).ToList();
+			insertList = insertList.OrderBy(_ => random.Next()).ToList();
 			foreach (var i in insertList)
 				t.Insert(i);
 			expected = 0;

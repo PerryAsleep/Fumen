@@ -8,6 +8,6 @@ namespace Fumen.ChartDefinition
 	/// </summary>
 	public class Layer
 	{
-		public List<Event> Events { get; set; } = new List<Event>();
+		public List<Event> Events { get; set; } = new ();
 	}
 }

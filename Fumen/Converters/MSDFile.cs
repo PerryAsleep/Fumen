@@ -45,13 +45,13 @@ namespace Fumen.Converters
 		/// </summary>
 		public class Value
 		{
-			public List<string> Params = new List<string>();
+			public List<string> Params = new ();
 		}
 
 		/// <summary>
 		/// The values parsed from the file.
 		/// </summary>
-		public List<Value> Values = new List<Value>();
+		public List<Value> Values = new ();
 
 		/// <summary>
 		/// Asynchronously load and parse the given msd file.
@@ -67,10 +67,12 @@ namespace Fumen.Converters
 			string buffer;
 			try
 			{
-				using (var reader = System.IO.File.OpenText(filePath))
-				{
-					buffer = await reader.ReadToEndAsync();
-				}
+				using var reader = System.IO.File.OpenText(filePath);
+				buffer = await reader.ReadToEndAsync(token);
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
 			}
 			catch (Exception e)
 			{
@@ -132,7 +134,7 @@ namespace Fumen.Converters
 
 						// Add the final param for the current value, trimming all whitespace that preceded
 						// the ValueEndMarker.
-						Values[Values.Count - 1].Params.Add(currentValueSB.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
+						Values[^1].Params.Add(currentValueSB.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
 						// Finish parsing the value, but continue to start parsing the new value below.
 						parsingValue = false;
 					}
@@ -157,7 +159,7 @@ namespace Fumen.Converters
 					// Handle ending a parameter.
 					if (buffer[i] == ParamMarker || buffer[i] == ValueEndMarker)
 					{
-						Values[Values.Count - 1].Params.Add(currentValueSB.Length > 0 ? currentValueSB.ToString() : "");
+						Values[^1].Params.Add(currentValueSB.Length > 0 ? currentValueSB.ToString() : "");
 						// Continue to start parsing a new parameter below.
 					}
 
@@ -186,7 +188,7 @@ namespace Fumen.Converters
 
 				// Add final parameter.
 				if (parsingValue)
-					Values[Values.Count - 1].Params.Add(currentValueSB.ToString());
+					Values[^1].Params.Add(currentValueSB.ToString());
 			}, token);
 
 			return true;

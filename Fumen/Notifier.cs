@@ -11,7 +11,7 @@ namespace Fumen
 		/// <summary>
 		/// All observers of this Notifier.
 		/// </summary>
-		private readonly List<IObserver<T>> Observers = new List<IObserver<T>>();
+		private readonly List<IObserver<T>> Observers = new ();
 
 		/// <summary>
 		/// Adds an Observer.

@@ -131,7 +131,7 @@ namespace Fumen
 		/// <summary>
 		/// Object for locking the StreamWriter.
 		/// </summary>
-		private readonly object StreamWriterLock = new object();
+		private readonly object StreamWriterLock = new ();
 
 		/// <summary>
 		/// Whether or not to write to the console when logging.
