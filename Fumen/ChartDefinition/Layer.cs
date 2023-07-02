@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 
-namespace Fumen.ChartDefinition
+namespace Fumen.ChartDefinition;
+
+/// <summary>
+/// Layer data.
+/// A Layer has ordered Events.
+/// </summary>
+public class Layer
 {
-	/// <summary>
-	/// Layer data.
-	/// A Layer has ordered Events.
-	/// </summary>
-	public class Layer
-	{
-		public List<Event> Events { get; set; } = new ();
-	}
+	public List<Event> Events { get; set; } = new();
 }

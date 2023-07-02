@@ -1,47 +1,46 @@
-﻿namespace Fumen
+﻿namespace Fumen;
+
+public enum FileFormatType
 {
-	public enum FileFormatType
+	SM,
+	SSC,
+}
+
+public class FileFormat
+{
+	private static readonly FileFormat[] Data;
+
+	public readonly FileFormatType Type;
+	public readonly string Extension;
+	public readonly string ExtensionWithSeparator;
+
+	private FileFormat(FileFormatType type, string extension)
 	{
-		SM,
-		SSC,
+		Type = type;
+		Extension = extension;
+		ExtensionWithSeparator = "." + extension;
 	}
 
-	public class FileFormat
+	static FileFormat()
 	{
-		private static readonly FileFormat[] Data;
-
-		public readonly FileFormatType Type;
-		public readonly string Extension;
-		public readonly string ExtensionWithSeparator;
-
-		private FileFormat(FileFormatType type, string extension)
+		Data = new[]
 		{
-			Type = type;
-			Extension = extension;
-			ExtensionWithSeparator = "." + extension;
-		}
+			new FileFormat(FileFormatType.SM, "sm"),
+			new FileFormat(FileFormatType.SSC, "ssc"),
+		};
+	}
 
-		static FileFormat()
-		{
-			Data = new[]
-			{
-				new FileFormat(FileFormatType.SM, "sm"),
-				new FileFormat(FileFormatType.SSC, "ssc"),
-			};
-		}
-
-		public static FileFormat GetFileFormatByExtension(string extension)
-		{
-			if (string.IsNullOrEmpty(extension))
-				return null;
-			extension = extension.ToLower();
-			foreach (var data in Data)
-			{
-				if (data.Extension == extension || data.ExtensionWithSeparator == extension)
-					return data;
-			}
-
+	public static FileFormat GetFileFormatByExtension(string extension)
+	{
+		if (string.IsNullOrEmpty(extension))
 			return null;
+		extension = extension.ToLower();
+		foreach (var data in Data)
+		{
+			if (data.Extension == extension || data.ExtensionWithSeparator == extension)
+				return data;
 		}
+
+		return null;
 	}
 }
