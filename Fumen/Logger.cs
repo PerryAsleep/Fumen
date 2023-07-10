@@ -200,6 +200,21 @@ public class Logger : IDisposable
 	}
 
 	/// <summary>
+	/// Clears the Logger instance's Buffer, if it exists.
+	/// Does nothing if the Logger instance was not configured to WriteToBuffer.
+	/// Requires locking the configured BufferLock.
+	/// </summary>
+	public static void ClearBuffer()
+	{
+		if (Instance?.Buffer == null || Instance.BufferLock == null)
+			return;
+		lock (Instance.BufferLock)
+		{
+			Instance.Buffer.Clear();
+		}
+	}
+
+	/// <summary>
 	/// Private Constructor.
 	/// </summary>
 	/// <param name="config">Config object for configuring the logger.</param>
