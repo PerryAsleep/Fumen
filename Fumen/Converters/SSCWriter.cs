@@ -140,6 +140,7 @@ public class SSCWriter : SMWriterBase
 				if (Config.CustomProperties?.CustomChartProperties?.Count > chartIndex)
 					customChartProperties = Config.CustomProperties.CustomChartProperties[chartIndex];
 				WriteChart(chart, customChartProperties);
+				chartIndex++;
 			}
 		}
 
