@@ -925,6 +925,19 @@ public static class SMCommon
 	}
 
 	/// <summary>
+	/// Returns whether or not the given Event is an Event which affects other Events' TimeSeconds
+	/// or MetricPosition values. 
+	/// </summary>
+	/// <param name="chartEvent">Event in question.</param>
+	/// <returns>
+	/// True if this Event affects other Events' TimeSeconds or MetricPosition values and false otherwise.
+	/// </returns>
+	public static bool DoesEventAffectTiming(Event chartEvent)
+	{
+		return chartEvent is TimeSignature or Tempo or Stop or Warp;
+	}
+
+	/// <summary>
 	/// Sets the TimeSeconds and MetricPositions on the given Chart Events based
 	/// on the rate altering Events in the Chart.
 	/// </summary>
@@ -1158,28 +1171,65 @@ public static class SMCommon
 		private const string DelayString = "Delay";
 		private const string NegativeStopString = "NegativeStop";
 
-		private static readonly Dictionary<string, int> SMEventOrder = new()
+		public static readonly List<string> SMEventOrderList = new()
 		{
 			// If changing this such that TimeSignature is no longer first, adjust CreateDummyFirstEventForRow.
-			{ "TimeSignature", 0 },
-			{ "Tempo", 1 },
-			{ "ScrollRate", 2 },
-			{ "ScrollRateInterpolation", 3 },
-			{ "TickCount", 4 },
-			{ "FakeSegment", 5 },
-			{ "Multipliers", 6 },
-			{ "Label", 7 },
-			{ "Delay", 8 }, // Delays occur before notes.
-			{ "NegativeStop", 9 }, // Negative Stops (like Warps) occur before notes.
-			{ "Warp", 10 }, // Warps occur before notes.
-			{ "LaneTapNote", 11 },
-			{ "LaneHoldStartNote", 12 },
-			{ "LaneHoldEndNote", 13 },
-			{ "LaneNote", 14 },
-			{ "Stop", 15 }, // Stops occur after notes.
+			nameof(TimeSignature),
+			nameof(Tempo),
+			nameof(ScrollRate),
+			nameof(ScrollRateInterpolation),
+			nameof(TickCount),
+			nameof(FakeSegment),
+			nameof(Multipliers),
+			nameof(Label),
+			DelayString, // Delays occur before notes.
+			NegativeStopString, // Negative Stops (like Warps) occur before notes.
+			nameof(Warp), // Warps occur before notes.
+			nameof(LaneTapNote),
+			nameof(LaneHoldStartNote),
+			nameof(LaneHoldEndNote),
+			nameof(LaneNote),
+			nameof(Stop), // Stops occur after notes.
 		};
 
-		public static int Compare(Event e1, Event e2)
+		private readonly Dictionary<string, int> SMEventOrderDict = new();
+
+		/// <summary>
+		/// Default constructor.
+		/// The SMEventComparer will use the default Event ordering.
+		/// </summary>
+		public SMEventComparer()
+		{
+			var index = 0;
+			foreach (var eventString in SMEventOrderList)
+			{
+				SMEventOrderDict.Add(eventString, index);
+				index++;
+			}
+		}
+
+		/// <summary>
+		/// Constructor with custom Event sort order.
+		/// The SMEventComparer will use Event ordering as defined by the given customEventOrder.
+		/// Strings in customEventOrder are expected to be the Type names of events in the structure
+		/// to be sorted. It is expected that every Type of event in the structure being sorted is
+		/// present in the given List. This method is intended to be used when dealing with custom
+		/// Event types that are unknown to the Fumen library.
+		/// <param name="customEventOrder">
+		/// List of names of types of Events in the order they should be sorted.
+		/// </param>
+		/// </summary>
+		public SMEventComparer(List<string> customEventOrder)
+		{
+			var index = 0;
+			foreach (var eventString in customEventOrder)
+			{
+				SMEventOrderDict.Add(eventString, index);
+				index++;
+			}
+		}
+
+		public int Compare(Event e1, Event e2)
 		{
 			if (null == e1 && null == e2)
 				return 0;
@@ -1225,8 +1275,8 @@ public static class SMCommon
 					typeStr2 = NegativeStopString;
 			}
 
-			var e1Index = SMEventOrder[typeStr1];
-			var e2Index = SMEventOrder[typeStr2];
+			var e1Index = SMEventOrderDict[typeStr1];
+			var e2Index = SMEventOrderDict[typeStr2];
 			if (e1Index >= 0 && e2Index >= 0)
 				comparison = e1Index.CompareTo(e2Index);
 			if (comparison != 0)
