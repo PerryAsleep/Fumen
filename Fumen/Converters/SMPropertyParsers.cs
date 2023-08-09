@@ -953,8 +953,9 @@ public class SongNotesPropertyParser : NotesPropertyParser
 			return true;
 		}
 
-		chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
-		chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
+		var chartProperties = SMCommon.GetChartProperties(smChartType);
+		chart.NumPlayers = chartProperties.GetNumPlayers();
+		chart.NumInputs = chartProperties.GetNumInputs();
 
 		// Parse the notes.
 		if (!ParseNotes(chart, value.Params[6] ?? ""))
@@ -1024,8 +1025,9 @@ public class ChartTypePropertyParser : PropertyParser
 			return true;
 		}
 
-		Chart.NumPlayers = SMCommon.Properties[(int)smChartType].NumPlayers;
-		Chart.NumInputs = SMCommon.Properties[(int)smChartType].NumInputs;
+		var chartProperties = SMCommon.GetChartProperties(smChartType);
+		Chart.NumPlayers = chartProperties.GetNumPlayers();
+		Chart.NumInputs = chartProperties.GetNumInputs();
 
 		Chart.Extras.AddSourceExtra(SMCommon.TagStepsType, Chart.Type, true);
 
