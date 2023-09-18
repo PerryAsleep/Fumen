@@ -11,97 +11,11 @@ namespace FumenTests;
 [TestClass]
 public class TestRedBlackTree
 {
-	/// <summary>
-	/// Helper method to assert that the given RedBlackTree is structured as expected.
-	/// This doesn't follow some unit test best practices of ignoring implementation details,
-	/// but this data structure is massively complicated and I want assurance that it is
-	/// implemented correctly.
-	/// </summary>
-	/// <typeparam name="T">Type of tree.</typeparam>
-	/// <param name="t">Tree to check.</param>
-	private void CheckTreeValid<T>(RedBlackTree<T> t) where T : IComparable<T>
-	{
-		var r = t.GetRoot();
-		if (t.Count == 0)
-		{
-			Assert.IsTrue(t.IsNull(r));
-			return;
-		}
-
-		// The root must be black.
-		Assert.IsNotNull(r);
-		Assert.IsTrue(t.IsNull(r.Parent));
-		Assert.IsTrue(!r.Red);
-
-		// Check every node.
-		var expectedLeafBlackCount = -1;
-		var numNodes = 0;
-		var previousValue = default(T);
-		CheckNode(t, r, ref previousValue, ref numNodes, ref expectedLeafBlackCount, 0);
-
-		Assert.AreEqual(numNodes, t.Count);
-	}
-
-	/// <summary>
-	/// Recursive helper for checking a Node of a RedBlackTree.
-	/// </summary>
-	private void CheckNode<T>(
-		RedBlackTree<T> t,
-		RedBlackTree<T>.Node n,
-		ref T previousValue,
-		ref int numNodes,
-		ref int expectedLeafBlackCount,
-		int currentLeafBlackCount) where T : IComparable<T>
-	{
-		numNodes++;
-
-		// All red nodes must have two black children where null children are considered black.
-		if (n.Red)
-		{
-			Assert.IsTrue(t.IsNull(n.L) || !n.L.Red);
-			Assert.IsTrue(t.IsNull(n.R) || !n.R.Red);
-		}
-		else
-		{
-			currentLeafBlackCount++;
-		}
-
-		// Leaf node checks.
-		if (t.IsNull(n.L) && t.IsNull(n.R))
-		{
-			var firstLeaf = expectedLeafBlackCount == -1;
-
-			// Leaf nodes must all have the same number of black ancestors.
-			if (expectedLeafBlackCount == -1)
-				expectedLeafBlackCount = currentLeafBlackCount;
-			Assert.AreEqual(expectedLeafBlackCount, currentLeafBlackCount);
-
-			// From left to right, leaf nodes should be sorted.
-			if (!firstLeaf)
-				Assert.IsTrue(n.Data.CompareTo(previousValue) >= 0);
-			previousValue = n.Data;
-		}
-
-		// Check left node.
-		if (!t.IsNull(n.L))
-		{
-			Assert.AreSame(n.L.Parent, n);
-			CheckNode(t, n.L, ref previousValue, ref numNodes, ref expectedLeafBlackCount, currentLeafBlackCount);
-		}
-
-		// Check right node.
-		if (!t.IsNull(n.R))
-		{
-			Assert.AreSame(n.R.Parent, n);
-			CheckNode(t, n.R, ref previousValue, ref numNodes, ref expectedLeafBlackCount, currentLeafBlackCount);
-		}
-	}
-
 	[TestMethod]
 	public void TestEmpty()
 	{
 		var t = new RedBlackTree<int>();
-		CheckTreeValid(t);
+		Assert.IsTrue(t.IsValid());
 	}
 
 	[TestMethod]
@@ -109,21 +23,21 @@ public class TestRedBlackTree
 	{
 		var t = new RedBlackTree<int>();
 
-		var num = 10000;
+		const int num = 10000;
 
 		// Insert ascending, delete ascending
 		for (var i = 0; i < num; i++)
 		{
 			t.Insert(i);
 			Assert.AreEqual(i + 1, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = 0; i < num; i++)
 		{
 			Assert.IsTrue(t.Delete(i));
 			Assert.AreEqual(num - 1 - i, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		// Insert ascending, delete descending
@@ -131,14 +45,14 @@ public class TestRedBlackTree
 		{
 			t.Insert(i);
 			Assert.AreEqual(i + 1, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = num - 1; i >= 0; i--)
 		{
 			Assert.IsTrue(t.Delete(i));
 			Assert.AreEqual(i, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		// Insert descending, delete ascending
@@ -146,14 +60,14 @@ public class TestRedBlackTree
 		{
 			t.Insert(i);
 			Assert.AreEqual(num - i, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = 0; i < num; i++)
 		{
 			Assert.IsTrue(t.Delete(i));
 			Assert.AreEqual(num - 1 - i, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		// Insert descending, delete descending
@@ -161,14 +75,14 @@ public class TestRedBlackTree
 		{
 			t.Insert(i);
 			Assert.AreEqual(num - i, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = num - 1; i >= 0; i--)
 		{
 			Assert.IsTrue(t.Delete(i));
 			Assert.AreEqual(i, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 	}
 
@@ -176,23 +90,19 @@ public class TestRedBlackTree
 	public void TestDuplicates()
 	{
 		var t = new RedBlackTree<int>();
+		const int value = 4;
 
-		var num = 10000;
-		var value = 4;
+		Assert.IsNotNull(t.Insert(value));
+		Assert.AreEqual(1, t.Count);
+		Assert.IsTrue(t.IsValid());
 
-		for (var i = 0; i < num; i++)
-		{
-			t.Insert(value);
-			Assert.AreEqual(i + 1, t.Count);
-			CheckTreeValid(t);
-		}
+		Assert.ThrowsException<ArgumentException>(() => t.Insert(value));
+		Assert.AreEqual(1, t.Count);
+		Assert.IsTrue(t.IsValid());
 
-		for (var i = 0; i < num; i++)
-		{
-			Assert.IsTrue(t.Delete(value));
-			Assert.AreEqual(num - 1 - i, t.Count);
-			CheckTreeValid(t);
-		}
+		Assert.IsTrue(t.Delete(value));
+		Assert.AreEqual(0, t.Count);
+		Assert.IsTrue(t.IsValid());
 	}
 
 	[TestMethod]
@@ -221,9 +131,9 @@ public class TestRedBlackTree
 	{
 		var t = new RedBlackTree<int>();
 
-		var randomSeed = 524614862;
+		const int randomSeed = 524614862;
 		var random = new Random(randomSeed);
-		var num = 10000;
+		const int num = 10000;
 
 		// Insert and delete the same set of random numbers.
 		var insertList = new List<int>();
@@ -242,7 +152,7 @@ public class TestRedBlackTree
 			t.Insert(val);
 			expectedCount++;
 			Assert.AreEqual(expectedCount, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		foreach (var val in deleteList)
@@ -250,7 +160,7 @@ public class TestRedBlackTree
 			Assert.IsTrue(t.Delete(val));
 			expectedCount--;
 			Assert.AreEqual(expectedCount, t.Count);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		// Insert and delete different sets of random numbers.
@@ -266,13 +176,13 @@ public class TestRedBlackTree
 		foreach (var val in insertList)
 		{
 			t.Insert(val);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		foreach (var val in deleteList)
 		{
 			t.Delete(val);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		// Insert and delete different sets of random numbers with some overlap.
@@ -290,13 +200,13 @@ public class TestRedBlackTree
 		foreach (var val in insertList)
 		{
 			t.Insert(val);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 
 		foreach (var val in deleteList)
 		{
 			t.Delete(val);
-			CheckTreeValid(t);
+			Assert.IsTrue(t.IsValid());
 		}
 	}
 
@@ -327,7 +237,7 @@ public class TestRedBlackTree
 		Assert.AreEqual(1, t.Count);
 		Assert.AreEqual(1, numCounted);
 
-		var num = 10000;
+		const int num = 10000;
 
 		// Iterate over multiple elements inserted in increasing order.
 		t = new RedBlackTree<int>();
@@ -361,7 +271,7 @@ public class TestRedBlackTree
 
 		// Iterate over multiple elements inserted in random order.
 		t = new RedBlackTree<int>();
-		var randomSeed = 13430297;
+		const int randomSeed = 13430297;
 		var random = new Random(randomSeed);
 		var insertList = new List<int>();
 		for (var i = 0; i < num; i++)
@@ -437,6 +347,72 @@ public class TestRedBlackTree
 	}
 
 	[TestMethod]
+	public void TestEnumeratorDelete()
+	{
+		var t = new RedBlackTree<int>();
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+
+		const int deletedValue = 5;
+		var e = t.Find(deletedValue);
+
+		// Deleting unset enumerator should throw an exception and not delete a value.
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.ThrowsException<InvalidOperationException>(e.Delete);
+		Assert.AreEqual(10, t.Count);
+
+		// Deleting a set enumerator should delete a value and unset the enumerator.
+		e.MoveNext();
+		Assert.IsTrue(e.IsCurrentValid());
+		e.Delete();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.AreEqual(9, t.Count);
+		var index = 0;
+		foreach (var e2 in t)
+		{
+			if (index < deletedValue)
+				Assert.AreEqual(index, e2);
+			else
+				Assert.AreEqual(index + 1, e2);
+			index++;
+		}
+	}
+
+	[TestMethod]
+	public void TestFirst()
+	{
+		var t = new RedBlackTree<int>();
+		var e = t.First();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsFalse(e.MoveNext());
+		Assert.IsFalse(e.IsCurrentValid());
+
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+		e = t.First();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+	}
+
+	[TestMethod]
+	public void TestLast()
+	{
+		var t = new RedBlackTree<int>();
+		var e = t.Last();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsFalse(e.MovePrev());
+		Assert.IsFalse(e.IsCurrentValid());
+
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+		e = t.Last();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsTrue(e.MovePrev());
+		Assert.AreEqual(9, e.Current);
+	}
+
+	[TestMethod]
 	public void TestFind()
 	{
 		// Finding in an empty tree should return null.
@@ -472,7 +448,7 @@ public class TestRedBlackTree
 		var t = new RedBlackTree<int>();
 		Assert.IsNull(t.FindGreatestPreceding(0));
 
-		var num = 100;
+		const int num = 100;
 		for (var i = 0; i < num; i += 2)
 			t.Insert(i);
 
@@ -534,7 +510,7 @@ public class TestRedBlackTree
 		var t = new RedBlackTree<int>();
 		Assert.IsNull(t.FindLeastFollowing(0));
 
-		var num = 100;
+		const int num = 100;
 		for (var i = 0; i < num; i += 2)
 			t.Insert(i);
 
