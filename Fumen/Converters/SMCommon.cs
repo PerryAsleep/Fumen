@@ -8,6 +8,9 @@ namespace Fumen.Converters;
 
 public static class SMCommon
 {
+	private const string DelayString = "Delay";
+	private const string NegativeStopString = "NegativeStop";
+
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
 	[SuppressMessage("ReSharper", "IdentifierTypo")]
 	public enum ChartType
@@ -484,6 +487,72 @@ public static class SMCommon
 	}
 
 	/// <summary>
+	/// Helper function for timing events to convert a dictionary of events by their double beat position
+	/// into a list that removes the earliest conflicting values that occur on the same row when that row
+	/// is converted to an integer.
+	/// </summary>
+	/// <typeparam name="T">Type of event data.</typeparam>
+	/// <param name="events">Dictionary of events by double row position.</param>
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	/// <param name="eventTypeString">String representation of the type of event for logging.</param>
+	/// <returns>
+	/// List of events with duplicates removed. The list values are Tuples.
+	/// The Tuples contain the following items:
+	///  Item1: Row integer position of the event.
+	///  Item2: Original double beat position of the event.
+	///  Item3: Original event value.
+	/// </returns>
+	private static List<Tuple<int, double, T>> ConvertValueAtTimeDictionaryToListWithNoConflicts<T>(
+		Dictionary<double, T> events,
+		ILogger logger,
+		bool logOnErrors,
+		string eventTypeString)
+	{
+		var results = new List<Tuple<int, double, T>>();
+
+		// We need to ensure that there is only at most one event of the given type per rounded integer position.
+		// Create a list in descending order by time to loop over so we can ignore earlier events that occur
+		// during the same row. This matches Stepmania behavior.
+		var orderedEvents = new List<Tuple<double, T>>();
+		foreach (var chartEvent in events)
+		{
+			orderedEvents.Add(new Tuple<double, T>(chartEvent.Key, chartEvent.Value));
+		}
+
+		orderedEvents = orderedEvents.OrderByDescending(t => t.Item1).ToList();
+
+		var previousIntegerPosition = int.MinValue;
+		foreach (var chartEvent in orderedEvents)
+		{
+			var integerPosition = ConvertAbsoluteBeatToIntegerPosition(chartEvent.Item1);
+
+			// Ignore this event if it is an earlier event at the same row.
+			if (previousIntegerPosition != int.MinValue && previousIntegerPosition == integerPosition)
+			{
+				if (logOnErrors)
+				{
+					logger.Warn(
+						$"{eventTypeString} with value {chartEvent.Item2} at beat {chartEvent.Item1} occurs at row {integerPosition} which conflicts with a later {eventTypeString} on the same row."
+						+ $" This {eventTypeString} will be ignored.");
+				}
+
+				continue;
+			}
+
+			previousIntegerPosition = integerPosition;
+
+			// Otherwise, add the result with the integer position.
+			results.Add(new Tuple<int, double, T>(integerPosition, chartEvent.Item1, chartEvent.Item2));
+		}
+
+		// Reverse the list so it is back in ascending order.
+		results.Reverse();
+
+		return results;
+	}
+
+	/// <summary>
 	/// Adds Tempo Events to the given Chart from the given Dictionary of
 	/// position to tempo values parsed from the Chart or Song.
 	/// </summary>
@@ -491,18 +560,24 @@ public static class SMCommon
 	/// Dictionary of time to value of tempos parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add Tempo Events to.</param>
-	public static void AddTempos(Dictionary<double, double> tempos, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddTempos(
+		Dictionary<double, double> tempos,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
 		// Insert tempo change events.
-		foreach (var tempo in tempos)
+		foreach (var tempo in ConvertValueAtTimeDictionaryToListWithNoConflicts(tempos, logger, logOnErrors, nameof(Tempo)))
 		{
-			var tempoChangeEvent = new Tempo(tempo.Value)
+			var tempoChangeEvent = new Tempo(tempo.Item3)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tempo.Key),
+				IntegerPosition = tempo.Item1,
 			};
 
 			// Record the actual doubles.
-			tempoChangeEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tempo.Key);
+			tempoChangeEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tempo.Item2);
 
 			chart.Layers[0].Events.Add(tempoChangeEvent);
 		}
@@ -516,18 +591,24 @@ public static class SMCommon
 	/// Dictionary of time to value of stop lengths parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add Stop Events to.</param>
-	public static void AddStops(Dictionary<double, double> stops, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddStops(
+		Dictionary<double, double> stops,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var stop in stops)
+		foreach (var stop in ConvertValueAtTimeDictionaryToListWithNoConflicts(stops, logger, logOnErrors, nameof(Stop)))
 		{
-			var stopEvent = new Stop(stop.Value)
+			var stopEvent = new Stop(stop.Item3)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(stop.Key),
+				IntegerPosition = stop.Item1,
 			};
 
 			// Record the actual doubles.
-			stopEvent.Extras.AddSourceExtra(TagFumenDoublePosition, stop.Key);
-			stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, stop.Value);
+			stopEvent.Extras.AddSourceExtra(TagFumenDoublePosition, stop.Item2);
+			stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, stop.Item3);
 
 			chart.Layers[0].Events.Add(stopEvent);
 		}
@@ -541,18 +622,24 @@ public static class SMCommon
 	/// Dictionary of time to value of delay lengths parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add Stop Events to.</param>
-	public static void AddDelays(Dictionary<double, double> delays, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddDelays(
+		Dictionary<double, double> delays,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var delay in delays)
+		foreach (var delay in ConvertValueAtTimeDictionaryToListWithNoConflicts(delays, logger, logOnErrors, DelayString))
 		{
-			var stopEvent = new Stop(delay.Value, true)
+			var stopEvent = new Stop(delay.Item3, true)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(delay.Key),
+				IntegerPosition = delay.Item1,
 			};
 
 			// Record the actual doubles.
-			stopEvent.Extras.AddSourceExtra(TagFumenDoublePosition, delay.Key);
-			stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, delay.Value);
+			stopEvent.Extras.AddSourceExtra(TagFumenDoublePosition, delay.Item2);
+			stopEvent.Extras.AddSourceExtra(TagFumenDoubleValue, delay.Item3);
 
 			chart.Layers[0].Events.Add(stopEvent);
 		}
@@ -566,19 +653,25 @@ public static class SMCommon
 	/// Dictionary of time to value of warp lengths parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add Warp Events to.</param>
-	public static void AddWarps(Dictionary<double, double> warps, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddWarps(
+		Dictionary<double, double> warps,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var warp in warps)
+		foreach (var warp in ConvertValueAtTimeDictionaryToListWithNoConflicts(warps, logger, logOnErrors, nameof(Warp)))
 		{
 			// Convert warp beats to number of rows
-			var warpEvent = new Warp(ConvertAbsoluteBeatToIntegerPosition(warp.Value))
+			var warpEvent = new Warp(ConvertAbsoluteBeatToIntegerPosition(warp.Item3))
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(warp.Key),
+				IntegerPosition = warp.Item1,
 			};
 
 			// Record the actual doubles.
-			warpEvent.Extras.AddSourceExtra(TagFumenDoublePosition, warp.Key);
-			warpEvent.Extras.AddSourceExtra(TagFumenDoubleValue, warp.Value);
+			warpEvent.Extras.AddSourceExtra(TagFumenDoublePosition, warp.Item2);
+			warpEvent.Extras.AddSourceExtra(TagFumenDoubleValue, warp.Item3);
 
 			chart.Layers[0].Events.Add(warpEvent);
 		}
@@ -592,18 +685,25 @@ public static class SMCommon
 	/// Dictionary of time to value of scroll rates parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add ScrollRate Events to.</param>
-	public static void AddScrollRateEvents(Dictionary<double, double> scrollRateEvents, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddScrollRateEvents(
+		Dictionary<double, double> scrollRateEvents,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var scrollRate in scrollRateEvents)
+		foreach (var scrollRate in ConvertValueAtTimeDictionaryToListWithNoConflicts(scrollRateEvents, logger, logOnErrors,
+			         "Scroll"))
 		{
-			var scrollRateEvent = new ScrollRate(scrollRate.Value)
+			var scrollRateEvent = new ScrollRate(scrollRate.Item3)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key),
+				IntegerPosition = scrollRate.Item1,
 			};
 
 			// Record the actual doubles.
-			scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Key);
-			scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Value);
+			scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Item2);
+			scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Item3);
 
 			chart.Layers[0].Events.Add(scrollRateEvent);
 		}
@@ -617,12 +717,18 @@ public static class SMCommon
 	/// Dictionary of time to value of scroll rates parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add ScrollRateInterpolation Events to.</param>
-	public static void AddScrollRateInterpolationEvents(Dictionary<double, Tuple<double, double, int>> scrollRateEvents,
-		Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddScrollRateInterpolationEvents(
+		Dictionary<double, Tuple<double, double, int>> scrollRateEvents,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var scrollRate in scrollRateEvents)
+		foreach (var scrollRate in ConvertValueAtTimeDictionaryToListWithNoConflicts(scrollRateEvents, logger, logOnErrors,
+			         "Speed"))
 		{
-			var (speed, length, secondsFlag) = scrollRate.Value;
+			var (speed, length, secondsFlag) = scrollRate.Item3;
 
 			var lengthIsTimeInSeconds = secondsFlag != 0;
 			var periodAsTime = 0.0;
@@ -635,12 +741,12 @@ public static class SMCommon
 			var scrollRateEvent =
 				new ScrollRateInterpolation(speed, periodAsIntegerPosition, periodAsTime, lengthIsTimeInSeconds)
 				{
-					IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(scrollRate.Key),
+					IntegerPosition = scrollRate.Item1,
 				};
 
 			// Record the actual doubles.
-			scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Key);
-			//scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Value);
+			scrollRateEvent.Extras.AddSourceExtra(TagFumenDoublePosition, scrollRate.Item2);
+			//scrollRateEvent.Extras.AddSourceExtra(TagFumenDoubleValue, scrollRate.Item3);
 
 			chart.Layers[0].Events.Add(scrollRateEvent);
 		}
@@ -654,17 +760,24 @@ public static class SMCommon
 	/// Dictionary of time to value of ticks parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add TickCount Events to.</param>
-	public static void AddTickCountEvents(Dictionary<double, int> tickCountEvents, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddTickCountEvents(
+		Dictionary<double, int> tickCountEvents,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var tickCount in tickCountEvents)
+		foreach (var tickCount in ConvertValueAtTimeDictionaryToListWithNoConflicts(tickCountEvents, logger, logOnErrors,
+			         nameof(TickCount)))
 		{
-			var tickCountEvent = new TickCount(tickCount.Value)
+			var tickCountEvent = new TickCount(tickCount.Item3)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(tickCount.Key),
+				IntegerPosition = tickCount.Item1,
 			};
 
 			// Record the actual doubles.
-			tickCountEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tickCount.Key);
+			tickCountEvent.Extras.AddSourceExtra(TagFumenDoublePosition, tickCount.Item2);
 
 			chart.Layers[0].Events.Add(tickCountEvent);
 		}
@@ -678,17 +791,23 @@ public static class SMCommon
 	/// Dictionary of time to value of strings parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add Label Events to.</param>
-	public static void AddLabelEvents(Dictionary<double, string> labelEvents, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddLabelEvents(
+		Dictionary<double, string> labelEvents,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var label in labelEvents)
+		foreach (var label in ConvertValueAtTimeDictionaryToListWithNoConflicts(labelEvents, logger, logOnErrors, nameof(Label)))
 		{
-			var labelEvent = new Label(label.Value)
+			var labelEvent = new Label(label.Item3)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(label.Key),
+				IntegerPosition = label.Item1,
 			};
 
 			// Record the actual doubles.
-			labelEvent.Extras.AddSourceExtra(TagFumenDoublePosition, label.Key);
+			labelEvent.Extras.AddSourceExtra(TagFumenDoublePosition, label.Item2);
 
 			chart.Layers[0].Events.Add(labelEvent);
 		}
@@ -702,18 +821,25 @@ public static class SMCommon
 	/// Dictionary of time to value of fake segment lengths parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add FakeSegment Events to.</param>
-	public static void AddFakeSegmentEvents(Dictionary<double, double> fakeEvents, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddFakeSegmentEvents(
+		Dictionary<double, double> fakeEvents,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var fake in fakeEvents)
+		foreach (var fake in ConvertValueAtTimeDictionaryToListWithNoConflicts(fakeEvents, logger, logOnErrors,
+			         nameof(FakeSegment)))
 		{
-			var fakeSegmentEvent = new FakeSegment(fake.Value)
+			var fakeSegmentEvent = new FakeSegment(fake.Item3)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(fake.Key),
+				IntegerPosition = fake.Item1,
 			};
 
 			// Record the actual doubles.
-			fakeSegmentEvent.Extras.AddSourceExtra(TagFumenDoublePosition, fake.Key);
-			fakeSegmentEvent.Extras.AddSourceExtra(TagFumenDoubleValue, fake.Value);
+			fakeSegmentEvent.Extras.AddSourceExtra(TagFumenDoublePosition, fake.Item2);
+			fakeSegmentEvent.Extras.AddSourceExtra(TagFumenDoubleValue, fake.Item3);
 
 			chart.Layers[0].Events.Add(fakeSegmentEvent);
 		}
@@ -727,17 +853,23 @@ public static class SMCommon
 	/// Dictionary of time to hit and miss multipliers parsed from the Song or Chart.
 	/// </param>
 	/// <param name="chart">Chart to add Multipliers Events to.</param>
-	public static void AddMultipliersEvents(Dictionary<double, Tuple<int, int>> comboEvents, Chart chart)
+	/// <param name="logger">Logger for logging errors or warnings.</param>
+	/// <param name="logOnErrors">Whether or not to log on warnings on errors.</param>
+	public static void AddMultipliersEvents(
+		Dictionary<double, Tuple<int, int>> comboEvents,
+		Chart chart,
+		ILogger logger,
+		bool logOnErrors)
 	{
-		foreach (var combo in comboEvents)
+		foreach (var combo in ConvertValueAtTimeDictionaryToListWithNoConflicts(comboEvents, logger, logOnErrors, "Combo"))
 		{
-			var multipliersEvent = new Multipliers(combo.Value.Item1, combo.Value.Item2)
+			var multipliersEvent = new Multipliers(combo.Item3.Item1, combo.Item3.Item2)
 			{
-				IntegerPosition = ConvertAbsoluteBeatToIntegerPosition(combo.Key),
+				IntegerPosition = combo.Item1,
 			};
 
 			// Record the actual doubles.
-			multipliersEvent.Extras.AddSourceExtra(TagFumenDoublePosition, combo.Key);
+			multipliersEvent.Extras.AddSourceExtra(TagFumenDoublePosition, combo.Item2);
 
 			chart.Layers[0].Events.Add(multipliersEvent);
 		}
@@ -773,10 +905,12 @@ public static class SMCommon
 			var lastTimeSignatureIntegerPosition = 0;
 			var lastTimeSignatureRowsPerMeasure = 0;
 			var tsEvents = new List<TimeSignature>();
-			foreach (var kvp in timeSignatures.OrderBy(t => t.Key))
+			foreach (var timeSignatureEvent in ConvertValueAtTimeDictionaryToListWithNoConflicts(timeSignatures, logger,
+				         logOnErrors, nameof(TimeSignature)))
 			{
-				var beatDouble = kvp.Key;
-				var ts = kvp.Value;
+				var integerPosition = timeSignatureEvent.Item1;
+				var beatDouble = timeSignatureEvent.Item2;
+				var ts = timeSignatureEvent.Item3;
 
 				// The first time signature must be at the start of the song.
 				if (first && beatDouble != 0.0)
@@ -809,8 +943,6 @@ public static class SMCommon
 					useDefaultTimeSignature = true;
 					break;
 				}
-
-				var integerPosition = ConvertAbsoluteBeatToIntegerPosition(beatDouble);
 
 				// Make sure this new time signature actually falls at the start of a measure.
 				var relativePosition = integerPosition - lastTimeSignatureIntegerPosition;
@@ -1188,10 +1320,6 @@ public static class SMCommon
 	/// </summary>
 	public class SMEventComparer : IComparer<Event>
 	{
-		// Compare by string instead of Type Name in order to sort Delays separately from Stops.
-		private const string DelayString = "Delay";
-		private const string NegativeStopString = "NegativeStop";
-
 		public static readonly List<string> SMEventOrderList = new()
 		{
 			// If changing this such that TimeSignature is no longer first, adjust CreateDummyFirstEventForRow.

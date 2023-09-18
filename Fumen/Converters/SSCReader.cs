@@ -187,25 +187,29 @@ public class SSCReader : Reader
 			return;
 		}
 
+		var logTimeEventErrors = firstChart;
 		var timingProperties = songTimingProperties;
 		if (chart.Extras.TryGetSourceExtra(TagFumenChartUsesOwnTimingData, out object useTimingDataObject))
 		{
 			if (useTimingDataObject is true)
+			{
 				timingProperties = chartTimingProperties;
+				logTimeEventErrors = true;
+			}
 		}
 
 		// Insert time property events.
-		AddStops(timingProperties.Stops, chart);
-		AddDelays(timingProperties.Delays, chart);
-		AddWarps(timingProperties.Warps, chart);
-		AddScrollRateEvents(timingProperties.Scrolls, chart);
-		AddScrollRateInterpolationEvents(timingProperties.Speeds, chart);
-		AddTempos(timingProperties.Tempos, chart);
-		AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, firstChart);
-		AddTickCountEvents(timingProperties.TickCounts, chart);
-		AddLabelEvents(timingProperties.Labels, chart);
-		AddFakeSegmentEvents(timingProperties.Fakes, chart);
-		AddMultipliersEvents(timingProperties.Combos, chart);
+		AddStops(timingProperties.Stops, chart, Logger, logTimeEventErrors);
+		AddDelays(timingProperties.Delays, chart, Logger, logTimeEventErrors);
+		AddWarps(timingProperties.Warps, chart, Logger, logTimeEventErrors);
+		AddScrollRateEvents(timingProperties.Scrolls, chart, Logger, logTimeEventErrors);
+		AddScrollRateInterpolationEvents(timingProperties.Speeds, chart, Logger, logTimeEventErrors);
+		AddTempos(timingProperties.Tempos, chart, Logger, logTimeEventErrors);
+		AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, logTimeEventErrors);
+		AddTickCountEvents(timingProperties.TickCounts, chart, Logger, logTimeEventErrors);
+		AddLabelEvents(timingProperties.Labels, chart, Logger, logTimeEventErrors);
+		AddFakeSegmentEvents(timingProperties.Fakes, chart, Logger, logTimeEventErrors);
+		AddMultipliersEvents(timingProperties.Combos, chart, Logger, logTimeEventErrors);
 
 		// Sort events.
 		chart.Layers[0].Events.Sort(new SMEventComparer());

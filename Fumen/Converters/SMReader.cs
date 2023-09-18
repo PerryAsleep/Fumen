@@ -185,11 +185,11 @@ public class SMReader : Reader
 			var firstChart = true;
 			foreach (var chart in song.Charts)
 			{
-				AddStops(timingProperties.Stops, chart);
-				AddDelays(timingProperties.Delays, chart);
-				AddTempos(timingProperties.Tempos, chart);
+				AddStops(timingProperties.Stops, chart, Logger, firstChart);
+				AddDelays(timingProperties.Delays, chart, Logger, firstChart);
+				AddTempos(timingProperties.Tempos, chart, Logger, firstChart);
 				AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, firstChart);
-				AddTickCountEvents(timingProperties.TickCounts, chart);
+				AddTickCountEvents(timingProperties.TickCounts, chart, Logger, firstChart);
 				firstChart = false;
 			}
 
