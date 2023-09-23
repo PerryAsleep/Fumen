@@ -1301,21 +1301,6 @@ public static class SMCommon
 	}
 
 	/// <summary>
-	/// Creates a dummy Event that will sort to be the first event, or equal to the first event
-	/// for the given row based on the rules from SMEventComparer.
-	/// </summary>
-	/// <param name="integerPosition">Integer position of the event.</param>
-	/// <returns>New Event.</returns>
-	public static Event CreateDummyFirstEventForRow(int integerPosition)
-	{
-		// Time Signature events are sorted first.
-		return new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
-		{
-			IntegerPosition = integerPosition,
-		};
-	}
-
-	/// <summary>
 	/// Custom Comparer for Events in an SM Chart.
 	/// </summary>
 	public class SMEventComparer : IComparer<Event>
