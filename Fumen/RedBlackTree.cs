@@ -5,6 +5,31 @@ using System.Collections.Generic;
 namespace Fumen;
 
 /// <summary>
+/// Read-only RedBlackTree interface.
+/// </summary>
+/// <typeparam name="T">Type of data stored in the tree.</typeparam>
+public interface IReadOnlyRedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
+{
+	/// <summary>
+	/// Read-only enumerator interface.
+	/// </summary>
+	public interface IReadOnlyRedBlackTreeEnumerator : IEnumerator<T>
+	{
+		public IReadOnlyRedBlackTreeEnumerator Clone();
+		public bool MovePrev();
+		public bool IsCurrentValid();
+		public void Unset();
+	}
+
+	public int GetCount();
+	public IReadOnlyRedBlackTreeEnumerator Find(T value);
+	public IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding(T value, bool orEqualTo = false);
+	public IReadOnlyRedBlackTreeEnumerator FindLeastFollowing(T value, bool orEqualTo = false);
+	public IReadOnlyRedBlackTreeEnumerator First();
+	public IReadOnlyRedBlackTreeEnumerator Last();
+}
+
+/// <summary>
 /// Red Black Tree.
 /// Self-balancing binary search tree.
 /// O(log(N)) time complexity inserts.
@@ -16,7 +41,7 @@ namespace Fumen;
 /// Duplicate values are not supported.
 /// </summary>
 /// <typeparam name="T">Type of data stored in the tree.</typeparam>
-public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
+public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 {
 	/// <summary>
 	/// RedBlackTree Node.
@@ -33,12 +58,9 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	/// <summary>
 	/// Enumerator interface.
 	/// </summary>
-	public interface IRedBlackTreeEnumerator : IEnumerator<T>
+	public interface IRedBlackTreeEnumerator : IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator
 	{
-		public IRedBlackTreeEnumerator Clone();
-		public bool MovePrev();
-		public void Unset();
-		public bool IsCurrentValid();
+		public new IRedBlackTreeEnumerator Clone();
 		public void Delete();
 	}
 
@@ -58,7 +80,7 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	/// <summary>
 	/// Number of elements in the Red Black Tree.
 	/// </summary>
-	public int Count { get; private set; }
+	private int Count;
 
 	/// <summary>
 	/// Constructor.
@@ -68,6 +90,15 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 		Nil = new Node();
 		Root = Nil;
 		Count = 0;
+	}
+
+	/// <summary>
+	/// Gets the number of elements in the Red Black Tree.
+	/// </summary>
+	/// <returns>Number of elements in the Red Black Tree.</returns>
+	public int GetCount()
+	{
+		return Count;
 	}
 
 	/// <summary>
@@ -345,7 +376,17 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	/// </summary>
 	/// <param name="value">Value to find.</param>
 	/// <returns>Enumerator to value or null if not found.</returns>
-	public IRedBlackTreeEnumerator Find(T value)
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator Find(T value)
+	{
+		return FindMutable(value);
+	}
+
+	/// <summary>
+	/// Finds the given value.
+	/// </summary>
+	/// <param name="value">Value to find.</param>
+	/// <returns>Enumerator to value or null if not found.</returns>
+	public IRedBlackTreeEnumerator FindMutable(T value)
 	{
 		var n = FindNode(value);
 		return IsNull(n) ? null : new Enumerator(this, n);
@@ -357,7 +398,18 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	/// <param name="value">Value to use to find the greatest preceding value.</param>
 	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
 	/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
-	public IRedBlackTreeEnumerator FindGreatestPreceding(T value, bool orEqualTo = false)
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding(T value, bool orEqualTo = false)
+	{
+		return FindGreatestPrecedingMutable(value, orEqualTo);
+	}
+
+	/// <summary>
+	/// Finds the greatest value preceding the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the greatest preceding value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
+	public IRedBlackTreeEnumerator FindGreatestPrecedingMutable(T value, bool orEqualTo = false)
 	{
 		var p = Nil;
 		var n = Root;
@@ -397,7 +449,18 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	/// <param name="value">Value to use to find the least following value.</param>
 	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
 	/// <returns>Enumerator to least following value or null if not found.</returns>
-	public IRedBlackTreeEnumerator FindLeastFollowing(T value, bool orEqualTo = false)
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindLeastFollowing(T value, bool orEqualTo = false)
+	{
+		return FindLeastFollowingMutable(value, orEqualTo);
+	}
+
+	/// <summary>
+	/// Finds the least value following the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the least following value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <returns>Enumerator to least following value or null if not found.</returns>
+	public IRedBlackTreeEnumerator FindLeastFollowingMutable(T value, bool orEqualTo = false)
 	{
 		var p = Nil;
 		var n = Root;
@@ -564,19 +627,37 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 	}
 
 	/// <summary>
+	/// Returns an IReadOnlyRedBlackTreeEnumerator to the first value in the tree.
+	/// </summary>
+	/// <returns>IReadOnlyRedBlackTreeEnumerator to the first value in the tree.</returns>
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator First()
+	{
+		return FirstMutable();
+	}
+
+	/// <summary>
 	/// Returns an IRedBlackTreeEnumerator to the first value in the tree.
 	/// </summary>
 	/// <returns>IRedBlackTreeEnumerator to the first value in the tree.</returns>
-	public IRedBlackTreeEnumerator First()
+	public IRedBlackTreeEnumerator FirstMutable()
 	{
 		return new Enumerator(this);
+	}
+
+	/// <summary>
+	/// Returns an IReadOnlyRedBlackTreeEnumerator to the last value in the tree.
+	/// </summary>
+	/// <returns>IReadOnlyRedBlackTreeEnumerator to the last value in the tree.</returns>
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator Last()
+	{
+		return LastMutable();
 	}
 
 	/// <summary>
 	/// Returns an IRedBlackTreeEnumerator to the last value in the tree.
 	/// </summary>
 	/// <returns>IRedBlackTreeEnumerator to the last value in the tree.</returns>
-	public IRedBlackTreeEnumerator Last()
+	public IRedBlackTreeEnumerator LastMutable()
 	{
 		var currentNode = Root;
 		if (IsNull(currentNode))
@@ -634,6 +715,11 @@ public class RedBlackTree<T> : IEnumerable<T> where T : IComparable<T>
 			IsUnset = e.IsUnset;
 			BeforeFirst = e.BeforeFirst;
 			AfterLast = e.AfterLast;
+		}
+
+		IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator.Clone()
+		{
+			return Clone();
 		}
 
 		public IRedBlackTreeEnumerator Clone()

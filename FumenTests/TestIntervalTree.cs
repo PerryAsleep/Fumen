@@ -29,14 +29,14 @@ public class TestIntervalTree
 		for (var i = 0; i < num; i++)
 		{
 			t.Insert(i, i, i + 10);
-			Assert.AreEqual(i + 1, t.Count);
+			Assert.AreEqual(i + 1, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = 0; i < num; i++)
 		{
 			Assert.IsTrue(t.Delete(i, i + 10));
-			Assert.AreEqual(num - 1 - i, t.Count);
+			Assert.AreEqual(num - 1 - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -44,14 +44,14 @@ public class TestIntervalTree
 		for (var i = 0; i < num; i++)
 		{
 			t.Insert(i, i, i + 10);
-			Assert.AreEqual(i + 1, t.Count);
+			Assert.AreEqual(i + 1, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = num - 1; i >= 0; i--)
 		{
 			Assert.IsTrue(t.Delete(i, i + 10));
-			Assert.AreEqual(i, t.Count);
+			Assert.AreEqual(i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -59,14 +59,14 @@ public class TestIntervalTree
 		for (var i = num - 1; i >= 0; i--)
 		{
 			t.Insert(i, i, i + 10);
-			Assert.AreEqual(num - i, t.Count);
+			Assert.AreEqual(num - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = 0; i < num; i++)
 		{
 			Assert.IsTrue(t.Delete(i, i + 10));
-			Assert.AreEqual(num - 1 - i, t.Count);
+			Assert.AreEqual(num - 1 - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -74,14 +74,14 @@ public class TestIntervalTree
 		for (var i = num - 1; i >= 0; i--)
 		{
 			t.Insert(i, i, i + 10);
-			Assert.AreEqual(num - i, t.Count);
+			Assert.AreEqual(num - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = num - 1; i >= 0; i--)
 		{
 			Assert.IsTrue(t.Delete(i, i + 10));
-			Assert.AreEqual(i, t.Count);
+			Assert.AreEqual(i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 	}
@@ -93,28 +93,28 @@ public class TestIntervalTree
 
 		// Duplicate interval with same values.
 		Assert.IsNotNull(t.Insert(4.0, 0, 10));
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		Assert.ThrowsException<ArgumentException>(() => t.Insert(4.0, 0, 10));
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		Assert.IsTrue(t.Delete(0, 10));
-		Assert.AreEqual(0, t.Count);
+		Assert.AreEqual(0, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		// Duplicate interval with different values.
 		Assert.IsNotNull(t.Insert(1.0, 0, 10));
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		Assert.ThrowsException<ArgumentException>(() => t.Insert(2.0, 0, 10));
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		Assert.IsTrue(t.Delete(0, 10));
-		Assert.AreEqual(0, t.Count);
+		Assert.AreEqual(0, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 	}
 
@@ -173,7 +173,7 @@ public class TestIntervalTree
 		{
 			t.Insert(val.Item1, val.Item2, val.Item3);
 			expectedCount++;
-			Assert.AreEqual(expectedCount, t.Count);
+			Assert.AreEqual(expectedCount, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -181,7 +181,7 @@ public class TestIntervalTree
 		{
 			Assert.IsTrue(t.Delete(val.Item1, val.Item2));
 			expectedCount--;
-			Assert.AreEqual(expectedCount, t.Count);
+			Assert.AreEqual(expectedCount, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -282,7 +282,7 @@ public class TestIntervalTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(0, t.Count);
+		Assert.AreEqual(0, t.GetCount());
 		Assert.AreEqual(0, numCounted);
 
 		// Iterate over 1 element.
@@ -294,7 +294,7 @@ public class TestIntervalTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.AreEqual(1, numCounted);
 
 		const int num = 10000;
@@ -311,7 +311,7 @@ public class TestIntervalTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(num, t.Count);
+		Assert.AreEqual(num, t.GetCount());
 		Assert.AreEqual(num, numCounted);
 
 		// Iterate over multiple elements inserted in decreasing order.
@@ -326,7 +326,7 @@ public class TestIntervalTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(num, t.Count);
+		Assert.AreEqual(num, t.GetCount());
 		Assert.AreEqual(num, numCounted);
 
 		// Iterate over multiple elements inserted in random order.
@@ -347,7 +347,7 @@ public class TestIntervalTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(num, t.Count);
+		Assert.AreEqual(num, t.GetCount());
 		Assert.AreEqual(num, numCounted);
 	}
 
@@ -386,7 +386,7 @@ public class TestIntervalTree
 		for (var i = 0; i < 10; i++)
 			t.Insert(i, i, i + 10);
 
-		var e = t.First();
+		var e = t.FirstMutable();
 		Assert.IsFalse(e.IsCurrentValid());
 		while (e.MoveNext())
 		{
@@ -395,7 +395,7 @@ public class TestIntervalTree
 
 		Assert.IsFalse(e.IsCurrentValid());
 
-		e = t.Find(5, 15);
+		e = t.FindMutable(5, 15);
 		Assert.IsFalse(e.IsCurrentValid());
 		e.MoveNext();
 		Assert.IsTrue(e.IsCurrentValid());
@@ -414,19 +414,19 @@ public class TestIntervalTree
 			t.Insert(i, i, i + 10);
 
 		const int deletedValue = 5;
-		var e = t.Find(deletedValue, deletedValue + 10);
+		var e = t.FindMutable(deletedValue, deletedValue + 10);
 
 		// Deleting unset enumerator should throw an exception and not delete a value.
 		Assert.IsFalse(e.IsCurrentValid());
 		Assert.ThrowsException<InvalidOperationException>(e.Delete);
-		Assert.AreEqual(10, t.Count);
+		Assert.AreEqual(10, t.GetCount());
 
 		// Deleting a set enumerator should delete a value and unset the enumerator.
 		e.MoveNext();
 		Assert.IsTrue(e.IsCurrentValid());
 		e.Delete();
 		Assert.IsFalse(e.IsCurrentValid());
-		Assert.AreEqual(9, t.Count);
+		Assert.AreEqual(9, t.GetCount());
 		var index = 0;
 		foreach (var e2 in t)
 		{
@@ -549,5 +549,183 @@ public class TestIntervalTree
 				Assert.AreEqual(expectedExclusiveResults[overlapIndex], exclusiveOverlaps[overlapIndex]);
 			}
 		}
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding()
+	{
+		// Finding in an empty tree should return null.
+		var t = new IntervalTree<int, int>();
+		Assert.IsNull(t.FindGreatestPreceding(0));
+
+		const int num = 100;
+		for (var i = 0; i < num; i += 2)
+			t.Insert(i, i, i + 10);
+
+		// Finding element less than least element should return null.
+		Assert.IsNull(t.FindGreatestPreceding(-1));
+		Assert.IsNull(t.FindGreatestPreceding(-1, true));
+
+		// Finding element less than greatest element should return greatest element.
+		var e = t.FindGreatestPreceding(num + 1);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(num - 2, e.Current);
+		e = t.FindGreatestPreceding(num + 1, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(num - 2, e.Current);
+
+		// Finding least element should return null when not using orEqualTo=true.
+		Assert.IsNull(t.FindGreatestPreceding(0));
+		// Finding least element should return that element when using orEqualTo=true.
+		e = t.FindGreatestPreceding(0, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+
+		// Find elements after the least element should return the greatest
+		// preceding element.
+		for (var i = 1; i < num; i++)
+		{
+			// Check without equals.
+			var expected = i - 1;
+			if (expected % 2 == 1)
+				expected -= 1;
+			e = t.FindGreatestPreceding(i);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+
+			// Check with equals.
+			expected = i;
+			if (expected % 2 == 1)
+				expected -= 1;
+			e = t.FindGreatestPreceding(i, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+		}
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing()
+	{
+		// Finding in an empty tree should return null.
+		var t = new IntervalTree<int, int>();
+		Assert.IsNull(t.FindLeastFollowing(0));
+
+		const int num = 100;
+		for (var i = 0; i < num; i += 2)
+			t.Insert(i, i, i + 10);
+
+		// Finding element greater than least element should return least element.
+		var e = t.FindLeastFollowing(-1);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+		e = t.FindLeastFollowing(-1, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+
+		// Finding element greater than greatest element should return null.
+		Assert.IsNull(t.FindLeastFollowing(num));
+		Assert.IsNull(t.FindLeastFollowing(num, true));
+
+		// Finding greatest element should return null when not using orEqualTo=true.
+		Assert.IsNull(t.FindLeastFollowing(num - 2));
+		// Finding greatest element should return that element when using orEqualTo=true.
+		e = t.FindLeastFollowing(num - 2, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(num - 2, e.Current);
+
+		// Find elements before the greatest element should return the least
+		// following element.
+		for (var i = 0; i < num - 2; i++)
+		{
+			// Check without equals.
+			var expected = i + 1;
+			if (expected % 2 == 1)
+				expected += 1;
+			e = t.FindLeastFollowing(i);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+
+			// Check with equals.
+			expected = i;
+			if (expected % 2 == 1)
+				expected += 1;
+			e = t.FindLeastFollowing(i, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+		}
+	}
+
+	[TestMethod]
+	public void TestCloneReadOnlyEnumerator()
+	{
+		var t = new IntervalTree<int, int>();
+		for (var i = 0; i < 10; i++)
+			t.Insert(i, i, i + 10);
+
+		var e = t.First();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(0, e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
+
+		var e2 = e.Clone();
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(1, e2.Current);
+		Assert.IsTrue(e2.MoveNext());
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(2, e2.Current);
+
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
+	}
+
+	[TestMethod]
+	public void TestCloneEnumerator()
+	{
+		var t = new IntervalTree<int, int>();
+		for (var i = 0; i < 10; i++)
+			t.Insert(i, i, i + 10);
+
+		var e = t.FirstMutable();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(0, e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
+
+		var e2 = e.Clone();
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(1, e2.Current);
+		Assert.IsTrue(e2.MoveNext());
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(2, e2.Current);
+
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
 	}
 }

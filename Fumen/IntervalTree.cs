@@ -5,6 +5,33 @@ using System.Collections.Generic;
 namespace Fumen;
 
 /// <summary>
+/// Read-only IntervalTree interface.
+/// </summary>
+/// <typeparam name="TKey">Type of key to use in tree.</typeparam>
+/// <typeparam name="TValue">Type of value to use in tree.</typeparam>
+public interface IReadOnlyIntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComparable<TKey>
+{
+	/// <summary>
+	/// Read-only enumerator interface.
+	/// </summary>
+	public interface IReadOnlyIntervalTreeEnumerator : IEnumerator<TValue>
+	{
+		public IReadOnlyIntervalTreeEnumerator Clone();
+		public bool MovePrev();
+		public bool IsCurrentValid();
+		public void Unset();
+	}
+
+	public int GetCount();
+	public IReadOnlyIntervalTreeEnumerator Find(TKey low, TKey high);
+	public List<TValue> FindAllOverlapping(TKey key, bool lowInclusive = true, bool highInclusive = true);
+	public IReadOnlyIntervalTreeEnumerator FindGreatestPreceding(TKey low, bool orEqualTo = false);
+	public IReadOnlyIntervalTreeEnumerator FindLeastFollowing(TKey low, bool orEqualTo = false);
+	public IReadOnlyIntervalTreeEnumerator First();
+	public IReadOnlyIntervalTreeEnumerator Last();
+}
+
+/// <summary>
 /// Interval tree.
 /// Self-balancing binary search tree of intervals represented by low and high keys.
 /// Implemented as an augmented Red Black Tree.
@@ -18,7 +45,7 @@ namespace Fumen;
 /// </summary>
 /// <typeparam name="TKey">Type of key to use in tree.</typeparam>
 /// <typeparam name="TValue">Type of value to use in tree.</typeparam>
-public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComparable<TKey>
+public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> where TKey : IComparable<TKey>
 {
 	/// <summary>
 	/// IntervalTree Node.
@@ -38,12 +65,9 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 	/// <summary>
 	/// Enumerator interface.
 	/// </summary>
-	public interface IIntervalTreeEnumerator : IEnumerator<TValue>
+	public interface IIntervalTreeEnumerator : IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator
 	{
-		public IIntervalTreeEnumerator Clone();
-		public bool MovePrev();
-		public void Unset();
-		public bool IsCurrentValid();
+		public new IIntervalTreeEnumerator Clone();
 		public void Delete();
 	}
 
@@ -61,9 +85,9 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 	private readonly Node Nil;
 
 	/// <summary>
-	/// Number of elements in the Red Black Tree.
+	/// Number of elements in the IntervalTree.
 	/// </summary>
-	public int Count { get; private set; }
+	private int Count;
 
 	/// <summary>
 	/// Constructor.
@@ -73,6 +97,15 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 		Nil = new Node();
 		Root = Nil;
 		Count = 0;
+	}
+
+	/// <summary>
+	/// Gets the number of elements in the IntervalTree.
+	/// </summary>
+	/// <returns>Number of elements in the IntervalTree.</returns>
+	public int GetCount()
+	{
+		return Count;
 	}
 
 	/// <summary>
@@ -382,7 +415,18 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 	/// <param name="low">Low value of interval to find the value for.</param>
 	/// <param name="high">High value of interval to find the value for.</param>
 	/// <returns>Enumerator to value or null if not found.</returns>
-	public IIntervalTreeEnumerator Find(TKey low, TKey high)
+	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator Find(TKey low, TKey high)
+	{
+		return FindMutable(low, high);
+	}
+
+	/// <summary>
+	/// Finds the value for the given interval low and high values.
+	/// </summary>
+	/// <param name="low">Low value of interval to find the value for.</param>
+	/// <param name="high">High value of interval to find the value for.</param>
+	/// <returns>Enumerator to value or null if not found.</returns>
+	public IIntervalTreeEnumerator FindMutable(TKey low, TKey high)
 	{
 		var n = FindNode(low, high);
 		return IsNull(n) ? null : new Enumerator(this, n);
@@ -438,6 +482,118 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 		// If the desired value is greater then this node's low, search the right subtree.
 		if (comparisonToLow > 0 && n.R != Nil)
 			FindAllOverlappingNode(n.R, key, lowInclusive, highInclusive, overlappingValues);
+	}
+
+	/// <summary>
+	/// Finds the interval with the greatest low key value preceding the given low key value.
+	/// </summary>
+	/// <param name="low">Low key value to use for finding.</param>
+	/// <param name="orEqualTo">If true, also include an interval if its low value is equal to the given low key value.</param>
+	/// <returns>
+	/// Enumerator to interval with the greatest low key value preceding the given low key value or null if not found.
+	/// </returns>
+	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator FindGreatestPreceding(TKey low,
+		bool orEqualTo = false)
+	{
+		return FindGreatestPrecedingMutable(low, orEqualTo);
+	}
+
+	/// <summary>
+	/// Finds the interval with the greatest low key value preceding the given low key value.
+	/// </summary>
+	/// <param name="low">Low key value to use for finding.</param>
+	/// <param name="orEqualTo">If true, also include an interval if its low value is equal to the given low key value.</param>
+	/// <returns>
+	/// Enumerator to interval with the greatest low key value preceding the given low key value or null if not found.
+	/// </returns>
+	public IIntervalTreeEnumerator FindGreatestPrecedingMutable(TKey low, bool orEqualTo = false)
+	{
+		var p = Nil;
+		var n = Root;
+		Node prev;
+		while (n != Nil)
+		{
+			var c = low.CompareTo(n.Low);
+			if (c == 0)
+			{
+				if (orEqualTo)
+					return new Enumerator(this, n);
+				prev = Prev(n);
+				if (prev == Nil)
+					return null;
+				return new Enumerator(this, prev);
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+			return null;
+
+		if (low.CompareTo(p.Low) > 0)
+			return new Enumerator(this, p);
+
+		prev = Prev(p);
+		if (prev == Nil)
+			return null;
+		return new Enumerator(this, prev);
+	}
+
+	/// <summary>
+	/// Finds the interval with the least low key value following the given low key value.
+	/// </summary>
+	/// <param name="low">Low key value to use for finding.</param>
+	/// <param name="orEqualTo">If true, also include an interval if its low value is equal to the given low key value.</param>
+	/// <returns>
+	/// Enumerator to interval with the least low key value following the given low key value or null if not found.
+	/// </returns>
+	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator FindLeastFollowing(TKey low,
+		bool orEqualTo = false)
+	{
+		return FindLeastFollowingMutable(low, orEqualTo);
+	}
+
+	/// <summary>
+	/// Finds the interval with the least low key value following the given low key value.
+	/// </summary>
+	/// <param name="low">Low key value to use for finding.</param>
+	/// <param name="orEqualTo">If true, also include an interval if its low value is equal to the given low key value.</param>
+	/// <returns>
+	/// Enumerator to interval with the least low key value following the given low key value or null if not found.
+	/// </returns>
+	public IIntervalTreeEnumerator FindLeastFollowingMutable(TKey low, bool orEqualTo = false)
+	{
+		var p = Nil;
+		var n = Root;
+		Node next;
+		while (n != Nil)
+		{
+			var c = low.CompareTo(n.Low);
+			if (c == 0)
+			{
+				if (orEqualTo)
+					return new Enumerator(this, n);
+				next = Next(n);
+				if (next == Nil)
+					return null;
+				return new Enumerator(this, next);
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+			return null;
+
+		if (low.CompareTo(p.Low) < 0)
+			return new Enumerator(this, p);
+
+		next = Next(p);
+		if (next == Nil)
+			return null;
+		return new Enumerator(this, next);
 	}
 
 	/// <summary>
@@ -618,19 +774,37 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 	}
 
 	/// <summary>
+	/// Returns an IReadOnlyIntervalTreeEnumerator to the first value in the tree.
+	/// </summary>
+	/// <returns>IReadOnlyIntervalTreeEnumerator to the first value in the tree.</returns>
+	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator First()
+	{
+		return FirstMutable();
+	}
+
+	/// <summary>
 	/// Returns an IIntervalTreeEnumerator to the first value in the tree.
 	/// </summary>
 	/// <returns>IIntervalTreeEnumerator to the first value in the tree.</returns>
-	public IIntervalTreeEnumerator First()
+	public IIntervalTreeEnumerator FirstMutable()
 	{
 		return new Enumerator(this);
+	}
+
+	/// <summary>
+	/// Returns an IReadOnlyIntervalTreeEnumerator to the last value in the tree.
+	/// </summary>
+	/// <returns>IReadOnlyIntervalTreeEnumerator to the last value in the tree.</returns>
+	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator Last()
+	{
+		return LastMutable();
 	}
 
 	/// <summary>
 	/// Returns an IIntervalTreeEnumerator to the last value in the tree.
 	/// </summary>
 	/// <returns>IIntervalTreeEnumerator to the last value in the tree.</returns>
-	public IIntervalTreeEnumerator Last()
+	public IIntervalTreeEnumerator LastMutable()
 	{
 		var currentNode = Root;
 		if (IsNull(currentNode))
@@ -688,6 +862,12 @@ public class IntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComp
 			IsUnset = e.IsUnset;
 			BeforeFirst = e.BeforeFirst;
 			AfterLast = e.AfterLast;
+		}
+
+		IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator
+			IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator.Clone()
+		{
+			return Clone();
 		}
 
 		public IIntervalTreeEnumerator Clone()

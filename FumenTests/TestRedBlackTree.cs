@@ -29,14 +29,14 @@ public class TestRedBlackTree
 		for (var i = 0; i < num; i++)
 		{
 			t.Insert(i);
-			Assert.AreEqual(i + 1, t.Count);
+			Assert.AreEqual(i + 1, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = 0; i < num; i++)
 		{
 			Assert.IsTrue(t.Delete(i));
-			Assert.AreEqual(num - 1 - i, t.Count);
+			Assert.AreEqual(num - 1 - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -44,14 +44,14 @@ public class TestRedBlackTree
 		for (var i = 0; i < num; i++)
 		{
 			t.Insert(i);
-			Assert.AreEqual(i + 1, t.Count);
+			Assert.AreEqual(i + 1, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = num - 1; i >= 0; i--)
 		{
 			Assert.IsTrue(t.Delete(i));
-			Assert.AreEqual(i, t.Count);
+			Assert.AreEqual(i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -59,14 +59,14 @@ public class TestRedBlackTree
 		for (var i = num - 1; i >= 0; i--)
 		{
 			t.Insert(i);
-			Assert.AreEqual(num - i, t.Count);
+			Assert.AreEqual(num - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = 0; i < num; i++)
 		{
 			Assert.IsTrue(t.Delete(i));
-			Assert.AreEqual(num - 1 - i, t.Count);
+			Assert.AreEqual(num - 1 - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -74,14 +74,14 @@ public class TestRedBlackTree
 		for (var i = num - 1; i >= 0; i--)
 		{
 			t.Insert(i);
-			Assert.AreEqual(num - i, t.Count);
+			Assert.AreEqual(num - i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
 		for (var i = num - 1; i >= 0; i--)
 		{
 			Assert.IsTrue(t.Delete(i));
-			Assert.AreEqual(i, t.Count);
+			Assert.AreEqual(i, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 	}
@@ -93,15 +93,15 @@ public class TestRedBlackTree
 		const int value = 4;
 
 		Assert.IsNotNull(t.Insert(value));
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		Assert.ThrowsException<ArgumentException>(() => t.Insert(value));
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
 		Assert.IsTrue(t.Delete(value));
-		Assert.AreEqual(0, t.Count);
+		Assert.AreEqual(0, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 	}
 
@@ -151,7 +151,7 @@ public class TestRedBlackTree
 		{
 			t.Insert(val);
 			expectedCount++;
-			Assert.AreEqual(expectedCount, t.Count);
+			Assert.AreEqual(expectedCount, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -159,7 +159,7 @@ public class TestRedBlackTree
 		{
 			Assert.IsTrue(t.Delete(val));
 			expectedCount--;
-			Assert.AreEqual(expectedCount, t.Count);
+			Assert.AreEqual(expectedCount, t.GetCount());
 			Assert.IsTrue(t.IsValid());
 		}
 
@@ -222,7 +222,7 @@ public class TestRedBlackTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(0, t.Count);
+		Assert.AreEqual(0, t.GetCount());
 		Assert.AreEqual(0, numCounted);
 
 		// Iterate over 1 element.
@@ -234,7 +234,7 @@ public class TestRedBlackTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(1, t.Count);
+		Assert.AreEqual(1, t.GetCount());
 		Assert.AreEqual(1, numCounted);
 
 		const int num = 10000;
@@ -251,7 +251,7 @@ public class TestRedBlackTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(num, t.Count);
+		Assert.AreEqual(num, t.GetCount());
 		Assert.AreEqual(num, numCounted);
 
 		// Iterate over multiple elements inserted in decreasing order.
@@ -266,7 +266,7 @@ public class TestRedBlackTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(num, t.Count);
+		Assert.AreEqual(num, t.GetCount());
 		Assert.AreEqual(num, numCounted);
 
 		// Iterate over multiple elements inserted in random order.
@@ -287,7 +287,7 @@ public class TestRedBlackTree
 			numCounted++;
 		}
 
-		Assert.AreEqual(num, t.Count);
+		Assert.AreEqual(num, t.GetCount());
 		Assert.AreEqual(num, numCounted);
 	}
 
@@ -326,7 +326,7 @@ public class TestRedBlackTree
 		for (var i = 0; i < 10; i++)
 			t.Insert(i);
 
-		var e = t.First();
+		var e = t.FirstMutable();
 		Assert.IsFalse(e.IsCurrentValid());
 		while (e.MoveNext())
 		{
@@ -335,7 +335,7 @@ public class TestRedBlackTree
 
 		Assert.IsFalse(e.IsCurrentValid());
 
-		e = t.Find(5);
+		e = t.FindMutable(5);
 		Assert.IsFalse(e.IsCurrentValid());
 		e.MoveNext();
 		Assert.IsTrue(e.IsCurrentValid());
@@ -354,19 +354,19 @@ public class TestRedBlackTree
 			t.Insert(i);
 
 		const int deletedValue = 5;
-		var e = t.Find(deletedValue);
+		var e = t.FindMutable(deletedValue);
 
 		// Deleting unset enumerator should throw an exception and not delete a value.
 		Assert.IsFalse(e.IsCurrentValid());
 		Assert.ThrowsException<InvalidOperationException>(e.Delete);
-		Assert.AreEqual(10, t.Count);
+		Assert.AreEqual(10, t.GetCount());
 
 		// Deleting a set enumerator should delete a value and unset the enumerator.
 		e.MoveNext();
 		Assert.IsTrue(e.IsCurrentValid());
 		e.Delete();
 		Assert.IsFalse(e.IsCurrentValid());
-		Assert.AreEqual(9, t.Count);
+		Assert.AreEqual(9, t.GetCount());
 		var index = 0;
 		foreach (var e2 in t)
 		{
@@ -563,5 +563,59 @@ public class TestRedBlackTree
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 		}
+	}
+
+	[TestMethod]
+	public void TestCloneReadOnlyEnumerator()
+	{
+		var t = new RedBlackTree<int>();
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+
+		var e = t.First();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(0, e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
+
+		var e2 = e.Clone();
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(1, e2.Current);
+		Assert.IsTrue(e2.MoveNext());
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(2, e2.Current);
+
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
+	}
+
+	[TestMethod]
+	public void TestCloneEnumerator()
+	{
+		var t = new RedBlackTree<int>();
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+
+		var e = t.FirstMutable();
+		Assert.IsFalse(e.IsCurrentValid());
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(0, e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
+
+		var e2 = e.Clone();
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(1, e2.Current);
+		Assert.IsTrue(e2.MoveNext());
+		Assert.IsTrue(e2.IsCurrentValid());
+		Assert.AreEqual(2, e2.Current);
+
+		Assert.IsTrue(e.IsCurrentValid());
+		Assert.AreEqual(1, e.Current);
 	}
 }
