@@ -9,7 +9,7 @@ namespace Fumen;
 /// </summary>
 /// <typeparam name="TKey">Type of key to use in tree.</typeparam>
 /// <typeparam name="TValue">Type of value to use in tree.</typeparam>
-public interface IReadOnlyIntervalTree<TKey, TValue> : IEnumerable<TValue> where TKey : IComparable<TKey>
+public interface IReadOnlyIntervalTree<in TKey, TValue> : IEnumerable<TValue> where TKey : IComparable<TKey>
 {
 	/// <summary>
 	/// Read-only enumerator interface.
