@@ -55,6 +55,32 @@ public abstract class Event
 	/// This is a deep clone except for Extra values.
 	/// </summary>
 	public abstract Event Clone();
+
+	/// <summary>
+	/// Returns whether this Event matches another Events.
+	/// Events match if they would be considered the same between different Charts.
+	/// They should occur at the same time and position and be of the same type.
+	/// Derived classes should implement more checks as appropriate for their types.
+	/// </summary>
+	/// <param name="other">Other Event to compare to this Event.</param>
+	/// <returns>True if this Event matches the given other Event and false otherwise.</returns>
+	public virtual bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+
+		// Omitting Extras.
+		// When testing for matches we care about if two events result in the
+		// same note. Extras are used for storing information from deserialization
+		// or for serialization.
+		return TimeSeconds.DoubleEquals(other.TimeSeconds)
+		       && Equals(MetricPosition, other.MetricPosition)
+		       && IntegerPosition == other.IntegerPosition
+		       && SourceType == other.SourceType
+		       && DestType == other.DestType;
+	}
 }
 
 /// <summary>
@@ -90,6 +116,24 @@ public class Stop : Event
 	{
 		return new Stop(this);
 	}
+
+	public bool Matches(Stop other)
+	{
+		return base.Matches(other)
+		       && LengthSeconds.DoubleEquals(other.LengthSeconds)
+		       && IsDelay == other.IsDelay;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((Stop)other);
+	}
 }
 
 /// <summary>
@@ -121,6 +165,23 @@ public class Warp : Event
 	{
 		return new Warp(this);
 	}
+
+	public bool Matches(Warp other)
+	{
+		return base.Matches(other)
+		       && LengthIntegerPosition == other.LengthIntegerPosition;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((Warp)other);
+	}
 }
 
 /// <summary>
@@ -147,6 +208,23 @@ public class ScrollRate : Event
 	public override Event Clone()
 	{
 		return new ScrollRate(this);
+	}
+
+	public bool Matches(ScrollRate other)
+	{
+		return base.Matches(other)
+		       && Rate.DoubleEquals(other.Rate);
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((ScrollRate)other);
 	}
 }
 
@@ -192,6 +270,26 @@ public class ScrollRateInterpolation : Event
 	{
 		return new ScrollRateInterpolation(this);
 	}
+
+	public bool Matches(ScrollRateInterpolation other)
+	{
+		return base.Matches(other)
+		       && Rate.DoubleEquals(other.Rate)
+		       && PeriodLengthIntegerPosition == other.PeriodLengthIntegerPosition
+		       && PeriodTimeSeconds.DoubleEquals(other.PeriodTimeSeconds)
+		       && PreferPeriodAsTime == other.PreferPeriodAsTime;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((ScrollRateInterpolation)other);
+	}
 }
 
 /// <summary>
@@ -229,6 +327,23 @@ public class Tempo : Event
 	{
 		return 60.0 / TempoBPM / rowsPerBeat;
 	}
+
+	public bool Matches(Tempo other)
+	{
+		return base.Matches(other)
+		       && TempoBPM.DoubleEquals(other.TempoBPM);
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((Tempo)other);
+	}
 }
 
 /// <summary>
@@ -255,6 +370,23 @@ public class TimeSignature : Event
 	public override Event Clone()
 	{
 		return new TimeSignature(this);
+	}
+
+	public bool Matches(TimeSignature other)
+	{
+		return base.Matches(other)
+		       && Equals(Signature, other.Signature);
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((TimeSignature)other);
 	}
 }
 
@@ -287,6 +419,23 @@ public class TickCount : Event
 	{
 		return new TickCount(this);
 	}
+
+	public bool Matches(TickCount other)
+	{
+		return base.Matches(other)
+		       && Ticks == other.Ticks;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((TickCount)other);
+	}
 }
 
 /// <summary>
@@ -317,6 +466,23 @@ public class Label : Event
 	{
 		return new Label(this);
 	}
+
+	public bool Matches(Label other)
+	{
+		return base.Matches(other)
+		       && Text == other.Text;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((Label)other);
+	}
 }
 
 /// <summary>
@@ -346,6 +512,23 @@ public class FakeSegment : Event
 	public override Event Clone()
 	{
 		return new FakeSegment(this);
+	}
+
+	public bool Matches(FakeSegment other)
+	{
+		return base.Matches(other)
+		       && LengthSeconds.DoubleEquals(other.LengthSeconds);
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((FakeSegment)other);
 	}
 }
 
@@ -383,5 +566,23 @@ public class Multipliers : Event
 	public override Event Clone()
 	{
 		return new Multipliers(this);
+	}
+
+	public bool Matches(Multipliers other)
+	{
+		return base.Matches(other)
+		       && HitMultiplier == other.HitMultiplier
+		       && MissMultiplier == other.MissMultiplier;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((Multipliers)other);
 	}
 }
