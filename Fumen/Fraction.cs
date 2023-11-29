@@ -58,6 +58,8 @@ public class Fraction : IComparable, IEquatable<Fraction>
 	public int CompareTo(object obj)
 	{
 		var other = (Fraction)obj;
+		if (other == null)
+			return 1;
 		if (Denominator == 0 && other.Denominator == 0)
 			return 0;
 		if (Numerator == 0 && other.Numerator == 0)

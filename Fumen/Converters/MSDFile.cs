@@ -26,7 +26,7 @@ public class MSDFile
 	public const char ValueEndMarker = ';';
 	public const char ParamMarker = ':';
 	public const char CommentChar = '/';
-	public const string CommentMarker = @"//";
+	public const string CommentMarker = "//";
 	public const char EscapeMarker = '\\';
 
 	public static string Escape(string input)
