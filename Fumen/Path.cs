@@ -187,4 +187,27 @@ public static class Path
 
 		return false;
 	}
+
+	/// <summary>
+	/// Returns whether or not the two given strings represent the same path.
+	/// </summary>
+	/// <param name="path1">First path to compare.</param>
+	/// <param name="path2">Second path to compare.</param>
+	/// <returns>True if the two paths represent the same path and false otherwise.</returns>
+	public static bool ArePathsEqual(string path1, string path2)
+	{
+		if (string.IsNullOrEmpty(path1) != string.IsNullOrEmpty(path2))
+			return false;
+		if (string.IsNullOrEmpty(path1))
+			return true;
+		if (path1 == path2)
+			return true;
+		if (path1.StartsWith(Win32DeviceNamespace))
+			path1 = path1.Remove(0, Win32DeviceNamespace.Length);
+		if (path2!.StartsWith(Win32DeviceNamespace))
+			path2 = path2.Remove(0, Win32DeviceNamespace.Length);
+		path1 = path1.Replace('\\', '/');
+		path2 = path2.Replace('\\', '/');
+		return path1 == path2;
+	}
 }
