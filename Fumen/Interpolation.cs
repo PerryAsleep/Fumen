@@ -50,6 +50,21 @@ public class Interpolation
 	}
 
 	/// <summary>
+	/// Return a linearly interpolated value between the given start and end values based on the given
+	/// current time with respect to the given start and end times.
+	/// The returned value will be clamped to be within the range defined by the given start and end values.
+	/// </summary>
+	public static float Lerp(float startValue, float endValue, long startTime, long endTime, long currentTime)
+	{
+		if (endTime == startTime)
+			return currentTime >= endTime ? endValue : startValue;
+		var ret = (float)(startValue + (double)(currentTime - startTime) / (endTime - startTime) * (endValue - startValue));
+		if (startValue < endValue)
+			return MathUtils.Clamp(ret, startValue, endValue);
+		return MathUtils.Clamp(ret, endValue, startValue);
+	}
+
+	/// <summary>
 	/// Return a logarithmicly interpolated value between the given start and end values based on the given
 	/// current time with respect to the given start and end times.
 	/// The returned value will be clamped to be within the range defined by the given start and end values.
