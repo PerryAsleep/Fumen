@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
@@ -60,8 +61,11 @@ public class SMReader : Reader
 		var song = new Song();
 		await Task.Run(() =>
 		{
+			var previousCulture = CultureInfo.CurrentCulture;
 			try
 			{
+				CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
 				var timingProperties = new TimingProperties();
 				song.SourceType = FileFormatType.SM;
 
@@ -240,6 +244,10 @@ public class SMReader : Reader
 			catch (OperationCanceledException)
 			{
 				// Intentionally Ignored.
+			}
+			finally
+			{
+				CultureInfo.CurrentCulture = previousCulture;
 			}
 		}, token);
 

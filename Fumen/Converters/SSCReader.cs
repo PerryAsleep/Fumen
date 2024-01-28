@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
@@ -86,8 +87,11 @@ public class SSCReader : Reader
 		var song = new Song();
 		await Task.Run(() =>
 		{
+			var previousCulture = CultureInfo.CurrentCulture;
 			try
 			{
+				CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
 				song.SourceType = FileFormatType.SSC;
 				var songTimingProperties = new TimingProperties();
 				var songPropertyParsers = GetSongPropertyParsers(song, songTimingProperties);
@@ -175,6 +179,10 @@ public class SSCReader : Reader
 			catch (OperationCanceledException)
 			{
 				// Intentionally Ignored.
+			}
+			finally
+			{
+				CultureInfo.CurrentCulture = previousCulture;
 			}
 		}, token);
 

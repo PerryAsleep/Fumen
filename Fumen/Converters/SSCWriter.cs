@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using Fumen.ChartDefinition;
@@ -37,114 +38,123 @@ public class SSCWriter : SMWriterBase
 	/// <returns>True if saving was successful and false otherwise.</returns>
 	public bool Save()
 	{
-		using (StreamWriter = new StreamWriter(Config.FilePath))
+		var previousCulture = CultureInfo.CurrentCulture;
+		try
 		{
-			// Version
-			if (!Config.Song.Extras.TryGetExtra(TagVersion, out object version, MatchesSourceFileFormatType()))
+			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+			using (StreamWriter = new StreamWriter(Config.FilePath))
 			{
-				WriteSongProperty(TagVersion, Version.ToString("N2"));
-			}
-			else
-			{
-				if (version is double d)
-					WriteSongProperty(TagVersion, d.ToString("N2"));
+				// Version
+				if (!Config.Song.Extras.TryGetExtra(TagVersion, out object version, MatchesSourceFileFormatType()))
+				{
+					WriteSongProperty(TagVersion, Version.ToString("N2"));
+				}
 				else
-					WriteSongPropertyFromExtras(TagVersion);
+				{
+					if (version is double d)
+						WriteSongProperty(TagVersion, d.ToString("N2"));
+					else
+						WriteSongPropertyFromExtras(TagVersion);
+				}
+
+				WriteSongProperty(TagTitle, Config.Song.Title);
+				WriteSongProperty(TagSubtitle, Config.Song.SubTitle);
+				WriteSongProperty(TagArtist, Config.Song.Artist);
+				WriteSongProperty(TagTitleTranslit, Config.Song.TitleTransliteration);
+				WriteSongProperty(TagSubtitleTranslit, Config.Song.SubTitleTransliteration);
+				WriteSongProperty(TagArtistTranslit, Config.Song.ArtistTransliteration);
+				WriteSongProperty(TagGenre, Config.Song.Genre);
+				WriteSongPropertyFromExtras(TagOrigin);
+				WriteSongPropertyFromExtras(TagCredit);
+				WriteSongProperty(TagBanner, Config.Song.SongSelectImage);
+				WriteSongPropertyFromExtras(TagBackground);
+				WriteSongPropertyFromExtras(TagPreviewVid);
+				WriteSongPropertyFromExtras(TagJacket);
+				WriteSongPropertyFromExtras(TagCDImage);
+				WriteSongPropertyFromExtras(TagDiscImage);
+				WriteSongPropertyFromExtras(TagLyricsPath);
+				WriteSongPropertyFromExtras(TagCDTitle);
+				WriteSongPropertyMusic();
+				if (Config.Song.Extras.TryGetExtra(TagPreview, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagPreview);
+				if (Config.Song.Extras.TryGetExtra(TagInstrumentTrack, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagInstrumentTrack);
+				WriteSongPropertyOffset();
+				WriteSongProperty(TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMDoubleFormat));
+				WriteSongProperty(TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMDoubleFormat));
+				WriteSongPropertyFromExtras(TagSelectable);
+				if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
+
+				// Custom properties. Always write these if they are present.
+				if (Config.CustomProperties?.CustomSongProperties != null)
+				{
+					foreach (var customProperty in Config.CustomProperties.CustomSongProperties)
+						WriteProperty(customProperty.Key, customProperty.Value);
+				}
+
+				// Timing data.
+				WriteSongPropertyBPMs();
+				WriteSongPropertyStops();
+				WriteSongPropertyDelays();
+				WriteSongPropertyWarps();
+				WriteSongPropertyTimeSignatures();
+				WriteSongPropertyTickCounts();
+				WriteSongPropertyCombos();
+				WriteSongPropertySpeeds();
+				WriteSongPropertyScrolls();
+				WriteSongPropertyFakes();
+				WriteSongPropertyLabels();
+
+				if (Config.Song.Extras.TryGetExtra(TagLastSecondHint, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagLastSecondHint, false, false);
+				WriteSongPropertyFromExtras(TagAnimations, true, false);
+				if (Config.Song.Extras.TryGetExtra(TagBGChanges, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagBGChanges, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagBGChanges1, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagBGChanges1, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagBGChanges2, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagBGChanges2, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
+					WriteSongPropertyFromExtras(TagFGChanges, false, false);
+				WriteSongPropertyFromExtras(TagKeySounds, false, false); // TODO: Write keysounds properly
+				WriteSongPropertyFromExtras(TagAttacks, false, false);
+
+				// Cache
+				if (Config.Song.Extras.TryGetExtra(TagFirstSecond, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(TagLastSecond, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(TagSongFileName, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(TagHasMusic, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(TagHasBanner, out object _, MatchesSourceFileFormatType())
+				    || Config.Song.Extras.TryGetExtra(TagMusicLength, out object _, MatchesSourceFileFormatType()))
+				{
+					StreamWriter.WriteLine("// cache tags:");
+					WriteSongPropertyFromExtras(TagFirstSecond);
+					WriteSongPropertyFromExtras(TagLastSecond);
+					WriteSongPropertyFromExtras(TagSongFileName);
+					WriteSongPropertyFromExtras(TagHasMusic);
+					WriteSongPropertyFromExtras(TagHasBanner);
+					WriteSongPropertyFromExtras(TagMusicLength);
+					StreamWriter.WriteLine("// end cache tags");
+				}
+
+				var chartIndex = 0;
+				foreach (var chart in Config.Song.Charts)
+				{
+					Dictionary<string, string> customChartProperties = null;
+					if (Config.CustomProperties?.CustomChartProperties?.Count > chartIndex)
+						customChartProperties = Config.CustomProperties.CustomChartProperties[chartIndex];
+					WriteChart(chart, customChartProperties);
+					chartIndex++;
+				}
 			}
 
-			WriteSongProperty(TagTitle, Config.Song.Title);
-			WriteSongProperty(TagSubtitle, Config.Song.SubTitle);
-			WriteSongProperty(TagArtist, Config.Song.Artist);
-			WriteSongProperty(TagTitleTranslit, Config.Song.TitleTransliteration);
-			WriteSongProperty(TagSubtitleTranslit, Config.Song.SubTitleTransliteration);
-			WriteSongProperty(TagArtistTranslit, Config.Song.ArtistTransliteration);
-			WriteSongProperty(TagGenre, Config.Song.Genre);
-			WriteSongPropertyFromExtras(TagOrigin);
-			WriteSongPropertyFromExtras(TagCredit);
-			WriteSongProperty(TagBanner, Config.Song.SongSelectImage);
-			WriteSongPropertyFromExtras(TagBackground);
-			WriteSongPropertyFromExtras(TagPreviewVid);
-			WriteSongPropertyFromExtras(TagJacket);
-			WriteSongPropertyFromExtras(TagCDImage);
-			WriteSongPropertyFromExtras(TagDiscImage);
-			WriteSongPropertyFromExtras(TagLyricsPath);
-			WriteSongPropertyFromExtras(TagCDTitle);
-			WriteSongPropertyMusic();
-			if (Config.Song.Extras.TryGetExtra(TagPreview, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagPreview);
-			if (Config.Song.Extras.TryGetExtra(TagInstrumentTrack, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagInstrumentTrack);
-			WriteSongPropertyOffset();
-			WriteSongProperty(TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMDoubleFormat));
-			WriteSongProperty(TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMDoubleFormat));
-			WriteSongPropertyFromExtras(TagSelectable);
-			if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
-
-			// Custom properties. Always write these if they are present.
-			if (Config.CustomProperties?.CustomSongProperties != null)
-			{
-				foreach (var customProperty in Config.CustomProperties.CustomSongProperties)
-					WriteProperty(customProperty.Key, customProperty.Value);
-			}
-
-			// Timing data.
-			WriteSongPropertyBPMs();
-			WriteSongPropertyStops();
-			WriteSongPropertyDelays();
-			WriteSongPropertyWarps();
-			WriteSongPropertyTimeSignatures();
-			WriteSongPropertyTickCounts();
-			WriteSongPropertyCombos();
-			WriteSongPropertySpeeds();
-			WriteSongPropertyScrolls();
-			WriteSongPropertyFakes();
-			WriteSongPropertyLabels();
-
-			if (Config.Song.Extras.TryGetExtra(TagLastSecondHint, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagLastSecondHint, false, false);
-			WriteSongPropertyFromExtras(TagAnimations, true, false);
-			if (Config.Song.Extras.TryGetExtra(TagBGChanges, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagBGChanges, false, false);
-			if (Config.Song.Extras.TryGetExtra(TagBGChanges1, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagBGChanges1, false, false);
-			if (Config.Song.Extras.TryGetExtra(TagBGChanges2, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagBGChanges2, false, false);
-			if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
-				WriteSongPropertyFromExtras(TagFGChanges, false, false);
-			WriteSongPropertyFromExtras(TagKeySounds, false, false); // TODO: Write keysounds properly
-			WriteSongPropertyFromExtras(TagAttacks, false, false);
-
-			// Cache
-			if (Config.Song.Extras.TryGetExtra(TagFirstSecond, out object _, MatchesSourceFileFormatType())
-			    || Config.Song.Extras.TryGetExtra(TagLastSecond, out object _, MatchesSourceFileFormatType())
-			    || Config.Song.Extras.TryGetExtra(TagSongFileName, out object _, MatchesSourceFileFormatType())
-			    || Config.Song.Extras.TryGetExtra(TagHasMusic, out object _, MatchesSourceFileFormatType())
-			    || Config.Song.Extras.TryGetExtra(TagHasBanner, out object _, MatchesSourceFileFormatType())
-			    || Config.Song.Extras.TryGetExtra(TagMusicLength, out object _, MatchesSourceFileFormatType()))
-			{
-				StreamWriter.WriteLine("// cache tags:");
-				WriteSongPropertyFromExtras(TagFirstSecond);
-				WriteSongPropertyFromExtras(TagLastSecond);
-				WriteSongPropertyFromExtras(TagSongFileName);
-				WriteSongPropertyFromExtras(TagHasMusic);
-				WriteSongPropertyFromExtras(TagHasBanner);
-				WriteSongPropertyFromExtras(TagMusicLength);
-				StreamWriter.WriteLine("// end cache tags");
-			}
-
-			var chartIndex = 0;
-			foreach (var chart in Config.Song.Charts)
-			{
-				Dictionary<string, string> customChartProperties = null;
-				if (Config.CustomProperties?.CustomChartProperties?.Count > chartIndex)
-					customChartProperties = Config.CustomProperties.CustomChartProperties[chartIndex];
-				WriteChart(chart, customChartProperties);
-				chartIndex++;
-			}
+			StreamWriter = null;
 		}
-
-		StreamWriter = null;
+		finally
+		{
+			CultureInfo.CurrentCulture = previousCulture;
+		}
 
 		return true;
 	}
