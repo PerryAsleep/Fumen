@@ -163,8 +163,9 @@ public static class SMCommon
 	public static readonly List<double> SubDivisionLengths = new();
 	private static readonly ChartProperties[] Properties;
 	public static readonly char[] NoteChars = { '0', '1', '2', '3', '4', 'M', 'L', 'F', 'K' };
+	public static readonly string[] NoteStrings = { "0", "1", "2", "3", "4", "M", "L", "F", "K" };
 
-	public static readonly string[] NoteStrings =
+	public static readonly string[] NotePrettyStrings =
 	{
 		"None", "Tap", "Hold Start", "Hold or Roll End", "Roll Start", "Mine", "Lift", "Fake", "KeySound",
 	};

@@ -702,13 +702,13 @@ public abstract class NotesPropertyParser : PropertyParser
 						// Get the note type.
 						var c = trimmedLine[charIndex];
 						var noteType = SMCommon.NoteType.None;
-						var noteString = SMCommon.NoteStrings[(int)noteType];
+						var noteString = SMCommon.NotePrettyStrings[(int)noteType];
 						for (var i = 0; i < SMCommon.NoteChars.Length; i++)
 						{
 							if (c == SMCommon.NoteChars[i])
 							{
 								noteType = (SMCommon.NoteType)i;
-								noteString = SMCommon.NoteStrings[i];
+								noteString = SMCommon.NotePrettyStrings[i];
 								break;
 							}
 						}
