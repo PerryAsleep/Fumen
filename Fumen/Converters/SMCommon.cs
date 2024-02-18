@@ -77,6 +77,34 @@ public static class SMCommon
 		return Enum.TryParse(chartTypeString.Replace("-", "_"), out smChartType);
 	}
 
+	public static bool IsPumpType(ChartType chartType)
+	{
+		return chartType == ChartType.pump_single
+		       || chartType == ChartType.pump_halfdouble
+		       || chartType == ChartType.pump_double
+		       || chartType == ChartType.pump_couple
+		       || chartType == ChartType.pump_routine;
+	}
+
+	public static bool IsSmxType(ChartType chartType)
+	{
+		return chartType == ChartType.smx_beginner
+		       || chartType == ChartType.smx_single
+		       || chartType == ChartType.smx_dual
+		       || chartType == ChartType.smx_full
+		       || chartType == ChartType.smx_team;
+	}
+
+	public static bool IsDanceType(ChartType chartType)
+	{
+		return chartType == ChartType.dance_single
+		       || chartType == ChartType.dance_double
+		       || chartType == ChartType.dance_couple
+		       || chartType == ChartType.dance_solo
+		       || chartType == ChartType.dance_threepanel
+		       || chartType == ChartType.dance_routine;
+	}
+
 	public enum ChartDifficultyType
 	{
 		Beginner,
