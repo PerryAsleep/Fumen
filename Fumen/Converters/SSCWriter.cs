@@ -42,7 +42,8 @@ public class SSCWriter : SMWriterBase
 		try
 		{
 			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-			using (StreamWriter = new StreamWriter(Config.FilePath))
+			using var atomicFile = new AtomicPersistenceFile(Config.FilePath);
+			using (StreamWriter = new StreamWriter(atomicFile.GetFilePathToSaveTo()))
 			{
 				// Version
 				if (!Config.Song.Extras.TryGetExtra(TagVersion, out object version, MatchesSourceFileFormatType()))

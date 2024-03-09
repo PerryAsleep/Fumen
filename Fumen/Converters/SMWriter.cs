@@ -39,7 +39,8 @@ public class SMWriter : SMWriterBase
 		try
 		{
 			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-			using (StreamWriter = new StreamWriter(Config.FilePath))
+			using var atomicFile = new AtomicPersistenceFile(Config.FilePath);
+			using (StreamWriter = new StreamWriter(atomicFile.GetFilePathToSaveTo()))
 			{
 				WriteSongProperty(TagTitle, Config.Song.Title);
 				WriteSongProperty(TagSubtitle, Config.Song.SubTitle);
