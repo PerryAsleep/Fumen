@@ -31,9 +31,19 @@ public static class FumenExtensions
 		return f - MinFloatDelta <= other && f + MinFloatDelta >= other;
 	}
 
+	public static bool FloatEquals(this float f, float other, float epsilon)
+	{
+		return Math.Abs(f - other) <= epsilon;
+	}
+
 	public static bool DoubleEquals(this double d, double other)
 	{
 		return HasMinimalDifference(d, other, 1);
+	}
+
+	public static bool DoubleEquals(this double d, double other, double epsilon)
+	{
+		return Math.Abs(d - other) <= epsilon;
 	}
 
 	/// <summary>
