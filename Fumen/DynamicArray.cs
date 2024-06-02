@@ -183,6 +183,33 @@ public class DynamicArray<T> : IReadOnlyDynamicArray<T>
 		Size = Math.Min(Size, capacity);
 	}
 
+	/// <summary>
+	/// Sets the size directly.
+	/// Will update capacity as needed.
+	/// </summary>
+	/// <param name="size">New size.</param>
+	/// <exception cref="IndexOutOfRangeException">Thrown when the given size is less than zero.</exception>
+	public void SetSize(int size)
+	{
+		if (size < 0)
+			throw new IndexOutOfRangeException();
+		GrowToAtLeast(size);
+		ShrinkTo(size);
+		Size = size;
+	}
+
+	/// <summary>
+	/// Sets the size directly without updating the capacity.
+	/// </summary>
+	/// <param name="size">New size.</param>
+	/// <exception cref="IndexOutOfRangeException">Thrown when the given size is less than zero or greater than the capacity.</exception>
+	public void SetSizeWithoutUpdatingCapacity(int size)
+	{
+		if (size < 0 || size > Capacity)
+			throw new IndexOutOfRangeException();
+		Size = size;
+	}
+
 	#region Resizing
 
 	/// <summary>
