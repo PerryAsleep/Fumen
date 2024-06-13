@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Fumen;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,6 +12,79 @@ namespace FumenTests;
 [TestClass]
 public class TestRedBlackTree
 {
+	internal sealed class BoxedDouble : IComparable<BoxedDouble>, IComparable<BoxedInt>
+	{
+		private readonly double Value;
+
+		public BoxedDouble(double value)
+		{
+			Value = value;
+		}
+
+		public double GetValue()
+		{
+			return Value;
+		}
+
+		public int CompareTo(BoxedDouble other)
+		{
+			return Value.CompareTo(other.GetValue());
+		}
+
+		public int CompareTo(BoxedInt other)
+		{
+			return Value.CompareTo(other.GetValue());
+		}
+	}
+
+	internal sealed class BoxedInt : IComparable<BoxedInt>, IComparable<BoxedDouble>
+	{
+		private readonly int Value;
+
+		public BoxedInt(int value)
+		{
+			Value = value;
+		}
+
+		public int GetValue()
+		{
+			return Value;
+		}
+
+		public int CompareTo(BoxedInt other)
+		{
+			return Value.CompareTo(other.GetValue());
+		}
+
+		public int CompareTo(BoxedDouble other)
+		{
+			return Value.CompareTo((int)other.GetValue());
+		}
+	}
+
+	private RedBlackTree<int> CreateEvenIntTree(int max)
+	{
+		Debug.Assert(max % 2 == 0);
+		var t = new RedBlackTree<int>();
+		for (var i = 0; i <= max; i += 2)
+			t.Insert(i);
+		return t;
+	}
+
+	private RedBlackTree<BoxedDouble> CreateEvenBoxedDoubleTree(int max)
+	{
+		Debug.Assert(max % 2 == 0);
+		var t = new RedBlackTree<BoxedDouble>();
+		for (var i = 0; i <= max; i += 2)
+			t.Insert(new BoxedDouble(i));
+		return t;
+	}
+
+	private static int CustomIntCompare(int a, int b)
+	{
+		return a.CompareTo(b);
+	}
+
 	[TestMethod]
 	public void TestEmpty()
 	{
@@ -396,6 +470,18 @@ public class TestRedBlackTree
 	}
 
 	[TestMethod]
+	public void TestFirstValue()
+	{
+		var t = new RedBlackTree<int>();
+		Assert.IsFalse(t.FirstValue(out var r));
+
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+		Assert.IsTrue(t.FirstValue(out r));
+		Assert.AreEqual(0, r);
+	}
+
+	[TestMethod]
 	public void TestLast()
 	{
 		var t = new RedBlackTree<int>();
@@ -410,6 +496,18 @@ public class TestRedBlackTree
 		Assert.IsFalse(e.IsCurrentValid());
 		Assert.IsTrue(e.MovePrev());
 		Assert.AreEqual(9, e.Current);
+	}
+
+	[TestMethod]
+	public void TestLastValue()
+	{
+		var t = new RedBlackTree<int>();
+		Assert.IsFalse(t.LastValue(out var r));
+
+		for (var i = 0; i < 10; i++)
+			t.Insert(i);
+		Assert.IsTrue(t.LastValue(out r));
+		Assert.AreEqual(9, r);
 	}
 
 	[TestMethod]
@@ -442,50 +540,113 @@ public class TestRedBlackTree
 	}
 
 	[TestMethod]
-	public void TestFindGreatestPreceding()
+	public void TestFindGreatestPreceding_Empty_ReturnsNull()
 	{
-		// Finding in an empty tree should return null.
 		var t = new RedBlackTree<int>();
 		Assert.IsNull(t.FindGreatestPreceding(0));
+	}
 
-		const int num = 100;
-		for (var i = 0; i < num; i += 2)
-			t.Insert(i);
+	[TestMethod]
+	public void TestFindGreatestPreceding_LessThanLeast_ReturnsNull()
+	{
+		var t = CreateEvenIntTree(100);
 
-		// Finding element less than least element should return null.
 		Assert.IsNull(t.FindGreatestPreceding(-1));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_OrEqual_LessThanLeast_ReturnsNull()
+	{
+		var t = CreateEvenIntTree(100);
+
 		Assert.IsNull(t.FindGreatestPreceding(-1, true));
+	}
 
-		// Finding element less than greatest element should return greatest element.
-		var e = t.FindGreatestPreceding(num + 1);
-		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
-		Assert.IsTrue(e.MoveNext());
-		Assert.AreEqual(num - 2, e.Current);
-		e = t.FindGreatestPreceding(num + 1, true);
-		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
-		Assert.IsTrue(e.MoveNext());
-		Assert.AreEqual(num - 2, e.Current);
+	[TestMethod]
+	public void TestFindGreatestPreceding_EqualToLeast_ReturnsNull()
+	{
+		var t = CreateEvenIntTree(100);
 
-		// Finding least element should return null when not using orEqualTo=true.
 		Assert.IsNull(t.FindGreatestPreceding(0));
-		// Finding least element should return that element when using orEqualTo=true.
-		e = t.FindGreatestPreceding(0, true);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_OrEqual_EqualToLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindGreatestPreceding(0, true);
 		Assert.IsNotNull(e);
 		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
+	}
 
-		// Find elements after the least element should return the greatest
-		// preceding element.
-		for (var i = 1; i < num; i++)
+	[TestMethod]
+	public void TestFindGreatestPreceding_GreaterThanGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max + 1);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_OrEqual_GreaterThanGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max + 1, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_EqualToGreatest_ReturnsPreceding()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max - 2, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_OrEqual_EqualToGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_MidRange()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		for (var i = 1; i <= max; i++)
 		{
 			// Check without equals.
 			var expected = i - 1;
 			if (expected % 2 == 1)
 				expected -= 1;
-			e = t.FindGreatestPreceding(i);
+			var e = t.FindGreatestPreceding(i);
 			Assert.IsNotNull(e);
 			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
@@ -504,50 +665,349 @@ public class TestRedBlackTree
 	}
 
 	[TestMethod]
-	public void TestFindLeastFollowing()
+	public void TestFindGreatestPreceding_Comparable_LessThanLeast_ReturnsNull()
 	{
-		// Finding in an empty tree should return null.
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		Assert.IsNull(t.FindGreatestPreceding(new BoxedInt(-1)));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_OrEqual_LessThanLeast_ReturnsNull()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		Assert.IsNull(t.FindGreatestPreceding(new BoxedInt(-1), true));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_EqualToLeast_ReturnsNull()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		Assert.IsNull(t.FindGreatestPreceding(new BoxedInt(0)));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_OrEqual_EqualToLeast_ReturnsLeast()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		var e = t.FindGreatestPreceding(new BoxedInt(0), true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_GreaterThanGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		var e = t.FindGreatestPreceding(new BoxedInt(max + 1));
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_OrEqual_GreaterThanGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		var e = t.FindGreatestPreceding(new BoxedInt(max + 1), true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_EqualToGreatest_ReturnsPreceding()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		var e = t.FindGreatestPreceding(new BoxedInt(max));
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max - 2));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_OrEqual_EqualToGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		var e = t.FindGreatestPreceding(new BoxedInt(max), true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_Comparable_MidRange()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		for (var i = 1; i <= max; i++)
+		{
+			// Check without equals.
+			var expected = i - 1;
+			if (expected % 2 == 1)
+				expected -= 1;
+			var e = t.FindGreatestPreceding(new BoxedInt(i));
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
+
+			// Check with equals.
+			expected = i;
+			if (expected % 2 == 1)
+				expected -= 1;
+			e = t.FindGreatestPreceding(new BoxedInt(i), true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
+		}
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_LessThanLeast_ReturnsNull()
+	{
+		var t = CreateEvenIntTree(100);
+
+		Assert.IsNull(t.FindGreatestPreceding(-1, CustomIntCompare));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_OrEqual_LessThanLeast_ReturnsNull()
+	{
+		var t = CreateEvenIntTree(100);
+
+		Assert.IsNull(t.FindGreatestPreceding(-1, CustomIntCompare, true));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_EqualToLeast_ReturnsNull()
+	{
+		var t = CreateEvenIntTree(100);
+
+		Assert.IsNull(t.FindGreatestPreceding(0, CustomIntCompare));
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_OrEqual_EqualToLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindGreatestPreceding(0, CustomIntCompare, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_GreaterThanGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max + 1, CustomIntCompare);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_OrEqual_GreaterThanGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max + 1, CustomIntCompare, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_EqualToGreatest_ReturnsPreceding()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max, CustomIntCompare);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max - 2, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_OrEqual_EqualToGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindGreatestPreceding(max, CustomIntCompare, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindGreatestPreceding_CustomComparer_MidRange()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		for (var i = 1; i <= max; i++)
+		{
+			// Check without equals.
+			var expected = i - 1;
+			if (expected % 2 == 1)
+				expected -= 1;
+			var e = t.FindGreatestPreceding(i, CustomIntCompare);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+
+			// Check with equals.
+			expected = i;
+			if (expected % 2 == 1)
+				expected -= 1;
+			e = t.FindGreatestPreceding(i, CustomIntCompare, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+		}
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Empty_ReturnsNull()
+	{
 		var t = new RedBlackTree<int>();
 		Assert.IsNull(t.FindLeastFollowing(0));
+	}
 
-		const int num = 100;
-		for (var i = 0; i < num; i += 2)
-			t.Insert(i);
+	[TestMethod]
+	public void TestFindLeastFollowing_LessThanLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
 
-		// Finding element greater than least element should return least element.
 		var e = t.FindLeastFollowing(-1);
 		Assert.IsNotNull(e);
 		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
-		e = t.FindLeastFollowing(-1, true);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_OrEqual_LessThanLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindLeastFollowing(-1, true);
 		Assert.IsNotNull(e);
 		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
+	}
 
-		// Finding element greater than greatest element should return null.
-		Assert.IsNull(t.FindLeastFollowing(num));
-		Assert.IsNull(t.FindLeastFollowing(num, true));
+	[TestMethod]
+	public void TestFindLeastFollowing_EqualToLeast_ReturnsFollowing()
+	{
+		var t = CreateEvenIntTree(100);
 
-		// Finding greatest element should return null when not using orEqualTo=true.
-		Assert.IsNull(t.FindLeastFollowing(num - 2));
-		// Finding greatest element should return that element when using orEqualTo=true.
-		e = t.FindLeastFollowing(num - 2, true);
+		var e = t.FindLeastFollowing(0);
 		Assert.IsNotNull(e);
 		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
-		Assert.AreEqual(num - 2, e.Current);
+		Assert.AreEqual(2, e.Current);
+	}
 
-		// Find elements before the greatest element should return the least
-		// following element.
-		for (var i = 0; i < num - 2; i++)
+	[TestMethod]
+	public void TestFindLeastFollowing_OrEqual_EqualToLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindLeastFollowing(0, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_GreaterThanGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(max + 1));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_OrEqual_GreaterThanGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(max + 1, true));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_EqualToGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(max));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_OrEqual_EqualToGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindLeastFollowing(max, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_MidRange()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		for (var i = 0; i < max - 2; i++)
 		{
 			// Check without equals.
 			var expected = i + 1;
 			if (expected % 2 == 1)
 				expected += 1;
-			e = t.FindLeastFollowing(i);
+			var e = t.FindLeastFollowing(i);
 			Assert.IsNotNull(e);
 			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
@@ -558,6 +1018,242 @@ public class TestRedBlackTree
 			if (expected % 2 == 1)
 				expected += 1;
 			e = t.FindLeastFollowing(i, true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+		}
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_LessThanLeast_ReturnsLeast()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		var e = t.FindLeastFollowing(new BoxedInt(-1));
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_OrEqual_LessThanLeast_ReturnsLeast()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		var e = t.FindLeastFollowing(new BoxedInt(-1), true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_EqualToLeast_ReturnsFollowing()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		var e = t.FindLeastFollowing(new BoxedInt(0));
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(2.0));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_OrEqual_EqualToLeast_ReturnsLeast()
+	{
+		var t = CreateEvenBoxedDoubleTree(100);
+
+		var e = t.FindLeastFollowing(new BoxedInt(0), true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_GreaterThanGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(new BoxedInt(max + 1)));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_OrEqual_GreaterThanGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(new BoxedInt(max + 1), true));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_EqualToGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(new BoxedInt(max)));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_OrEqual_EqualToGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		var e = t.FindLeastFollowing(new BoxedInt(max), true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_Comparable_MidRange()
+	{
+		const int max = 100;
+		var t = CreateEvenBoxedDoubleTree(max);
+
+		for (var i = 0; i < max - 2; i++)
+		{
+			// Check without equals.
+			var expected = i + 1;
+			if (expected % 2 == 1)
+				expected += 1;
+			var e = t.FindLeastFollowing(new BoxedInt(i));
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
+
+			// Check with equals.
+			expected = i;
+			if (expected % 2 == 1)
+				expected += 1;
+			e = t.FindLeastFollowing(new BoxedInt(i), true);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
+		}
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_LessThanLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindLeastFollowing(-1, CustomIntCompare);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_OrEqual_LessThanLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindLeastFollowing(-1, CustomIntCompare, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_EqualToLeast_ReturnsFollowing()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindLeastFollowing(0, CustomIntCompare);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(2, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_OrEqual_EqualToLeast_ReturnsLeast()
+	{
+		var t = CreateEvenIntTree(100);
+
+		var e = t.FindLeastFollowing(0, CustomIntCompare, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(0, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_GreaterThanGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(max + 1, CustomIntCompare));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_OrEqual_GreaterThanGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(max + 1, CustomIntCompare, true));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_EqualToGreatest_ReturnsNull()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		Assert.IsNull(t.FindLeastFollowing(max, CustomIntCompare));
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_OrEqual_EqualToGreatest_ReturnsGreatest()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		var e = t.FindLeastFollowing(max, CustomIntCompare, true);
+		Assert.IsNotNull(e);
+		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.IsTrue(e.MoveNext());
+		Assert.AreEqual(max, e.Current);
+	}
+
+	[TestMethod]
+	public void TestFindLeastFollowing_CustomComparer_MidRange()
+	{
+		const int max = 100;
+		var t = CreateEvenIntTree(max);
+
+		for (var i = 0; i < max - 2; i++)
+		{
+			// Check without equals.
+			var expected = i + 1;
+			if (expected % 2 == 1)
+				expected += 1;
+			var e = t.FindLeastFollowing(i, CustomIntCompare);
+			Assert.IsNotNull(e);
+			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.IsTrue(e.MoveNext());
+			Assert.AreEqual(expected, e.Current);
+
+			// Check with equals.
+			expected = i;
+			if (expected % 2 == 1)
+				expected += 1;
+			e = t.FindLeastFollowing(i, CustomIntCompare, true);
 			Assert.IsNotNull(e);
 			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());

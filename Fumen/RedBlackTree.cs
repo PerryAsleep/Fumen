@@ -23,10 +23,29 @@ public interface IReadOnlyRedBlackTree<T> : IEnumerable<T> where T : IComparable
 
 	public int GetCount();
 	public IReadOnlyRedBlackTreeEnumerator Find(T value);
-	public IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding(T value, bool orEqualTo = false);
-	public IReadOnlyRedBlackTreeEnumerator FindLeastFollowing(T value, bool orEqualTo = false);
+
+	// @formatter:off
+	public IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding<TComparable>(TComparable value, bool orEqualTo = false) where TComparable : IComparable<T>;
+
+	public IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding<TComparable>(TComparable value, Func<T, TComparable, int> comparer, bool orEqualTo = false);
+
+	public bool FindGreatestPrecedingValue<TComparable>(TComparable value, bool orEqualTo, out T result) where TComparable : IComparable<T>;
+
+	public bool FindGreatestPrecedingValue<TComparable>(TComparable value, Func<T, TComparable, int> comparer, bool orEqualTo, out T result);
+
+	public IReadOnlyRedBlackTreeEnumerator FindLeastFollowing<TComparable>(TComparable value, bool orEqualTo = false) where TComparable : IComparable<T>;
+
+	public IReadOnlyRedBlackTreeEnumerator FindLeastFollowing<TComparable>(TComparable value, Func<T, TComparable, int> comparer, bool orEqualTo = false);
+
+	public bool FindLeastFollowingValue<TComparable>(TComparable value, bool orEqualTo, out T result) where TComparable : IComparable<T>;
+
+	public bool FindLeastFollowingValue<TComparable>(TComparable value, Func<T, TComparable, int> comparer, bool orEqualTo, out T result);
+	// @formatter:on
+
 	public IReadOnlyRedBlackTreeEnumerator First();
+	public bool FirstValue(out T result);
 	public IReadOnlyRedBlackTreeEnumerator Last();
+	public bool LastValue(out T result);
 }
 
 /// <summary>
@@ -398,7 +417,8 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 	/// <param name="value">Value to use to find the greatest preceding value.</param>
 	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
 	/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
-	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding(T value, bool orEqualTo = false)
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding<TComparable>(TComparable value,
+		bool orEqualTo = false) where TComparable : IComparable<T>
 	{
 		return FindGreatestPrecedingMutable(value, orEqualTo);
 	}
@@ -409,7 +429,8 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 	/// <param name="value">Value to use to find the greatest preceding value.</param>
 	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
 	/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
-	public IRedBlackTreeEnumerator FindGreatestPrecedingMutable(T value, bool orEqualTo = false)
+	public IRedBlackTreeEnumerator FindGreatestPrecedingMutable<TComparable>(TComparable value, bool orEqualTo = false)
+		where TComparable : IComparable<T>
 	{
 		var p = Nil;
 		var n = Root;
@@ -444,12 +465,193 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 	}
 
 	/// <summary>
+	/// Finds the greatest value preceding the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the greatest preceding value.</param>
+	/// <param name="comparer">Function for comparing values in the tree to the given value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindGreatestPreceding<TComparable>(TComparable value,
+		Func<T, TComparable, int> comparer, bool orEqualTo = false)
+	{
+		return FindGreatestPrecedingMutable(value, comparer, orEqualTo);
+	}
+
+	/// <summary>
+	/// Finds the greatest value preceding the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the greatest preceding value.</param>
+	/// <param name="comparer">Function for comparing values in the tree to the given value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <returns>Enumerator to greatest preceding value or null if not found.</returns>
+	public IRedBlackTreeEnumerator FindGreatestPrecedingMutable<TComparable>(TComparable value,
+		Func<T, TComparable, int> comparer, bool orEqualTo = false)
+	{
+		var p = Nil;
+		var n = Root;
+		Node prev;
+		while (n != Nil)
+		{
+			var c = -comparer(n.Value, value);
+			if (c == 0)
+			{
+				if (orEqualTo)
+					return new Enumerator(this, n);
+				prev = Prev(n);
+				if (prev == Nil)
+					return null;
+				return new Enumerator(this, prev);
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+			return null;
+
+		if (comparer(p.Value, value) <= 0)
+			return new Enumerator(this, p);
+
+		prev = Prev(p);
+		if (prev == Nil)
+			return null;
+		return new Enumerator(this, prev);
+	}
+
+	/// <summary>
+	/// Finds the greatest value preceding the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the greatest preceding value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <param name="result">Greatest preceding value.</param>
+	/// <returns>True if a value was found and false otherwise.</returns>
+	public bool FindGreatestPrecedingValue<TComparable>(TComparable value, bool orEqualTo, out T result)
+		where TComparable : IComparable<T>
+	{
+		var p = Nil;
+		var n = Root;
+		Node prev;
+		while (n != Nil)
+		{
+			var c = value.CompareTo(n.Value);
+			if (c == 0)
+			{
+				if (orEqualTo)
+				{
+					result = n.Value;
+					return true;
+				}
+
+				prev = Prev(n);
+				if (prev == Nil)
+				{
+					result = default;
+					return false;
+				}
+
+				result = prev.Value;
+				return true;
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		if (value.CompareTo(p.Value) > 0)
+		{
+			result = p.Value;
+			return true;
+		}
+
+		prev = Prev(p);
+		if (prev == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		result = prev.Value;
+		return true;
+	}
+
+	/// <summary>
+	/// Finds the greatest value preceding the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the greatest preceding value.</param>
+	/// <param name="comparer">Function for comparing values in the tree to the given value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <param name="result">Greatest preceding value.</param>
+	/// <returns>True if a value was found and false otherwise.</returns>
+	public bool FindGreatestPrecedingValue<TComparable>(TComparable value, Func<T, TComparable, int> comparer, bool orEqualTo,
+		out T result)
+	{
+		var p = Nil;
+		var n = Root;
+		Node prev;
+		while (n != Nil)
+		{
+			var c = -comparer(n.Value, value);
+			if (c == 0)
+			{
+				if (orEqualTo)
+				{
+					result = n.Value;
+					return true;
+				}
+
+				prev = Prev(n);
+				if (prev == Nil)
+				{
+					result = default;
+					return false;
+				}
+
+				result = prev.Value;
+				return true;
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		if (comparer(p.Value, value) <= 0)
+		{
+			result = p.Value;
+			return true;
+		}
+
+		prev = Prev(p);
+		if (prev == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		result = prev.Value;
+		return true;
+	}
+
+	/// <summary>
 	/// Finds the least value following the given value.
 	/// </summary>
 	/// <param name="value">Value to use to find the least following value.</param>
 	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
 	/// <returns>Enumerator to least following value or null if not found.</returns>
-	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindLeastFollowing(T value, bool orEqualTo = false)
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindLeastFollowing<TComparable>(TComparable value,
+		bool orEqualTo = false) where TComparable : IComparable<T>
 	{
 		return FindLeastFollowingMutable(value, orEqualTo);
 	}
@@ -460,7 +662,8 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 	/// <param name="value">Value to use to find the least following value.</param>
 	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
 	/// <returns>Enumerator to least following value or null if not found.</returns>
-	public IRedBlackTreeEnumerator FindLeastFollowingMutable(T value, bool orEqualTo = false)
+	public IRedBlackTreeEnumerator FindLeastFollowingMutable<TComparable>(TComparable value, bool orEqualTo = false)
+		where TComparable : IComparable<T>
 	{
 		var p = Nil;
 		var n = Root;
@@ -492,6 +695,188 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 		if (next == Nil)
 			return null;
 		return new Enumerator(this, next);
+	}
+
+	/// <summary>
+	/// Finds the least value following the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the least following value.</param>
+	/// <param name="comparer">Function for comparing values in the tree to the given value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <returns>Enumerator to least following value or null if not found.</returns>
+	public IReadOnlyRedBlackTree<T>.IReadOnlyRedBlackTreeEnumerator FindLeastFollowing<TComparable>(TComparable value,
+		Func<T, TComparable, int> comparer, bool orEqualTo = false)
+	{
+		return FindLeastFollowingMutable(value, comparer, orEqualTo);
+	}
+
+	/// <summary>
+	/// Finds the least value following the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the least following value.</param>
+	/// <param name="comparer">Function for comparing values in the tree to the given value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <returns>Enumerator to least following value or null if not found.</returns>
+	public IRedBlackTreeEnumerator FindLeastFollowingMutable<TComparable>(TComparable value, Func<T, TComparable, int> comparer,
+		bool orEqualTo = false)
+	{
+		var p = Nil;
+		var n = Root;
+		Node next;
+		while (n != Nil)
+		{
+			var c = -comparer(n.Value, value);
+			if (c == 0)
+			{
+				if (orEqualTo)
+					return new Enumerator(this, n);
+				next = Next(n);
+				if (next == Nil)
+					return null;
+				return new Enumerator(this, next);
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+			return null;
+
+		if (comparer(p.Value, value) >= 0)
+			return new Enumerator(this, p);
+
+		next = Next(p);
+		if (next == Nil)
+			return null;
+		return new Enumerator(this, next);
+	}
+
+	/// <summary>
+	/// Finds the least value following the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the least following value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <param name="result">Least following value.</param>
+	/// <returns>True if a value was found and false otherwise.</returns>
+	public bool FindLeastFollowingValue<TComparable>(TComparable value, bool orEqualTo, out T result)
+		where TComparable : IComparable<T>
+	{
+		var p = Nil;
+		var n = Root;
+		Node next;
+		while (n != Nil)
+		{
+			var c = value.CompareTo(n.Value);
+			if (c == 0)
+			{
+				if (orEqualTo)
+				{
+					result = n.Value;
+					return true;
+				}
+
+				next = Next(n);
+				if (next == Nil)
+				{
+					result = default;
+					return false;
+				}
+
+				result = next.Value;
+				return true;
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		if (value.CompareTo(p.Value) < 0)
+		{
+			result = p.Value;
+			return true;
+		}
+
+		next = Next(p);
+		if (next == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		result = next.Value;
+		return true;
+	}
+
+	/// <summary>
+	/// Finds the least value following the given value.
+	/// </summary>
+	/// <param name="value">Value to use to find the least following value.</param>
+	/// <param name="comparer">Function for comparing values in the tree to the given value.</param>
+	/// <param name="orEqualTo">If true, also include a value if it is equal to the given value.</param>
+	/// <param name="result">Least following value.</param>
+	/// <returns>True if a value was found and false otherwise.</returns>
+	public bool FindLeastFollowingValue<TComparable>(TComparable value, Func<T, TComparable, int> comparer, bool orEqualTo,
+		out T result)
+	{
+		var p = Nil;
+		var n = Root;
+		Node next;
+		while (n != Nil)
+		{
+			var c = -comparer(n.Value, value);
+			if (c == 0)
+			{
+				if (orEqualTo)
+				{
+					result = n.Value;
+					return true;
+				}
+
+				next = Next(n);
+				if (next == Nil)
+				{
+					result = default;
+					return false;
+				}
+
+				{
+					result = next.Value;
+					return true;
+				}
+			}
+
+			p = n;
+			n = c < 0 ? n.L : n.R;
+		}
+
+		if (p == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		if (comparer(p.Value, value) >= 0)
+		{
+			result = p.Value;
+			return true;
+		}
+
+		next = Next(p);
+		if (next == Nil)
+		{
+			result = default;
+			return false;
+		}
+
+		result = next.Value;
+		return true;
 	}
 
 	/// <summary>
@@ -645,6 +1030,26 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 	}
 
 	/// <summary>
+	/// Finds the first value in the tree.
+	/// </summary>
+	/// <param name="result">The first value in the tree.</param>
+	/// <returns>True if the first value was found and false otherwise.</returns>
+	public bool FirstValue(out T result)
+	{
+		var currentNode = Root;
+		if (IsNull(currentNode))
+		{
+			result = default;
+			return false;
+		}
+
+		while (!IsNull(currentNode.L))
+			currentNode = currentNode.L;
+		result = currentNode.Value;
+		return true;
+	}
+
+	/// <summary>
 	/// Returns an IReadOnlyRedBlackTreeEnumerator to the last value in the tree.
 	/// </summary>
 	/// <returns>IReadOnlyRedBlackTreeEnumerator to the last value in the tree.</returns>
@@ -665,6 +1070,26 @@ public class RedBlackTree<T> : IReadOnlyRedBlackTree<T> where T : IComparable<T>
 		while (!IsNull(currentNode.R))
 			currentNode = currentNode.R;
 		return new Enumerator(this, currentNode);
+	}
+
+	/// <summary>
+	/// Finds the last value in the tree.
+	/// </summary>
+	/// <param name="result">The last value in the tree.</param>
+	/// <returns>True if the last value was found and false otherwise.</returns>
+	public bool LastValue(out T result)
+	{
+		var currentNode = Root;
+		if (IsNull(currentNode))
+		{
+			result = default;
+			return false;
+		}
+
+		while (!IsNull(currentNode.R))
+			currentNode = currentNode.R;
+		result = currentNode.Value;
+		return true;
 	}
 
 	#region IEnumerable
