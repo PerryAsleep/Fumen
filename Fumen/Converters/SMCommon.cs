@@ -377,6 +377,20 @@ public static class SMCommon
 	}
 
 	/// <summary>
+	/// Given a TimeSignature and a row in a chart that occurs during that time signature,
+	/// returns the row relative to the start of the measure containing the row.
+	/// </summary>
+	/// <param name="ts">TimeSignature in question.</param>
+	/// <param name="row">Row in question.</param>
+	/// <returns>Row relative to its measure start.</returns>
+	public static int GetRowRelativeToMeasureStart(TimeSignature ts, int row)
+	{
+		var rowsPerWholeNote = NumBeatsPerMeasure * MaxValidDenominator;
+		var rowsPerMeasure = rowsPerWholeNote * ts.Signature.Numerator / ts.Signature.Denominator;
+		return (row - ts.IntegerPosition) % rowsPerMeasure;
+	}
+
+	/// <summary>
 	/// Given a double representation of an arbitrary fraction return the closest
 	/// matching Fraction that stepmania supports as a beat subdivision.
 	/// </summary>
@@ -1336,23 +1350,45 @@ public static class SMCommon
 	{
 		public static readonly List<string> SMEventOrderList = new()
 		{
-			// If changing this such that TimeSignature is no longer first, adjust CreateDummyFirstEventForRow.
+			// Time signatures and tempos must occur first because they are needed
+			// for timing and position determination.
 			nameof(TimeSignature),
 			nameof(Tempo),
-			nameof(ScrollRate),
-			nameof(ScrollRateInterpolation),
+
+			// Miscellaneous events.
 			nameof(TickCount),
 			nameof(FakeSegment),
 			nameof(Multipliers),
 			nameof(Label),
-			DelayString, // Delays occur before notes.
-			NegativeStopString, // Negative Stops (like Warps) occur before notes.
-			nameof(Warp), // Warps occur before notes.
+
+			// Delays occur before steps by definition.
+			DelayString,
+
+			// All step notes.
 			nameof(LaneTapNote),
 			nameof(LaneHoldStartNote),
 			nameof(LaneHoldEndNote),
 			nameof(LaneNote),
-			nameof(Stop), // Stops occur after notes.
+
+			// Scroll events.
+			nameof(ScrollRate),
+			nameof(ScrollRateInterpolation),
+
+			// Stops must occur after steps by definition.
+			// Stops must occur after scroll rate events. When a stop and scroll change
+			// occur simultaneously the scroll change must happen first.
+			// Gimmick charts like NULCTRL exploit this.
+			nameof(Stop),
+
+			// Negative stops are effectively warps.
+			// See warp comment below.
+			NegativeStopString,
+
+			// Warps must occur after stops.
+			// Some songs have stops and warps at the same time and the chart must
+			// stop before warping.
+			// Gimmick charts like NULCTRL exploit this.
+			nameof(Warp),
 		};
 
 		private readonly Dictionary<string, int> SMEventOrderDict = new();
