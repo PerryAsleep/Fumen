@@ -8,8 +8,8 @@ namespace Fumen.Converters;
 
 public static class SMCommon
 {
-	private const string DelayString = "Delay";
-	private const string NegativeStopString = "NegativeStop";
+	public const string DelayString = "Delay";
+	public const string NegativeStopString = "NegativeStop";
 
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
 	[SuppressMessage("ReSharper", "IdentifierTypo")]
