@@ -9,7 +9,9 @@ namespace Fumen;
 /// </summary>
 /// <typeparam name="TKey">Type of key to use in tree.</typeparam>
 /// <typeparam name="TValue">Type of value to use in tree.</typeparam>
-public interface IReadOnlyIntervalTree<in TKey, TValue> : IEnumerable<TValue> where TKey : IComparable<TKey>
+public interface IReadOnlyIntervalTree<in TKey, TValue> : IEnumerable<TValue>
+	where TKey : IComparable<TKey>
+	where TValue : IEquatable<TValue>
 {
 	/// <summary>
 	/// Read-only enumerator interface.
@@ -23,7 +25,7 @@ public interface IReadOnlyIntervalTree<in TKey, TValue> : IEnumerable<TValue> wh
 	}
 
 	public int GetCount();
-	public IReadOnlyIntervalTreeEnumerator Find(TKey low, TKey high);
+	public IReadOnlyIntervalTreeEnumerator Find(TValue value, TKey low, TKey high);
 	public List<TValue> FindAllOverlapping(TKey key, bool lowInclusive = true, bool highInclusive = true);
 	public IReadOnlyIntervalTreeEnumerator FindGreatestPreceding(TKey low, bool orEqualTo = false);
 	public IReadOnlyIntervalTreeEnumerator FindLeastFollowing(TKey low, bool orEqualTo = false);
@@ -41,25 +43,267 @@ public interface IReadOnlyIntervalTree<in TKey, TValue> : IEnumerable<TValue> wh
 /// Amortized O(1) time complexity enumeration.
 /// O(N) memory usage.
 /// Not thread safe.
-/// Duplicate low keys are not supported.
+/// Intervals beginning at the same low key are supported, though these scenarios will
+/// result in O(N) operations where N is the number of values with the same low key.
 /// </summary>
 /// <typeparam name="TKey">Type of key to use in tree.</typeparam>
 /// <typeparam name="TValue">Type of value to use in tree.</typeparam>
-public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> where TKey : IComparable<TKey>
+public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
+	where TKey : IComparable<TKey>
+	where TValue : IEquatable<TValue>
 {
 	/// <summary>
 	/// IntervalTree Node.
+	/// Nodes may contain more than one value and high key.
 	/// </summary>
 	private class Node
 	{
+		/// <summary>
+		/// Sentinel invalid internal index value.
+		/// </summary>
+		public const int InvalidIndex = -1;
+
+		/// <summary>
+		/// Low key.
+		/// </summary>
 		public TKey Low;
-		public TKey High;
+
+		/// <summary>
+		/// High key.
+		/// </summary>
+		private TKey High;
+
+		/// <summary>
+		/// Highest value of this Node's sub-tree.
+		/// </summary>
 		public TKey SubTreeHighest;
-		public TValue Value;
+
+		/// <summary>
+		/// Value.
+		/// </summary>
+		private TValue Value;
+
+		/// <summary>
+		/// Parent Node.
+		/// </summary>
 		public Node Parent;
+
+		/// <summary>
+		/// Left child Node.
+		/// </summary>
 		public Node L;
+
+		/// <summary>
+		/// Right child Node.
+		/// </summary>
 		public Node R;
+
+		/// <summary>
+		/// Whether this Node is red or black.
+		/// </summary>
 		public bool Red;
+
+		/// <summary>
+		/// Optional list of other values which share this Node's low key.
+		/// </summary>
+		private List<TValue> EqualValues;
+
+		/// <summary>
+		/// Optional list of other high keys for values which share this Node's low key.
+		/// </summary>
+		private List<TKey> EqualHighs;
+
+		/// <summary>
+		/// Empty constructor for Nil node.
+		/// </summary>
+		public Node()
+		{
+		}
+
+		/// <summary>
+		/// Constructor.
+		/// </summary>
+		/// <param name="low">Low key.</param>
+		/// <param name="high">High key.</param>
+		/// <param name="value">Value.</param>
+		/// <param name="nil">The Nil node.</param>
+		public Node(TKey low, TKey high, TValue value, Node nil)
+		{
+			Value = value;
+			Low = low;
+			High = high;
+			SubTreeHighest = high;
+			Parent = nil;
+			L = nil;
+			R = nil;
+		}
+
+		/// <summary>
+		/// Gets the number of values stored at this node.
+		/// </summary>
+		/// <returns>Number of values stored at this node.</returns>
+		public int GetNumValues()
+		{
+			if (EqualValues == null)
+				return 1;
+			return EqualValues.Count + 1;
+		}
+
+		/// <summary>
+		/// Gets the highest high key for values at this node.
+		/// </summary>
+		/// <returns>Highest high key for values at this node.</returns>
+		public TKey GetHigh()
+		{
+			if (EqualHighs == null)
+				return High;
+			var high = High;
+			for (var i = 0; i < EqualHighs.Count; i++)
+				if (EqualHighs[i].CompareTo(high) > 0)
+					high = EqualHighs[i];
+			return high;
+		}
+
+		/// <summary>
+		/// Gets the internal index of the given value and high key.
+		/// </summary>
+		/// <param name="high">High key value.</param>
+		/// <param name="value">Value.</param>
+		/// <returns>Index of given value and high key or InvalidIndex if not found.</returns>
+		public int GetIndexOfValue(TKey high, TValue value)
+		{
+			if (High.CompareTo(high) == 0 && Value.Equals(value))
+				return 0;
+			if (EqualHighs == null)
+				return InvalidIndex;
+			for (var i = 0; i < EqualHighs.Count; i++)
+				if (EqualHighs[i].CompareTo(high) == 0 && value.Equals(EqualValues[i]))
+					return i + 1;
+			return InvalidIndex;
+		}
+
+		/// <summary>
+		/// Gets the value at the given internal index.
+		/// Assumes the given index is valid.
+		/// </summary>
+		/// <param name="index">Internal index to get the value of.</param>
+		/// <returns>Value at the given internal index.</returns>
+		public TValue GetValueAtIndex(int index)
+		{
+			if (index == 0)
+				return Value;
+			return EqualValues[index - 1];
+		}
+
+		/// <summary>
+		/// Adds another value to this node that has an equal low key.
+		/// </summary>
+		/// <param name="high">High key value.</param>
+		/// <param name="value">Value.</param>
+		public void AddEqualValue(TKey high, TValue value)
+		{
+			EqualValues ??= new List<TValue>();
+			EqualValues.Add(value);
+			EqualHighs ??= new List<TKey>();
+			EqualHighs.Add(high);
+		}
+
+		/// <summary>
+		/// Adds any Values overlapping the given key from this Node to the given list of overlappingValues.
+		/// </summary>
+		/// <param name="key">Key to check for value overlap.</param>
+		/// <param name="lowInclusive">Whether or not low key values should be inclusive.</param>
+		/// <param name="highInclusive">Whether or not high key values should be inclusive.</param>
+		/// <param name="overlappingValues">List of overlapping Values to add to.</param>
+		public void AddOverlappingValues(TKey key, bool lowInclusive, bool highInclusive, List<TValue> overlappingValues)
+		{
+			var comparisonToLow = key.CompareTo(Low);
+			var lowPasses = lowInclusive ? comparisonToLow >= 0 : comparisonToLow > 0;
+			if (!lowPasses)
+				return;
+			var comparisonToHigh = key.CompareTo(High);
+			var highPasses = highInclusive ? comparisonToHigh <= 0 : comparisonToHigh < 0;
+			if (highPasses)
+			{
+				overlappingValues.Add(Value);
+			}
+
+			if (EqualValues != null && EqualHighs != null)
+			{
+				for (var i = 0; i < EqualHighs.Count; i++)
+				{
+					comparisonToHigh = key.CompareTo(EqualHighs[i]);
+					highPasses = highInclusive ? comparisonToHigh <= 0 : comparisonToHigh < 0;
+					if (highPasses)
+					{
+						overlappingValues.Add(EqualValues[i]);
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Deletes the value at the given internal index.
+		/// Assumes the given index is valid.
+		/// </summary>
+		/// <param name="index">Internal index to delete the value of.</param>
+		/// <returns>
+		/// Returns true if any values remain and false otherwise.
+		/// </returns>
+		public bool DeleteValueAtIndex(int index)
+		{
+			if (index > 0)
+			{
+				if (EqualValues.Count == 1)
+				{
+					EqualValues = null;
+					EqualHighs = null;
+					return true;
+				}
+
+				EqualValues.RemoveAt(index - 1);
+				EqualHighs.RemoveAt(index - 1);
+				return true;
+			}
+
+			if (EqualValues == null)
+			{
+				return false;
+			}
+
+			Value = EqualValues[0];
+			High = EqualHighs[0];
+			if (EqualValues.Count == 1)
+			{
+				EqualValues = null;
+				EqualHighs = null;
+			}
+			else
+			{
+				EqualValues.RemoveAt(0);
+				EqualHighs.RemoveAt(0);
+			}
+
+			return true;
+		}
+
+		/// <summary>
+		/// Copies the internals of this Node to the given other Node.
+		/// Used for node deletion algorithm.
+		/// </summary>
+		/// <param name="other">Other node to copy internals to.</param>
+		public void CopyInternalsFrom(Node other)
+		{
+			Low = other.Low;
+			High = other.High;
+			Value = other.Value;
+			EqualHighs = null;
+			EqualValues = null;
+			if (other.EqualHighs != null)
+				EqualHighs = new List<TKey>(other.EqualHighs);
+			if (other.EqualValues != null)
+				EqualValues = new List<TValue>(other.EqualValues);
+		}
 	}
 
 	/// <summary>
@@ -251,51 +495,57 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	/// <param name="low">Low value of the interval associated with the given value.</param>
 	/// <param name="high">High value of the interval associated with the given value.</param>
 	/// <returns>IIntervalTreeEnumerator to the inserted value.</returns>
-	/// <exception cref="ArgumentException">Throws ArgumentException if the given low value is not unique.</exception>
+	/// <exception cref="ArgumentException">Throws ArgumentException if the given low greater than the given high value.</exception>
 	public IIntervalTreeEnumerator Insert(TValue value, TKey low, TKey high)
 	{
-		Count++;
-		var n = new Node
+		if (low.CompareTo(high) > 0)
 		{
-			Value = value,
-			Low = low,
-			High = high,
-			SubTreeHighest = high,
-			Parent = Nil,
-			R = Nil,
-			L = Nil,
-		};
+			throw new ArgumentException($"Low value {low} is greater than high value {high}.");
+		}
+
+		Count++;
+		var n = new Node(low, high, value, Nil);
 		if (IsNull(Root))
 		{
 			Root = n;
-			return new Enumerator(this, n);
+			return new Enumerator(this, n, 0);
 		}
 
 		var x = Root;
 		var p = Nil;
+		var comparison = 0;
 		while (x != Nil)
 		{
 			p = x;
-			x = n.Low.CompareTo(x.Low) < 0 ? x.L : x.R;
+			comparison = n.Low.CompareTo(x.Low);
+			if (comparison < 0)
+				x = x.L;
+			else if (comparison > 0)
+				x = x.R;
+			else
+				break;
 		}
 
-		n.Parent = p;
-		var comparison = n.Low.CompareTo(p.Low);
+		n.Red = true;
 		if (comparison < 0)
 		{
+			n.Parent = p;
 			p.L = n;
 		}
 		else if (comparison > 0)
 		{
+			n.Parent = p;
 			p.R = n;
 		}
 		else
 		{
-			Count--;
-			throw new ArgumentException($"Low value {low} already exists in IntervalTree.");
+			p.AddEqualValue(high, value);
+			var nodeHigh = p.GetHigh();
+			if (p.SubTreeHighest.CompareTo(nodeHigh) < 0)
+				p.SubTreeHighest = nodeHigh;
+			n = p;
+			p = n.Parent;
 		}
-
-		n.Red = true;
 
 		// Adjust SubTreeHighest.
 		x = p;
@@ -308,12 +558,12 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			x = x.Parent;
 		}
 
-		if (n.Parent.Parent == Nil)
-			return new Enumerator(this, n);
+		if (n.Parent.Parent == Nil || comparison == 0)
+			return new Enumerator(this, n, n.GetNumValues() - 1);
 
 		InsertFix(n);
 
-		return new Enumerator(this, n);
+		return new Enumerator(this, n, n.GetNumValues() - 1);
 	}
 
 	/// <summary>
@@ -387,10 +637,11 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	/// <summary>
 	/// Finds the Node with the given interval.
 	/// </summary>
+	/// <param name="value">Value to find.</param>
 	/// <param name="low">Low value of the interval whose value to find.</param>
 	/// <param name="high">High value of the interval whose value to find.</param>
 	/// <returns>Node associated with the given interval or Nil if no Node exists with that interval.</returns>
-	private Node FindNode(TKey low, TKey high)
+	private (Node, int) FindNode(TValue value, TKey low, TKey high)
 	{
 		var n = Root;
 		while (n != Nil)
@@ -398,38 +649,41 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			var c = low.CompareTo(n.Low);
 			if (c == 0)
 			{
-				if (high.CompareTo(n.High) == 0)
-					return n;
-				return Nil;
+				var index = n.GetIndexOfValue(high, value);
+				if (index >= 0)
+					return (n, index);
+				return (Nil, Node.InvalidIndex);
 			}
 
 			n = c < 0 ? n.L : n.R;
 		}
 
-		return n;
+		return (n, Node.InvalidIndex);
 	}
 
 	/// <summary>
 	/// Finds the value for the given interval low and high values.
 	/// </summary>
+	/// <param name="value">Value to find.</param>
 	/// <param name="low">Low value of interval to find the value for.</param>
 	/// <param name="high">High value of interval to find the value for.</param>
 	/// <returns>Enumerator to value or null if not found.</returns>
-	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator Find(TKey low, TKey high)
+	public IReadOnlyIntervalTree<TKey, TValue>.IReadOnlyIntervalTreeEnumerator Find(TValue value, TKey low, TKey high)
 	{
-		return FindMutable(low, high);
+		return FindMutable(value, low, high);
 	}
 
 	/// <summary>
 	/// Finds the value for the given interval low and high values.
 	/// </summary>
+	/// <param name="value">Value to find.</param>
 	/// <param name="low">Low value of interval to find the value for.</param>
 	/// <param name="high">High value of interval to find the value for.</param>
 	/// <returns>Enumerator to value or null if not found.</returns>
-	public IIntervalTreeEnumerator FindMutable(TKey low, TKey high)
+	public IIntervalTreeEnumerator FindMutable(TValue value, TKey low, TKey high)
 	{
-		var n = FindNode(low, high);
-		return IsNull(n) ? null : new Enumerator(this, n);
+		var (node, valueIndex) = FindNode(value, low, high);
+		return IsNull(node) ? null : new Enumerator(this, node, valueIndex);
 	}
 
 	/// <summary>
@@ -472,15 +726,10 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			FindAllOverlappingNode(n.L, key, lowInclusive, highInclusive, overlappingValues);
 
 		// Add this node's value to the results if it overlaps.
-		var comparisonToLow = key.CompareTo(n.Low);
-		var comparisonToHigh = key.CompareTo(n.High);
-		var lowPasses = lowInclusive ? comparisonToLow >= 0 : comparisonToLow > 0;
-		var highPasses = highInclusive ? comparisonToHigh <= 0 : comparisonToHigh < 0;
-		if (lowPasses && highPasses)
-			overlappingValues.Add(n.Value);
+		n.AddOverlappingValues(key, lowInclusive, highInclusive, overlappingValues);
 
 		// If the desired value is greater then this node's low, search the right subtree.
-		if (comparisonToLow > 0 && n.R != Nil)
+		if (key.CompareTo(n.Low) > 0 && n.R != Nil)
 			FindAllOverlappingNode(n.R, key, lowInclusive, highInclusive, overlappingValues);
 	}
 
@@ -517,11 +766,11 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			if (c == 0)
 			{
 				if (orEqualTo)
-					return new Enumerator(this, n);
+					return new Enumerator(this, n, n.GetNumValues() - 1);
 				prev = Prev(n);
 				if (prev == Nil)
 					return null;
-				return new Enumerator(this, prev);
+				return new Enumerator(this, prev, prev.GetNumValues() - 1);
 			}
 
 			p = n;
@@ -532,12 +781,12 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			return null;
 
 		if (low.CompareTo(p.Low) > 0)
-			return new Enumerator(this, p);
+			return new Enumerator(this, p, p.GetNumValues() - 1);
 
 		prev = Prev(p);
 		if (prev == Nil)
 			return null;
-		return new Enumerator(this, prev);
+		return new Enumerator(this, prev, prev.GetNumValues() - 1);
 	}
 
 	/// <summary>
@@ -573,11 +822,11 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			if (c == 0)
 			{
 				if (orEqualTo)
-					return new Enumerator(this, n);
+					return new Enumerator(this, n, 0);
 				next = Next(n);
 				if (next == Nil)
 					return null;
-				return new Enumerator(this, next);
+				return new Enumerator(this, next, 0);
 			}
 
 			p = n;
@@ -588,12 +837,12 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			return null;
 
 		if (low.CompareTo(p.Low) < 0)
-			return new Enumerator(this, p);
+			return new Enumerator(this, p, 0);
 
 		next = Next(p);
 		if (next == Nil)
 			return null;
-		return new Enumerator(this, next);
+		return new Enumerator(this, next, 0);
 	}
 
 	/// <summary>
@@ -605,7 +854,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	private bool UpdateSubTreeHighest(Node n)
 	{
 		var original = n.SubTreeHighest;
-		n.SubTreeHighest = n.High;
+		n.SubTreeHighest = n.GetHigh();
 		if (n.L != Nil && n.L.SubTreeHighest.CompareTo(n.SubTreeHighest) > 0)
 		{
 			n.SubTreeHighest = n.L.SubTreeHighest;
@@ -622,27 +871,49 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	/// <summary>
 	/// Deletes the value associated with the given interval.
 	/// </summary>
+	/// <param name="value">Value to delete.</param>
 	/// <param name="low">Low value of interval to delete the value for.</param>
 	/// <param name="high">High value of interval to delete the value for.</param>
 	/// <returns>True if a value was found and deleted and false otherwise.</returns>
-	public bool Delete(TKey low, TKey high)
+	public bool Delete(TValue value, TKey low, TKey high)
 	{
-		var n = FindNode(low, high);
-		if (IsNull(n))
+		var (node, valueIndex) = FindNode(value, low, high);
+		if (IsNull(node))
 			return false;
-
-		Delete(n);
+		DeleteValueFromNode(node, valueIndex);
 		return true;
 	}
 
 	/// <summary>
-	/// Deletes the given node.
+	/// Delete the value at the given index from the given Node.
+	/// Assumes the index is valid.
 	/// </summary>
-	/// <param name="n">Node to delete.</param>
-	private void Delete(Node n)
+	/// <param name="n">Node to delete value from.</param>
+	/// <param name="valueIndex">Index of value to delete.</param>
+	private void DeleteValueFromNode(Node n, int valueIndex)
 	{
 		Count--;
+		var anyValuesRemain = n.DeleteValueAtIndex(valueIndex);
+		if (!anyValuesRemain)
+		{
+			DeleteNode(n);
+			return;
+		}
 
+		while (n != Nil)
+		{
+			if (!UpdateSubTreeHighest(n))
+				return;
+			n = n.Parent;
+		}
+	}
+
+	/// <summary>
+	/// Deletes the given node entirely from the tree.
+	/// </summary>
+	/// <param name="n">Node to delete.</param>
+	private void DeleteNode(Node n)
+	{
 		Node y;
 		if (n.L == Nil || n.R == Nil)
 			y = n;
@@ -661,9 +932,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 
 		if (y != n)
 		{
-			n.Low = y.Low;
-			n.High = y.High;
-			n.Value = y.Value;
+			n.CopyInternalsFrom(y);
 		}
 
 		// Update SubTreeHighest.
@@ -808,10 +1077,10 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	{
 		var currentNode = Root;
 		if (IsNull(currentNode))
-			return new Enumerator(this, currentNode);
+			return new Enumerator(this, currentNode, 0);
 		while (!IsNull(currentNode.R))
 			currentNode = currentNode.R;
-		return new Enumerator(this, currentNode);
+		return new Enumerator(this, currentNode, currentNode.GetNumValues() - 1);
 	}
 
 	#region IEnumerable
@@ -837,6 +1106,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	{
 		private readonly IntervalTree<TKey, TValue> Tree;
 		private Node CurrentNode;
+		private int CurrentNodeIndex;
 		private bool IsUnset;
 		private bool BeforeFirst;
 		private bool AfterLast;
@@ -848,10 +1118,11 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			Reset();
 		}
 
-		public Enumerator(IntervalTree<TKey, TValue> tree, Node n)
+		public Enumerator(IntervalTree<TKey, TValue> tree, Node n, int index)
 		{
 			Tree = tree;
 			CurrentNode = n;
+			CurrentNodeIndex = index;
 			IsUnset = true;
 		}
 
@@ -859,6 +1130,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 		{
 			Tree = e.Tree;
 			CurrentNode = e.CurrentNode;
+			CurrentNodeIndex = e.CurrentNodeIndex;
 			IsUnset = e.IsUnset;
 			BeforeFirst = e.BeforeFirst;
 			AfterLast = e.AfterLast;
@@ -913,7 +1185,12 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 				}
 				else
 				{
-					CurrentNode = Tree.Next(CurrentNode);
+					CurrentNodeIndex++;
+					if (CurrentNodeIndex >= CurrentNode.GetNumValues())
+					{
+						CurrentNodeIndex = 0;
+						CurrentNode = Tree.Next(CurrentNode);
+					}
 				}
 			}
 
@@ -936,13 +1213,22 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 					{
 						while (!Tree.IsNull(CurrentNode.R))
 							CurrentNode = CurrentNode.R;
+						CurrentNodeIndex = CurrentNode.GetNumValues() - 1;
 					}
 
 					AfterLast = false;
 				}
 				else
 				{
-					CurrentNode = Tree.Prev(CurrentNode);
+					if (CurrentNodeIndex > 0)
+					{
+						CurrentNodeIndex--;
+					}
+					else
+					{
+						CurrentNode = Tree.Prev(CurrentNode);
+						CurrentNodeIndex = CurrentNode.GetNumValues() - 1;
+					}
 				}
 			}
 
@@ -956,6 +1242,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			BeforeFirst = false;
 			AfterLast = false;
 			CurrentNode = Tree.GetRoot();
+			CurrentNodeIndex = 0;
 			if (!Tree.IsNull(CurrentNode))
 			{
 				while (!Tree.IsNull(CurrentNode.L))
@@ -977,7 +1264,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 		{
 			if (IsUnset)
 				throw new InvalidOperationException();
-			Tree.Delete(CurrentNode);
+			Tree.DeleteValueFromNode(CurrentNode, CurrentNodeIndex);
 			Reset();
 		}
 
@@ -989,7 +1276,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			{
 				if (IsUnset)
 					throw new InvalidOperationException();
-				return CurrentNode.Value;
+				return CurrentNode.GetValueAtIndex(CurrentNodeIndex);
 			}
 		}
 	}
@@ -1025,13 +1312,13 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 
 		// Check every node.
 		var expectedLeafBlackCount = -1;
-		var numNodes = 0;
+		var numValues = 0;
 		var previousMin = default(TKey);
-		var (valid, _, _) = IsNodeValid(r, ref previousMin, ref numNodes, ref expectedLeafBlackCount, 0);
+		var (valid, _, _) = IsNodeValid(r, ref previousMin, ref numValues, ref expectedLeafBlackCount, 0);
 		if (!valid)
 			return false;
 
-		return numNodes == Count;
+		return numValues == Count;
 	}
 
 	/// <summary>
@@ -1043,19 +1330,19 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 	private (bool, TKey, TKey) IsNodeValid(
 		Node n,
 		ref TKey previousMin,
-		ref int numNodes,
+		ref int numValues,
 		ref int expectedLeafBlackCount,
 		int currentLeafBlackCount)
 	{
-		numNodes++;
+		numValues += n.GetNumValues();
 
 		// All red nodes must have two black children where null children are considered black.
 		if (n.Red)
 		{
 			if (!(IsNull(n.L) || !n.L.Red))
-				return (false, n.Low, n.High);
+				return (false, n.Low, n.GetHigh());
 			if (!(IsNull(n.R) || !n.R.Red))
-				return (false, n.Low, n.High);
+				return (false, n.Low, n.GetHigh());
 		}
 		else
 		{
@@ -1083,7 +1370,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			previousMin = n.Low;
 		}
 
-		var highestSubTreeValue = n.High;
+		var highestSubTreeValue = n.GetHigh();
 		var lowestSubTreeValue = n.Low;
 
 		// Check left node.
@@ -1092,7 +1379,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			if (n.L.Parent != n)
 				return (false, default, default);
 			var (leftValid, leftLow, leftHigh) =
-				IsNodeValid(n.L, ref previousMin, ref numNodes, ref expectedLeafBlackCount, currentLeafBlackCount);
+				IsNodeValid(n.L, ref previousMin, ref numValues, ref expectedLeafBlackCount, currentLeafBlackCount);
 			if (!leftValid)
 				return (false, default, default);
 			highestSubTreeValue = leftHigh.CompareTo(highestSubTreeValue) > 0 ? leftHigh : highestSubTreeValue;
@@ -1105,7 +1392,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue> wh
 			if (n.R.Parent != n)
 				return (false, default, default);
 			var (rightValid, rightLow, rightHigh) =
-				IsNodeValid(n.R, ref previousMin, ref numNodes, ref expectedLeafBlackCount, currentLeafBlackCount);
+				IsNodeValid(n.R, ref previousMin, ref numValues, ref expectedLeafBlackCount, currentLeafBlackCount);
 			if (!rightValid)
 				return (false, default, default);
 			highestSubTreeValue = rightHigh.CompareTo(highestSubTreeValue) > 0 ? rightHigh : highestSubTreeValue;
