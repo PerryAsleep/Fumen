@@ -10,6 +10,7 @@ public static class SMCommon
 {
 	public const string DelayString = "Delay";
 	public const string NegativeStopString = "NegativeStop";
+	public const string NegativeDelayString = "NegativeDelay";
 
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
 	[SuppressMessage("ReSharper", "IdentifierTypo")]
@@ -1382,6 +1383,7 @@ public static class SMCommon
 
 			// Negative stops are effectively warps.
 			// See warp comment below.
+			NegativeDelayString,
 			NegativeStopString,
 
 			// Warps must occur after stops.
@@ -1460,18 +1462,32 @@ public static class SMCommon
 			if (e1 is Stop s1)
 			{
 				if (s1.IsDelay)
-					typeStr1 = DelayString;
+				{
+					if (s1.LengthSeconds < 0.0)
+						typeStr1 = NegativeDelayString;
+					else
+						typeStr1 = DelayString;
+				}
 				else if (s1.LengthSeconds < 0.0)
+				{
 					typeStr1 = NegativeStopString;
+				}
 			}
 
 			var typeStr2 = e2.GetType().Name;
 			if (e2 is Stop s2)
 			{
 				if (s2.IsDelay)
-					typeStr2 = DelayString;
+				{
+					if (s2.LengthSeconds < 0.0)
+						typeStr2 = NegativeDelayString;
+					else
+						typeStr2 = DelayString;
+				}
 				else if (s2.LengthSeconds < 0.0)
+				{
 					typeStr2 = NegativeStopString;
+				}
 			}
 
 			var e1Index = SMEventOrderDict[typeStr1];
