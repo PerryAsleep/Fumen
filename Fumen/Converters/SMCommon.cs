@@ -159,6 +159,12 @@ public static class SMCommon
 	public const int NumBeatsPerMeasure = 4;
 
 	/// <summary>
+	/// StepMania uses a default tempo of 60 beats per minute.
+	/// If a song has invalid tempos and one needs to be set automatically this value will be used.
+	/// </summary>
+	public const double DefaultTempo = 60.0;
+
+	/// <summary>
 	/// In StepMania's representation there are a maximum of 48 rows per beat.
 	/// </summary>
 	public const int MaxValidDenominator = 48;
@@ -613,9 +619,51 @@ public static class SMCommon
 		bool logOnErrors)
 	{
 		// Insert tempo change events.
-		foreach (var tempo in ConvertValueAtTimeDictionaryToListWithNoConflicts(tempos, logger, logOnErrors, nameof(Tempo)))
+		var temposList = ConvertValueAtTimeDictionaryToListWithNoConflicts(tempos, logger, logOnErrors, nameof(Tempo));
+		for (var i = 0; i < temposList.Count; i++)
 		{
-			var tempoChangeEvent = new Tempo(tempo.Item3)
+			var tempo = temposList[i];
+			var bpm = tempo.Item3;
+
+			// Tempos must be positive.
+			if (bpm <= 0.0)
+			{
+				// On the first tempo, scan forward to replace it with a valid tempo.
+				if (i == 0)
+				{
+					var foundValidTempo = false;
+					for (var j = 1; j < temposList.Count; j++)
+					{
+						if (temposList[j].Item3 > 0.0)
+						{
+							logger.Warn(
+								$"Fist tempo {bpm} is invalid."
+								+ $" Defaulting first tempo to first valid tempo: {temposList[j].Item3}bpm.");
+							foundValidTempo = true;
+							bpm = temposList[j].Item3;
+							break;
+						}
+					}
+					if (!foundValidTempo)
+					{
+						logger.Warn(
+							$"Fist tempo {bpm} is invalid and there are no valid tempos to use."
+							+ $" Defaulting entire Song to {DefaultTempo}bpm.");
+						bpm = DefaultTempo;
+					}
+				}
+				// For subsequent tempos, ignore them.
+				else
+				{
+					if (logOnErrors)
+					{
+						logger.Warn($"Tempo {bpm} is invalid. Skipping this tempo.");
+					}
+					continue;
+				}
+			}
+
+			var tempoChangeEvent = new Tempo(bpm)
 			{
 				IntegerPosition = tempo.Item1,
 			};
@@ -1180,12 +1228,6 @@ public static class SMCommon
 		// a ssc and sm file that are not the same. The ssc file will have a shorter skipped range
 		// and the two charts will be out of sync.
 
-		// TODO: Check handling of negative Tempo warps.
-		// Negative BPM changes could have been used for Warps before Warps were implemented,
-		// though it seems like negative Stops were preferred. StepMania 5 saves Warps in sm
-		// files as negative Stops and not negative Tempos.
-		// Need to check that the logic below handles this in the same way StepMania would.
-
 		foreach (var chartEvent in events)
 		{
 			if (chartEvent == null)
@@ -1231,7 +1273,7 @@ public static class SMCommon
 			chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
 			chartEvent.TimeSeconds = absoluteTime - currentWarpTime - totalWarpTime + totalStopTimeSeconds;
 
-			// In the case of negative stop / bpm warps, we need to clamp the time of an event so it does not precede events which
+			// In the case of negative stop warps, we need to clamp the time of an event so it does not precede events which
 			// have lower IntegerPositions
 			if (chartEvent.TimeSeconds < previousEventTimeSeconds)
 				chartEvent.TimeSeconds = previousEventTimeSeconds;
