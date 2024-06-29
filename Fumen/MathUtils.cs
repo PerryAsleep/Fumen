@@ -16,4 +16,13 @@ public class MathUtils
 	{
 		return value < min ? min : value > max ? max : value;
 	}
+
+	public static int FloorDouble(double value)
+	{
+		if (value <= int.MinValue)
+			return int.MinValue;
+		if (value >= int.MaxValue)
+			return int.MaxValue;
+		return (int)value;
+	}
 }
