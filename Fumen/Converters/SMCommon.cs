@@ -644,6 +644,7 @@ public static class SMCommon
 							break;
 						}
 					}
+
 					if (!foundValidTempo)
 					{
 						logger.Warn(
@@ -659,6 +660,7 @@ public static class SMCommon
 					{
 						logger.Warn($"Tempo {bpm} is invalid. Skipping this tempo.");
 					}
+
 					continue;
 				}
 			}
