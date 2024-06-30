@@ -984,123 +984,61 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		var useDefaultTimeSignature = false;
-
-		// If there are no time signatures defined, use a default 4/4 signature.
-		if (timeSignatures.Count == 0)
+		var tsEvents = new List<TimeSignature>();
+		foreach (var timeSignatureEvent in ConvertValueAtTimeDictionaryToListWithNoConflicts(timeSignatures, logger,
+			         logOnErrors, nameof(TimeSignature)))
 		{
-			useDefaultTimeSignature = true;
-		}
+			var integerPosition = timeSignatureEvent.Item1;
+			var beatDouble = timeSignatureEvent.Item2;
+			var ts = timeSignatureEvent.Item3;
 
-		// Otherwise, try to parse the time signatures and ensure they are valid.
-		else
-		{
-			var first = true;
-			var lastTimeSignatureIntegerPosition = 0;
-			var lastTimeSignatureRowsPerMeasure = 0;
-			var tsEvents = new List<TimeSignature>();
-			foreach (var timeSignatureEvent in ConvertValueAtTimeDictionaryToListWithNoConflicts(timeSignatures, logger,
-				         logOnErrors, nameof(TimeSignature)))
+			// Make sure this time signature is positive.
+			if (ts.Numerator < 1 || ts.Denominator < 1)
 			{
-				var integerPosition = timeSignatureEvent.Item1;
-				var beatDouble = timeSignatureEvent.Item2;
-				var ts = timeSignatureEvent.Item3;
-
-				// The first time signature must be at the start of the song.
-				if (first && beatDouble != 0.0)
+				if (logOnErrors)
 				{
-					if (logOnErrors)
-					{
-						var beatStr = beatDouble.ToString(SMDoubleFormat);
-						var expectedBeatStr = 0.0.ToString(SMDoubleFormat);
-						logger.Warn(
-							$"First time signature occurs at {beatStr}."
-							+ $" If explicit time signatures are defined the first must be at {expectedBeatStr}."
-							+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
-					}
-
-					useDefaultTimeSignature = true;
-					break;
+					var beatStr = beatDouble.ToString(SMDoubleFormat);
+					logger.Warn(
+						$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) is invalid."
+						+ " Both values must be greater than 0. Skipping this time signature.");
 				}
 
-				if (ts.Numerator < 1 || ts.Denominator < 1)
-				{
-					if (logOnErrors)
-					{
-						var beatStr = beatDouble.ToString(SMDoubleFormat);
-						logger.Warn(
-							$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) is invalid."
-							+ " Both values must be greater than 0."
-							+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
-					}
-
-					useDefaultTimeSignature = true;
-					break;
-				}
-
-				// Make sure this new time signature actually falls at the start of a measure.
-				var relativePosition = integerPosition - lastTimeSignatureIntegerPosition;
-				if (lastTimeSignatureRowsPerMeasure != 0 && relativePosition % lastTimeSignatureRowsPerMeasure != 0)
-				{
-					if (logOnErrors)
-					{
-						var beatStr = beatDouble.ToString(SMDoubleFormat);
-						logger.Warn(
-							$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) does not fall on a measure boundary."
-							+ " Time signatures can only change at the start of a measure."
-							+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
-					}
-
-					useDefaultTimeSignature = true;
-					break;
-				}
-
-				// Make sure this time signature can be represented by StepMania's integer positions.
-				if (MaxValidDenominator * NumBeatsPerMeasure % ts.Denominator != 0)
-				{
-					if (logOnErrors)
-					{
-						var beatStr = beatDouble.ToString(SMDoubleFormat);
-						logger.Warn(
-							$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) cannot be represented by StepMania."
-							+ $" The beat ({ts.Denominator}) must evenly divide {MaxValidDenominator * NumBeatsPerMeasure}."
-							+ $" Defaulting entire Song to {NumBeatsPerMeasure}/{NumBeatsPerMeasure}.");
-					}
-
-					useDefaultTimeSignature = true;
-					break;
-				}
-
-				// Record measure boundaries so we can check the next time signature.
-				var rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / ts.Denominator;
-				var rowsPerMeasure = rowsPerBeat * ts.Numerator;
-				lastTimeSignatureRowsPerMeasure = rowsPerMeasure;
-				lastTimeSignatureIntegerPosition = integerPosition;
-
-				tsEvents.Add(new TimeSignature(ts)
-				{
-					IntegerPosition = integerPosition,
-				});
-
-				first = false;
+				continue;
 			}
 
-			// All time signatures are valid, record them.
-			if (!useDefaultTimeSignature)
+			// Make sure this time signature can be represented by StepMania's integer positions.
+			if (MaxValidDenominator * NumBeatsPerMeasure % ts.Denominator != 0)
 			{
-				foreach (var tsEvent in tsEvents)
-					chart.Layers[0].Events.Add(tsEvent);
-			}
-		}
+				if (logOnErrors)
+				{
+					var beatStr = beatDouble.ToString(SMDoubleFormat);
+					logger.Warn(
+						$"Time signature at {beatStr} ({ts.Numerator}/{ts.Denominator}) cannot be represented by StepMania."
+						+ $" The beat ({ts.Denominator}) must evenly divide {MaxValidDenominator * NumBeatsPerMeasure}."
+						+ $" Skipping this time signature.");
+				}
 
-		// Add a 4/4 time signature by default.
-		if (useDefaultTimeSignature)
-		{
-			chart.Layers[0].Events.Add(new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
+				continue;
+			}
+
+			tsEvents.Add(new TimeSignature(ts)
 			{
-				IntegerPosition = 0,
+				IntegerPosition = integerPosition,
 			});
 		}
+
+		// If there is no time signature at the start of the chart, add a default 4/4 signature.
+		if (tsEvents.Count == 0 || tsEvents[0].IntegerPosition != 0)
+		{
+			tsEvents.Add(new TimeSignature(new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
+			{
+				IntegerPosition = 0,
+			}));
+		}
+
+		// Add all time signatures.
+		foreach (var tsEvent in tsEvents)
+			chart.Layers[0].Events.Add(tsEvent);
 	}
 
 	/// <summary>
@@ -1303,6 +1241,17 @@ public static class SMCommon
 				// Time Signature change. Update time signature and beat time tracking.
 				case TimeSignature ts:
 				{
+					// We allow time signatures to occur on any row, even if that cuts off a previous measure.
+					// Check for this scenario and increment the measure if needed as time signatures should always
+					// start a new measure.
+					if (beatInMeasure != 0 || beatSubDivision.ToDouble() > 0)
+					{
+						absoluteMeasure++;
+						beatInMeasure = 0;
+						beatSubDivision = new Fraction(0, MaxValidDenominator);
+						chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
+					}
+
 					var timeSignature = ts.Signature;
 
 					lastTimeSigChangeRow = chartEvent.IntegerPosition;
