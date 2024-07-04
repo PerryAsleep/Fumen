@@ -10,7 +10,6 @@ public static class SMCommon
 {
 	public const string DelayString = "Delay";
 	public const string NegativeStopString = "NegativeStop";
-	public const string NegativeDelayString = "NegativeDelay";
 
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
 	[SuppressMessage("ReSharper", "IdentifierTypo")]
@@ -726,6 +725,19 @@ public static class SMCommon
 	{
 		foreach (var delay in ConvertValueAtTimeDictionaryToListWithNoConflicts(delays, logger, logOnErrors, DelayString))
 		{
+			var length = delay.Item3;
+			if (length < 0.0)
+			{
+				if (logOnErrors)
+				{
+					logger.Warn(
+						$"Delay at row {delay.Item1} ({length}) is invalid."
+						+ " Delays cannot be negative. Skipping this delay.");
+				}
+
+				continue;
+			}
+
 			var stopEvent = new Stop(delay.Item3, true)
 			{
 				IntegerPosition = delay.Item1,
@@ -1376,7 +1388,6 @@ public static class SMCommon
 
 			// Negative stops are effectively warps.
 			// See warp comment below.
-			NegativeDelayString,
 			NegativeStopString,
 
 			// Warps must occur after stops.
@@ -1456,10 +1467,7 @@ public static class SMCommon
 			{
 				if (s1.IsDelay)
 				{
-					if (s1.LengthSeconds < 0.0)
-						typeStr1 = NegativeDelayString;
-					else
-						typeStr1 = DelayString;
+					typeStr1 = DelayString;
 				}
 				else if (s1.LengthSeconds < 0.0)
 				{
@@ -1472,10 +1480,7 @@ public static class SMCommon
 			{
 				if (s2.IsDelay)
 				{
-					if (s2.LengthSeconds < 0.0)
-						typeStr2 = NegativeDelayString;
-					else
-						typeStr2 = DelayString;
+					typeStr2 = DelayString;
 				}
 				else if (s2.LengthSeconds < 0.0)
 				{
