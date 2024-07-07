@@ -100,9 +100,9 @@ public class SMWriter : SMWriterBase
 				WriteSongPropertyStops();
 				// Skipping writing of Freezes as they are read as Stops and will be written back out as Stops.
 				// WriteSongPropertyFromExtras(TagFreezes, true);
-				WriteSongPropertyDelays(true);
-				WriteSongPropertyTimeSignatures(true);
-				WriteSongPropertyTickCounts(true);
+				WriteSongPropertyDelays();
+				WriteSongPropertyTimeSignatures();
+				WriteSongPropertyTickCounts();
 
 				WriteSongPropertyFromExtras(TagInstrumentTrack, true, false);
 				WriteSongPropertyFromExtras(TagAnimations, true, false);
