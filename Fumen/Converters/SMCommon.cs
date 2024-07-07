@@ -576,6 +576,19 @@ public static class SMCommon
 		{
 			var integerPosition = ConvertAbsoluteBeatToIntegerPosition(chartEvent.Item1);
 
+			// Ignore this event if it is at a negative position.
+			if (integerPosition < 0)
+			{
+				if (logOnErrors)
+				{
+					logger.Warn(
+						$"{eventTypeString} with value {chartEvent.Item2} at beat {chartEvent.Item1} occurs at an invalid row {integerPosition}."
+						+ $" This {eventTypeString} will be ignored.");
+				}
+
+				continue;
+			}
+
 			// Ignore this event if it is an earlier event at the same row.
 			if (previousIntegerPosition != int.MinValue && previousIntegerPosition == integerPosition)
 			{
@@ -694,7 +707,20 @@ public static class SMCommon
 	{
 		foreach (var stop in ConvertValueAtTimeDictionaryToListWithNoConflicts(stops, logger, logOnErrors, nameof(Stop)))
 		{
-			var stopEvent = new Stop(stop.Item3)
+			var length = stop.Item3;
+			if (length.DoubleEquals(0.0))
+			{
+				if (logOnErrors)
+				{
+					logger.Warn(
+						$"Stop at row {stop.Item1} ({length}) is invalid."
+						+ " Stop lengths must not be 0.0. Skipping this stop.");
+				}
+
+				continue;
+			}
+
+			var stopEvent = new Stop(length)
 			{
 				IntegerPosition = stop.Item1,
 			};
@@ -769,6 +795,17 @@ public static class SMCommon
 	{
 		foreach (var warp in ConvertValueAtTimeDictionaryToListWithNoConflicts(warps, logger, logOnErrors, nameof(Warp)))
 		{
+			if (warp.Item3 <= 0)
+			{
+				if (logOnErrors)
+				{
+					logger.Warn(
+						$"Warp at row {warp.Item1} ({warp.Item3}) is invalid."
+						+ " Warps lengths must be greater than 0. Skipping this warp.");
+				}
+				continue;
+			}
+
 			// Convert warp beats to number of rows
 			var warpEvent = new Warp(ConvertAbsoluteBeatToIntegerPosition(warp.Item3))
 			{
@@ -938,7 +975,19 @@ public static class SMCommon
 		foreach (var fake in ConvertValueAtTimeDictionaryToListWithNoConflicts(fakeEvents, logger, logOnErrors,
 			         nameof(FakeSegment)))
 		{
-			var fakeSegmentEvent = new FakeSegment(fake.Item3)
+			var length = fake.Item3;
+			if (length <= 0.0)
+			{
+				if (logOnErrors)
+				{
+					logger.Warn(
+						$"Fake segment at row {fake.Item1} ({length}) is invalid."
+						+ " Fake segment lengths must be greater than 0. Skipping this fake segment.");
+				}
+				continue;
+			}
+
+			var fakeSegmentEvent = new FakeSegment(length)
 			{
 				IntegerPosition = fake.Item1,
 			};
