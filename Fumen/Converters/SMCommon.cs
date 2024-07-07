@@ -803,6 +803,7 @@ public static class SMCommon
 						$"Warp at row {warp.Item1} ({warp.Item3}) is invalid."
 						+ " Warps lengths must be greater than 0. Skipping this warp.");
 				}
+
 				continue;
 			}
 
@@ -984,6 +985,7 @@ public static class SMCommon
 						$"Fake segment at row {fake.Item1} ({length}) is invalid."
 						+ " Fake segment lengths must be greater than 0. Skipping this fake segment.");
 				}
+
 				continue;
 			}
 
