@@ -989,7 +989,8 @@ public static class SMCommon
 				continue;
 			}
 
-			var fakeSegmentEvent = new FakeSegment(length)
+			// Convert fake segment beats to number of rows
+			var fakeSegmentEvent = new FakeSegment(ConvertAbsoluteBeatToIntegerPosition(fake.Item3))
 			{
 				IntegerPosition = fake.Item1,
 			};

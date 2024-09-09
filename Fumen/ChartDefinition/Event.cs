@@ -486,7 +486,7 @@ public class Label : Event
 }
 
 /// <summary>
-/// Event representing a text label.
+/// Event representing a fake segment.
 /// </summary>
 /// <remarks>
 /// This is extremely StepMania-specific.
@@ -494,19 +494,19 @@ public class Label : Event
 public class FakeSegment : Event
 {
 	/// <summary>
-	/// Length of the fake segment as time in seconds.
+	/// Length of the fake segment in integer position units.
 	/// </summary>
-	public double LengthSeconds;
+	public int LengthIntegerPosition;
 
-	public FakeSegment(double lengthSeconds)
+	public FakeSegment(int lengthIntegerPosition)
 	{
-		LengthSeconds = lengthSeconds;
+		LengthIntegerPosition = lengthIntegerPosition;
 	}
 
 	public FakeSegment(FakeSegment other)
 		: base(other)
 	{
-		LengthSeconds = other.LengthSeconds;
+		LengthIntegerPosition = other.LengthIntegerPosition;
 	}
 
 	public override Event Clone()
@@ -517,7 +517,7 @@ public class FakeSegment : Event
 	public bool Matches(FakeSegment other)
 	{
 		return base.Matches(other)
-		       && LengthSeconds.DoubleEquals(other.LengthSeconds);
+		       && LengthIntegerPosition == other.LengthIntegerPosition;
 	}
 
 	public override bool Matches(Event other)

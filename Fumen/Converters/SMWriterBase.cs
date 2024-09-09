@@ -1142,7 +1142,11 @@ public abstract class SMWriterBase
 			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
 
 			if (!f.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
-				length = f.LengthSeconds;
+			{
+				// Convert the fake segment rows to beats.
+				length = SMCommon.ConvertIntegerPositionToBeat(f.LengthIntegerPosition);
+			}
+
 			var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={lengthStr}");
