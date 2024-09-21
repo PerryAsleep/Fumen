@@ -128,6 +128,13 @@ public abstract class SMWriterBase
 		public bool UpdateEventRowsFromMetricPosition = false;
 
 		/// <summary>
+		/// Force using song-level timing data instead of per-chart timing data when writing files.
+		/// The FallbackChart will be used for song-level timing data and all chart-level timing
+		/// data will be ignored.
+		/// </summary>
+		public bool ForceOnlySongLevelTiming;
+
+		/// <summary>
 		/// Custom properties to write into the file as MSD key value pairs regardless of the specified
 		/// PropertyEmissionBehavior.
 		/// </summary>

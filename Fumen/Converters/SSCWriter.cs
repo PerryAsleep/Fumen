@@ -212,6 +212,11 @@ public class SSCWriter : SMWriterBase
 				writeTimingData = true;
 		}
 
+		if (Config.ForceOnlySongLevelTiming)
+		{
+			writeTimingData = false;
+		}
+
 		if (writeTimingData)
 		{
 			WriteChartProperty(chart, TagOffset, chart.ChartOffsetFromMusic);
