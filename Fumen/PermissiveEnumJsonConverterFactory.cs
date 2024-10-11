@@ -14,6 +14,22 @@ namespace Fumen;
 /// </summary>
 public class PermissiveEnumJsonConverterFactory : JsonConverterFactory
 {
+	/// <summary>
+	/// Explicit default values to use.
+	/// </summary>
+	private readonly Dictionary<Type, Enum> DefaultEnumValues = new();
+
+	/// <summary>
+	/// Registers a default value to use for an Enum when invalid values are encountered
+	/// during deserialization.
+	/// </summary>
+	/// <typeparam name="T">Type of Enum.</typeparam>
+	/// <param name="value">Enum value to use as a default.</param>
+	public void RegisterDefault<T>(T value) where T : struct, Enum
+	{
+		DefaultEnumValues[typeof(T)] = value;
+	}
+
 	public override bool CanConvert(Type typeToConvert)
 	{
 		// Enums can be converted.
@@ -31,8 +47,10 @@ public class PermissiveEnumJsonConverterFactory : JsonConverterFactory
 		// Create a converter for Enums.
 		if (typeToConvert.IsEnum)
 		{
-			return (JsonConverter)Activator.CreateInstance(
+			var converter = (JsonConverter)Activator.CreateInstance(
 				typeof(EnumConverter<>).MakeGenericType(typeToConvert));
+			((IDefaultConverter)converter)!.SetDefaults(DefaultEnumValues);
+			return converter;
 		}
 
 		// Create a converter for Dictionaries with Enum keys.
@@ -43,19 +61,39 @@ public class PermissiveEnumJsonConverterFactory : JsonConverterFactory
 				typeof(Dictionary<,>).MakeGenericType(keyType, valueType), keyType, valueType));
 	}
 
+	private interface IDefaultConverter
+	{
+		public void SetDefaults(IReadOnlyDictionary<Type, Enum> defaultEnumValues);
+	}
+
 	/// <summary>
 	/// JsonConverter for Enums which can safely ignore invalid Enum values when reading.
 	/// </summary>
 	/// <typeparam name="T">Enum Type.</typeparam>
-	private class EnumConverter<T> : JsonConverter<T> where T : struct, Enum
+	private class EnumConverter<T> : JsonConverter<T>, IDefaultConverter where T : struct, Enum
 	{
+		/// <summary>
+		/// Explicit default values to use.
+		/// </summary>
+		private IReadOnlyDictionary<Type, Enum> DefaultEnumValues;
+
+		public void SetDefaults(IReadOnlyDictionary<Type, Enum> defaultEnumValues)
+		{
+			DefaultEnumValues = defaultEnumValues;
+		}
+
 		public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
 			if (reader.TokenType == JsonTokenType.String)
 			{
+				// Try to parse the enum value.
 				var enumValue = reader.GetString();
 				if (Enum.TryParse(enumValue, true, out T result))
 					return result;
+
+				// If an explicit default value exists for this enum, use it.
+				if (DefaultEnumValues.TryGetValue(typeToConvert, out var value))
+					return (T)value;
 			}
 
 			return default;
