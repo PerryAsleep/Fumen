@@ -132,11 +132,13 @@ public static class SMCommon
 	{
 		private readonly int NumInputs;
 		private readonly int NumPlayers;
+		private readonly bool SupportsVariableNumberOfPlayers = false;
 
-		public ChartProperties(int numInputs, int numPlayers)
+		public ChartProperties(int numInputs, int numPlayers, bool supportsVariableNumberOfPlayers)
 		{
 			NumInputs = numInputs;
 			NumPlayers = numPlayers;
+			SupportsVariableNumberOfPlayers = supportsVariableNumberOfPlayers;
 		}
 
 		public int GetNumInputs()
@@ -147,6 +149,11 @@ public static class SMCommon
 		public int GetNumPlayers()
 		{
 			return NumPlayers;
+		}
+
+		public bool GetSupportsVariableNumberOfPlayers()
+		{
+			return SupportsVariableNumberOfPlayers;
 		}
 	}
 
@@ -332,54 +339,61 @@ public static class SMCommon
 
 		// Initialize ChartProperties.
 		Properties = new ChartProperties[Enum.GetNames(typeof(ChartType)).Length];
-		Properties[(int)ChartType.dance_single] = new ChartProperties(4, 1);
-		Properties[(int)ChartType.dance_double] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.dance_couple] = new ChartProperties(8, 2);
-		Properties[(int)ChartType.dance_solo] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.dance_threepanel] = new ChartProperties(3, 1);
-		Properties[(int)ChartType.dance_routine] = new ChartProperties(8, 2);
-		Properties[(int)ChartType.pump_single] = new ChartProperties(5, 1);
-		Properties[(int)ChartType.pump_halfdouble] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.pump_double] = new ChartProperties(10, 1);
-		Properties[(int)ChartType.pump_couple] = new ChartProperties(10, 2);
-		Properties[(int)ChartType.pump_routine] = new ChartProperties(10, 2);
-		Properties[(int)ChartType.kb7_single] = new ChartProperties(7, 1);
-		Properties[(int)ChartType.ez2_single] = new ChartProperties(5, 1);
-		Properties[(int)ChartType.ez2_double] = new ChartProperties(10, 1);
-		Properties[(int)ChartType.ez2_real] = new ChartProperties(7, 1);
-		Properties[(int)ChartType.para_single] = new ChartProperties(5, 1);
-		Properties[(int)ChartType.ds3ddx_single] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.bm_single5] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.bm_versus5] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.bm_double5] = new ChartProperties(12, 1);
-		Properties[(int)ChartType.bm_single7] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.bm_versus7] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.bm_double7] = new ChartProperties(16, 1);
-		Properties[(int)ChartType.maniax_single] = new ChartProperties(4, 1);
-		Properties[(int)ChartType.maniax_double] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.techno_single4] = new ChartProperties(4, 1);
-		Properties[(int)ChartType.techno_single5] = new ChartProperties(5, 1);
-		Properties[(int)ChartType.techno_single8] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.techno_double4] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.techno_double5] = new ChartProperties(10, 1);
-		Properties[(int)ChartType.techno_double8] = new ChartProperties(16, 1);
-		Properties[(int)ChartType.pnm_five] = new ChartProperties(5, 1);
-		Properties[(int)ChartType.pnm_nine] = new ChartProperties(9, 1);
-		Properties[(int)ChartType.lights_cabinet] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.kickbox_human] = new ChartProperties(4, 1);
-		Properties[(int)ChartType.kickbox_quadarm] = new ChartProperties(4, 1);
-		Properties[(int)ChartType.kickbox_insect] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.kickbox_arachnid] = new ChartProperties(8, 1);
-		Properties[(int)ChartType.smx_beginner] = new ChartProperties(3, 1);
-		Properties[(int)ChartType.smx_single] = new ChartProperties(5, 1);
-		Properties[(int)ChartType.smx_dual] = new ChartProperties(6, 1);
-		Properties[(int)ChartType.smx_full] = new ChartProperties(10, 1);
-		Properties[(int)ChartType.smx_team] = new ChartProperties(10, 2);
+		Properties[(int)ChartType.dance_single] = new ChartProperties(4, 1, false);
+		Properties[(int)ChartType.dance_double] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.dance_couple] = new ChartProperties(8, 2, false);
+		Properties[(int)ChartType.dance_solo] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.dance_threepanel] = new ChartProperties(3, 1, false);
+		Properties[(int)ChartType.dance_routine] = new ChartProperties(8, 2, true);
+		Properties[(int)ChartType.pump_single] = new ChartProperties(5, 1, false);
+		Properties[(int)ChartType.pump_halfdouble] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.pump_double] = new ChartProperties(10, 1, false);
+		Properties[(int)ChartType.pump_couple] = new ChartProperties(10, 2, false);
+		Properties[(int)ChartType.pump_routine] = new ChartProperties(10, 2, true);
+		Properties[(int)ChartType.kb7_single] = new ChartProperties(7, 1, false);
+		Properties[(int)ChartType.ez2_single] = new ChartProperties(5, 1, false);
+		Properties[(int)ChartType.ez2_double] = new ChartProperties(10, 1, false);
+		Properties[(int)ChartType.ez2_real] = new ChartProperties(7, 1, false);
+		Properties[(int)ChartType.para_single] = new ChartProperties(5, 1, false);
+		Properties[(int)ChartType.ds3ddx_single] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.bm_single5] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.bm_versus5] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.bm_double5] = new ChartProperties(12, 1, false);
+		Properties[(int)ChartType.bm_single7] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.bm_versus7] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.bm_double7] = new ChartProperties(16, 1, false);
+		Properties[(int)ChartType.maniax_single] = new ChartProperties(4, 1, false);
+		Properties[(int)ChartType.maniax_double] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.techno_single4] = new ChartProperties(4, 1, false);
+		Properties[(int)ChartType.techno_single5] = new ChartProperties(5, 1, false);
+		Properties[(int)ChartType.techno_single8] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.techno_double4] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.techno_double5] = new ChartProperties(10, 1, false);
+		Properties[(int)ChartType.techno_double8] = new ChartProperties(16, 1, false);
+		Properties[(int)ChartType.pnm_five] = new ChartProperties(5, 1, false);
+		Properties[(int)ChartType.pnm_nine] = new ChartProperties(9, 1, false);
+		Properties[(int)ChartType.lights_cabinet] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.kickbox_human] = new ChartProperties(4, 1, false);
+		Properties[(int)ChartType.kickbox_quadarm] = new ChartProperties(4, 1, false);
+		Properties[(int)ChartType.kickbox_insect] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.kickbox_arachnid] = new ChartProperties(8, 1, false);
+		Properties[(int)ChartType.smx_beginner] = new ChartProperties(3, 1, false);
+		Properties[(int)ChartType.smx_single] = new ChartProperties(5, 1, false);
+		Properties[(int)ChartType.smx_dual] = new ChartProperties(6, 1, false);
+		Properties[(int)ChartType.smx_full] = new ChartProperties(10, 1, false);
+		Properties[(int)ChartType.smx_team] = new ChartProperties(10, 2, true);
 	}
 
 	public static ChartProperties GetChartProperties(ChartType chartType)
 	{
 		return Properties[(int)chartType];
+	}
+
+	public static ChartProperties GetChartProperties(string chartTypeString)
+	{
+		if (TryGetChartType(chartTypeString, out var chartType))
+			return GetChartProperties(chartType);
+		return null;
 	}
 
 	/// <summary>
@@ -1546,6 +1560,14 @@ public static class SMCommon
 				comparison = e1Index.CompareTo(e2Index);
 			if (comparison != 0)
 				return comparison;
+
+			// Order by player.
+			if (e1 is Note n1 && e2 is Note n2)
+			{
+				comparison = n1.Player.CompareTo(n2.Player);
+				if (comparison != 0)
+					return comparison;
+			}
 
 			return comparison;
 		}
