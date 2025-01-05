@@ -1248,7 +1248,7 @@ public abstract class SMWriterBase
 		{
 			// Marker to separate players' charts.
 			if (playerIndex > 0)
-				StreamWriter.Write("&\r\n\r\n");
+				StreamWriter.Write("&\r\n");
 
 			var measures = new List<MeasureData>
 			{
@@ -1259,6 +1259,7 @@ public abstract class SMWriterBase
 			// Accumulate data about each measure.
 			// Each measure here is forced 4/4.
 			foreach (var chartEvent in chart.Layers[0].Events)
+			{
 			{
 				var note = chartEvent as LaneNote;
 				if (note == null || note.Player != playerIndex)
