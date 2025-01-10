@@ -1260,7 +1260,6 @@ public abstract class SMWriterBase
 			// Each measure here is forced 4/4.
 			foreach (var chartEvent in chart.Layers[0].Events)
 			{
-			{
 				var note = chartEvent as LaneNote;
 				if (note == null || note.Player != playerIndex)
 					continue;
