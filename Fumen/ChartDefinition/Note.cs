@@ -26,8 +26,8 @@ public abstract class Note : Event
 	protected Note(Note other)
 		: base(other)
 	{
-		other.Player = Player;
-		other.Appendage = Appendage;
+		Player = other.Player;
+		Appendage = other.Appendage;
 	}
 }
 
