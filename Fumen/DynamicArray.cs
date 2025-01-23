@@ -84,13 +84,13 @@ public class DynamicArray<T> : IReadOnlyDynamicArray<T>
 	{
 		get
 		{
-			if (index < 0 || index > Size)
+			if (index < 0 || index >= Size)
 				throw new IndexOutOfRangeException();
 			return Array[index];
 		}
 		set
 		{
-			if (index < 0 || index > Size)
+			if (index < 0 || index >= Size)
 				throw new IndexOutOfRangeException();
 			Array[index] = value;
 		}
