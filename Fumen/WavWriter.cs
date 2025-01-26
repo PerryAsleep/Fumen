@@ -8,9 +8,9 @@ namespace Fumen;
 /// </summary>
 public sealed class WavWriter
 {
-	private static readonly char[] RiffHeader = { 'R', 'I', 'F', 'F' };
-	private static readonly char[] WaveFormatHeader = { 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' };
-	private static readonly char[] DataHeader = { 'd', 'a', 't', 'a' };
+	private static readonly char[] RiffHeader = ['R', 'I', 'F', 'F'];
+	private static readonly char[] WaveFormatHeader = ['W', 'A', 'V', 'E', 'f', 'm', 't', ' '];
+	private static readonly char[] DataHeader = ['d', 'a', 't', 'a'];
 	private const int FormatDataLength = 16;
 	private const short AudioFormat = 1; // PCM
 	private const short BitsPerSample = 16;

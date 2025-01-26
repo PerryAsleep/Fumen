@@ -30,7 +30,7 @@ public class Song
 	/// <summary>
 	/// The Charts making up this Song.
 	/// </summary>
-	public List<Chart> Charts { get; set; } = new();
+	public List<Chart> Charts { get; set; } = [];
 
 	/// <summary>
 	/// Miscellaneous extra information associated with this Song.

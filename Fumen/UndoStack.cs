@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Fumen;
 
 /// <summary>
-/// An stack with methods to Push, Pop, and Repush elements.
+/// A stack with methods to Push, Pop, and Repush elements.
 /// When Popping an element, the UndoStack will still maintain the element internally
 /// so that it can be Repushed later to support redoing undone operations.
 /// UndoStack uses an underlying circular buffer to allow an unbounded number of

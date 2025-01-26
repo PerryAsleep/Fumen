@@ -229,7 +229,7 @@ public class DynamicArray<T> : IReadOnlyDynamicArray<T>
 
 	/// <summary>
 	/// If needed, grow the underlying Array to fit the given desired capacity.
-	/// Will not copying values when growing.
+	/// Will not copy values when growing.
 	/// Should only be used when callers will set the contents of the Array.
 	/// </summary>
 	/// <param name="desiredCapacity">New capacity.</param>

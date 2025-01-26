@@ -45,13 +45,13 @@ public class MSDFile
 	/// </summary>
 	public class Value
 	{
-		public List<string> Params = new();
+		public List<string> Params = [];
 	}
 
 	/// <summary>
 	/// The values parsed from the file.
 	/// </summary>
-	public List<Value> Values = new();
+	public List<Value> Values = [];
 
 	/// <summary>
 	/// Asynchronously load and parse the given msd file.

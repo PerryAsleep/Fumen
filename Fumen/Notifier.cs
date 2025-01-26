@@ -11,7 +11,7 @@ public class Notifier<T>
 	/// <summary>
 	/// All observers of this Notifier.
 	/// </summary>
-	private readonly List<IObserver<T>> Observers = new();
+	private readonly List<IObserver<T>> Observers = [];
 
 	/// <summary>
 	/// Adds an Observer.
@@ -36,7 +36,7 @@ public class Notifier<T>
 	/// Notify all IObservers of this Notifier of an event.
 	/// </summary>
 	/// <param name="eventId">String identifier of the event.</param>
-	/// <param name="notifier">Object issuing notification. Typically this.</param>
+	/// <param name="notifier">Object issuing notification. Typically, this.</param>
 	protected void Notify(string eventId, T notifier)
 	{
 		foreach (var observer in Observers)
@@ -49,7 +49,7 @@ public class Notifier<T>
 	/// Notify all IObservers of this Notifier of an event.
 	/// </summary>
 	/// <param name="eventId">String identifier of the event.</param>
-	/// <param name="notifier">Object issuing notification. Typically this.</param>
+	/// <param name="notifier">Object issuing notification. Typically, this.</param>
 	/// <param name="payload">Arbitrary object payload for notification.</param>
 	protected void Notify(string eventId, T notifier, object payload)
 	{

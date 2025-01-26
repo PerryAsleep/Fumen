@@ -35,7 +35,7 @@ public abstract class PropertyParser
 	/// <summary>
 	/// Abstract Parse method for a MSDFile.Value.
 	/// Checks the MSDFile.Value to see if it matches our PropertyName and parses
-	/// the Params if does.
+	/// the Params if it does.
 	/// </summary>
 	/// <param name="value">MSDFile.Value to check and parse.</param>
 	/// <returns>
@@ -349,7 +349,7 @@ public class ListFractionPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var fractionEntries = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+			var fractionEntries = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var fractionEntry in fractionEntries)
 			{
 				var fractionParts = fractionEntry.Split('=');
@@ -433,7 +433,7 @@ public class CSVListAtTimePropertyParser<T> : PropertyParser where T : IConverti
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var pairs = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+			var pairs = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var pair in pairs)
 			{
 				var kvp = pair.Split('=');
@@ -513,7 +513,7 @@ public class ScrollRateInterpolationPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var interpolationDatas = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+			var interpolationDatas = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var interpolationData in interpolationDatas)
 			{
 				var kvp = interpolationData.Split('=');
@@ -595,7 +595,7 @@ public class ComboPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var comboDatas = value.Params[1].Trim().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+			var comboDatas = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var comboData in comboDatas)
 			{
 				var kvp = comboData.Split('=');
@@ -657,6 +657,7 @@ public abstract class NotesPropertyParser : PropertyParser
 	/// events into the given Chart.
 	/// </summary>
 	/// <param name="chart">Chart to parse notes into.</param>
+	/// <param name="properties">ChartProperties for the given Chart.</param>
 	/// <param name="notesStr">String representation of notes from an sm or ssc chart.</param>
 	/// <returns>Whether the notes represent a valid chart or not.</returns>
 	protected bool ParseNotes(Chart chart, ChartProperties properties, string notesStr)
@@ -944,7 +945,7 @@ public abstract class NotesPropertyParser : PropertyParser
 public class SongNotesPropertyParser : NotesPropertyParser
 {
 	private readonly Song Song;
-	private readonly bool ParseNotes;
+	private new readonly bool ParseNotes;
 
 	public SongNotesPropertyParser(string smPropertyName, Song song, bool parseNotes)
 		: base(smPropertyName)

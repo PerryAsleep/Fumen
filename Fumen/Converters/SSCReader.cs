@@ -17,8 +17,8 @@ public class SSCReader : Reader
 	/// In StepMania parsing, if one of these values is present on a Chart then the Chart is considered
 	/// to use its own set of timing data and should not fall back to Song timing data.
 	/// </summary>
-	private static readonly HashSet<string> ChartTimingDataTags = new()
-	{
+	private static readonly HashSet<string> ChartTimingDataTags =
+	[
 		TagBPMs,
 		TagStops,
 		TagDelays,
@@ -31,7 +31,7 @@ public class SSCReader : Reader
 		TagFakes,
 		TagLabels,
 		TagOffset,
-	};
+	];
 
 	/// <summary>
 	/// SSC properties which affect scroll rate and note timing.
@@ -113,7 +113,7 @@ public class SSCReader : Reader
 
 		var song = new Song();
 		var timingProperties = new TimingProperties();
-		var propertyParsers = GetSongMetaDataPropertyParsers(song, timingProperties);
+		var propertyParsers = GetSongMetaDataPropertyParsers(song);
 		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, true);
 		token.ThrowIfCancellationRequested();
 		return song;
@@ -387,7 +387,7 @@ public class SSCReader : Reader
 			[TagLabels] = new CSVListAtTimePropertyParser<string>(TagLabels, songTimingProperties.Labels, song.Extras,
 				TagFumenRawLabelsStr),
 			// Removed, see https://github.com/stepmania/stepmania/issues/9
-			// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
+			// SSC files are forced 4/4 time signatures. Other time signatures can be provided, but they are only
 			// suggestions to a renderer for how to draw measure markers.
 			[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, songTimingProperties.TimeSignatures,
 				song.Extras, TagFumenRawTimeSignaturesStr),
@@ -411,7 +411,7 @@ public class SSCReader : Reader
 		return parsers;
 	}
 
-	private Dictionary<string, PropertyParser> GetSongMetaDataPropertyParsers(Song song, TimingProperties songTimingProperties)
+	private Dictionary<string, PropertyParser> GetSongMetaDataPropertyParsers(Song song)
 	{
 		var parsers = new Dictionary<string, PropertyParser>()
 		{
@@ -482,7 +482,7 @@ public class SSCReader : Reader
 			[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, chartTimingProperties.Delays, chart.Extras,
 				TagFumenRawDelaysStr),
 			// Removed, see https://github.com/stepmania/stepmania/issues/9
-			// SSC files are forced 4/4 time signatures. Other time signatures can be provided but they are only
+			// SSC files are forced 4/4 time signatures. Other time signatures can be provided, but they are only
 			// suggestions to a renderer for how to draw measure markers.
 			[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, chartTimingProperties.TimeSignatures,
 				chart.Extras, TagFumenRawTimeSignaturesStr),

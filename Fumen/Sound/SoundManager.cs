@@ -379,7 +379,7 @@ public class SoundManager
 								(startInputSampleIndex + hermiteIndex) * bytesPerSample + inputChannelOffset,
 								0, maxInputSampleIndex);
 							// Parse the sample at this index.
-							// This often results in redundant parses, but in practice optimizing them out isn't a big gain
+							// This often results in redundant parses, but in practice optimizing them out isn't a big gain,
 							// and it adds a lot of complexity. The main perf hit is InterpolateHermite.
 							hermitePoints[hermiteIndex] = parseSample(inputIndex);
 						}
@@ -445,12 +445,10 @@ public class SoundManager
 	/// <param name="name">DSP name.</param>
 	public void DestroyDsp(string name)
 	{
-		if (!DspHandles.TryGetValue(name, out var handle))
+		if (!DspHandles.Remove(name, out var handle))
 		{
 			throw new ArgumentException($"No DSP found for {name}");
 		}
-
-		DspHandles.Remove(name);
 
 		ErrCheck(System.getMasterChannelGroup(out var mainGroup));
 		ErrCheck(mainGroup.removeDSP(handle!.GetDsp()));

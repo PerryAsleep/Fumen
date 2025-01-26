@@ -34,7 +34,7 @@ public class TestUndoStack
 			Assert.IsTrue(us.Pop(out var popped));
 			Assert.AreEqual(10, popped);
 			Assert.AreEqual(currentAbsoluteIndex, us.GetAbsoluteIndex());
-			Assert.AreEqual(default, us.GetCurrent());
+			Assert.AreEqual(0, us.GetCurrent());
 			Assert.IsFalse(us.CanPop());
 			Assert.IsTrue(us.CanRepush());
 
@@ -89,7 +89,7 @@ public class TestUndoStack
 		{
 			us.Reset();
 			Assert.AreEqual(0, us.GetAbsoluteIndex());
-			Assert.AreEqual(default, us.GetCurrent());
+			Assert.AreEqual(0, us.GetCurrent());
 			Assert.IsFalse(us.CanPop());
 			Assert.IsFalse(us.CanRepush());
 		}
@@ -142,7 +142,7 @@ public class TestUndoStack
 		var us = new UndoStack<int>(stackSize, false);
 		Assert.IsFalse(us.CanPop());
 		Assert.IsFalse(us.Pop(out var val));
-		Assert.AreEqual(default, val);
+		Assert.AreEqual(0, val);
 
 		// Push some values and verify they can be popped.
 		us.Push(0);
@@ -176,7 +176,7 @@ public class TestUndoStack
 		Assert.AreEqual(0, us.GetAbsoluteIndex());
 		Assert.IsFalse(us.CanPop());
 		Assert.IsFalse(us.Pop(out val));
-		Assert.AreEqual(default, val);
+		Assert.AreEqual(0, val);
 
 		// Push beyond the stack size.
 		for (var i = 0; i < stackSize * 2; i++)
@@ -196,7 +196,7 @@ public class TestUndoStack
 
 		Assert.IsFalse(us.CanPop());
 		Assert.IsFalse(us.Pop(out val));
-		Assert.AreEqual(default, val);
+		Assert.AreEqual(0, val);
 
 		// Push one more and verify it can be popped.
 		us.Push(stackSize);
@@ -278,13 +278,13 @@ public class TestUndoStack
 		var us = new UndoStack<int>(5, false);
 		VerifyResize(us, 10, 0, 0);
 
-		// Resize larger - under size.
+		// Resize larger - under the size.
 		us = new UndoStack<int>(5, false);
 		for (var i = 0; i < 3; i++)
 			us.Push(i);
 		VerifyResize(us, 10, 0, 3);
 
-		// Resize larger - under size and repushable.
+		// Resize larger - under the size and repushable.
 		us = new UndoStack<int>(5, false);
 		for (var i = 0; i < 3; i++)
 			us.Push(i);
@@ -305,13 +305,13 @@ public class TestUndoStack
 		us.Pop(out _);
 		VerifyResize(us, 10, 2, 3);
 
-		// Resize larger - over size.
+		// Resize larger - over the size.
 		us = new UndoStack<int>(5, false);
 		for (var i = 0; i < 13; i++)
 			us.Push(i);
 		VerifyResize(us, 10, 0, 5);
 
-		// Resize larger - over size and repushable.
+		// Resize larger - over the size and repushable.
 		us = new UndoStack<int>(5, false);
 		for (var i = 0; i < 13; i++)
 			us.Push(i);

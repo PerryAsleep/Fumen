@@ -314,7 +314,7 @@ public class SMReader : Reader
 			[TagDelays] = new CSVListAtTimePropertyParser<double>(TagDelays, timingProperties.Delays, song.Extras,
 				TagFumenRawDelaysStr),
 			// Removed, see https://github.com/stepmania/stepmania/issues/9
-			// SM files are forced 4/4 time signatures. Other time signatures can be provided but they are only
+			// SM files are forced 4/4 time signatures. Other time signatures can be provided, but they are only
 			// suggestions to a renderer for how to draw measure markers.
 			[TagTimeSignatures] = new ListFractionPropertyParser(TagTimeSignatures, timingProperties.TimeSignatures,
 				song.Extras, TagFumenRawTimeSignaturesStr),

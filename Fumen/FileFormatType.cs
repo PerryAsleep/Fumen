@@ -23,11 +23,11 @@ public class FileFormat
 
 	static FileFormat()
 	{
-		Data = new[]
-		{
+		Data =
+		[
 			new FileFormat(FileFormatType.SM, "sm"),
 			new FileFormat(FileFormatType.SSC, "ssc"),
-		};
+		];
 	}
 
 	public static FileFormat GetFileFormatByExtension(string extension)

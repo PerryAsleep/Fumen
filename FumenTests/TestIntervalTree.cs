@@ -213,8 +213,8 @@ public class TestIntervalTree
 
 			// Insert and delete different sets of random numbers.
 			t = new IntervalTree<int, double>();
-			insertList = new List<Tuple<int, int, int>>();
-			deleteList = new List<Tuple<int, int, int>>();
+			insertList = [];
+			deleteList = [];
 			for (var i = 0; i < num; i++)
 			{
 				var low = random.Next();
@@ -258,8 +258,8 @@ public class TestIntervalTree
 
 			// Insert and delete different sets of random numbers with some overlap.
 			t = new IntervalTree<int, double>();
-			insertList = new List<Tuple<int, int, int>>();
-			deleteList = new List<Tuple<int, int, int>>();
+			insertList = [];
+			deleteList = [];
 			for (var i = 0; i < num; i++)
 			{
 				var low = random.Next();
@@ -658,7 +658,7 @@ public class TestIntervalTree
 				}
 			}
 
-			// Finding elements outside of the range of the tree should return null.
+			// Finding elements outside the range of the tree should return null.
 			Assert.IsNull(t.Find(0, -1, num - 1));
 			Assert.IsNull(t.Find(0, num - 1, num - 1 + interval));
 
@@ -781,7 +781,7 @@ public class TestIntervalTree
 			Assert.IsNull(t.FindGreatestPreceding(-1));
 			Assert.IsNull(t.FindGreatestPreceding(-1, true));
 
-			// Finding with low greater than greatest low should return greatest value.
+			// Finding with low greater than the greatest low should return the greatest value.
 			// When there are multiple values at the greatest low, the last inserted one
 			// should be returned.
 			var e = t.FindGreatestPreceding(num);
@@ -797,7 +797,7 @@ public class TestIntervalTree
 
 			// Finding with least low should return null when not using orEqualTo=true.
 			Assert.IsNull(t.FindGreatestPreceding(0));
-			// Finding with least low should return least value when using orEqualTo=true.
+			// Finding with least low should return the least value when using orEqualTo=true.
 			// When there are multiple values at the least low, the last inserted one
 			// should be returned.
 			e = t.FindGreatestPreceding(0, true);
@@ -866,13 +866,13 @@ public class TestIntervalTree
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(0, e.Current);
 
-			// Finding with low greater than greatest low should return null.
+			// Finding with low greater than the greatest low should return null.
 			Assert.IsNull(t.FindLeastFollowing(num));
 			Assert.IsNull(t.FindLeastFollowing(num, true));
 
-			// Finding with greatest low should return null when not using orEqualTo=true.
+			// Finding with the greatest low should return null when not using orEqualTo=true.
 			Assert.IsNull(t.FindLeastFollowing(num - 2));
-			// Finding with greatest low should return greatest value when using orEqualTo=true.
+			// Finding with the greatest low should return the greatest value when using orEqualTo=true.
 			// When there are multiple values at the greatest low, the first inserted one
 			// should be returned.
 			e = t.FindLeastFollowing(num - 2, true);

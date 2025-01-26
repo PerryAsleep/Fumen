@@ -22,14 +22,14 @@ public class Combinations
 	}
 
 	/// <summary>
-	/// Creates a List of all length <paramref name="size"/> combinations of the
+	/// Creates a List of all length <paramref name="size"/> combinations of
 	/// the given <paramref name="elements"/>.
 	/// </summary>
 	/// <typeparam name="T">Type of element in <paramref name="elements"/></typeparam>
 	/// <param name="elements">IEnumerable of all elements to make combinations of.</param>
 	/// <param name="size">Length of combination arrays to return.</param>
 	/// <returns>
-	/// List of all length <paramref name="size"/> combinations of the the given
+	/// List of all length <paramref name="size"/> combinations of the given
 	/// <paramref name="elements"/>.
 	/// </returns>
 	public static List<T[]> CreateCombinations<T>(IEnumerable<T> elements, int size)

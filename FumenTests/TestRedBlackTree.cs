@@ -239,8 +239,8 @@ public class TestRedBlackTree
 
 		// Insert and delete different sets of random numbers.
 		t = new RedBlackTree<int>();
-		insertList = new List<int>();
-		deleteList = new List<int>();
+		insertList = [];
+		deleteList = [];
 		for (var i = 0; i < num; i++)
 		{
 			insertList.Add(random.Next());
@@ -261,8 +261,8 @@ public class TestRedBlackTree
 
 		// Insert and delete different sets of random numbers with some overlap.
 		t = new RedBlackTree<int>();
-		insertList = new List<int>();
-		deleteList = new List<int>();
+		insertList = [];
+		deleteList = [];
 		for (var i = 0; i < num; i++)
 		{
 			var val = random.Next();
@@ -520,7 +520,7 @@ public class TestRedBlackTree
 		for (var i = 0; i < 10; i += 2)
 			t.Insert(i);
 
-		// Finding elements outside of the range of the tree should return null.
+		// Finding elements outside the range of the tree should return null.
 		Assert.IsNull(t.Find(-1));
 		Assert.IsNull(t.Find(9));
 

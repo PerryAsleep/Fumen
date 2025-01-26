@@ -53,7 +53,7 @@ public abstract class SMWriterBase
 		/// matches what stepmania would export. This means even if the source chart has a property
 		/// that stepmania understands but stepmania does not save (like the deprecated ANIMATIONS
 		/// property) that those properties will be ignored when exporting. This option should be
-		/// used when creating a Song manually or from a non-stepmania source and it is desired to
+		/// used when creating a Song manually or from a non-stepmania source, and it is desired to
 		/// have the result match stepmania.
 		/// </summary>
 		Stepmania,
@@ -81,10 +81,10 @@ public abstract class SMWriterBase
 		/// <summary>
 		/// Custom properties per Chart. These will be written as individual MSD key value pairs.
 		/// If the save file format supports keys at the Chart level then these will be saved per Chart.
-		/// Otherwise they will be saved at the Song level with modified tags to identify which Chart
+		/// Otherwise, they will be saved at the Song level with modified tags to identify which Chart
 		/// they are for.
 		/// </summary>
-		public List<Dictionary<string, string>> CustomChartProperties = new();
+		public List<Dictionary<string, string>> CustomChartProperties = [];
 	}
 
 	/// <summary>
@@ -244,7 +244,7 @@ public abstract class SMWriterBase
 		/// <summary>
 		/// All LaneNotes in this measure.
 		/// </summary>
-		public readonly List<LaneNote> Notes = new();
+		public readonly List<LaneNote> Notes = [];
 	}
 
 	/// <summary>
@@ -339,7 +339,7 @@ public abstract class SMWriterBase
 			else
 			{
 				if (!chartsByType.ContainsKey(smChartType))
-					chartsByType[smChartType] = new List<Chart>();
+					chartsByType[smChartType] = [];
 				chartsByType[smChartType].Add(chart);
 			}
 

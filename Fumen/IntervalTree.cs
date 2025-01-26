@@ -74,7 +74,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
 		private TKey High;
 
 		/// <summary>
-		/// Highest value of this Node's sub-tree.
+		/// Highest value of this Node's subtree.
 		/// </summary>
 		public TKey SubTreeHighest;
 
@@ -202,9 +202,9 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
 		/// <param name="value">Value.</param>
 		public void AddEqualValue(TKey high, TValue value)
 		{
-			EqualValues ??= new List<TValue>();
+			EqualValues ??= [];
 			EqualValues.Add(value);
-			EqualHighs ??= new List<TKey>();
+			EqualHighs ??= [];
 			EqualHighs.Add(high);
 		}
 
@@ -300,9 +300,9 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
 			EqualHighs = null;
 			EqualValues = null;
 			if (other.EqualHighs != null)
-				EqualHighs = new List<TKey>(other.EqualHighs);
+				EqualHighs = [..other.EqualHighs];
 			if (other.EqualValues != null)
-				EqualValues = new List<TValue>(other.EqualValues);
+				EqualValues = [..other.EqualValues];
 		}
 	}
 
@@ -706,7 +706,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Finds all intervals overlapping the given key value for the given node and its descendents.
+	/// Finds all intervals overlapping the given key value for the given node and its descendants.
 	/// Overlapping values are stored in the given overlappingValues list in the order of they interval low values.
 	/// </summary>
 	/// <param name="n">Node to check.</param>
@@ -728,7 +728,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
 		// Add this node's value to the results if it overlaps.
 		n.AddOverlappingValues(key, lowInclusive, highInclusive, overlappingValues);
 
-		// If the desired value is greater then this node's low, search the right subtree.
+		// If the desired value is greater than this node's low, search the right subtree.
 		if (key.CompareTo(n.Low) > 0 && n.R != Nil)
 			FindAllOverlappingNode(n.R, key, lowInclusive, highInclusive, overlappingValues);
 	}
@@ -1289,7 +1289,7 @@ public class IntervalTree<TKey, TValue> : IReadOnlyIntervalTree<TKey, TValue>
 	/// Unit test helper for checking whether this tree is a valid interval tree.
 	/// A valid interval tree must meet all red black tree validity rules and every
 	/// node's SubTreeHighest must be equal to the highest high interval value of itself
-	/// and all its descendents.
+	/// and all its descendants.
 	/// </summary>
 	/// <returns>
 	/// True if this tree is valid and false otherwise.

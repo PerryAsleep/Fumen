@@ -71,7 +71,7 @@ public class Chart
 	/// <summary>
 	/// Layers of Events, including the Notes of the Chart.
 	/// </summary>
-	public List<Layer> Layers { get; set; } = new();
+	public List<Layer> Layers { get; set; } = [];
 
 	/// <summary>
 	/// Miscellaneous extra information associated with this Chart.

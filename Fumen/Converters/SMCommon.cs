@@ -67,9 +67,7 @@ public static class SMCommon
 
 	public static string ChartTypeString(ChartType type)
 	{
-		if (ChartTypeStings.TryGetValue(type, out var chartTypeString))
-			return chartTypeString;
-		return null;
+		return ChartTypeStings.GetValueOrDefault(type);
 	}
 
 	public static bool TryGetChartType(string chartTypeString, out ChartType smChartType)
@@ -132,7 +130,7 @@ public static class SMCommon
 	{
 		private readonly int NumInputs;
 		private readonly int NumPlayers;
-		private readonly bool SupportsVariableNumberOfPlayers = false;
+		private readonly bool SupportsVariableNumberOfPlayers;
 
 		public ChartProperties(int numInputs, int numPlayers, bool supportsVariableNumberOfPlayers)
 		{
@@ -186,7 +184,7 @@ public static class SMCommon
 	/// though it can handle 16 and 48 times.
 	/// </summary>
 	public static readonly int[] ValidDenominators =
-	{
+	[
 		1, // Quarter note
 		2, // Eighth note
 		3, // Eighth note triplet (Twelfth note)
@@ -196,20 +194,20 @@ public static class SMCommon
 		12, // Thirty-second note triplet (Forty-eighth note)
 		16, // Sixty-fourth note
 		48, // One-hundred-ninety-second note
-	};
+	];
 
-	public static readonly char[] SMAllWhiteSpace = { '\r', '\n', ' ', '\t' };
+	public static readonly char[] SMAllWhiteSpace = ['\r', '\n', ' ', '\t'];
 
-	public static readonly List<Fraction> SubDivisions = new();
-	public static readonly List<double> SubDivisionLengths = new();
+	public static readonly List<Fraction> SubDivisions = [];
+	public static readonly List<double> SubDivisionLengths = [];
 	private static readonly ChartProperties[] Properties;
-	public static readonly char[] NoteChars = { '0', '1', '2', '3', '4', 'M', 'L', 'F', 'K' };
-	public static readonly string[] NoteStrings = { "0", "1", "2", "3", "4", "M", "L", "F", "K" };
+	public static readonly char[] NoteChars = ['0', '1', '2', '3', '4', 'M', 'L', 'F', 'K'];
+	public static readonly string[] NoteStrings = ["0", "1", "2", "3", "4", "M", "L", "F", "K"];
 
 	public static readonly string[] NotePrettyStrings =
-	{
+	[
 		"None", "Tap", "Hold Start", "Hold or Roll End", "Roll Start", "Mine", "Lift", "Fake", "KeySound",
-	};
+	];
 
 	public const string TagTitle = "TITLE";
 	public const string TagSubtitle = "SUBTITLE";
@@ -1420,10 +1418,8 @@ public static class SMCommon
 	/// </summary>
 	public class SMEventComparer : IComparer<Event>
 	{
-		public static readonly List<string> SMEventOrderList = new()
-		{
-			// Time signatures and tempos must occur first because they are needed
-			// for timing and position determination.
+		public static readonly List<string> SMEventOrderList =
+		[
 			nameof(TimeSignature),
 			nameof(Tempo),
 
@@ -1461,7 +1457,7 @@ public static class SMCommon
 			// stop before warping.
 			// Gimmick charts like NULCTRL exploit this.
 			nameof(Warp),
-		};
+		];
 
 		private readonly Dictionary<string, int> SMEventOrderDict = new();
 
