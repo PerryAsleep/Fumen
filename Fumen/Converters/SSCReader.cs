@@ -68,9 +68,10 @@ public class SSCReader : Reader
 	}
 
 	/// <summary>
-	/// Load the ssc file specified by the provided file path.
+	/// Load the ssc file and return a Song containing the full set of Charts.
 	/// </summary>
 	/// <param name="token">CancellationToken to cancel task.</param>
+	/// <returns>Song with full Charts.</returns>
 	public override async Task<Song> LoadAsync(CancellationToken token)
 	{
 		// Load the file as an MSDFile.
@@ -85,6 +86,49 @@ public class SSCReader : Reader
 		token.ThrowIfCancellationRequested();
 
 		var song = new Song();
+		var timingProperties = new TimingProperties();
+		var propertyParsers = GetSongPropertyParsers(song, timingProperties);
+		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, false);
+		token.ThrowIfCancellationRequested();
+		return song;
+	}
+
+	/// <summary>
+	/// Load the ssc file and return a Song containing only Song and Chart metadata with no step data.
+	/// </summary>
+	/// <param name="token">CancellationToken to cancel task.</param>
+	/// <returns>Song with metadata populated.</returns>
+	public override async Task<Song> LoadMetaDataAsync(CancellationToken token)
+	{
+		// Load the file as an MSDFile.
+		var msdFile = new MSDFile();
+		var result = await msdFile.LoadAsync(FilePath, token);
+		if (!result)
+		{
+			Logger.Error("Failed to load MSD File.");
+			return null;
+		}
+
+		token.ThrowIfCancellationRequested();
+
+		var song = new Song();
+		var timingProperties = new TimingProperties();
+		var propertyParsers = GetSongMetaDataPropertyParsers(song, timingProperties);
+		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, true);
+		token.ThrowIfCancellationRequested();
+		return song;
+	}
+
+	private async Task LoadAsyncInternal(
+		CancellationToken token,
+		Song song,
+		MSDFile msdFile,
+		Dictionary<string, PropertyParser> songPropertyParsers,
+		TimingProperties songTimingProperties,
+		bool metaDataOnly)
+	{
+		token.ThrowIfCancellationRequested();
+
 		await Task.Run(() =>
 		{
 			var previousCulture = CultureInfo.CurrentCulture;
@@ -93,8 +137,6 @@ public class SSCReader : Reader
 				CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
 				song.SourceType = FileFormatType.SSC;
-				var songTimingProperties = new TimingProperties();
-				var songPropertyParsers = GetSongPropertyParsers(song, songTimingProperties);
 				var songExtrasPropertyParser = new ExtrasPropertyParser(song.Extras);
 				songExtrasPropertyParser.SetLogger(Logger);
 
@@ -128,14 +170,17 @@ public class SSCReader : Reader
 								activeChartTimingProperties,
 								song,
 								songTimingProperties,
-								ref firstChart);
+								ref firstChart,
+								metaDataOnly);
 						}
 
 						// Set up a new Chart.
 						activeChart = new Chart();
 						activeChart.Layers.Add(new Layer());
 						activeChartTimingProperties = new TimingProperties();
-						chartPropertyParsers = GetChartPropertyParsers(activeChart, activeChartTimingProperties);
+						chartPropertyParsers = metaDataOnly
+							? GetChartPropertyParsers(activeChart, activeChartTimingProperties)
+							: GetChartMetaDataPropertyParsers(activeChart);
 						chartExtrasPropertyParser = new ExtrasPropertyParser(activeChart.Extras);
 						chartExtrasPropertyParser.SetLogger(Logger);
 						continue;
@@ -173,7 +218,8 @@ public class SSCReader : Reader
 						activeChartTimingProperties,
 						song,
 						songTimingProperties,
-						ref firstChart);
+						ref firstChart,
+						metaDataOnly);
 				}
 			}
 			catch (OperationCanceledException)
@@ -187,8 +233,6 @@ public class SSCReader : Reader
 		}, token);
 
 		token.ThrowIfCancellationRequested();
-
-		return song;
 	}
 
 	private void FinalizeChartAndAddToSong(
@@ -196,7 +240,8 @@ public class SSCReader : Reader
 		TimingProperties chartTimingProperties,
 		Song song,
 		TimingProperties songTimingProperties,
-		ref bool firstChart)
+		ref bool firstChart,
+		bool metaDataOnly)
 	{
 		// Do not add this Chart if we failed to parse the type.
 		if (string.IsNullOrEmpty(chart.Type))
@@ -215,21 +260,24 @@ public class SSCReader : Reader
 			}
 		}
 
-		// Insert time property events.
-		AddStops(timingProperties.Stops, chart, Logger, logTimeEventErrors);
-		AddDelays(timingProperties.Delays, chart, Logger, logTimeEventErrors);
-		AddWarps(timingProperties.Warps, chart, Logger, logTimeEventErrors);
-		AddScrollRateEvents(timingProperties.Scrolls, chart, Logger, logTimeEventErrors);
-		AddScrollRateInterpolationEvents(timingProperties.Speeds, chart, Logger, logTimeEventErrors);
-		AddTempos(timingProperties.Tempos, chart, Logger, logTimeEventErrors);
-		AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, logTimeEventErrors);
-		AddTickCountEvents(timingProperties.TickCounts, chart, Logger, logTimeEventErrors);
-		AddLabelEvents(timingProperties.Labels, chart, Logger, logTimeEventErrors);
-		AddFakeSegmentEvents(timingProperties.Fakes, chart, Logger, logTimeEventErrors);
-		AddMultipliersEvents(timingProperties.Combos, chart, Logger, logTimeEventErrors);
+		if (!metaDataOnly)
+		{
+			// Insert time property events.
+			AddStops(timingProperties.Stops, chart, Logger, logTimeEventErrors);
+			AddDelays(timingProperties.Delays, chart, Logger, logTimeEventErrors);
+			AddWarps(timingProperties.Warps, chart, Logger, logTimeEventErrors);
+			AddScrollRateEvents(timingProperties.Scrolls, chart, Logger, logTimeEventErrors);
+			AddScrollRateInterpolationEvents(timingProperties.Speeds, chart, Logger, logTimeEventErrors);
+			AddTempos(timingProperties.Tempos, chart, Logger, logTimeEventErrors);
+			AddTimeSignatures(timingProperties.TimeSignatures, chart, Logger, logTimeEventErrors);
+			AddTickCountEvents(timingProperties.TickCounts, chart, Logger, logTimeEventErrors);
+			AddLabelEvents(timingProperties.Labels, chart, Logger, logTimeEventErrors);
+			AddFakeSegmentEvents(timingProperties.Fakes, chart, Logger, logTimeEventErrors);
+			AddMultipliersEvents(timingProperties.Combos, chart, Logger, logTimeEventErrors);
 
-		// Sort events.
-		chart.Layers[0].Events.Sort(new SMEventComparer());
+			// Sort events.
+			chart.Layers[0].Events.Sort(new SMEventComparer());
+		}
 
 		// Copy Song information over missing Chart information.
 		if (string.IsNullOrEmpty(chart.MusicFile))
@@ -272,7 +320,8 @@ public class SSCReader : Reader
 				timingProperties.Tempos);
 		}
 
-		SetEventTimeAndMetricPositionsFromRows(chart);
+		if (!metaDataOnly)
+			SetEventTimeAndMetricPositionsFromRows(chart);
 
 		// Add the Chart.
 		song.Charts.Add(chart);
@@ -362,6 +411,54 @@ public class SSCReader : Reader
 		return parsers;
 	}
 
+	private Dictionary<string, PropertyParser> GetSongMetaDataPropertyParsers(Song song, TimingProperties songTimingProperties)
+	{
+		var parsers = new Dictionary<string, PropertyParser>()
+		{
+			// Song tags.
+			[TagVersion] = new PropertyToSourceExtrasParser<double>(TagVersion, song.Extras),
+			[TagTitle] = new PropertyToSongPropertyParser(TagTitle, nameof(Song.Title), song),
+			[TagSubtitle] = new PropertyToSongPropertyParser(TagSubtitle, nameof(Song.SubTitle), song),
+			[TagArtist] = new PropertyToSongPropertyParser(TagArtist, nameof(Song.Artist), song),
+			[TagTitleTranslit] = new PropertyToSongPropertyParser(TagTitleTranslit, nameof(Song.TitleTransliteration), song),
+			[TagSubtitleTranslit] =
+				new PropertyToSongPropertyParser(TagSubtitleTranslit, nameof(Song.SubTitleTransliteration), song),
+			[TagArtistTranslit] =
+				new PropertyToSongPropertyParser(TagArtistTranslit, nameof(Song.ArtistTransliteration), song),
+			[TagGenre] = new PropertyToSongPropertyParser(TagGenre, nameof(Song.Genre), song),
+			[TagOrigin] = new PropertyToSourceExtrasParser<string>(TagOrigin, song.Extras),
+			[TagCredit] = new PropertyToSourceExtrasParser<string>(TagCredit, song.Extras),
+			[TagBanner] = new PropertyToSongPropertyParser(TagBanner, nameof(Song.SongSelectImage), song),
+			[TagBackground] = new PropertyToSourceExtrasParser<string>(TagBackground, song.Extras),
+			[TagPreviewVid] = new PropertyToSourceExtrasParser<string>(TagPreviewVid, song.Extras),
+			[TagJacket] = new PropertyToSourceExtrasParser<string>(TagJacket, song.Extras),
+			[TagCDImage] = new PropertyToSourceExtrasParser<string>(TagCDImage, song.Extras),
+			[TagDiscImage] = new PropertyToSourceExtrasParser<string>(TagDiscImage, song.Extras),
+			[TagLyricsPath] = new PropertyToSourceExtrasParser<string>(TagLyricsPath, song.Extras),
+			[TagCDTitle] = new PropertyToSourceExtrasParser<string>(TagCDTitle, song.Extras),
+			[TagMusic] = new PropertyToSourceExtrasParser<string>(TagMusic, song.Extras),
+			[TagPreview] = new PropertyToSongPropertyParser(TagPreview, nameof(Song.PreviewMusicFile), song),
+			[TagInstrumentTrack] = new PropertyToSourceExtrasParser<string>(TagInstrumentTrack, song.Extras),
+			[TagMusicLength] = new PropertyToSourceExtrasParser<double>(TagMusicLength, song.Extras),
+			[TagLastSecondHint] = new PropertyToSourceExtrasParser<double>(TagLastSecondHint, song.Extras),
+			[TagSampleStart] = new PropertyToSongPropertyParser(TagSampleStart, nameof(Song.PreviewSampleStart), song),
+			[TagSampleLength] = new PropertyToSongPropertyParser(TagSampleLength, nameof(Song.PreviewSampleLength), song),
+			[TagDisplayBPM] = new ListPropertyToSourceExtrasParser<string>(TagDisplayBPM, song.Extras),
+			[TagSelectable] = new PropertyToSourceExtrasParser<string>(TagSelectable, song.Extras),
+			[TagAnimations] = new PropertyToSourceExtrasParser<string>(TagAnimations, song.Extras),
+			[TagBGChanges] = new PropertyToSourceExtrasParser<string>(TagBGChanges, song.Extras),
+			[TagBGChanges1] = new PropertyToSourceExtrasParser<string>(TagBGChanges1, song.Extras),
+			[TagBGChanges2] = new PropertyToSourceExtrasParser<string>(TagBGChanges2, song.Extras),
+			[TagFGChanges] = new PropertyToSourceExtrasParser<string>(TagFGChanges, song.Extras),
+			[TagKeySounds] = new PropertyToSourceExtrasParser<string>(TagKeySounds, song.Extras),
+			[TagAttacks] = new ListPropertyToSourceExtrasParser<string>(TagAttacks, song.Extras),
+			[TagOffset] = new PropertyToSourceExtrasParser<double>(TagOffset, song.Extras),
+		};
+		foreach (var kvp in parsers)
+			kvp.Value.SetLogger(Logger);
+		return parsers;
+	}
+
 	private Dictionary<string, PropertyParser> GetChartPropertyParsers(
 		Chart chart,
 		TimingProperties chartTimingProperties)
@@ -408,6 +505,31 @@ public class SSCReader : Reader
 			[TagDisplayBPM] = new PropertyToChartPropertyParser(TagDisplayBPM, nameof(Chart.Tempo), chart),
 			[TagNotes] = new ChartNotesPropertyParser(TagNotes, chart),
 			[TagNotes2] = new ChartNotesPropertyParser(TagNotes2, chart),
+		};
+		foreach (var kvp in parsers)
+			kvp.Value.SetLogger(Logger);
+		return parsers;
+	}
+
+	private Dictionary<string, PropertyParser> GetChartMetaDataPropertyParsers(Chart chart)
+	{
+		var parsers = new Dictionary<string, PropertyParser>()
+		{
+			[TagVersion] = new PropertyToSourceExtrasParser<double>(TagVersion, chart.Extras),
+			[TagChartName] = new PropertyToSourceExtrasParser<string>(TagChartName, chart.Extras),
+			[TagStepsType] = new ChartTypePropertyParser(chart),
+			[TagChartStyle] = new PropertyToSourceExtrasParser<string>(TagChartStyle, chart.Extras),
+			[TagDescription] = new PropertyToChartPropertyParser(TagDescription, nameof(Chart.Description), chart),
+			[TagDifficulty] = new PropertyToChartPropertyParser(TagDifficulty, nameof(Chart.DifficultyType), chart),
+			[TagMeter] = new PropertyToChartPropertyParser(TagMeter, nameof(Chart.DifficultyRating), chart),
+			[TagRadarValues] = new PropertyToSourceExtrasParser<string>(TagRadarValues, chart.Extras),
+			[TagCredit] = new PropertyToChartPropertyParser(TagCredit, nameof(Chart.Author), chart),
+			[TagMusic] = new PropertyToChartPropertyParser(TagMusic, nameof(Chart.MusicFile), chart),
+			[TagOffset] = new PropertyToChartPropertyParser(TagOffset, nameof(Chart.ChartOffsetFromMusic), chart),
+			[TagSampleStart] = new PropertyToSourceExtrasParser<double>(TagSampleStart, chart.Extras),
+			[TagSampleLength] = new PropertyToSourceExtrasParser<double>(TagSampleLength, chart.Extras),
+			[TagSelectable] = new PropertyToSourceExtrasParser<string>(TagSelectable, chart.Extras),
+			[TagDisplayBPM] = new PropertyToChartPropertyParser(TagDisplayBPM, nameof(Chart.Tempo), chart),
 		};
 		foreach (var kvp in parsers)
 			kvp.Value.SetLogger(Logger);

@@ -25,11 +25,18 @@ public abstract class Reader
 	}
 
 	/// <summary>
-	/// Load the file and return a Song.
+	/// Load the file and return a Song containing the full set of Charts.
 	/// </summary>
 	/// <param name="token">CancellationToken to cancel task.</param>
-	/// <returns>Song populated from file.</returns>
+	/// <returns>Song with full Charts populated from file.</returns>
 	public abstract /*async*/ Task<Song> LoadAsync(CancellationToken token);
+
+	/// <summary>
+	/// Load the file and return a Song containing only the Song and Chart metadata with no step data.
+	/// </summary>
+	/// <param name="token">CancellationToken to cancel task.</param>
+	/// <returns>Song with metadata populated from file.</returns>
+	public abstract /*async*/ Task<Song> LoadMetaDataAsync(CancellationToken token);
 
 	/// <summary>
 	/// Factory method to create the appropriate Reader based on the given file.

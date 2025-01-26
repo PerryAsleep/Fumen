@@ -944,11 +944,13 @@ public abstract class NotesPropertyParser : PropertyParser
 public class SongNotesPropertyParser : NotesPropertyParser
 {
 	private readonly Song Song;
+	private readonly bool ParseNotes;
 
-	public SongNotesPropertyParser(string smPropertyName, Song song)
+	public SongNotesPropertyParser(string smPropertyName, Song song, bool parseNotes)
 		: base(smPropertyName)
 	{
 		Song = song;
+		ParseNotes = parseNotes;
 	}
 
 	public override bool Parse(MSDFile.Value value)
@@ -1007,8 +1009,11 @@ public class SongNotesPropertyParser : NotesPropertyParser
 		chart.NumInputs = chartProperties.GetNumInputs();
 
 		// Parse the notes.
-		if (!ParseNotes(chart, chartProperties, value.Params[6] ?? ""))
-			return true;
+		if (ParseNotes)
+		{
+			if (!ParseNotes(chart, chartProperties, value.Params[6] ?? ""))
+				return true;
+		}
 
 		Song.Charts.Add(chart);
 
