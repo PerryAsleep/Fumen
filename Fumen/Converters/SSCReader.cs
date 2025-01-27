@@ -179,8 +179,8 @@ public class SSCReader : Reader
 						activeChart.Layers.Add(new Layer());
 						activeChartTimingProperties = new TimingProperties();
 						chartPropertyParsers = metaDataOnly
-							? GetChartPropertyParsers(activeChart, activeChartTimingProperties)
-							: GetChartMetaDataPropertyParsers(activeChart);
+							? GetChartMetaDataPropertyParsers(activeChart)
+							: GetChartPropertyParsers(activeChart, activeChartTimingProperties);
 						chartExtrasPropertyParser = new ExtrasPropertyParser(activeChart.Extras);
 						chartExtrasPropertyParser.SetLogger(Logger);
 						continue;
