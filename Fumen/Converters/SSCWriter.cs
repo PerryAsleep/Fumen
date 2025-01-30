@@ -241,7 +241,7 @@ public class SSCWriter : SMWriterBase
 
 		// Write all the notes.
 		WriteChartNotesValueStart(chart);
-		WriteChartNotes(chart);
+		WriteChartNotes(chart, Config.UseStepF2ForPumpMultiplayerCharts);
 
 		// Mark the notes as complete.
 		StreamWriter.WriteLine(MSDFile.ValueEndMarker);

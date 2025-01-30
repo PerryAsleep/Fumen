@@ -140,7 +140,7 @@ public class SMReader : Reader
 							// Remove the song marker to get the original key.
 							var propertyKey = key.Substring(0, key.Length - SMCustomPropertySongMarkerLength);
 							// Add the custom property to the song extras.
-							song.Extras.AddSourceExtra(propertyKey, value.Params[1]);
+							song.Extras.AddSourceExtra(propertyKey, value.Params[1], true);
 							parsed = true;
 						}
 						// Check for a chart custom property.
@@ -171,7 +171,7 @@ public class SMReader : Reader
 						// the property on the song extras so the caller has access to it.
 						if (!parsed)
 						{
-							song.Extras.AddSourceExtra(key, value.Params[1]);
+							song.Extras.AddSourceExtra(key, value.Params[1], true);
 						}
 					}
 				}

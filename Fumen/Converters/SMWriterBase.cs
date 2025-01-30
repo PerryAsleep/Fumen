@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Fumen.ChartDefinition;
+using static Fumen.Converters.SMCommon;
 
 namespace Fumen.Converters;
 
@@ -133,6 +134,11 @@ public abstract class SMWriterBase
 		/// data will be ignored.
 		/// </summary>
 		public bool ForceOnlySongLevelTiming;
+
+		/// <summary>
+		/// When writing Pump multiplayer charts, use StepF2 syntax.
+		/// </summary>
+		public bool UseStepF2ForPumpMultiplayerCharts;
 
 		/// <summary>
 		/// Custom properties to write into the file as MSD key value pairs regardless of the specified
@@ -270,7 +276,7 @@ public abstract class SMWriterBase
 	/// <summary>
 	/// The ChartDifficultyType to use for each Chart when writing.
 	/// </summary>
-	private Dictionary<Chart, SMCommon.ChartDifficultyType> ChartDifficultyTypes;
+	private Dictionary<Chart, ChartDifficultyType> ChartDifficultyTypes;
 
 	/// <summary>
 	/// Constructor.
@@ -290,7 +296,7 @@ public abstract class SMWriterBase
 		if (Config.UpdateEventRowsFromMetricPosition)
 		{
 			foreach (var chart in Config.Song.Charts)
-				SMCommon.SetEventRowsFromMetricPosition(chart);
+				SetEventRowsFromMetricPosition(chart);
 		}
 	}
 
@@ -321,11 +327,11 @@ public abstract class SMWriterBase
 	/// </summary>
 	private void DetermineChartDifficultyTypes()
 	{
-		ChartDifficultyTypes = new Dictionary<Chart, SMCommon.ChartDifficultyType>();
+		ChartDifficultyTypes = new Dictionary<Chart, ChartDifficultyType>();
 
 		// Group charts by their types (e.g. singles and doubles).
 		var chartIndex = 0;
-		var chartsByType = new Dictionary<SMCommon.ChartType, List<Chart>>();
+		var chartsByType = new Dictionary<ChartType, List<Chart>>();
 		foreach (var chart in Config.Song.Charts)
 		{
 			if (!TryGetChartType(chart, out var smChartType))
@@ -355,12 +361,12 @@ public abstract class SMWriterBase
 
 			// If there are few enough charts then rank them by Challenge down to Beginner
 			// starting at Challenge for the Chart with the most notes.
-			if (sortedChartsOfType.Count <= (int)SMCommon.ChartDifficultyType.Challenge)
+			if (sortedChartsOfType.Count <= (int)ChartDifficultyType.Challenge)
 			{
-				var currentDifficulty = (int)SMCommon.ChartDifficultyType.Challenge;
+				var currentDifficulty = (int)ChartDifficultyType.Challenge;
 				for (var i = sortedChartsOfType.Count - 1; i >= 0; i--)
 				{
-					ChartDifficultyTypes[sortedChartsOfType[i]] = (SMCommon.ChartDifficultyType)currentDifficulty;
+					ChartDifficultyTypes[sortedChartsOfType[i]] = (ChartDifficultyType)currentDifficulty;
 					currentDifficulty--;
 				}
 			}
@@ -372,7 +378,7 @@ public abstract class SMWriterBase
 				for (var i = sortedChartsOfType.Count - 1; i >= 0; i--)
 				{
 					ChartDifficultyTypes[sortedChartsOfType[i]] =
-						(SMCommon.ChartDifficultyType)Math.Min(i, (int)SMCommon.ChartDifficultyType.Edit);
+						(ChartDifficultyType)Math.Min(i, (int)ChartDifficultyType.Edit);
 				}
 			}
 		}
@@ -380,7 +386,7 @@ public abstract class SMWriterBase
 		// If any chart actually has a stepmania ChartDifficultyType, use that.
 		foreach (var chart in Config.Song.Charts)
 		{
-			if (Enum.TryParse(chart.DifficultyType, out SMCommon.ChartDifficultyType explicitType))
+			if (Enum.TryParse(chart.DifficultyType, out ChartDifficultyType explicitType))
 				ChartDifficultyTypes[chart] = explicitType;
 		}
 	}
@@ -437,7 +443,7 @@ public abstract class SMWriterBase
 				break;
 			}
 			case double d:
-				WritePropertyInternal(smPropertyName, d.ToString(SMCommon.SMDoubleFormat), false);
+				WritePropertyInternal(smPropertyName, d.ToString(SMDoubleFormat), false);
 				break;
 			default:
 				WritePropertyInternal(smPropertyName, value.ToString(), escape);
@@ -499,20 +505,20 @@ public abstract class SMWriterBase
 
 	protected void WriteSongPropertyMusic(bool stepmaniaOmitted = false)
 	{
-		if (!Config.Song.Extras.TryGetExtra(SMCommon.TagMusic, out object value, MatchesSourceFileFormatType())
+		if (!Config.Song.Extras.TryGetExtra(TagMusic, out object value, MatchesSourceFileFormatType())
 		    && Config.FallbackChart != null)
 			value = Config.FallbackChart.MusicFile;
-		WriteSongProperty(SMCommon.TagMusic, value?.ToString() ?? "", stepmaniaOmitted);
+		WriteSongProperty(TagMusic, value?.ToString() ?? "", stepmaniaOmitted);
 	}
 
 	protected void WriteSongPropertyOffset(bool stepmaniaOmitted = false)
 	{
-		if (!Config.Song.Extras.TryGetExtra(SMCommon.TagOffset, out object value, MatchesSourceFileFormatType())
+		if (!Config.Song.Extras.TryGetExtra(TagOffset, out object value, MatchesSourceFileFormatType())
 		    && Config.FallbackChart != null)
-			value = Config.FallbackChart.ChartOffsetFromMusic.ToString(SMCommon.SMDoubleFormat);
+			value = Config.FallbackChart.ChartOffsetFromMusic.ToString(SMDoubleFormat);
 		if (value is double d)
-			value = d.ToString(SMCommon.SMDoubleFormat);
-		WriteSongProperty(SMCommon.TagOffset, value?.ToString() ?? "", stepmaniaOmitted);
+			value = d.ToString(SMDoubleFormat);
+		WriteSongProperty(TagOffset, value?.ToString() ?? "", stepmaniaOmitted);
 	}
 
 	protected void WriteSongPropertyBPMs(bool stepmaniaOmitted = false)
@@ -522,9 +528,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteTemposFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawBpmsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagBPMs, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagBPMs, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -534,20 +540,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagBPMs, "", stepmaniaOmitted);
+		WriteSongProperty(TagBPMs, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyBPMs(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteTemposFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawBpmsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagBPMs, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagBPMs, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagBPMs, CreateBPMStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagBPMs, CreateBPMStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateBPMStringFromChartEvents(Chart chart)
@@ -564,15 +570,15 @@ public abstract class SMWriterBase
 
 			// If present, use the original double value from the source chart so as not to lose
 			// or alter the precision.
-			if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!tc.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(tc.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(tc.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
-			var tempoStr = tc.TempoBPM.ToString(SMCommon.SMDoubleFormat);
+			var tempoStr = tc.TempoBPM.ToString(SMDoubleFormat);
 			sb.Append($"{timeInBeatsStr}={tempoStr}");
 		}
 
@@ -586,9 +592,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteStopsFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawStopsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawStopsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagStops, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagStops, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -598,20 +604,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagStops, "", stepmaniaOmitted);
+		WriteSongProperty(TagStops, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyStops(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteStopsFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawStopsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawStopsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagStops, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagStops, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagStops, CreateStopStringFromChartEvents(chart, false), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagStops, CreateStopStringFromChartEvents(chart, false), stepmaniaOmitted, false);
 	}
 
 	private string CreateStopStringFromChartEvents(Chart chart, bool delays)
@@ -630,17 +636,17 @@ public abstract class SMWriterBase
 
 			// If present, use the original double values from the source chart so as not to lose
 			// or alter the precision.
-			if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!stop.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(stop.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(stop.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
-			if (!stop.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+			if (!stop.Extras.TryGetExtra(TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
 				length = stop.LengthSeconds;
-			var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
+			var lengthStr = length.ToString(SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={lengthStr}");
 		}
@@ -655,9 +661,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteDelaysFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawDelaysStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagDelays, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagDelays, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -667,20 +673,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagDelays, "", stepmaniaOmitted);
+		WriteSongProperty(TagDelays, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyDelays(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteDelaysFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawDelaysStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawDelaysStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagDelays, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagDelays, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagDelays, CreateStopStringFromChartEvents(chart, true), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagDelays, CreateStopStringFromChartEvents(chart, true), stepmaniaOmitted, false);
 	}
 
 	protected void WriteSongPropertyWarps(bool stepmaniaOmitted = false)
@@ -690,9 +696,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteWarpsFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawWarpsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagWarps, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagWarps, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -702,20 +708,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagWarps, "", stepmaniaOmitted);
+		WriteSongProperty(TagWarps, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyWarps(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteWarpsFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawWarpsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawWarpsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagWarps, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagWarps, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagWarps, CreateWarpStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagWarps, CreateWarpStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateWarpStringFromChartEvents(Chart chart)
@@ -732,21 +738,21 @@ public abstract class SMWriterBase
 
 			// If present, use the original double values from the source chart so as not to lose
 			// or alter the precision.
-			if (!warp.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!warp.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(warp.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(warp.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
-			if (!warp.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+			if (!warp.Extras.TryGetExtra(TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
 			{
 				// Convert the warp rows to beats.
-				length = SMCommon.ConvertIntegerPositionToBeat(warp.LengthIntegerPosition);
+				length = ConvertIntegerPositionToBeat(warp.LengthIntegerPosition);
 			}
 
-			var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
+			var lengthStr = length.ToString(SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={lengthStr}");
 		}
@@ -761,9 +767,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteScrollsFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawScrollsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagScrolls, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagScrolls, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -773,20 +779,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagScrolls, "", stepmaniaOmitted);
+		WriteSongProperty(TagScrolls, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyScrolls(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteScrollsFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawScrollsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawScrollsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagScrolls, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagScrolls, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagScrolls, CreateScrollStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagScrolls, CreateScrollStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateScrollStringFromChartEvents(Chart chart)
@@ -803,17 +809,17 @@ public abstract class SMWriterBase
 
 			// If present, use the original double values from the source chart so as not to lose
 			// or alter the precision.
-			if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!scroll.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(scroll.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(scroll.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
-			if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+			if (!scroll.Extras.TryGetExtra(TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
 				length = scroll.Rate;
-			var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
+			var lengthStr = length.ToString(SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={lengthStr}");
 		}
@@ -828,9 +834,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteSpeedsFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawSpeedsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagSpeeds, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagSpeeds, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -840,20 +846,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagSpeeds, "", stepmaniaOmitted);
+		WriteSongProperty(TagSpeeds, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertySpeeds(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteSpeedsFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawSpeedsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawSpeedsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagSpeeds, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagSpeeds, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagSpeeds, CreateSpeedStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagSpeeds, CreateSpeedStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateSpeedStringFromChartEvents(Chart chart)
@@ -870,25 +876,25 @@ public abstract class SMWriterBase
 
 			// If present, use the original double values from the source chart so as not to lose
 			// or alter the precision.
-			if (!scroll.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!scroll.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(scroll.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(scroll.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
 			var modeStr = scroll.PreferPeriodAsTime ? "1" : "0";
-			var speedStr = scroll.Rate.ToString(SMCommon.SMDoubleFormat);
+			var speedStr = scroll.Rate.ToString(SMDoubleFormat);
 			string lengthStr;
 			if (scroll.PreferPeriodAsTime)
 			{
-				lengthStr = scroll.PeriodTimeSeconds.ToString(SMCommon.SMDoubleFormat);
+				lengthStr = scroll.PeriodTimeSeconds.ToString(SMDoubleFormat);
 			}
 			else
 			{
-				lengthStr = SMCommon.ConvertIntegerPositionToBeat(scroll.PeriodLengthIntegerPosition)
-					.ToString(SMCommon.SMDoubleFormat);
+				lengthStr = ConvertIntegerPositionToBeat(scroll.PeriodLengthIntegerPosition)
+					.ToString(SMDoubleFormat);
 			}
 
 			sb.Append($"{timeInBeatsStr}={speedStr}={lengthStr}={modeStr}");
@@ -903,9 +909,9 @@ public abstract class SMWriterBase
 		// This is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteTimeSignaturesFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawTimeSignaturesStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagTimeSignatures, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -916,22 +922,22 @@ public abstract class SMWriterBase
 		}
 
 		// Default to 4/4.
-		var beatStr = 0.0.ToString(SMCommon.SMDoubleFormat);
-		WriteSongProperty(SMCommon.TagTimeSignatures, $"{beatStr}=4=4", stepmaniaOmitted, false);
+		var beatStr = 0.0.ToString(SMDoubleFormat);
+		WriteSongProperty(TagTimeSignatures, $"{beatStr}=4=4", stepmaniaOmitted, false);
 	}
 
 	protected void WriteChartPropertyTimeSignatures(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteTimeSignaturesFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawTimeSignaturesStr, out string rawStr,
+		    && chart.Extras.TryGetExtra(TagFumenRawTimeSignaturesStr, out string rawStr,
 			    MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagTimeSignatures, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagTimeSignatures, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart),
+		WriteChartProperty(chart, TagTimeSignatures, CreateTimeSignaturesStringFromChartEvents(chart),
 			stepmaniaOmitted, false);
 	}
 
@@ -949,13 +955,13 @@ public abstract class SMWriterBase
 
 			// If present, use the original double values from the source chart so as not to lose
 			// or alter the precision.
-			if (!ts.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!ts.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(ts.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(ts.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={ts.Signature.Numerator}={ts.Signature.Denominator}");
 		}
@@ -970,9 +976,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteTickCountsFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawTickCountsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawTickCountsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagTickCounts, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagTickCounts, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -982,20 +988,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagTickCounts, "", stepmaniaOmitted);
+		WriteSongProperty(TagTickCounts, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyTickCounts(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteTickCountsFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawTickCountsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawTickCountsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagTickCounts, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagTickCounts, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagTickCounts, CreateTickCountStringFromChartEvents(chart), stepmaniaOmitted,
+		WriteChartProperty(chart, TagTickCounts, CreateTickCountStringFromChartEvents(chart), stepmaniaOmitted,
 			false);
 	}
 
@@ -1013,13 +1019,13 @@ public abstract class SMWriterBase
 
 			// If present, use the original double value from the source chart so as not to lose
 			// or alter the precision.
-			if (!tc.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!tc.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(tc.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(tc.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 			sb.Append($"{timeInBeatsStr}={tc.Ticks}");
 		}
 
@@ -1033,9 +1039,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteCombosFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawCombosStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawCombosStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagCombos, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagCombos, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -1045,20 +1051,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagCombos, "", stepmaniaOmitted);
+		WriteSongProperty(TagCombos, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyCombos(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteCombosFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawCombosStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawCombosStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagCombos, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagCombos, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagCombos, CreateCombosStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagCombos, CreateCombosStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateCombosStringFromChartEvents(Chart chart)
@@ -1075,13 +1081,13 @@ public abstract class SMWriterBase
 
 			// If present, use the original double value from the source chart so as not to lose
 			// or alter the precision.
-			if (!c.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!c.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(c.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(c.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={c.HitMultiplier}");
 			if (c.HitMultiplier != c.MissMultiplier)
@@ -1098,9 +1104,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteFakesFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawFakesStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawFakesStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagFakes, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagFakes, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -1110,20 +1116,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagFakes, "", stepmaniaOmitted);
+		WriteSongProperty(TagFakes, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyFakes(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteFakesFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawFakesStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawFakesStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagFakes, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagFakes, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagFakes, CreateFakesStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagFakes, CreateFakesStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateFakesStringFromChartEvents(Chart chart)
@@ -1140,21 +1146,21 @@ public abstract class SMWriterBase
 
 			// If present, use the original double value from the source chart so as not to lose
 			// or alter the precision.
-			if (!f.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!f.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(f.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(f.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
-			if (!f.Extras.TryGetExtra(SMCommon.TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
+			if (!f.Extras.TryGetExtra(TagFumenDoubleValue, out double length, MatchesSourceFileFormatType()))
 			{
 				// Convert the fake segment rows to beats.
-				length = SMCommon.ConvertIntegerPositionToBeat(f.LengthIntegerPosition);
+				length = ConvertIntegerPositionToBeat(f.LengthIntegerPosition);
 			}
 
-			var lengthStr = length.ToString(SMCommon.SMDoubleFormat);
+			var lengthStr = length.ToString(SMDoubleFormat);
 
 			sb.Append($"{timeInBeatsStr}={lengthStr}");
 		}
@@ -1169,9 +1175,9 @@ public abstract class SMWriterBase
 		// and this is to cut down on unnecessary diffs when exporting files.
 		if (MatchesSourceFileFormatType()
 		    && Config.WriteLabelsFromExtras
-		    && Config.Song.Extras.TryGetSourceExtra(SMCommon.TagFumenRawLabelsStr, out string rawStr))
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawLabelsStr, out string rawStr))
 		{
-			WriteSongProperty(SMCommon.TagLabels, rawStr, stepmaniaOmitted, false);
+			WriteSongProperty(TagLabels, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
@@ -1181,20 +1187,20 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		WriteSongProperty(SMCommon.TagLabels, "", stepmaniaOmitted);
+		WriteSongProperty(TagLabels, "", stepmaniaOmitted);
 	}
 
 	protected void WriteChartPropertyLabels(Chart chart, bool stepmaniaOmitted = false)
 	{
 		// If we have a raw string from the source file, use it.
 		if (Config.WriteLabelsFromExtras
-		    && chart.Extras.TryGetExtra(SMCommon.TagFumenRawLabelsStr, out string rawStr, MatchesSourceFileFormatType()))
+		    && chart.Extras.TryGetExtra(TagFumenRawLabelsStr, out string rawStr, MatchesSourceFileFormatType()))
 		{
-			WriteChartProperty(chart, SMCommon.TagLabels, rawStr, stepmaniaOmitted, false);
+			WriteChartProperty(chart, TagLabels, rawStr, stepmaniaOmitted, false);
 			return;
 		}
 
-		WriteChartProperty(chart, SMCommon.TagLabels, CreateLabelsStringFromChartEvents(chart), stepmaniaOmitted, false);
+		WriteChartProperty(chart, TagLabels, CreateLabelsStringFromChartEvents(chart), stepmaniaOmitted, false);
 	}
 
 	private string CreateLabelsStringFromChartEvents(Chart chart)
@@ -1211,13 +1217,13 @@ public abstract class SMWriterBase
 
 			// If present, use the original double value from the source chart so as not to lose
 			// or alter the precision.
-			if (!l.Extras.TryGetExtra(SMCommon.TagFumenDoublePosition, out double timeInBeats,
+			if (!l.Extras.TryGetExtra(TagFumenDoublePosition, out double timeInBeats,
 				    MatchesSourceFileFormatType()))
 			{
-				timeInBeats = SMCommon.ConvertIntegerPositionToBeat(l.IntegerPosition);
+				timeInBeats = ConvertIntegerPositionToBeat(l.IntegerPosition);
 			}
 
-			var timeInBeatsStr = timeInBeats.ToString(SMCommon.SMDoubleFormat);
+			var timeInBeatsStr = timeInBeats.ToString(SMDoubleFormat);
 
 			// Escape the text, including the comma.
 			// Stepmania actually does not escape the text and because of this you
@@ -1236,15 +1242,35 @@ public abstract class SMWriterBase
 
 	protected void WriteChartNotesValueStart(Chart chart)
 	{
-		if (!chart.Extras.TryGetExtra(SMCommon.TagFumenNotesType, out string notesType, MatchesSourceFileFormatType()))
-			notesType = SMCommon.TagNotes;
+		if (!chart.Extras.TryGetExtra(TagFumenNotesType, out string notesType, MatchesSourceFileFormatType()))
+			notesType = TagNotes;
 		StreamWriter.WriteLine($"{MSDFile.ValueStartMarker}{notesType}{MSDFile.ParamMarker}");
 	}
 
-	protected void WriteChartNotes(Chart chart)
+	/// <summary>
+	/// Write all notes text for the given Chart.
+	/// </summary>
+	/// <param name="chart">The Chart to write the notes for.</param>
+	/// <param name="useStepF2ForPumpMultiplayer">
+	/// If true then use StepF2 notation when this chart is a pump multiplayer chart.
+	/// </param>
+	protected void WriteChartNotes(Chart chart, bool useStepF2ForPumpMultiplayer)
 	{
+		// Check if we should be using StepF2 notation.
+		var useStepF2Players = false;
+		var isPumpChart = TryGetChartType(chart, out var chartType) && IsPumpType(chartType);
+		if (useStepF2ForPumpMultiplayer && chart.NumPlayers > 1 && isPumpChart)
+		{
+			var chartProperties = GetChartProperties(chart.Type);
+			if (chart.NumPlayers > 1 || (chartProperties?.GetSupportsVariableNumberOfPlayers() ?? false))
+				useStepF2Players = true;
+		}
+
+		// For normal charts we write one segment per player. For StepF2 charts we only write one segment with all players.
+		var numPlayerSegments = useStepF2Players ? 1 : chart.NumPlayers;
+
 		// Write one chart per player.
-		for (var playerIndex = 0; playerIndex < chart.NumPlayers; playerIndex++)
+		for (var playerIndex = 0; playerIndex < numPlayerSegments; playerIndex++)
 		{
 			// Marker to separate players' charts.
 			if (playerIndex > 0)
@@ -1261,10 +1287,10 @@ public abstract class SMWriterBase
 			foreach (var chartEvent in chart.Layers[0].Events)
 			{
 				var note = chartEvent as LaneNote;
-				if (note == null || note.Player != playerIndex)
+				if (note == null || (!useStepF2Players && note.Player != playerIndex))
 					continue;
 
-				var measure = note.IntegerPosition / (SMCommon.MaxValidDenominator * SMCommon.NumBeatsPerMeasure);
+				var measure = note.IntegerPosition / (MaxValidDenominator * NumBeatsPerMeasure);
 				while (measures.Count <= measure)
 					measures.Add(new MeasureData());
 
@@ -1272,8 +1298,8 @@ public abstract class SMWriterBase
 
 				// Store least common multiple of all notes in this measure.
 				var subDivisionFraction = new Fraction(
-					note.IntegerPosition % SMCommon.MaxValidDenominator,
-					SMCommon.MaxValidDenominator);
+					note.IntegerPosition % MaxValidDenominator,
+					MaxValidDenominator);
 				var subDivisionDenominator = subDivisionFraction.Reduce().Denominator;
 				if (subDivisionDenominator == 0)
 					subDivisionDenominator = 1;
@@ -1285,11 +1311,18 @@ public abstract class SMWriterBase
 			// Write each measure.
 			var index = 0;
 			foreach (var measureData in measures)
-				WriteMeasure(chart, measureData, index++);
+				WriteMeasure(chart, measureData, index++, useStepF2Players);
 		}
 	}
 
-	private void WriteMeasure(Chart chart, MeasureData measureData, int measureIndex)
+	/// <summary>
+	/// Write a single measure of notes for the given chart.
+	/// </summary>
+	/// <param name="chart">The Chart to write the notes for.</param>
+	/// <param name="measureData">Steps for the specific measure to write.</param>
+	/// <param name="measureIndex">The index of the measure to write.</param>
+	/// <param name="useStepF2Players">Whether to use StepF2 notation for the players.</param>
+	private void WriteMeasure(Chart chart, MeasureData measureData, int measureIndex, bool useStepF2Players)
 	{
 		// For UseLeastCommonMultiple and UseLeastCommonMultipleFromStepmaniaEditor we will
 		// determine the number of lines to write per beat, assuming 4 beats per measure since
@@ -1309,13 +1342,13 @@ public abstract class SMWriterBase
 					foreach (var measureNote in measureData.Notes)
 					{
 						if (!measureNote.Extras.TryGetExtra(
-							    SMCommon.TagFumenNoteOriginalMeasurePosition,
+							    TagFumenNoteOriginalMeasurePosition,
 							    out Fraction f,
 							    true))
 						{
 							Logger.Error(
-								$"Notes in measure {measureIndex} are missing Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition}."
-								+ $" Fractions must be present in the Extras for {SMCommon.TagFumenNoteOriginalMeasurePosition} when using"
+								$"Notes in measure {measureIndex} are missing Extras for {TagFumenNoteOriginalMeasurePosition}."
+								+ $" Fractions must be present in the Extras for {TagFumenNoteOriginalMeasurePosition} when using"
 								+ " UseSourceExtraOriginalMeasurePosition MeasureSpacingBehavior.");
 							return;
 						}
@@ -1336,7 +1369,7 @@ public abstract class SMWriterBase
 				// Still treat blank measures as 4 lines.
 				else
 				{
-					measureCharsDY = SMCommon.NumBeatsPerMeasure;
+					measureCharsDY = NumBeatsPerMeasure;
 				}
 
 				break;
@@ -1344,118 +1377,262 @@ public abstract class SMWriterBase
 			case MeasureSpacingBehavior.UseLeastCommonMultiple:
 			{
 				linesPerBeat = measureData.LCM;
-				measureCharsDY = SMCommon.NumBeatsPerMeasure * linesPerBeat;
+				measureCharsDY = NumBeatsPerMeasure * linesPerBeat;
 				break;
 			}
 			case MeasureSpacingBehavior.UseLeastCommonMultipleFromStepmaniaEditor:
 			{
 				// Make sure the notes can actually be represented by the stepmania editor.
-				if (!SMCommon.GetLowestValidSMSubDivision(measureData.LCM, out linesPerBeat))
+				if (!GetLowestValidSMSubDivision(measureData.LCM, out linesPerBeat))
 				{
 					Logger.Error($"Unsupported subdivisions {measureData.LCM} for notes in measure index {measureIndex}."
 					             + " Consider using UseLeastCommonMultiple MeasureSpacingBehavior.");
 					return;
 				}
 
-				measureCharsDY = SMCommon.NumBeatsPerMeasure * linesPerBeat;
+				measureCharsDY = NumBeatsPerMeasure * linesPerBeat;
 				break;
 			}
 		}
 
-		// Set up a grid of characters to write.
-		// TODO: Support keysound tagging.
-		var measureCharsDX = chart.NumInputs;
-		var measureChars = new char[measureCharsDX, measureCharsDY];
-
-		// Populate characters in the grid based on the events of the measure.
-		foreach (var measureNote in measureData.Notes)
+		// For StepF2 writing each line has a variable width. We can't write a grid.
+		if (useStepF2Players)
 		{
-			// Get the note char to write.
-			var c = GetSMCharForNote(measureNote);
-
-			// Determine the position to record the note.
-			int measureEventPositionInMeasure;
-
-			// When using UseSourceExtraOriginalMeasurePosition, get the y position directly from the extra data.
-			if (Config.MeasureSpacingBehavior == MeasureSpacingBehavior.UseSourceExtraOriginalMeasurePosition)
+			var sb = new StringBuilder();
+			var i = 0;
+			foreach (var measureNote in measureData.Notes)
 			{
-				measureNote.Extras.TryGetExtra(
-					SMCommon.TagFumenNoteOriginalMeasurePosition,
-					out Fraction f,
-					true);
-				measureEventPositionInMeasure = f.Numerator;
+				// Get the note string to write.
+				var s = GetStepF2CoopStringForNote(measureNote);
+
+				// Determine the position to record the note.
+				var measureEventPositionInMeasure = GetPositionInMeasure(measureNote, linesPerBeat);
+
+				// Bounds checks.
+				if (measureNote.Lane < 0 || measureNote.Lane >= chart.NumInputs)
+				{
+					Logger.Error(
+						$"Note at {GetPositionForLogging(measureNote.IntegerPosition)} has invalid lane {measureNote.Lane}.");
+					return;
+				}
+
+				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
+				{
+					Logger.Error($"Note has invalid position {GetPositionForLogging(measureNote.IntegerPosition)}.");
+					return;
+				}
+
+				// Write up to this note.
+				var index = measureEventPositionInMeasure * (chart.NumInputs + 1) + measureNote.Lane;
+				while (i < index)
+				{
+					if ((i + 1) % (chart.NumInputs + 1) == 0)
+						sb.Append('\n');
+					else
+						sb.Append('0');
+					i++;
+				}
+
+				// Record the note.
+				sb.Append(s);
+				i++;
 			}
 
-			// Otherwise calculate the position based on the lines per beat.
-			else
+			// Write the remainder of the measure
+			while (i < measureCharsDY * (chart.NumInputs + 1))
 			{
-				var totalBeat = measureNote.IntegerPosition / SMCommon.MaxValidDenominator;
-				var relativeBeat = totalBeat % SMCommon.NumBeatsPerMeasure;
-				var subDivision = new Fraction(measureNote.IntegerPosition % SMCommon.MaxValidDenominator,
-					SMCommon.MaxValidDenominator);
-				var reducedSubDivision = subDivision.Reduce();
-				measureEventPositionInMeasure = relativeBeat * linesPerBeat
-				                                + linesPerBeat / Math.Max(1, reducedSubDivision.Denominator)
-				                                * reducedSubDivision.Numerator;
+				if ((i + 1) % (chart.NumInputs + 1) == 0)
+					sb.Append('\n');
+				else
+					sb.Append('0');
+				i++;
 			}
 
-			// Bounds checks.
-			if (measureNote.Lane < 0 || measureNote.Lane >= chart.NumInputs)
-			{
-				Logger.Error(
-					$"Note at {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)} has invalid lane {measureNote.Lane}.");
-				return;
-			}
-
-			if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
-			{
-				Logger.Error($"Note has invalid position {SMCommon.GetPositionForLogging(measureNote.IntegerPosition)}.");
-				return;
-			}
-
-			// Record the note.
-			measureChars[measureNote.Lane, measureEventPositionInMeasure] = c;
+			// Write the measure of accumulated characters.
+			if (!measureData.FirstMeasure)
+				StreamWriter.WriteLine(",");
+			StreamWriter.Write(sb.ToString());
 		}
 
-		// Write the measure of accumulated characters.
-		if (!measureData.FirstMeasure)
-			StreamWriter.WriteLine(",");
-		for (var y = 0; y < measureCharsDY; y++)
+		// Normal case, write a grid of characters.
+		else
 		{
-			for (var x = 0; x < measureCharsDX; x++)
+			// Set up a grid of characters to write.
+			// TODO: Support keysound tagging.
+			var measureCharsDX = chart.NumInputs;
+			var measureChars = new char[measureCharsDX, measureCharsDY];
+
+			// Populate characters in the grid based on the events of the measure.
+			foreach (var measureNote in measureData.Notes)
 			{
-				StreamWriter.Write(measureChars[x, y] == '\0'
-					? SMCommon.NoteChars[(int)SMCommon.NoteType.None]
-					: measureChars[x, y]);
+				// Get the note char to write.
+				var c = GetSMCharForNote(measureNote);
+
+				// Determine the position to record the note.
+				var measureEventPositionInMeasure = GetPositionInMeasure(measureNote, linesPerBeat);
+
+				// Bounds checks.
+				if (measureNote.Lane < 0 || measureNote.Lane >= chart.NumInputs)
+				{
+					Logger.Error(
+						$"Note at {GetPositionForLogging(measureNote.IntegerPosition)} has invalid lane {measureNote.Lane}.");
+					return;
+				}
+
+				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
+				{
+					Logger.Error($"Note has invalid position {GetPositionForLogging(measureNote.IntegerPosition)}.");
+					return;
+				}
+
+				// Record the note.
+				measureChars[measureNote.Lane, measureEventPositionInMeasure] = c;
 			}
 
-			StreamWriter.WriteLine();
+			// Write the measure of accumulated characters.
+			if (!measureData.FirstMeasure)
+				StreamWriter.WriteLine(",");
+			for (var y = 0; y < measureCharsDY; y++)
+			{
+				for (var x = 0; x < measureCharsDX; x++)
+				{
+					StreamWriter.Write(measureChars[x, y] == '\0'
+						? NoteChars[(int)NoteType.None]
+						: measureChars[x, y]);
+				}
+
+				StreamWriter.WriteLine();
+			}
 		}
+	}
+
+	private int GetPositionInMeasure(LaneNote note, int linesPerBeat)
+	{
+		// When using UseSourceExtraOriginalMeasurePosition, get the y position directly from the extra data.
+		if (Config.MeasureSpacingBehavior == MeasureSpacingBehavior.UseSourceExtraOriginalMeasurePosition)
+		{
+			note.Extras.TryGetExtra(
+				TagFumenNoteOriginalMeasurePosition,
+				out Fraction f,
+				true);
+			return f.Numerator;
+		}
+
+		// Otherwise calculate the position based on the lines per beat.
+		var totalBeat = note.IntegerPosition / MaxValidDenominator;
+		var relativeBeat = totalBeat % NumBeatsPerMeasure;
+		var subDivision = new Fraction(note.IntegerPosition % MaxValidDenominator,
+			MaxValidDenominator);
+		var reducedSubDivision = subDivision.Reduce();
+		return relativeBeat * linesPerBeat
+		       + linesPerBeat / Math.Max(1, reducedSubDivision.Denominator)
+		       * reducedSubDivision.Numerator;
 	}
 
 	private char GetSMCharForNote(LaneNote note)
 	{
 		if (note.DestType?.Length == 1
-		    && SMCommon.NoteChars.Contains(note.DestType[0]))
+		    && NoteChars.Contains(note.DestType[0]))
 			return note.DestType[0];
 
 		if (MatchesSourceFileFormatType()
 		    && note.SourceType?.Length == 1
-		    && SMCommon.NoteChars.Contains(note.SourceType[0]))
+		    && NoteChars.Contains(note.SourceType[0]))
 			return note.SourceType[0];
 
 		if (note is LaneTapNote)
-			return SMCommon.NoteChars[(int)SMCommon.NoteType.Tap];
+			return NoteChars[(int)NoteType.Tap];
 		if (note is LaneHoldEndNote)
-			return SMCommon.NoteChars[(int)SMCommon.NoteType.HoldEnd];
+			return NoteChars[(int)NoteType.HoldEnd];
 		if (note is LaneHoldStartNote)
-			return SMCommon.NoteChars[(int)SMCommon.NoteType.HoldStart];
-		return SMCommon.NoteChars[(int)SMCommon.NoteType.None];
+			return NoteChars[(int)NoteType.HoldStart];
+		return NoteChars[(int)NoteType.None];
+	}
+
+	private string GetStepF2CoopStringForNote(LaneNote note)
+	{
+		// StepF2 only supports 4 players.
+		if (note.Player >= StepF2MaxPlayers)
+			return NoteStrings[(int)NoteType.None];
+
+		var tap = false;
+		var hold = false;
+		var holdEnd = false;
+		var roll = false;
+		var mine = false;
+		var fake = false;
+		if (note.DestType?.Length == 1)
+		{
+			tap = note.DestType[0] == NoteChars[(int)NoteType.Tap];
+			hold = note.DestType[0] == NoteChars[(int)NoteType.HoldStart];
+			holdEnd = note.DestType[0] == NoteChars[(int)NoteType.HoldEnd];
+			roll = note.DestType[0] == NoteChars[(int)NoteType.RollStart];
+			mine = note.DestType[0] == NoteChars[(int)NoteType.Mine];
+			fake = note.DestType[0] == NoteChars[(int)NoteType.Fake];
+		}
+
+		if (MatchesSourceFileFormatType() && note.SourceType?.Length == 1)
+		{
+			tap |= note.SourceType[0] == NoteChars[(int)NoteType.Tap];
+			hold |= note.SourceType[0] == NoteChars[(int)NoteType.HoldStart];
+			holdEnd |= note.SourceType[0] == NoteChars[(int)NoteType.HoldEnd];
+			roll |= note.SourceType[0] == NoteChars[(int)NoteType.RollStart];
+			mine |= note.SourceType[0] == NoteChars[(int)NoteType.Mine];
+			fake |= note.SourceType[0] == NoteChars[(int)NoteType.Fake];
+		}
+
+		tap |= note is LaneTapNote;
+		hold |= note is LaneHoldStartNote;
+		holdEnd |= note is LaneHoldEndNote;
+
+		// In StepF2 rolls aren't supported. Treat them as holds.
+		if (roll)
+			hold = true;
+
+		// In StepF2 mines aren't even supported. We can't put them in the compound format.
+		if (mine)
+			return NoteStrings[(int)NoteType.Mine];
+
+		// Hold ends have no special treatment.
+		if (holdEnd)
+			return NoteStrings[(int)NoteType.HoldEnd];
+
+		// Taps and hold starts use special characters and may require compound notation.
+		if (tap || hold)
+		{
+			var stepChar = NoteStrings[(int)NoteType.None];
+			switch (note.Player)
+			{
+				case 0: stepChar = StepF2NoteStrings[(int)(hold ? StepF2NoteType.P1HoldStart : StepF2NoteType.P1Tap)]; break;
+				case 1: stepChar = StepF2NoteStrings[(int)(hold ? StepF2NoteType.P2HoldStart : StepF2NoteType.P2Tap)]; break;
+				case 2: stepChar = StepF2NoteStrings[(int)(hold ? StepF2NoteType.P3HoldStart : StepF2NoteType.P3Tap)]; break;
+				case 3: stepChar = StepF2NoteStrings[(int)(hold ? StepF2NoteType.P4HoldStart : StepF2NoteType.P4Tap)]; break;
+			}
+
+			// Fakes plus special coop player notation necessitate compound notation.
+			if (fake)
+			{
+				var ret = StepF2CompoundNoteStartMarkerString;
+				ret += stepChar;
+				ret += StepF2CompoundNoteSeparatorString
+				       + StepF2AttributeStrings[(int)StepF2AttributeType.Normal]
+				       + StepF2CompoundNoteSeparatorString
+				       + StepF2CompoundNoteFakeMarkerString
+				       + StepF2CompoundNoteSeparatorString
+				       + "0"
+				       + StepF2CompoundNoteEndMarkerString;
+				return ret;
+			}
+
+			return stepChar;
+		}
+
+		return NoteStrings[(int)NoteType.None];
 	}
 
 	protected string GetRadarValues(Chart chart)
 	{
-		if (!chart.Extras.TryGetExtra(SMCommon.TagRadarValues, out List<double> radarValues, MatchesSourceFileFormatType())
+		if (!chart.Extras.TryGetExtra(TagRadarValues, out List<double> radarValues, MatchesSourceFileFormatType())
 		    || radarValues.Count <= 0)
 			return "";
 
@@ -1465,44 +1642,44 @@ public abstract class SMWriterBase
 		{
 			if (!bFirst)
 				sb.Append(",");
-			sb.Append(val.ToString(SMCommon.SMDoubleFormat));
+			sb.Append(val.ToString(SMDoubleFormat));
 			bFirst = false;
 		}
 
 		return sb.ToString();
 	}
 
-	protected static bool TryGetChartType(Chart chart, out SMCommon.ChartType chartType)
+	protected static bool TryGetChartType(Chart chart, out ChartType chartType)
 	{
 		// If the Chart's Type is already a supported ChartType, use that.
 		if (SMCommon.TryGetChartType(chart.Type, out chartType))
 			return true;
 
 		// Otherwise infer the ChartType from the number of inputs and players
-		chartType = SMCommon.ChartType.dance_single;
+		chartType = ChartType.dance_single;
 		if (chart.NumPlayers == 1)
 		{
 			if (chart.NumInputs <= 3)
 			{
-				chartType = SMCommon.ChartType.dance_threepanel;
+				chartType = ChartType.dance_threepanel;
 				return true;
 			}
 
 			if (chart.NumInputs == 4)
 			{
-				chartType = SMCommon.ChartType.dance_single;
+				chartType = ChartType.dance_single;
 				return true;
 			}
 
 			if (chart.NumInputs <= 6)
 			{
-				chartType = SMCommon.ChartType.dance_solo;
+				chartType = ChartType.dance_solo;
 				return true;
 			}
 
 			if (chart.NumInputs <= 8)
 			{
-				chartType = SMCommon.ChartType.dance_double;
+				chartType = ChartType.dance_double;
 				return true;
 			}
 		}
@@ -1511,7 +1688,7 @@ public abstract class SMWriterBase
 		{
 			if (chart.NumInputs <= 8)
 			{
-				chartType = SMCommon.ChartType.dance_routine;
+				chartType = ChartType.dance_routine;
 				return true;
 			}
 		}

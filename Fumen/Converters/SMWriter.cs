@@ -161,7 +161,7 @@ public class SMWriter : SMWriterBase
 		StreamWriter.WriteLine($"     {radarValues}{MSDFile.ParamMarker}");
 
 		// Write all the notes.
-		WriteChartNotes(chart);
+		WriteChartNotes(chart, Config.UseStepF2ForPumpMultiplayerCharts);
 
 		// Mark the chart as complete.
 		StreamWriter.WriteLine(MSDFile.ValueEndMarker);

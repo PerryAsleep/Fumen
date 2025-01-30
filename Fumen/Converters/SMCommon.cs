@@ -126,6 +126,29 @@ public static class SMCommon
 		KeySound,
 	}
 
+	public enum StepF2NoteType
+	{
+		P1Tap,
+		P1HoldStart,
+		P2Tap,
+		P2HoldStart,
+		P3Tap,
+		P3HoldStart,
+		P4Tap,
+		P4HoldStart,
+		Sudden,
+		Vanish,
+		Hidden,
+	}
+
+	public enum StepF2AttributeType
+	{
+		Normal,
+		Sudden,
+		Vanish,
+		Hidden,
+	}
+
 	public class ChartProperties
 	{
 		private readonly int NumInputs;
@@ -196,6 +219,8 @@ public static class SMCommon
 		48, // One-hundred-ninety-second note
 	];
 
+	public const int StepF2MaxPlayers = 4;
+
 	public static readonly char[] SMAllWhiteSpace = ['\r', '\n', ' ', '\t'];
 
 	public static readonly List<Fraction> SubDivisions = [];
@@ -208,6 +233,20 @@ public static class SMCommon
 	[
 		"None", "Tap", "Hold Start", "Hold or Roll End", "Roll Start", "Mine", "Lift", "Fake", "KeySound",
 	];
+
+	public static readonly char[] StepF2NoteChars = ['X', 'x', 'Y', 'y', 'Z', 'z', '1', '2', 'S', 'V', 'H'];
+	public static readonly string[] StepF2NoteStrings = ["X", "x", "Y", "y", "Z", "z", "1", "2", "S", "V", "H"];
+	public static readonly char[] StepF2CoopExclusiveNoteChars = ['X', 'x', 'Y', 'y', 'Z', 'z'];
+	public static readonly char[] StepF2AttributeChars = ['n', 's', 'v', 'h'];
+	public static readonly string[] StepF2AttributeStrings = ["n", "s", "v", "h"];
+
+	public const char StepF2CompoundNoteStartMarker = '{';
+	public const string StepF2CompoundNoteStartMarkerString = "{";
+	public const char StepF2CompoundNoteEndMarker = '}';
+	public const string StepF2CompoundNoteEndMarkerString = "}";
+	public const string StepF2CompoundNoteSeparatorString = "|";
+	public const char StepF2CompoundNoteFakeMarker = '1';
+	public const string StepF2CompoundNoteFakeMarkerString = "1";
 
 	public const string TagTitle = "TITLE";
 	public const string TagSubtitle = "SUBTITLE";
@@ -295,6 +334,11 @@ public static class SMCommon
 	public const string TagFumenRawTimeSignaturesStr = "FumenRawTimeSignaturesStr";
 	public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
 	public const string TagFumenNoteOriginalMeasurePosition = "FumenNoteOriginalMeasurePosition";
+
+	public const string TagFumenStepF2Fake = "FumenStepF2Fake";
+	public const string TagFumenStepF2Sudden = "FumenStepF2Sudden";
+	public const string TagFumenStepF2Vanish = "FumenStepF2Vanish";
+	public const string TagFumenStepF2Hidden = "FumenStepF2Hidden";
 
 	public const string SMDoubleFormat = "F6";
 
@@ -392,6 +436,17 @@ public static class SMCommon
 		if (TryGetChartType(chartTypeString, out var chartType))
 			return GetChartProperties(chartType);
 		return null;
+	}
+
+	public static bool IsCharExclusiveToStepF2CoopChart(char c)
+	{
+		for (var i = 0; i < StepF2CoopExclusiveNoteChars.Length; i++)
+		{
+			if (StepF2CoopExclusiveNoteChars[i] == c)
+				return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>

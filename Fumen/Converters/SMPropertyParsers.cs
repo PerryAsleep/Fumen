@@ -99,7 +99,7 @@ public class ExtrasPropertyParser : PropertyParser
 	{
 		if (value.Params.Count != 2)
 			return false;
-		Extras.AddSourceExtra(value.Params[0], value.Params[1]);
+		Extras.AddSourceExtra(value.Params[0], value.Params[1], true);
 		return true;
 	}
 }
@@ -662,6 +662,23 @@ public abstract class NotesPropertyParser : PropertyParser
 	/// <returns>Whether the notes represent a valid chart or not.</returns>
 	protected bool ParseNotes(Chart chart, ChartProperties properties, string notesStr)
 	{
+		return ParseNotes(chart, properties, notesStr, false);
+	}
+
+	/// <summary>
+	/// Parses the sm/ssc string representation of measures and notes as
+	/// events into the given Chart.
+	/// </summary>
+	/// <param name="chart">Chart to parse notes into.</param>
+	/// <param name="properties">ChartProperties for the given Chart.</param>
+	/// <param name="notesStr">String representation of notes from an sm or ssc chart.</param>
+	/// <param name="isStepF2CoopChart">
+	/// If true then we know for certain this is a StepF2 style co-op chart where some symbols
+	/// need to re-interpreted (namely 1 and 2 going from Tap and HoldEnd to P4 Tap and P4 Hold End).
+	/// </param>
+	/// <returns>Whether the notes represent a valid chart or not.</returns>
+	private bool ParseNotes(Chart chart, ChartProperties properties, string notesStr, bool isStepF2CoopChart)
+	{
 		if (chart.NumInputs < 1)
 		{
 			var loggedType = chart.Type;
@@ -673,6 +690,9 @@ public abstract class NotesPropertyParser : PropertyParser
 			return false;
 		}
 
+		var isPumpChart = TryGetChartType(chart.Type, out var smChartType) && IsPumpType(smChartType);
+		var isPumpDoublesChart = isPumpChart && smChartType == ChartType.pump_double;
+		var isPumpRoutineChart = isPumpChart && smChartType == ChartType.pump_routine;
 		var validChart = true;
 		var player = 0;
 		var currentMeasureEvents = new List<Event>();
@@ -694,11 +714,12 @@ public abstract class NotesPropertyParser : PropertyParser
 			}
 		}
 
+		var specialNoteFlags = new Dictionary<string, object>();
+
 		foreach (var notesStrForPlayer in notesStringsPerPlayer)
 		{
 			var measure = 0;
-			var holding = new bool[chart.NumInputs];
-			var rolling = new bool[chart.NumInputs];
+			var activeHolds = new LaneHoldStartNote[chart.NumInputs];
 
 			// RemoveEmptyEntries seems wrong, but matches Stepmania parsing logic.
 			var measures = notesStrForPlayer.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -717,8 +738,132 @@ public abstract class NotesPropertyParser : PropertyParser
 					     charIndex < trimmedLine.Length && laneIndex < chart.NumInputs;
 					     charIndex++, laneIndex++)
 					{
-						// Get the note type.
 						var c = trimmedLine[charIndex];
+						specialNoteFlags.Clear();
+						int? playerOverride = null;
+
+						// Check for special StepF2 note types.
+						if (isPumpChart)
+						{
+							// Notes in StepF2 can optionally be a compound string instead of a character.
+							// Compound notes look like {<note>|<attribute>|<fake>|<reserved>} where:
+							// <note> is a character denoting the step type.
+							// <attribute> is a character denoting special attributes.
+							// <fake> is a character denoting a fake note.
+							// <reserved> is a reserved character,
+							var compound = c == StepF2CompoundNoteStartMarker;
+							if (compound)
+							{
+								if (charIndex + 1 < trimmedLine.Length)
+									charIndex++;
+							}
+
+							c = trimmedLine[charIndex];
+							if (isStepF2CoopChart)
+							{
+								if (c == StepF2NoteChars[(int)StepF2NoteType.P1Tap])
+								{
+									playerOverride = 0;
+									c = NoteChars[(int)NoteType.Tap];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P1HoldStart])
+								{
+									playerOverride = 0;
+									c = NoteChars[(int)NoteType.HoldStart];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P2Tap])
+								{
+									playerOverride = 1;
+									chart.NumPlayers = Math.Max(chart.NumPlayers, 2);
+									c = NoteChars[(int)NoteType.Tap];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P2HoldStart])
+								{
+									playerOverride = 1;
+									chart.NumPlayers = Math.Max(chart.NumPlayers, 2);
+									c = NoteChars[(int)NoteType.HoldStart];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P3Tap])
+								{
+									playerOverride = 2;
+									chart.NumPlayers = Math.Max(chart.NumPlayers, 3);
+									c = NoteChars[(int)NoteType.Tap];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P3HoldStart])
+								{
+									playerOverride = 2;
+									chart.NumPlayers = Math.Max(chart.NumPlayers, 3);
+									c = NoteChars[(int)NoteType.HoldStart];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P4Tap])
+								{
+									playerOverride = 3;
+									chart.NumPlayers = Math.Max(chart.NumPlayers, 4);
+									c = NoteChars[(int)NoteType.Tap];
+								}
+								else if (c == StepF2NoteChars[(int)StepF2NoteType.P4HoldStart])
+								{
+									playerOverride = 3;
+									chart.NumPlayers = Math.Max(chart.NumPlayers, 4);
+									c = NoteChars[(int)NoteType.HoldStart];
+								}
+							}
+
+							// Handle special note types.
+							if (c == StepF2NoteChars[(int)StepF2NoteType.Sudden])
+							{
+								specialNoteFlags[TagFumenStepF2Sudden] = true;
+								c = NoteChars[(int)NoteType.Tap];
+							}
+							else if (c == StepF2NoteChars[(int)StepF2NoteType.Vanish])
+							{
+								specialNoteFlags[TagFumenStepF2Vanish] = true;
+								c = NoteChars[(int)NoteType.Tap];
+							}
+							else if (c == StepF2NoteChars[(int)StepF2NoteType.Hidden])
+							{
+								specialNoteFlags[TagFumenStepF2Hidden] = true;
+								c = NoteChars[(int)NoteType.Tap];
+							}
+
+							if (compound)
+							{
+								// Advance past the | mark to the attribute.
+								if (charIndex + 2 < trimmedLine.Length)
+									charIndex += 2;
+								if (trimmedLine[charIndex] == StepF2AttributeChars[(int)StepF2AttributeType.Sudden])
+									specialNoteFlags[TagFumenStepF2Sudden] = true;
+								if (trimmedLine[charIndex] == StepF2AttributeChars[(int)StepF2AttributeType.Vanish])
+									specialNoteFlags[TagFumenStepF2Vanish] = true;
+								if (trimmedLine[charIndex] == StepF2AttributeChars[(int)StepF2AttributeType.Hidden])
+									specialNoteFlags[TagFumenStepF2Hidden] = true;
+
+								// Advance past the next | mark to the fake flag.
+								if (charIndex + 2 < trimmedLine.Length)
+									charIndex += 2;
+								if (trimmedLine[charIndex] == StepF2CompoundNoteFakeMarker)
+								{
+									specialNoteFlags[TagFumenStepF2Fake] = true;
+									if (c == NoteChars[(int)NoteType.Tap])
+										c = NoteChars[(int)NoteType.Fake];
+								}
+
+								// Advance past the next | mark and the reserved flag.
+								if (charIndex + 3 < trimmedLine.Length)
+									charIndex += 3;
+								if (trimmedLine[charIndex] != StepF2CompoundNoteEndMarker)
+								{
+									Logger?.Error(
+										$"Invalid {chart.Type} {chart.DifficultyType} Chart. Malformed StepF2 compound note on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+									validChart = false;
+								}
+							}
+
+							if (!validChart)
+								break;
+						}
+
+						// Get the note type.
 						var noteType = NoteType.None;
 						var noteString = NotePrettyStrings[(int)noteType];
 						for (var i = 0; i < NoteChars.Length; i++)
@@ -728,6 +873,31 @@ public abstract class NotesPropertyParser : PropertyParser
 								noteType = (NoteType)i;
 								noteString = NotePrettyStrings[i];
 								break;
+							}
+						}
+
+						// Check for special StepF2 notes
+						if (noteType == NoteType.None && isPumpChart)
+						{
+							// Check for characters which indicate this is a StepF2 co-op chart.
+							if ((isPumpDoublesChart || isPumpRoutineChart) && !isStepF2CoopChart)
+							{
+								if (IsCharExclusiveToStepF2CoopChart(c))
+								{
+									// We need to reparse the chart starting from the beginning.
+									// StepF2 interprets some characters differently depending on if it is
+									// a co-op chart or not, like '1' being a P4 tap in co-op but a P1 tap
+									// in non-co-op.
+									if (chart.Type != "pump-routine")
+									{
+										Logger.Warn(
+											$"{chart.Type} chart uses StepF2 notation for multiple players but it is not a pump-routine chart." +
+											" Changing the chart type to pump-routine.");
+										chart.Type = "pump-routine";
+									}
+
+									return ParseNotes(chart, properties, notesStr, true);
+								}
 							}
 						}
 
@@ -742,17 +912,10 @@ public abstract class NotesPropertyParser : PropertyParser
 							case NoteType.HoldStart:
 							case NoteType.RollStart:
 							{
-								if (holding[laneIndex])
+								if (activeHolds[laneIndex] != null)
 								{
 									Logger?.Error(
-										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during hold on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
-									validChart = false;
-								}
-
-								if (rolling[laneIndex])
-								{
-									Logger?.Error(
-										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during roll on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
+										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} during hold or roll on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
 									validChart = false;
 								}
 
@@ -760,7 +923,7 @@ public abstract class NotesPropertyParser : PropertyParser
 							}
 							case NoteType.HoldEnd:
 							{
-								if (!holding[laneIndex] && !rolling[laneIndex])
+								if (activeHolds[laneIndex] == null)
 								{
 									Logger?.Error(
 										$"Invalid {chart.Type} {chart.DifficultyType} Chart. {noteString} while neither holding nor rolling on lane {laneIndex} during measure {measure}. This Chart will be ignored.");
@@ -788,17 +951,14 @@ public abstract class NotesPropertyParser : PropertyParser
 								note = new LaneNote { SourceType = c.ToString() };
 								break;
 							case NoteType.HoldStart:
-								holding[laneIndex] = true;
-								note = new LaneHoldStartNote { SourceType = c.ToString() };
-								break;
 							case NoteType.RollStart:
-								rolling[laneIndex] = true;
-								note = new LaneHoldStartNote { SourceType = c.ToString() };
+								activeHolds[laneIndex] = new LaneHoldStartNote { SourceType = c.ToString() };
+								note = activeHolds[laneIndex];
 								break;
 							case NoteType.HoldEnd:
 								note = new LaneHoldEndNote { SourceType = c.ToString() };
-								holding[laneIndex] = false;
-								rolling[laneIndex] = false;
+								playerOverride = activeHolds[laneIndex]?.Player ?? player;
+								activeHolds[laneIndex] = null;
 								break;
 						}
 
@@ -826,13 +986,16 @@ public abstract class NotesPropertyParser : PropertyParser
 						}
 
 						// Deprecated Attack parsing
-						if (charIndex + 1 < trimmedLine.Length && trimmedLine[charIndex + 1] == '{')
+						if (!isPumpChart)
 						{
-							while (charIndex < trimmedLine.Length)
+							if (charIndex + 1 < trimmedLine.Length && trimmedLine[charIndex + 1] == '{')
 							{
-								if (trimmedLine[charIndex] == '}')
-									break;
-								charIndex++;
+								while (charIndex < trimmedLine.Length)
+								{
+									if (trimmedLine[charIndex] == '}')
+										break;
+									charIndex++;
+								}
 							}
 						}
 
@@ -851,9 +1014,13 @@ public abstract class NotesPropertyParser : PropertyParser
 						if (null == note)
 							continue;
 
+						// Add any special flags accumulated above.
+						foreach (var kvp in specialNoteFlags)
+							note.Extras.AddSourceExtra(kvp.Key, kvp.Value);
+
 						// Configure common parameters on the note and add it.
 						note.Lane = laneIndex;
-						note.Player = player;
+						note.Player = playerOverride ?? player;
 						note.IntegerPosition = measure * NumBeatsPerMeasure * MaxValidDenominator
 						                       + Convert.ToInt32(
 							                       (double)(NumBeatsPerMeasure * MaxValidDenominator) /
@@ -866,7 +1033,7 @@ public abstract class NotesPropertyParser : PropertyParser
 					if (!validChart)
 						break;
 
-					// Advance line marker
+					// Advance line marker.
 					lineInMeasure++;
 				}
 
@@ -878,20 +1045,16 @@ public abstract class NotesPropertyParser : PropertyParser
 				measure++;
 			}
 
+			if (!validChart)
+				break;
+
 			// Validation.
 			for (var i = 0; i < chart.NumInputs; i++)
 			{
-				if (holding[i])
+				if (activeHolds[i] != null)
 				{
 					Logger?.Error(
-						$"Invalid {chart.Type} {chart.DifficultyType} Chart. Incomplete hold on lane {i}. This Chart will be ignored.");
-					validChart = false;
-				}
-
-				if (rolling[i])
-				{
-					Logger?.Error(
-						$"Invalid {chart.Type} {chart.DifficultyType} Chart. Incomplete roll on lane {i}. This Chart will be ignored.");
+						$"Invalid {chart.Type} {chart.DifficultyType} Chart. Incomplete hold or roll on lane {i}. This Chart will be ignored.");
 					validChart = false;
 				}
 			}
