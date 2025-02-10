@@ -349,7 +349,7 @@ public class ListFractionPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var fractionEntries = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
+			var fractionEntries = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var fractionEntry in fractionEntries)
 			{
 				var fractionParts = fractionEntry.Split('=');
@@ -433,7 +433,7 @@ public class CSVListAtTimePropertyParser<T> : PropertyParser where T : IConverti
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var pairs = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
+			var pairs = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var pair in pairs)
 			{
 				var kvp = pair.Split('=');
@@ -513,7 +513,7 @@ public class ScrollRateInterpolationPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var interpolationDatas = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
+			var interpolationDatas = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var interpolationData in interpolationDatas)
 			{
 				var kvp = interpolationData.Split('=');
@@ -595,7 +595,7 @@ public class ComboPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var comboDatas = value.Params[1].Trim().Split([','], StringSplitOptions.RemoveEmptyEntries);
+			var comboDatas = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var comboData in comboDatas)
 			{
 				var kvp = comboData.Split('=');
