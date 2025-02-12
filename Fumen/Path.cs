@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Fumen;
 
@@ -71,7 +72,8 @@ public static class Path
 	}
 
 	/// <summary>
-	/// Gets the full path, prepended with the Win32 device namespace to allows
+	/// Gets the full path.
+	/// On Windows the path will be prepended with the Win32 device namespace to allows
 	/// paths longer than 260 characters in some .NetFramework API calls which are
 	/// still restricted by MAX_PATH.
 	/// </summary>
@@ -80,9 +82,11 @@ public static class Path
 	/// </remarks>
 	/// <param name="path">The path to format.</param>
 	/// <returns>Full formatted path.</returns>
-	public static string GetWin32FileSystemFullPath(string path)
+	public static string GetFullPathwithDeviceNamespace(string path)
 	{
-		return Win32DeviceNamespace + System.IO.Path.GetFullPath(path);
+		return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			? Win32DeviceNamespace + System.IO.Path.GetFullPath(path)
+			: System.IO.Path.GetFullPath(path);
 	}
 
 	/// <summary>
