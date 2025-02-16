@@ -9,8 +9,9 @@ namespace Fumen;
 /// the most recent call always running, and cancelling any potentially previously running work
 /// so that there is always at most one asynchronous operation running.
 /// </summary>
-/// <typeparam name="T">Type of object used for state that is passed to work Tasks.</typeparam>
-public abstract class CancellableTask<T>
+/// <typeparam name="TInput">Type of object used for input state that is passed to the work Task.</typeparam>
+/// <typeparam name="TOutput">Type of object used for output from the Task.</typeparam>
+public abstract class CancellableTask<TInput, TOutput> where TOutput : class
 {
 	/// <summary>
 	/// CancellationTokenSource used for cancelling a running work Task.
@@ -25,12 +26,12 @@ public abstract class CancellableTask<T>
 	/// <summary>
 	/// The state from the most recent call to Start.
 	/// </summary>
-	private T State;
+	private TInput State;
 
 	/// <summary>
 	/// Currently running work Task.
 	/// </summary>
-	private Task WorkTask;
+	private Task<TOutput> WorkTask;
 
 	/// <summary>
 	/// Start a task with the given state.
@@ -40,7 +41,7 @@ public abstract class CancellableTask<T>
 	/// True if this call performed work and false if this call returned early before doing work
 	/// due to multiple calls running simultaneously.
 	/// </returns>
-	public async Task<bool> Start(T state)
+	public async Task<TOutput> Start(TInput state)
 	{
 		var needToAwaitWorkTask = false;
 		lock (Lock)
@@ -54,7 +55,7 @@ public abstract class CancellableTask<T>
 				// If we are already running, and another call has already started the cancellation,
 				// then return. That other call will proceed with the update State from above.
 				if (CancellationTokenSource.IsCancellationRequested)
-					return false;
+					return null;
 
 				// This is the first call to Start while the current work Task is running.
 				// We should cancel it and wait for it to cancel, then proceed with a new
@@ -68,7 +69,7 @@ public abstract class CancellableTask<T>
 		// We need to wait for it to finish cancelling so we can start a new one.
 		if (needToAwaitWorkTask)
 		{
-			await WorkTask;
+			_ = await WorkTask;
 		}
 
 		// We are now ready to start the work Task.
@@ -79,20 +80,22 @@ public abstract class CancellableTask<T>
 			// another thread called Start and made it into this scope first. In that case it is
 			// safe for this call to return as the other will do the work.
 			if (CancellationTokenSource != null)
-				return false;
+				return null;
 
 			// Start a new work Task with a new CancellationTokenSource.
 			CancellationTokenSource = new CancellationTokenSource();
 			var localState = State;
 			WorkTask = Task.Run(async () =>
 			{
+				TOutput result;
 				try
 				{
-					await DoWork(localState);
+					result = await DoWork(localState);
 				}
 				catch (OperationCanceledException)
 				{
 					Cancel();
+					result = null;
 				}
 				finally
 				{
@@ -102,14 +105,13 @@ public abstract class CancellableTask<T>
 						CancellationTokenSource = null;
 					}
 				}
+
+				return result;
 			});
 		}
 
 		// Wait for the work Task to complete.
-		await WorkTask;
-
-		// Return true to indicate we have done work.
-		return true;
+		return await WorkTask;
 	}
 
 	/// <summary>
@@ -125,9 +127,5 @@ public abstract class CancellableTask<T>
 	/// <param name="state">
 	/// The state provided to the most recent call of Start.
 	/// </param>
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-	protected virtual async Task DoWork(T state)
-	{
-	}
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+	protected abstract Task<TOutput> DoWork(TInput state);
 }
