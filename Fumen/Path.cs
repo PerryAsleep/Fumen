@@ -82,7 +82,7 @@ public static class Path
 	/// </remarks>
 	/// <param name="path">The path to format.</param>
 	/// <returns>Full formatted path.</returns>
-	public static string GetFullPathwithDeviceNamespace(string path)
+	public static string GetFullPathWithDeviceNamespace(string path)
 	{
 		return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 			? Win32DeviceNamespace + System.IO.Path.GetFullPath(path)

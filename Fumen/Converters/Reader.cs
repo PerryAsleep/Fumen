@@ -50,7 +50,7 @@ public abstract class Reader
 		var fileFormat = FileFormat.GetFileFormatByExtension(fileInfo.Extension.ToLower());
 		if (fileFormat == null)
 			return null;
-		var fullName = Path.GetFullPathwithDeviceNamespace(fileInfo.FullName);
+		var fullName = Path.GetFullPathWithDeviceNamespace(fileInfo.FullName);
 		switch (fileFormat.Type)
 		{
 			case FileFormatType.SM:
@@ -78,7 +78,7 @@ public abstract class Reader
 		var fileFormat = FileFormat.GetFileFormatByExtension(extension.ToLower());
 		if (fileFormat == null)
 			return null;
-		var fullName = Path.GetFullPathwithDeviceNamespace(fileName);
+		var fullName = Path.GetFullPathWithDeviceNamespace(fileName);
 		switch (fileFormat.Type)
 		{
 			case FileFormatType.SM:
