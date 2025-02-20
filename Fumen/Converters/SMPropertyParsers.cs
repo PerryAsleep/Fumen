@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using Fumen.ChartDefinition;
 using static Fumen.Converters.SMCommon;
 
@@ -163,6 +164,7 @@ public class PropertyToSongPropertyParser : PropertyParser
 
 /// <summary>
 /// Parses a value with one parameter directly into the property specified for the Chart.
+/// Can handle lists but will treat them as strings.
 /// Example:
 /// #ARTIST:Usao;
 /// </summary>
@@ -180,9 +182,39 @@ public class PropertyToChartPropertyParser : PropertyParser
 
 	public override bool Parse(MSDFile.Value value)
 	{
-		// Only consider this line if it matches this property name.
-		if (!ParseFirstParameter(value, out var chartValueStr))
-			return false;
+		string chartValueStr = null;
+
+		// The property is a list of values.
+		if (value.Params.Count > 2)
+		{
+			// Only consider this line if it matches this property name.
+			if (!DoesValueMatchProperty(value))
+				return false;
+
+			var sb = new StringBuilder();
+			var first = true;
+			for (var paramIndex = 1; paramIndex < value.Params.Count; paramIndex++)
+			{
+				if (!string.IsNullOrEmpty(value.Params[paramIndex]))
+				{
+					if (!first)
+					{
+						sb.Append(MSDFile.ParamMarker);
+					}
+
+					sb.Append(value.Params[paramIndex]);
+					first = false;
+				}
+			}
+
+			chartValueStr = sb.ToString();
+		}
+		else
+		{
+			// Only consider this line if it matches this property name.
+			if (!ParseFirstParameter(value, out chartValueStr))
+				return false;
+		}
 
 		// Record the string value in the extras.
 		Chart.Extras.AddSourceExtra(PropertyName, chartValueStr, true);
