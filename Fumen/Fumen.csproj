@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<PathMap>$(MSBuildProjectDirectory)=.</PathMap>
 	</PropertyGroup>
 	<ItemGroup>
 		<Folder Include="Sound\fmod\lib\" />
