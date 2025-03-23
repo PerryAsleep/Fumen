@@ -1177,7 +1177,7 @@ public static class SMCommon
 	/// a Chart for display purposes. First tries to get the DisplayBPM
 	/// from the source extras, and convert that list to a string. Failing that
 	/// it tries to look through the provided tempo events from the Song or Chart
-	/// and use the one at position 0.0.
+	/// and uses the min and max for a range, or one value if there is only one tempo.
 	/// </summary>
 	/// <param name="extras">
 	/// Extras from Song or Chart to check the TagDisplayBPM value.
@@ -1209,9 +1209,24 @@ public static class SMCommon
 				displayTempo = chartDisplayTempoObj.ToString();
 			}
 		}
-		else if (tempos?.ContainsKey(0.0) ?? false)
+		else if (tempos != null && tempos.Count > 0)
 		{
-			displayTempo = tempos[0.0].ToString("N3");
+			var minTempo = double.MaxValue;
+			var maxTempo = double.MinValue;
+			foreach (var kvp in tempos)
+			{
+				minTempo = Math.Min(kvp.Value, minTempo);
+				maxTempo = Math.Max(kvp.Value, maxTempo);
+			}
+
+			if (minTempo.DoubleEquals(maxTempo))
+			{
+				displayTempo = minTempo.ToString("N3");
+			}
+			else
+			{
+				displayTempo = minTempo.ToString("N3") + MSDFile.ParamMarker + maxTempo.ToString("N3");
+			}
 		}
 
 		return displayTempo;
