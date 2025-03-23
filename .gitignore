@@ -6,6 +6,7 @@
 # Fumen
 notes.txt
 message.txt
+.DS_Store
 
 # User-specific files
 *.rsuser
