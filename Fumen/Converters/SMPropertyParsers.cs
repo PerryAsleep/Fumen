@@ -182,7 +182,7 @@ public class PropertyToChartPropertyParser : PropertyParser
 
 	public override bool Parse(MSDFile.Value value)
 	{
-		string chartValueStr = null;
+		string chartValueStr;
 
 		// The property is a list of values.
 		if (value.Params.Count > 2)
