@@ -221,6 +221,9 @@ public static class SMCommon
 
 	public const int StepF2MaxPlayers = 4;
 
+	public const double NullOffset = 0.0;
+	public const double ItgOffset = 0.009;
+
 	public static readonly char[] SMAllWhiteSpace = ['\r', '\n', ' ', '\t'];
 
 	public static readonly List<Fraction> SubDivisions = [];
