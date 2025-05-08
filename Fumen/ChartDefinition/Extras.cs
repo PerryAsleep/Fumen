@@ -55,6 +55,15 @@ public class Extras
 	}
 
 	/// <summary>
+	/// Clear all Extras data.
+	/// </summary>
+	public void Clear()
+	{
+		SourceExtras?.Clear();
+		DestExtras?.Clear();
+	}
+
+	/// <summary>
 	/// Add an object to the source extra information.
 	/// </summary>
 	/// <param name="key">Key to identify this object.</param>
