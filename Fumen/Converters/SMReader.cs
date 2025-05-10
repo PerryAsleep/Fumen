@@ -61,8 +61,9 @@ public class SMReader : Reader
 
 		var song = new Song();
 		var timingProperties = new TimingProperties();
-		var propertyParsers = GetSongPropertyParsers(song, timingProperties);
-		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, false);
+		var attacks = new List<Attack>();
+		var propertyParsers = GetSongPropertyParsers(song, timingProperties, attacks);
+		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, attacks, false);
 		token.ThrowIfCancellationRequested();
 		return song;
 	}
@@ -87,7 +88,7 @@ public class SMReader : Reader
 
 		var song = new Song();
 		var propertyParsers = GetMetaDataPropertyParsers(song);
-		await LoadAsyncInternal(token, song, msdFile, propertyParsers, new TimingProperties(), true);
+		await LoadAsyncInternal(token, song, msdFile, propertyParsers, new TimingProperties(), null, true);
 		return song;
 	}
 
@@ -97,6 +98,7 @@ public class SMReader : Reader
 		MSDFile msdFile,
 		Dictionary<string, PropertyParser> propertyParsers,
 		TimingProperties timingProperties,
+		List<Attack> attacks,
 		bool metaDataOnly)
 	{
 		token.ThrowIfCancellationRequested();
@@ -233,7 +235,18 @@ public class SMReader : Reader
 					}
 
 					if (!metaDataOnly)
-						SetEventTimeAndMetricPositionsFromRows(chart);
+					{
+						SetEventTimeFromRows(chart);
+
+						if (attacks.Count > 0)
+						{
+							// Only after event times are known can we set the rows for Attacks which are defined only by time.
+							var chartAttacks = SetAttackRowsAndTimes(attacks, chart.Layers[0].Events, chartOffset, Logger);
+							// Now that the attacks have correct rows and time, add them to the chart and re-sort.
+							AddAttacks(chartAttacks, chart);
+							chart.Layers[0].Events.Sort(new SMEventComparer());
+						}
+					}
 				}
 			}
 			catch (OperationCanceledException)
@@ -285,7 +298,8 @@ public class SMReader : Reader
 
 	private Dictionary<string, PropertyParser> GetSongPropertyParsers(
 		Song song,
-		TimingProperties timingProperties)
+		TimingProperties timingProperties,
+		List<Attack> attacks)
 	{
 		var parsers = new Dictionary<string, PropertyParser>()
 		{
@@ -332,7 +346,7 @@ public class SMReader : Reader
 			[TagFGChanges] = new PropertyToSourceExtrasParser<string>(TagFGChanges, song.Extras),
 			// TODO: Parse Keysounds properly.
 			[TagKeySounds] = new PropertyToSourceExtrasParser<string>(TagKeySounds, song.Extras),
-			[TagAttacks] = new ListPropertyToSourceExtrasParser<string>(TagAttacks, song.Extras),
+			[TagAttacks] = new AttackPropertyParser(TagAttacks, attacks, song.Extras, TagFumenRawAttacksStr),
 			[TagNotes] = new SongNotesPropertyParser(TagNotes, song, true),
 			[TagNotes2] = new SongNotesPropertyParser(TagNotes2, song, true),
 			[TagLastBeatHint] = new PropertyToSourceExtrasParser<string>(TagLastBeatHint, song.Extras),

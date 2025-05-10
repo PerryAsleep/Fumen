@@ -86,9 +86,10 @@ public class SSCReader : Reader
 		token.ThrowIfCancellationRequested();
 
 		var song = new Song();
-		var timingProperties = new TimingProperties();
-		var propertyParsers = GetSongPropertyParsers(song, timingProperties);
-		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, false);
+		var songTimingProperties = new TimingProperties();
+		var songAttacks = new List<Attack>();
+		var propertyParsers = GetSongPropertyParsers(song, songTimingProperties, songAttacks);
+		await LoadAsyncInternal(token, song, msdFile, propertyParsers, songTimingProperties, songAttacks, false);
 		token.ThrowIfCancellationRequested();
 		return song;
 	}
@@ -112,9 +113,9 @@ public class SSCReader : Reader
 		token.ThrowIfCancellationRequested();
 
 		var song = new Song();
-		var timingProperties = new TimingProperties();
+		var songTimingProperties = new TimingProperties();
 		var propertyParsers = GetSongMetaDataPropertyParsers(song);
-		await LoadAsyncInternal(token, song, msdFile, propertyParsers, timingProperties, true);
+		await LoadAsyncInternal(token, song, msdFile, propertyParsers, songTimingProperties, null, true);
 		token.ThrowIfCancellationRequested();
 		return song;
 	}
@@ -125,6 +126,7 @@ public class SSCReader : Reader
 		MSDFile msdFile,
 		Dictionary<string, PropertyParser> songPropertyParsers,
 		TimingProperties songTimingProperties,
+		List<Attack> songAttacks,
 		bool metaDataOnly)
 	{
 		token.ThrowIfCancellationRequested();
@@ -145,6 +147,7 @@ public class SSCReader : Reader
 				Chart activeChart = null;
 				var firstChart = true;
 				var activeChartTimingProperties = new TimingProperties();
+				var activeChartAttacks = new List<Attack>();
 
 				// Parse all Values from the MSDFile.
 				foreach (var value in msdFile.Values)
@@ -168,8 +171,10 @@ public class SSCReader : Reader
 							FinalizeChartAndAddToSong(
 								activeChart,
 								activeChartTimingProperties,
+								activeChartAttacks,
 								song,
 								songTimingProperties,
+								songAttacks,
 								ref firstChart,
 								metaDataOnly);
 						}
@@ -178,9 +183,10 @@ public class SSCReader : Reader
 						activeChart = new Chart();
 						activeChart.Layers.Add(new Layer());
 						activeChartTimingProperties = new TimingProperties();
+						activeChartAttacks = [];
 						chartPropertyParsers = metaDataOnly
 							? GetChartMetaDataPropertyParsers(activeChart)
-							: GetChartPropertyParsers(activeChart, activeChartTimingProperties);
+							: GetChartPropertyParsers(activeChart, activeChartTimingProperties, activeChartAttacks);
 						chartExtrasPropertyParser = new ExtrasPropertyParser(activeChart.Extras);
 						chartExtrasPropertyParser.SetLogger(Logger);
 						continue;
@@ -216,8 +222,10 @@ public class SSCReader : Reader
 					FinalizeChartAndAddToSong(
 						activeChart,
 						activeChartTimingProperties,
+						activeChartAttacks,
 						song,
 						songTimingProperties,
+						songAttacks,
 						ref firstChart,
 						metaDataOnly);
 				}
@@ -238,8 +246,10 @@ public class SSCReader : Reader
 	private void FinalizeChartAndAddToSong(
 		Chart chart,
 		TimingProperties chartTimingProperties,
+		List<Attack> chartAttacks,
 		Song song,
 		TimingProperties songTimingProperties,
+		List<Attack> songAttacks,
 		ref bool firstChart,
 		bool metaDataOnly)
 	{
@@ -259,6 +269,10 @@ public class SSCReader : Reader
 				logTimeEventErrors = true;
 			}
 		}
+
+		var attacks = chartAttacks;
+		if (attacks == null || attacks.Count == 0)
+			attacks = songAttacks;
 
 		if (!metaDataOnly)
 		{
@@ -321,7 +335,18 @@ public class SSCReader : Reader
 		}
 
 		if (!metaDataOnly)
-			SetEventTimeAndMetricPositionsFromRows(chart);
+		{
+			SetEventTimeFromRows(chart);
+
+			if (attacks.Count > 0)
+			{
+				// Only after event times are known can we set the rows for Attacks which are defined only by time.
+				var modifiedAttacks = SetAttackRowsAndTimes(attacks, chart.Layers[0].Events, chart.ChartOffsetFromMusic, Logger);
+				// Now that the attacks have correct rows and time, add them to the chart and re-sort.
+				AddAttacks(modifiedAttacks, chart);
+				chart.Layers[0].Events.Sort(new SMEventComparer());
+			}
+		}
 
 		// Add the Chart.
 		song.Charts.Add(chart);
@@ -331,7 +356,8 @@ public class SSCReader : Reader
 
 	private Dictionary<string, PropertyParser> GetSongPropertyParsers(
 		Song song,
-		TimingProperties songTimingProperties)
+		TimingProperties songTimingProperties,
+		List<Attack> songAttacks)
 	{
 		var parsers = new Dictionary<string, PropertyParser>()
 		{
@@ -372,7 +398,7 @@ public class SSCReader : Reader
 			[TagFGChanges] = new PropertyToSourceExtrasParser<string>(TagFGChanges, song.Extras),
 			// TODO: Parse Keysounds properly.
 			[TagKeySounds] = new PropertyToSourceExtrasParser<string>(TagKeySounds, song.Extras),
-			[TagAttacks] = new ListPropertyToSourceExtrasParser<string>(TagAttacks, song.Extras),
+			[TagAttacks] = new AttackPropertyParser(TagAttacks, songAttacks, song.Extras, TagFumenRawAttacksStr),
 			[TagOffset] = new PropertyToSourceExtrasParser<double>(TagOffset, song.Extras),
 
 			// These tags are only used if the individual charts do not specify values.
@@ -451,7 +477,6 @@ public class SSCReader : Reader
 			[TagBGChanges2] = new PropertyToSourceExtrasParser<string>(TagBGChanges2, song.Extras),
 			[TagFGChanges] = new PropertyToSourceExtrasParser<string>(TagFGChanges, song.Extras),
 			[TagKeySounds] = new PropertyToSourceExtrasParser<string>(TagKeySounds, song.Extras),
-			[TagAttacks] = new ListPropertyToSourceExtrasParser<string>(TagAttacks, song.Extras),
 			[TagOffset] = new PropertyToSourceExtrasParser<double>(TagOffset, song.Extras),
 		};
 		foreach (var kvp in parsers)
@@ -461,7 +486,8 @@ public class SSCReader : Reader
 
 	private Dictionary<string, PropertyParser> GetChartPropertyParsers(
 		Chart chart,
-		TimingProperties chartTimingProperties)
+		TimingProperties chartTimingProperties,
+		List<Attack> chartAttacks)
 	{
 		var parsers = new Dictionary<string, PropertyParser>()
 		{
@@ -497,7 +523,7 @@ public class SSCReader : Reader
 				TagFumenRawScrollsStr),
 			[TagFakes] = new CSVListAtTimePropertyParser<double>(TagFakes, chartTimingProperties.Fakes, chart.Extras),
 			[TagLabels] = new CSVListAtTimePropertyParser<string>(TagLabels, chartTimingProperties.Labels, chart.Extras),
-			[TagAttacks] = new ListPropertyToSourceExtrasParser<string>(TagAttacks, chart.Extras),
+			[TagAttacks] = new AttackPropertyParser(TagAttacks, chartAttacks, chart.Extras, TagFumenRawAttacksStr),
 			[TagOffset] = new PropertyToChartPropertyParser(TagOffset, nameof(Chart.ChartOffsetFromMusic), chart),
 			[TagSampleStart] = new PropertyToSourceExtrasParser<double>(TagSampleStart, chart.Extras),
 			[TagSampleLength] = new PropertyToSourceExtrasParser<double>(TagSampleLength, chart.Extras),

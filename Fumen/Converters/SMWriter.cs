@@ -115,7 +115,7 @@ public class SMWriter : SMWriterBase
 				if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(TagFGChanges, false, false);
 				WriteSongPropertyFromExtras(TagKeySounds, false, false); // TODO: Write keysounds properly
-				WriteSongPropertyFromExtras(TagAttacks, false, false);
+				WriteSongPropertyAttacks();
 
 				StreamWriter.WriteLine();
 

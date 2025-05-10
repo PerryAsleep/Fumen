@@ -345,6 +345,220 @@ public class ListPropertyToSourceExtrasParser<T> : PropertyParser where T : ICon
 
 /// <summary>
 /// Parses a value with multiple parameters separated by the MSDFile ParamMarker
+/// into a List of Attacks.
+/// Will also store the raw value on the Extras if given raw string property name.
+/// Example:
+/// #ATTACKS: TIME=0.00:LEN=0.05:MODS=*10 -25% Confusion: TIME=1.98:LEN=0.05:MODS=*10 -25% Confusion;
+/// </summary>
+public class AttackPropertyParser : PropertyParser
+{
+	private readonly List<Attack> Values;
+	private readonly Extras Extras;
+	private readonly string RawStringPropertyName;
+
+	public AttackPropertyParser(
+		string smPropertyName,
+		List<Attack> values,
+		Extras extras = null,
+		string rawStringPropertyName = null)
+		: base(smPropertyName)
+	{
+		Values = values;
+		Extras = extras;
+		RawStringPropertyName = rawStringPropertyName;
+	}
+
+	public override bool Parse(MSDFile.Value value)
+	{
+		// Only consider this line if it matches this property name.
+		if (!ParseFirstParameter(value, out var rawStr))
+			return false;
+
+		// Record the raw string to preserve formatting when writing.
+		if (!string.IsNullOrEmpty(RawStringPropertyName))
+			Extras?.AddSourceExtra(RawStringPropertyName, rawStr);
+
+		var attacksByRow = new Dictionary<double, Attack>();
+		if (!string.IsNullOrEmpty(rawStr))
+		{
+			// This logic looks a little strange, but it matches Stepmania.
+			// Attacks use the ParamMarker both to separate individual attacks
+			// and to separate components within attacks. We start at index 1
+			// because 0 is the ATTACKS text itself.
+			var a = new Attack();
+			var duration = 0.0;
+			double? end = null;
+			for (var i = 1; i < value.Params.Count; i++)
+			{
+				var parts = value.Params[i].Split('=', StringSplitOptions.TrimEntries);
+				if (parts.Length < 2)
+					continue;
+
+				switch (parts[0].Trim().ToLower())
+				{
+					case "time":
+					{
+						if (!double.TryParse(parts[1], out var time))
+						{
+							Logger?.Warn($"{PropertyName}: Malformed {TagAttacks} time '{parts[1]}'.");
+							continue;
+						}
+
+						a.TimeSeconds = time;
+						break;
+					}
+					case "len":
+					{
+						if (!double.TryParse(parts[1], out var len))
+						{
+							Logger?.Warn($"{PropertyName}: Malformed {TagAttacks} len '{parts[1]}'.");
+							continue;
+						}
+
+						duration = len;
+						break;
+					}
+					case "end":
+					{
+						if (!double.TryParse(parts[1], out var endDouble))
+						{
+							Logger?.Warn($"{PropertyName}: Malformed {TagAttacks} end '{parts[1]}'.");
+							continue;
+						}
+
+						end = endDouble;
+						break;
+					}
+					case "mods":
+					{
+						if (end != null)
+						{
+							duration = end.Value - a.TimeSeconds;
+							end = null;
+						}
+
+						a.Modifiers = ParseMods(parts[1], duration);
+
+						if (attacksByRow.TryGetValue(a.TimeSeconds, out var existingAttack))
+						{
+							existingAttack.Modifiers.AddRange(a.Modifiers);
+						}
+						else
+						{
+							Values.Add(a);
+							attacksByRow[a.TimeSeconds] = a;
+						}
+
+						a = new Attack();
+						duration = 0.0;
+						break;
+					}
+				}
+			}
+		}
+
+		Extras?.AddSourceExtra(PropertyName, Values);
+
+		return true;
+	}
+
+	/// <summary>
+	/// Parses a string representing multiple mods into a list of Modifiers.
+	/// The logic is strange, but it matches the logic from Stepmania in PlayerOptions::FromOneModString.
+	/// </summary>
+	/// <param name="modsString">String of one or more mods in an attack string.</param>
+	/// <param name="duration">Modifier duration in seconds.</param>
+	/// <returns>List of parsed Modifiers.</returns>
+	private List<Modifier> ParseMods(string modsString, double duration)
+	{
+		var mods = new List<Modifier>();
+
+		var modStrings = modsString.Trim().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+		foreach (var modString in modStrings)
+		{
+			var mod = new Modifier
+			{
+				Level = 1.0,
+				Speed = 1.0,
+				LengthSeconds = duration,
+			};
+			var modComponents = modString.Split(" ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+			if (modComponents.Length == 0)
+				continue;
+			foreach (var component in modComponents)
+			{
+				if (component == "no")
+				{
+					mod.Level = 0.0;
+				}
+				else if (char.IsDigit(component[0]) || component[0] == '-')
+				{
+					if (component.EndsWith("ms"))
+					{
+						if (!double.TryParse(component.Substring(0, component.Length - 2), out var ms))
+						{
+							Logger?.Warn($"Failed to parse MODS level ms value '{component}'. Expected floating point value.");
+							mod = null;
+							break;
+						}
+
+						mod.Level = ms * 0.001;
+					}
+					else if (component.EndsWith("*"))
+					{
+						Logger?.Warn($"Failed to parse MODS level value '{component}'. MODS values should not end in '*'.");
+						mod = null;
+						break;
+					}
+					else
+					{
+						// ReSharper disable once CommentTypo
+						// Level values often end with % and Stepmania uses std::strtof which can handle that.
+						// double.TryParse cannot so we manually remove it.
+						var cleanedComponent = component;
+						if (cleanedComponent.EndsWith("%"))
+						{
+							cleanedComponent = cleanedComponent[..^1];
+						}
+
+						if (!double.TryParse(cleanedComponent, out var level))
+						{
+							Logger?.Warn(
+								$"Failed to parse MODS level value '{cleanedComponent}'. Expected floating point value.");
+							mod = null;
+							break;
+						}
+
+						mod.Level = level * 0.01;
+					}
+				}
+				else if (component[0] == '*')
+				{
+					var speedString = component.Substring(1);
+					if (!double.TryParse(speedString, out var speed))
+					{
+						Logger?.Warn($"Failed to parse MODS speed value '{speedString}'. Expected floating point value.");
+						mod = null;
+						break;
+					}
+
+					mod.Speed = speed;
+				}
+			}
+
+			if (mod == null)
+				continue;
+
+			mod.Name = modComponents[^1];
+			mods.Add(mod);
+		}
+
+		return mods;
+	}
+}
+
+/// <summary>
+/// Parses a value with multiple parameters separated by the MSDFile ParamMarker
 /// into a List of Fractions.
 /// Parses these into a Dictionary of Fractions.
 /// Will also store the raw value on the Extras if given raw string property name.

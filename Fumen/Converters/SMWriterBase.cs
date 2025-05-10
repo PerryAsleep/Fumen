@@ -121,14 +121,6 @@ public abstract class SMWriterBase
 		public string FilePath;
 
 		/// <summary>
-		/// When writing files, the Event IntegerPosition will be used to determine positioning.
-		/// Setting this variable to true will update every Event IntegerPosition based off of it's
-		/// MetricPosition prior to writing.
-		/// Use this if the Rows have not been set but accurate MetricPositions are available.
-		/// </summary>
-		public bool UpdateEventRowsFromMetricPosition = false;
-
-		/// <summary>
 		/// Force using song-level timing data instead of per-chart timing data when writing files.
 		/// The FallbackChart will be used for song-level timing data and all chart-level timing
 		/// data will be ignored.
@@ -211,6 +203,12 @@ public abstract class SMWriterBase
 		/// If false, write from the Chart's Multipliers Events.
 		/// </summary>
 		public bool WriteCombosFromExtras = false;
+
+		/// <summary>
+		/// If true, write Attacks from the Song or Chart's Extras.
+		/// If false, write from the Chart's Attack Events.
+		/// </summary>
+		public bool WriteAttacksFromExtras = false;
 	}
 
 	/// <summary>
@@ -292,12 +290,6 @@ public abstract class SMWriterBase
 
 		PerformStartupChecks();
 		DetermineChartDifficultyTypes();
-
-		if (Config.UpdateEventRowsFromMetricPosition)
-		{
-			foreach (var chart in Config.Song.Charts)
-				SetEventRowsFromMetricPosition(chart);
-		}
 	}
 
 	/// <summary>
@@ -1235,6 +1227,79 @@ public abstract class SMWriterBase
 			text = text.Replace(",", $"{MSDFile.EscapeMarker},");
 
 			sb.Append($"{timeInBeatsStr}={text}");
+		}
+
+		return sb.ToString();
+	}
+
+	protected void WriteSongPropertyAttacks(bool stepmaniaOmitted = false)
+	{
+		// If we have a raw string from the source file, use it.
+		// Stepmania files have changed how they format values over the years
+		// and this is to cut down on unnecessary diffs when exporting files.
+		if (MatchesSourceFileFormatType()
+		    && Config.WriteAttacksFromExtras
+		    && Config.Song.Extras.TryGetSourceExtra(TagFumenRawAttacksStr, out string rawStr))
+		{
+			WriteSongProperty(TagAttacks, rawStr, stepmaniaOmitted, false);
+			return;
+		}
+
+		if (Config.FallbackChart != null)
+		{
+			WriteChartPropertyAttacks(Config.FallbackChart, stepmaniaOmitted);
+			return;
+		}
+
+		WriteSongProperty(TagAttacks, "", stepmaniaOmitted);
+	}
+
+	protected void WriteChartPropertyAttacks(Chart chart, bool stepmaniaOmitted = false)
+	{
+		// If we have a raw string from the source file, use it.
+		if (Config.WriteAttacksFromExtras
+		    && chart.Extras.TryGetExtra(TagFumenRawAttacksStr, out string rawStr, MatchesSourceFileFormatType()))
+		{
+			WriteChartProperty(chart, TagAttacks, rawStr, stepmaniaOmitted, false);
+			return;
+		}
+
+		WriteChartProperty(chart, TagAttacks, CreateAttacksStringFromChartEvents(chart), stepmaniaOmitted, false);
+	}
+
+	private string CreateAttacksStringFromChartEvents(Chart chart)
+	{
+		var numAttacks = 0;
+		var numMods = 0;
+		var sb = new StringBuilder();
+		foreach (var e in chart.Layers[0].Events)
+		{
+			if (!(e is Attack a))
+				continue;
+
+			// Attacks start with a newline, and then every attack is on one line.
+			if (numAttacks == 0)
+				sb.Append("\r\n");
+			numAttacks++;
+
+			// If present, use the original double value from the source chart so as not to lose
+			// or alter the precision.
+			if (!a.Extras.TryGetExtra(TagFumenDoublePosition, out double attackTime, MatchesSourceFileFormatType()))
+			{
+				attackTime = a.TimeSeconds - chart.ChartOffsetFromMusic;
+			}
+
+			var attackTimeStr = attackTime.ToString(SMDoubleFormat);
+
+			foreach (var mod in a.Modifiers)
+			{
+				if (numMods > 1)
+					sb.Append(MSDFile.ParamMarker);
+				numMods++;
+				var modLen = mod.LengthSeconds.ToString(SMDoubleFormat);
+				sb.Append(
+					$"  TIME={attackTimeStr}{MSDFile.ParamMarker}LEN={modLen}{MSDFile.ParamMarker}MODS={GetModString(mod, true, false)}");
+			}
 		}
 
 		return sb.ToString();

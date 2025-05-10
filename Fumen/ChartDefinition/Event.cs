@@ -1,4 +1,6 @@
-﻿namespace Fumen.ChartDefinition;
+﻿using System.Collections.Generic;
+
+namespace Fumen.ChartDefinition;
 
 /// <summary>
 /// Event within a Chart Layer.
@@ -9,11 +11,6 @@ public abstract class Event
 	/// Position of this Event represented as time in seconds.
 	/// </summary>
 	public double TimeSeconds { get; set; }
-
-	/// <summary>
-	/// Position of this Event represented as a MetricPosition.
-	/// </summary>
-	public MetricPosition MetricPosition { get; set; }
 
 	/// <summary>
 	/// Position of this Event represented as an integer value.
@@ -42,8 +39,6 @@ public abstract class Event
 	protected Event(Event other)
 	{
 		TimeSeconds = other.TimeSeconds;
-		if (other.MetricPosition != null)
-			MetricPosition = new MetricPosition(other.MetricPosition);
 		IntegerPosition = other.IntegerPosition;
 		SourceType = other.SourceType;
 		DestType = other.DestType;
@@ -76,7 +71,6 @@ public abstract class Event
 		// same note. Extras are used for storing information from deserialization
 		// or for serialization.
 		return TimeSeconds.DoubleEquals(other.TimeSeconds)
-		       && Equals(MetricPosition, other.MetricPosition)
 		       && IntegerPosition == other.IntegerPosition
 		       && SourceType == other.SourceType
 		       && DestType == other.DestType;
@@ -356,15 +350,22 @@ public class TimeSignature : Event
 	/// </summary>
 	public Fraction Signature;
 
-	public TimeSignature(Fraction signature)
+	/// <summary>
+	/// Measure number of this TimeSignature Event.
+	/// </summary>
+	public int Measure;
+
+	public TimeSignature(Fraction signature, int measure)
 	{
 		Signature = signature;
+		Measure = measure;
 	}
 
 	public TimeSignature(TimeSignature other)
 		: base(other)
 	{
 		Signature = new Fraction(other.Signature);
+		Measure = other.Measure;
 	}
 
 	public override Event Clone()
@@ -375,6 +376,7 @@ public class TimeSignature : Event
 	public bool Matches(TimeSignature other)
 	{
 		return base.Matches(other)
+		       && Measure == other.Measure
 		       && Equals(Signature, other.Signature);
 	}
 
@@ -584,5 +586,129 @@ public class Multipliers : Event
 		if (other.GetType() != GetType())
 			return false;
 		return Matches((Multipliers)other);
+	}
+}
+
+/// <summary>
+/// Event representing modifiers to apply at specific times for specific durations.
+/// </summary>
+/// <remarks>
+/// This is extremely StepMania-specific.
+/// </remarks>
+public class Attack : Event
+{
+	/// <summary>
+	/// List of all Modifiers being applied for this Attack.
+	/// </summary>
+	public List<Modifier> Modifiers;
+
+	public Attack()
+	{
+		Modifiers = new List<Modifier>();
+	}
+
+	public Attack(List<Modifier> modifiers)
+	{
+		Modifiers = modifiers;
+	}
+
+	public Attack(Attack other)
+		: base(other)
+	{
+		Modifiers = new List<Modifier>(other.Modifiers.Count);
+		foreach (var mod in other.Modifiers)
+		{
+			Modifiers.Add(mod.Clone());
+		}
+	}
+
+	public override Event Clone()
+	{
+		return new Attack(this);
+	}
+
+	public bool Matches(Attack other)
+	{
+		if (!base.Matches(other))
+			return false;
+		if (Modifiers.Count != other.Modifiers.Count)
+			return false;
+		for (var i = 0; i < Modifiers.Count; i++)
+			if (!Modifiers[i].Matches(other.Modifiers[i]))
+				return false;
+		return true;
+	}
+
+	public override bool Matches(Event other)
+	{
+		if (ReferenceEquals(null, other))
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+		if (other.GetType() != GetType())
+			return false;
+		return Matches((Attack)other);
+	}
+}
+
+/// <summary>
+/// Modifier to apply during an Attack.
+/// </summary>
+/// <remarks>
+/// This is extremely StepMania-specific.
+/// </remarks>
+public class Modifier
+{
+	/// <summary>
+	/// Modifier name. There are a large number of these and the allowed values vary depending on
+	/// the fork of Stepmania, so it is best to use a string rather than enumerated values. These
+	/// are values like "drunk", "boomerang", "dizzy", etc.
+	/// </summary>
+	public string Name;
+
+	/// <summary>
+	/// Numeric level of the effect. Also referred to as strength. In ssm/ssc files these are often
+	/// expressed with values like:
+	/// 100%:	Normal level.
+	/// no:		Equivalent to 0%.
+	/// -50%:	Inverted amount.
+	/// </summary>
+	public double Level;
+
+	/// <summary>
+	/// How quickly the modifier is applied. The default speed is 1s. In ssm/ssc files these are
+	/// often expressed with values like:
+	/// *0.5:	Half speed.
+	/// *2:		Double speed.
+	/// *1:		Default speed.
+	/// </summary>
+	public double Speed;
+
+	/// <summary>
+	/// Duration of the Modifier as time in seconds.
+	/// Stepmania does not associate length with modifiers. It instead defines the length
+	/// on the owning attack. This can result in situations where on a single row there are
+	/// multiple Attack events, one for each set of Modifiers with the same length. Defining
+	/// the length on the mod simplifies this as it means we can use only one Attack per row.
+	/// </summary>
+	public double LengthSeconds;
+
+	public Modifier Clone()
+	{
+		return new Modifier
+		{
+			Name = Name,
+			Level = Level,
+			Speed = Speed,
+			LengthSeconds = LengthSeconds,
+		};
+	}
+
+	public bool Matches(Modifier other)
+	{
+		return Name == other.Name
+		       && Level.DoubleEquals(other.Level)
+		       && Speed.DoubleEquals(other.Speed)
+		       && LengthSeconds.DoubleEquals(other.LengthSeconds);
 	}
 }

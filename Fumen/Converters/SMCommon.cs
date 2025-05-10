@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text;
 using Fumen.ChartDefinition;
 
 namespace Fumen.Converters;
@@ -335,6 +336,7 @@ public static class SMCommon
 	public const string TagFumenRawCombosStr = "FumenRawCombosStr";
 	public const string TagFumenRawFakesStr = "FumenRawFakesStr";
 	public const string TagFumenRawTimeSignaturesStr = "FumenRawTimeSignaturesStr";
+	public const string TagFumenRawAttacksStr = "FumenRawAttacksStr";
 	public const string TagFumenChartUsesOwnTimingData = "FumenChartUsesOwnTimingData";
 	public const string TagFumenNoteOriginalMeasurePosition = "FumenNoteOriginalMeasurePosition";
 
@@ -622,7 +624,7 @@ public static class SMCommon
 	///  Item2: Original double beat position of the event.
 	///  Item3: Original event value.
 	/// </returns>
-	private static List<Tuple<int, double, T>> ConvertValueAtTimeDictionaryToListWithNoConflicts<T>(
+	private static List<Tuple<int, double, T>> ConvertValueAtBeatDictionaryToListWithNoConflicts<T>(
 		Dictionary<double, T> events,
 		ILogger logger,
 		bool logOnErrors,
@@ -701,7 +703,7 @@ public static class SMCommon
 		bool logOnErrors)
 	{
 		// Insert tempo change events.
-		var temposList = ConvertValueAtTimeDictionaryToListWithNoConflicts(tempos, logger, logOnErrors, nameof(Tempo));
+		var temposList = ConvertValueAtBeatDictionaryToListWithNoConflicts(tempos, logger, logOnErrors, nameof(Tempo));
 		for (var i = 0; i < temposList.Count; i++)
 		{
 			var tempo = temposList[i];
@@ -775,7 +777,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var stop in ConvertValueAtTimeDictionaryToListWithNoConflicts(stops, logger, logOnErrors, nameof(Stop)))
+		foreach (var stop in ConvertValueAtBeatDictionaryToListWithNoConflicts(stops, logger, logOnErrors, nameof(Stop)))
 		{
 			var length = stop.Item3;
 			if (length.DoubleEquals(0.0))
@@ -819,7 +821,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var delay in ConvertValueAtTimeDictionaryToListWithNoConflicts(delays, logger, logOnErrors, DelayString))
+		foreach (var delay in ConvertValueAtBeatDictionaryToListWithNoConflicts(delays, logger, logOnErrors, DelayString))
 		{
 			var length = delay.Item3;
 			if (length < 0.0)
@@ -863,7 +865,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var warp in ConvertValueAtTimeDictionaryToListWithNoConflicts(warps, logger, logOnErrors, nameof(Warp)))
+		foreach (var warp in ConvertValueAtBeatDictionaryToListWithNoConflicts(warps, logger, logOnErrors, nameof(Warp)))
 		{
 			if (warp.Item3 <= 0)
 			{
@@ -907,7 +909,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var scrollRate in ConvertValueAtTimeDictionaryToListWithNoConflicts(scrollRateEvents, logger, logOnErrors,
+		foreach (var scrollRate in ConvertValueAtBeatDictionaryToListWithNoConflicts(scrollRateEvents, logger, logOnErrors,
 			         "Scroll"))
 		{
 			var scrollRateEvent = new ScrollRate(scrollRate.Item3)
@@ -939,7 +941,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var scrollRate in ConvertValueAtTimeDictionaryToListWithNoConflicts(scrollRateEvents, logger, logOnErrors,
+		foreach (var scrollRate in ConvertValueAtBeatDictionaryToListWithNoConflicts(scrollRateEvents, logger, logOnErrors,
 			         "Speed"))
 		{
 			var (speed, length, secondsFlag) = scrollRate.Item3;
@@ -982,7 +984,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var tickCount in ConvertValueAtTimeDictionaryToListWithNoConflicts(tickCountEvents, logger, logOnErrors,
+		foreach (var tickCount in ConvertValueAtBeatDictionaryToListWithNoConflicts(tickCountEvents, logger, logOnErrors,
 			         nameof(TickCount)))
 		{
 			var tickCountEvent = new TickCount(tickCount.Item3)
@@ -1013,7 +1015,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var label in ConvertValueAtTimeDictionaryToListWithNoConflicts(labelEvents, logger, logOnErrors, nameof(Label)))
+		foreach (var label in ConvertValueAtBeatDictionaryToListWithNoConflicts(labelEvents, logger, logOnErrors, nameof(Label)))
 		{
 			var labelEvent = new Label(label.Item3)
 			{
@@ -1043,7 +1045,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var fake in ConvertValueAtTimeDictionaryToListWithNoConflicts(fakeEvents, logger, logOnErrors,
+		foreach (var fake in ConvertValueAtBeatDictionaryToListWithNoConflicts(fakeEvents, logger, logOnErrors,
 			         nameof(FakeSegment)))
 		{
 			var length = fake.Item3;
@@ -1089,7 +1091,7 @@ public static class SMCommon
 		ILogger logger,
 		bool logOnErrors)
 	{
-		foreach (var combo in ConvertValueAtTimeDictionaryToListWithNoConflicts(comboEvents, logger, logOnErrors, "Combo"))
+		foreach (var combo in ConvertValueAtBeatDictionaryToListWithNoConflicts(comboEvents, logger, logOnErrors, "Combo"))
 		{
 			var multipliersEvent = new Multipliers(combo.Item3.Item1, combo.Item3.Item2)
 			{
@@ -1119,8 +1121,10 @@ public static class SMCommon
 		bool logOnErrors)
 	{
 		var tsEvents = new List<TimeSignature>();
-		foreach (var timeSignatureEvent in ConvertValueAtTimeDictionaryToListWithNoConflicts(timeSignatures, logger,
-			         logOnErrors, nameof(TimeSignature)))
+		TimeSignature previousTimeSignature = null;
+		var timeSignatureList =
+			ConvertValueAtBeatDictionaryToListWithNoConflicts(timeSignatures, logger, logOnErrors, nameof(TimeSignature));
+		foreach (var timeSignatureEvent in timeSignatureList)
 		{
 			var integerPosition = timeSignatureEvent.Item1;
 			var beatDouble = timeSignatureEvent.Item2;
@@ -1155,7 +1159,30 @@ public static class SMCommon
 				continue;
 			}
 
-			tsEvents.Add(new TimeSignature(ts)
+			// If there is no time signature at the start of the chart, add a default 4/4 signature.
+			if (previousTimeSignature == null && integerPosition != 0)
+			{
+				previousTimeSignature =
+					new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure), 0)
+					{
+						IntegerPosition = 0,
+					};
+				tsEvents.Add(previousTimeSignature);
+			}
+
+			// Determine the measure number for this TimeSignature. Always round up to account for poorly specified
+			// time signatures which do not fall on measure boundaries.
+			var measure = 0;
+			if (previousTimeSignature != null)
+			{
+				var rowsPerMeasure = previousTimeSignature.Signature.Numerator * NumBeatsPerMeasure /
+				                     previousTimeSignature.Signature.Denominator;
+				var relativeRow = integerPosition - previousTimeSignature.IntegerPosition;
+				var relativeMeasure = (relativeRow + rowsPerMeasure - 1) / rowsPerMeasure;
+				measure = previousTimeSignature.Measure + relativeMeasure;
+			}
+
+			tsEvents.Add(new TimeSignature(ts, measure)
 			{
 				IntegerPosition = integerPosition,
 			});
@@ -1164,7 +1191,7 @@ public static class SMCommon
 		// If there is no time signature at the start of the chart, add a default 4/4 signature.
 		if (tsEvents.Count == 0 || tsEvents[0].IntegerPosition != 0)
 		{
-			tsEvents.Add(new TimeSignature(new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure))
+			tsEvents.Add(new TimeSignature(new TimeSignature(new Fraction(NumBeatsPerMeasure, NumBeatsPerMeasure), 0)
 			{
 				IntegerPosition = 0,
 			}));
@@ -1173,6 +1200,18 @@ public static class SMCommon
 		// Add all time signatures.
 		foreach (var tsEvent in tsEvents)
 			chart.Layers[0].Events.Add(tsEvent);
+	}
+
+	/// <summary>
+	/// Adds the given Attack Events to the given Chart.
+	/// </summary>
+	/// <param name="attacks">
+	/// List of Attacks parsed from the Song or Chart.
+	/// </param>
+	/// <param name="chart">Chart to add Attack Events to.</param>
+	public static void AddAttacks(List<Attack> attacks, Chart chart)
+	{
+		chart.Layers[0].Events.AddRange(attacks);
 	}
 
 	/// <summary>
@@ -1235,6 +1274,40 @@ public static class SMCommon
 		return displayTempo;
 	}
 
+	public static string GetModString(Modifier mod, bool escapeName, bool compactForm)
+	{
+		var sb = new StringBuilder();
+
+		if (!mod.Speed.DoubleEquals(1.0))
+		{
+			var modSpeed = compactForm ? mod.Speed.ToString("0.##") : mod.Speed.ToString(SMDoubleFormat);
+			sb.Append($"*{modSpeed} ");
+		}
+
+		if (!mod.Level.DoubleEquals(1.0))
+		{
+			var scaledLevel = mod.Level * 100.0;
+			var modLevel = compactForm ? scaledLevel.ToString("0.##") : scaledLevel.ToString(SMDoubleFormat);
+			sb.Append($"{modLevel}% ");
+		}
+
+		// Escape the mod name. Don't allow unescaped spaces or commas as
+		// parsing logic splits on these characters.
+		if (escapeName)
+		{
+			var modText = MSDFile.Escape(mod.Name);
+			modText = modText.Replace(" ", $"{MSDFile.EscapeMarker} ");
+			modText = modText.Replace(",", $"{MSDFile.EscapeMarker},");
+			sb.Append(modText);
+		}
+		else
+		{
+			sb.Append(mod.Name);
+		}
+
+		return sb.ToString();
+	}
+
 	/// <summary>
 	/// Copies the non-performance events from one List of Events to another.
 	/// </summary>
@@ -1253,18 +1326,18 @@ public static class SMCommon
 			    || e is TickCount
 			    || e is Label
 			    || e is FakeSegment
-			    || e is Multipliers)
+			    || e is Multipliers
+			    || e is Attack)
 				dest.Add(e.Clone());
 		}
 	}
 
 	/// <summary>
-	/// Returns whether or not the given Event is an Event which affects other Events' TimeSeconds
-	/// or MetricPosition values. 
+	/// Returns whether or not the given Event affects other Events' TimeSeconds or metric position values.
 	/// </summary>
 	/// <param name="chartEvent">Event in question.</param>
 	/// <returns>
-	/// True if this Event affects other Events' TimeSeconds or MetricPosition values and false otherwise.
+	/// True if this Event affects other Events' TimeSeconds or metric position values and false otherwise.
 	/// </returns>
 	public static bool DoesEventAffectTiming(Event chartEvent)
 	{
@@ -1272,28 +1345,181 @@ public static class SMCommon
 	}
 
 	/// <summary>
-	/// Sets the TimeSeconds and MetricPositions on the given Chart Events based
-	/// on the rate altering Events in the Chart.
+	/// Sets the TimeSeconds on the given Chart Events based on the rate altering Events in the Chart.
 	/// </summary>
-	/// <param name="chart">Chart to set TimeSeconds and MetricPosition on the Events.</param>
-	public static void SetEventTimeAndMetricPositionsFromRows(Chart chart)
+	/// <param name="chart">Chart to set TimeSeconds on the Events.</param>
+	public static void SetEventTimeFromRows(Chart chart)
 	{
-		SetEventTimeAndMetricPositionsFromRows(chart.Layers[0].Events);
+		SetEventTimeFromRows(chart.Layers[0].Events);
 	}
 
 	/// <summary>
-	/// Sets the TimeSeconds and MetricPositions on the given Events based on rate altering Events.
+	/// Sets the rows and times on the given list of Attacks.
+	/// Attacks in simfiles are specified by their song times. Rows need to be derived from these times
+	/// and these times need to be converted into chart times. Attacks with correct rows and times are
+	/// returned as new List so as not to alter the original Attack data which may be from the song and
+	/// used for multiple charts.
+	/// </summary>
+	/// <param name="attacks">
+	/// List of Attacks to set IntegerPosition and TImeSeconds values on.
+	/// It is assumed that these Attacks are not present in the list of allEvents.
+	/// </param>
+	/// <param name="allEvents">
+	/// List of all Events in the chart without the Attacks.
+	/// </param>
+	/// <param name="musicOffset">
+	/// Music offset of the chart for these Events.
+	/// </param>
+	/// <param name="logger">ILogger for logging.</param>
+	/// <returns>New List of new Attacks fully configured for use within the chart containing the given Events.</returns>
+	public static List<Attack> SetAttackRowsAndTimes(IReadOnlyList<Attack> attacks, IReadOnlyList<Event> allEvents,
+		double musicOffset, ILogger logger)
+	{
+		if (attacks == null)
+			return null;
+
+		var newAttacks = new List<Attack>();
+		if (attacks.Count == 0)
+			return newAttacks;
+
+		if (allEvents == null || allEvents.Count == 0)
+		{
+			logger.Warn("Attack rows and times cannot be determined because chart has no events to derive positions from.");
+			return newAttacks;
+		}
+
+		// Clone the attacks so we can modify them without potentially affecting the song attacks for other charts.
+		foreach (var attack in attacks)
+		{
+			newAttacks.Add((Attack)attack.Clone());
+		}
+
+		// Convert song times to chart times. Clamp so rows aren't negative.
+		// While the Stepmania editor won't allow it, users can set the times of attacks
+		// in simfiles directly and there are cases in the wild of attacks being before
+		// row 0. We do not support events at negative rows.
+		foreach (var attack in newAttacks)
+		{
+			var chartTime = attack.TimeSeconds + musicOffset;
+			if (chartTime < 0.0)
+			{
+				logger.Warn(
+					$"Attack at time {attack.TimeSeconds} with an offset of {musicOffset} results in a negative time of {chartTime}. This attack will be clamped to occur at 0.0.");
+			}
+
+			attack.TimeSeconds = Math.Max(0.0, attack.TimeSeconds + musicOffset);
+		}
+
+		var nextAttackIndex = 0;
+		var nextAttack = newAttacks[nextAttackIndex];
+
+		Tempo lastTempo = null;
+		Event previousEvent = null;
+		if (allEvents.Count > 0)
+			previousEvent = allEvents[0];
+
+		var warpRowsRemaining = 0;
+		var stopTimeRemaining = 0.0;
+		var lastRowsPerSecond = 1.0;
+		var lastSecondsPerRow = 1.0;
+
+		// Loop over every event.
+		for (var i = 0; i < allEvents.Count; i++)
+		{
+			var chartEvent = allEvents[i];
+			if (chartEvent == null)
+				continue;
+
+			// Update warp and stop tracking.
+			var rowsSincePrevious = chartEvent.IntegerPosition - previousEvent!.IntegerPosition;
+			warpRowsRemaining = Math.Max(0, warpRowsRemaining - rowsSincePrevious);
+			if (stopTimeRemaining != 0.0)
+			{
+				var stopTimeSincePrevious = rowsSincePrevious * lastSecondsPerRow;
+				stopTimeRemaining = Math.Min(0.0, stopTimeRemaining + stopTimeSincePrevious);
+			}
+
+			// Update any running data needed for row computation.
+			switch (chartEvent)
+			{
+				case Stop stop:
+				{
+					stopTimeRemaining += stop.LengthSeconds;
+					break;
+				}
+				case Warp warp:
+				{
+					warpRowsRemaining = Math.Max(warpRowsRemaining, warp.LengthIntegerPosition);
+					break;
+				}
+				case Tempo tc:
+				{
+					lastTempo = tc;
+					lastSecondsPerRow = tc.GetSecondsPerRow(MaxValidDenominator);
+					lastRowsPerSecond = tc.GetRowsPerSecond(MaxValidDenominator);
+					break;
+				}
+			}
+
+			// If the next event would follow the current event which needs its row set, set the row.
+			var shouldSetRowOnNextEvent = i >= allEvents.Count - 1 || allEvents[i + 1].TimeSeconds >= nextAttack.TimeSeconds;
+			while (shouldSetRowOnNextEvent)
+			{
+				if (lastTempo == null)
+				{
+					nextAttack.IntegerPosition = 0;
+				}
+				else
+				{
+					// Set the row.
+					var relativeTime = nextAttack.TimeSeconds - (chartEvent.TimeSeconds + stopTimeRemaining);
+					var row = chartEvent.IntegerPosition + relativeTime * lastRowsPerSecond + warpRowsRemaining;
+					nextAttack.IntegerPosition = Math.Max(0, (int)(row + 0.5));
+
+					// Snap the time to the actual correct time for this row.
+					var relativeRow = Math.Max(0.0, nextAttack.IntegerPosition - chartEvent.IntegerPosition);
+					relativeTime = Math.Max(0.0, relativeRow * lastSecondsPerRow + stopTimeRemaining);
+					nextAttack.TimeSeconds = chartEvent.TimeSeconds + relativeTime;
+				}
+
+				// Advance to the next attack to set.
+				nextAttackIndex++;
+				if (nextAttackIndex >= newAttacks.Count)
+					break;
+				nextAttack = newAttacks[nextAttackIndex];
+				shouldSetRowOnNextEvent = i >= allEvents.Count || allEvents[i + 1].TimeSeconds >= nextAttack.TimeSeconds;
+			}
+
+			if (nextAttackIndex >= newAttacks.Count)
+				break;
+		}
+
+		// Correct coincident attacks.
+		newAttacks = newAttacks.OrderBy(a => a.IntegerPosition).ToList();
+		for (var i = newAttacks.Count - 1; i >= 1; i--)
+		{
+			if (newAttacks[i].IntegerPosition == newAttacks[i - 1].IntegerPosition)
+			{
+				logger.Warn($"Coincident attacks found at row {newAttacks[i].IntegerPosition}. These attacks will be combined.");
+				newAttacks[i - 1].Modifiers.AddRange(newAttacks[i].Modifiers);
+				newAttacks.RemoveAt(i);
+			}
+		}
+
+		return newAttacks;
+	}
+
+	/// <summary>
+	/// Sets the TimeSeconds on the given Events based on the rate altering Events within the given Events.
+	/// This is intended to be used for a complete set of Events from a Chart after it has been loaded and
+	/// the rows are accurate but the times are not yet set.
 	/// </summary>
 	/// <param name="events">Enumerable set of Events to update.</param>
-	public static void SetEventTimeAndMetricPositionsFromRows(IEnumerable<Event> events)
+	public static void SetEventTimeFromRows(IEnumerable<Event> events)
 	{
 		var lastTempoChangeRow = 0;
 		var lastTempoChangeTime = 0.0;
 		Tempo lastTempo = null;
-		var lastTimeSigChangeMeasure = 0;
-		var lastTimeSigChangeRow = 0;
-		var rowsPerBeat = MaxValidDenominator;
-		var beatsPerMeasure = NumBeatsPerMeasure;
 		var totalStopTimeSeconds = 0.0;
 		var previousEventTimeSeconds = 0.0;
 
@@ -1321,14 +1547,6 @@ public static class SMCommon
 		{
 			if (chartEvent == null)
 				continue;
-
-			var beatRelativeToLastTimeSigChange = (chartEvent.IntegerPosition - lastTimeSigChangeRow) / rowsPerBeat;
-			var measureRelativeToLastTimeSigChange = beatRelativeToLastTimeSigChange / beatsPerMeasure;
-
-			var absoluteMeasure = lastTimeSigChangeMeasure + measureRelativeToLastTimeSigChange;
-			var beatInMeasure = beatRelativeToLastTimeSigChange - measureRelativeToLastTimeSigChange * beatsPerMeasure;
-			var beatSubDivision = new Fraction((chartEvent.IntegerPosition - lastTimeSigChangeRow) % rowsPerBeat, rowsPerBeat)
-				.Reduce();
 
 			var timeRelativeToLastTempoChange = lastTempo == null
 				? 0.0
@@ -1359,7 +1577,7 @@ public static class SMCommon
 				}
 			}
 
-			chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
+			// Set the time.
 			chartEvent.TimeSeconds = absoluteTime - currentWarpTime - totalWarpTime + totalStopTimeSeconds;
 
 			// In the case of negative stop warps, we need to clamp the time of an event so it does not precede events which
@@ -1387,36 +1605,6 @@ public static class SMCommon
 						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
 					break;
 				}
-				// Time Signature change. Update time signature and beat time tracking.
-				case TimeSignature ts:
-				{
-					// We allow time signatures to occur on any row, even if that cuts off a previous measure.
-					// Check for this scenario and increment the measure if needed as time signatures should always
-					// start a new measure.
-					if (beatInMeasure != 0 || beatSubDivision.ToDouble() > 0)
-					{
-						absoluteMeasure++;
-						beatInMeasure = 0;
-						beatSubDivision = new Fraction(0, MaxValidDenominator);
-						chartEvent.MetricPosition = new MetricPosition(absoluteMeasure, beatInMeasure, beatSubDivision);
-					}
-
-					var timeSignature = ts.Signature;
-
-					lastTimeSigChangeRow = chartEvent.IntegerPosition;
-					lastTimeSigChangeMeasure = absoluteMeasure;
-					beatsPerMeasure = timeSignature.Numerator;
-					rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / timeSignature.Denominator;
-
-					// If this alteration in beat time occurs during a warp, update our warp tracking variables.
-					if (warpingEndPosition != -1)
-					{
-						totalWarpTime += currentWarpTime;
-						lastWarpBeatTimeChangeRow = chartEvent.IntegerPosition;
-					}
-
-					break;
-				}
 				// Tempo change. Update beat time tracking.
 				case Tempo tc:
 				{
@@ -1438,42 +1626,8 @@ public static class SMCommon
 	}
 
 	/// <summary>
-	/// Sets the Event IntegerPosition values based on their MetricPosition values
-	/// for all Events in the given Chart.
-	/// </summary>
-	/// <param name="chart">Chart to update Events.</param>
-	public static void SetEventRowsFromMetricPosition(Chart chart)
-	{
-		var lastBeatTimeChangeRow = 0;
-		var lastBeatTimeChangeMeasure = 0;
-		var rowsPerBeat = MaxValidDenominator;
-		var beatsPerMeasure = NumBeatsPerMeasure;
-
-		foreach (var chartEvent in chart.Layers[0].Events)
-		{
-			var pos = chartEvent.MetricPosition;
-			var relativeMeasure = pos.Measure - lastBeatTimeChangeMeasure;
-			var relativeBeat = relativeMeasure * beatsPerMeasure + pos.Beat;
-			var subDivision = pos.SubDivision.Reduce();
-			var subDivisionRows = subDivision.Numerator * rowsPerBeat / subDivision.Denominator;
-			var relativeRow = relativeBeat * rowsPerBeat + subDivisionRows;
-			var absoluteRow = lastBeatTimeChangeRow + relativeRow;
-			chartEvent.IntegerPosition = absoluteRow;
-
-			if (chartEvent is TimeSignature ts)
-			{
-				var timeSignature = ts.Signature;
-				lastBeatTimeChangeRow = chartEvent.IntegerPosition;
-				lastBeatTimeChangeMeasure = pos.Measure;
-				beatsPerMeasure = timeSignature.Numerator;
-				rowsPerBeat = MaxValidDenominator * NumBeatsPerMeasure / timeSignature.Denominator;
-			}
-		}
-	}
-
-	/// <summary>
 	/// Helper method for logging position information for a row.
-	/// Assumes the StepMania 4/4 time signature and determines a MetricPosition from the row.
+	/// Assumes the StepMania 4/4 time signature and determines a metric position from the row.
 	/// </summary>
 	/// <param name="row">Row / IntegerPosition value.</param>
 	/// <returns>Formatting string for logging.</returns>
@@ -1501,6 +1655,7 @@ public static class SMCommon
 			nameof(FakeSegment),
 			nameof(Multipliers),
 			nameof(Label),
+			nameof(Attack),
 
 			// Delays occur before steps by definition.
 			DelayString,

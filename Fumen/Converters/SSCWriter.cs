@@ -119,7 +119,7 @@ public class SSCWriter : SMWriterBase
 				if (Config.Song.Extras.TryGetExtra(TagFGChanges, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(TagFGChanges, false, false);
 				WriteSongPropertyFromExtras(TagKeySounds, false, false); // TODO: Write keysounds properly
-				WriteSongPropertyFromExtras(TagAttacks, false, false);
+				WriteSongPropertyAttacks();
 
 				// Cache
 				if (Config.Song.Extras.TryGetExtra(TagFirstSecond, out object _, MatchesSourceFileFormatType())
@@ -236,7 +236,7 @@ public class SSCWriter : SMWriterBase
 		WriteChartPropertyFromExtras(chart, TagSampleStart, true, false);
 		WriteChartPropertyFromExtras(chart, TagSampleLength, true, false);
 		WriteChartPropertyFromExtras(chart, TagSelectable, true, false);
-		WriteChartPropertyFromExtras(chart, TagAttacks, true, false);
+		WriteChartPropertyAttacks(chart, true);
 		WriteChartProperty(chart, TagDisplayBPM, chart.Tempo, false, false);
 
 		// Write all the notes.
