@@ -1284,10 +1284,9 @@ public static class SMCommon
 			sb.Append($"*{modSpeed} ");
 		}
 
-		if (!mod.Level.DoubleEquals(1.0))
+		if (!mod.Level.DoubleEquals(100.0))
 		{
-			var scaledLevel = mod.Level * 100.0;
-			var modLevel = compactForm ? scaledLevel.ToString("0.##") : scaledLevel.ToString(SMDoubleFormat);
+			var modLevel = compactForm ? mod.Level.ToString("0.##") : mod.Level.ToString(SMDoubleFormat);
 			sb.Append($"{modLevel}% ");
 		}
 

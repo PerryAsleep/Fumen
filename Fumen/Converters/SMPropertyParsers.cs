@@ -529,7 +529,7 @@ public class AttackPropertyParser : PropertyParser
 							break;
 						}
 
-						mod.Level = level * 0.01;
+						mod.Level = level;
 					}
 				}
 				else if (component[0] == '*')
