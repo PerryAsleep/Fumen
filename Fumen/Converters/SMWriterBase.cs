@@ -1293,6 +1293,9 @@ public abstract class SMWriterBase
 
 			foreach (var mod in a.Modifiers)
 			{
+				if (string.IsNullOrWhiteSpace(mod.Name))
+					continue;
+
 				if (numMods > 1)
 					sb.Append(MSDFile.ParamMarker);
 				numMods++;
