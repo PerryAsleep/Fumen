@@ -1296,7 +1296,7 @@ public abstract class SMWriterBase
 				if (string.IsNullOrWhiteSpace(mod.Name))
 					continue;
 
-				if (numMods > 1)
+				if (numMods > 0)
 					sb.Append(MSDFile.ParamMarker);
 				numMods++;
 				var modLen = mod.LengthSeconds.ToString(SMDoubleFormat);
