@@ -236,7 +236,7 @@ public class SSCWriter : SMWriterBase
 		WriteChartPropertyFromExtras(chart, TagSampleStart, true, false);
 		WriteChartPropertyFromExtras(chart, TagSampleLength, true, false);
 		WriteChartPropertyFromExtras(chart, TagSelectable, true, false);
-		WriteChartPropertyAttacks(chart, true);
+		WriteChartPropertyAttacks(chart);
 		WriteChartProperty(chart, TagDisplayBPM, chart.Tempo, false, false);
 
 		// Write all the notes.
