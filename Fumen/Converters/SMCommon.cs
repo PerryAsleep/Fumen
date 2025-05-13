@@ -1175,17 +1175,19 @@ public static class SMCommon
 			var measure = 0;
 			if (previousTimeSignature != null)
 			{
-				var rowsPerMeasure = previousTimeSignature.Signature.Numerator * NumBeatsPerMeasure /
+				var rowsPerMeasure = previousTimeSignature.Signature.Numerator * MaxValidDenominator * NumBeatsPerMeasure /
 				                     previousTimeSignature.Signature.Denominator;
 				var relativeRow = integerPosition - previousTimeSignature.IntegerPosition;
 				var relativeMeasure = (relativeRow + rowsPerMeasure - 1) / rowsPerMeasure;
 				measure = previousTimeSignature.Measure + relativeMeasure;
 			}
 
-			tsEvents.Add(new TimeSignature(ts, measure)
+			var newTimeSignature = new TimeSignature(ts, measure)
 			{
 				IntegerPosition = integerPosition,
-			});
+			};
+			tsEvents.Add(newTimeSignature);
+			previousTimeSignature = newTimeSignature;
 		}
 
 		// If there is no time signature at the start of the chart, add a default 4/4 signature.
