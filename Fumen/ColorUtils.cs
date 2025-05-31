@@ -13,6 +13,21 @@ public class ColorUtils
 		       | ((uint)(((startColor >> 24) & 0xFF) * startPercent + ((endColor >> 24) & 0xFF) * endPercent) << 24);
 	}
 
+	public static uint ColorRGBAInterpolateIgnoringTransparentColor(uint startColor, uint endColor, float endPercent)
+	{
+		var startTransparent = ((startColor >> 24) & 0xFF) == 0;
+		var endTransparent = ((endColor >> 24) & 0xFF) == 0;
+		if (startTransparent != endTransparent)
+		{
+			if (startTransparent)
+				startColor = endColor & 0x00FFFFFF;
+			else
+				endColor = startColor & 0x00FFFFFF;
+		}
+
+		return ColorRGBAInterpolate(startColor, endColor, endPercent);
+	}
+
 	public static uint ColorRGBAInterpolateBGR(uint startColor, uint endColor, float endPercent)
 	{
 		var startPercent = 1.0f - endPercent;
