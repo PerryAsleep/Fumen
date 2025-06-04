@@ -604,7 +604,7 @@ public class Attack : Event
 
 	public Attack()
 	{
-		Modifiers = new List<Modifier>();
+		Modifiers = [];
 	}
 
 	public Attack(List<Modifier> modifiers)
