@@ -101,6 +101,8 @@ public class Logger : IDisposable
 		public object BufferLock;
 		public LinkedList<LogMessage> Buffer;
 		public int BufferSize;
+
+		public Action<LogMessage> CustomLogAction;
 	}
 
 	/// <summary>
@@ -141,6 +143,13 @@ public class Logger : IDisposable
 	private readonly object BufferLock;
 	private readonly LinkedList<LogMessage> Buffer;
 	private readonly int BufferSize;
+
+	/// <summary>
+	/// Custom action invoke with log messages when logging.
+	/// Meant to give applications with specific logging needs a way to
+	/// hook into logging.
+	/// </summary>
+	private readonly Action<LogMessage> CustomLogAction;
 
 	/// <summary>
 	/// Start up the logger.
@@ -239,6 +248,8 @@ public class Logger : IDisposable
 			BufferSize = config.BufferSize;
 		}
 
+		CustomLogAction = config.CustomLogAction;
+
 		// Start a Task to write enqueued messages to the StreamWriter.
 		WriteQueueTask = Task.Factory.StartNew(
 			WriteQueue,
@@ -305,16 +316,18 @@ public class Logger : IDisposable
 	{
 		foreach (var message in LogQueue.GetConsumingEnumerable())
 		{
+			var messageStr = WriteToConsole || StreamWriter != null ? message.ToString() : null;
+
 			// Write to the console, if configured to do so.
 			if (WriteToConsole)
-				Console.WriteLine(message);
+				Console.WriteLine(messageStr);
 
 			// Write to the StreamWriter for writing to a file, if configured to do so.
 			if (StreamWriter != null)
 			{
 				lock (StreamWriterLock)
 				{
-					StreamWriter?.WriteLine(message);
+					StreamWriter?.WriteLine(messageStr);
 				}
 			}
 
@@ -328,6 +341,9 @@ public class Logger : IDisposable
 					Buffer.AddFirst(message);
 				}
 			}
+
+			// Write to the custom logging action, if configured to do so.
+			CustomLogAction?.Invoke(message);
 		}
 	}
 }
