@@ -64,16 +64,38 @@ public static class SMCommon
 		smx_team,
 	}
 
+	public static readonly Dictionary<string, ChartType> OutfoxNamesChartTypes = new()
+	{
+		{ "smx_double6", ChartType.smx_dual },
+		{ "smx_double10", ChartType.smx_full },
+		{ "smx_couple", ChartType.smx_team },
+		{ "smx_routine", ChartType.smx_team },
+	};
+
+	public static readonly Dictionary<ChartType, string> ChartTypesToOutfoxNames = new()
+	{
+		{ ChartType.smx_dual, "smx_double6" },
+		{ ChartType.smx_full, "smx_double10" },
+		{ ChartType.smx_team, "smx_routine" },
+	};
+
 	private static readonly Dictionary<ChartType, string> ChartTypeStings;
 
-	public static string ChartTypeString(ChartType type)
+	public static string ChartTypeString(ChartType type, bool useOutfoxFormat = false)
 	{
+		if (useOutfoxFormat && ChartTypesToOutfoxNames.TryGetValue(type, out var chartTypeString))
+			return chartTypeString.Replace("_", "-");
 		return ChartTypeStings.GetValueOrDefault(type);
 	}
 
 	public static bool TryGetChartType(string chartTypeString, out ChartType smChartType)
 	{
-		return Enum.TryParse(chartTypeString.Replace("-", "_"), out smChartType);
+		var sanitizedInput = chartTypeString.Replace("-", "_");
+		if (Enum.TryParse(sanitizedInput, out smChartType))
+			return true;
+		if (OutfoxNamesChartTypes.TryGetValue(sanitizedInput, out smChartType))
+			return true;
+		return false;
 	}
 
 	public static bool IsPumpType(ChartType chartType)

@@ -167,7 +167,7 @@ public class SSCWriter : SMWriterBase
 		if (!TryGetChartType(chart, out var chartType))
 			return;
 
-		var charTypeStr = chartType.ToString().Replace('_', '-');
+		var charTypeStr = ChartTypeString(chartType, Config.UseOutfoxFormatForSmx);
 		var chartDifficultyType = GetChartDifficultyTypeString(chart);
 
 		StreamWriter.WriteLine();

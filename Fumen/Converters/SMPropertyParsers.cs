@@ -1414,6 +1414,11 @@ public class SongNotesPropertyParser : NotesPropertyParser
 			return true;
 		}
 
+		// Different applications which use sm files have different identifiers for chart types.
+		// After parsing the string identifier to a ChartType, set the Type string back to 
+		// the expected string representation of the ChartType.
+		chart.Type = ChartTypeString(smChartType);
+
 		var chartProperties = GetChartProperties(smChartType);
 		chart.NumPlayers = chartProperties.GetNumPlayers();
 		chart.NumInputs = chartProperties.GetNumInputs();
@@ -1495,6 +1500,11 @@ public class ChartTypePropertyParser : PropertyParser
 			Chart.Type = null;
 			return true;
 		}
+
+		// Different applications which use sm files have different identifiers for chart types.
+		// After parsing the string identifier to a ChartType, set the Type string back to 
+		// the expected string representation of the ChartType.
+		Chart.Type = ChartTypeString(smChartType);
 
 		var chartProperties = GetChartProperties(smChartType);
 		Chart.NumPlayers = chartProperties.GetNumPlayers();

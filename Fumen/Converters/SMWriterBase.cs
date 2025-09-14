@@ -133,6 +133,11 @@ public abstract class SMWriterBase
 		public bool UseStepF2ForPumpMultiplayerCharts;
 
 		/// <summary>
+		/// When writing SMX charts, use Outfox's format.
+		/// </summary>
+		public bool UseOutfoxFormatForSmx;
+
+		/// <summary>
 		/// Custom properties to write into the file as MSD key value pairs regardless of the specified
 		/// PropertyEmissionBehavior.
 		/// </summary>
