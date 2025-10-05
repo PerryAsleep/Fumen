@@ -31,15 +31,12 @@ public interface ILogger
 }
 
 /// <summary>
-/// Provides methods for logging messages to the console and optionally to disk.
+/// Provides methods for logging messages.
+/// Can log to disk, the console, an application-provided buffer, and an application-provided callback.
+/// Offers parameters for controlling buffer sizes and flush behavior.
 /// </summary>
 public class Logger : IDisposable
 {
-	/// <summary>
-	/// Bounding capacity of the BlockingCollection queue.
-	/// </summary>
-	private const int QueueCapacity = 64;
-
 	/// <summary>
 	/// Static Logger instance for logging to disk.
 	/// </summary>
@@ -88,20 +85,72 @@ public class Logger : IDisposable
 	/// </summary>
 	public class Config
 	{
+		/// <summary>
+		/// LogLevel. Only log messages at or above the given level will be logged.
+		/// </summary>
 		public LogLevel Level = LogLevel.Info;
 
+		/// <summary>
+		/// Optional queue capacity for messages. If specified then messages enqueued
+		/// while the queue is full will block until the next write occurs.
+		/// </summary>
+		public int? QueueCapacity;
+
+		/// <summary>
+		/// Whether or not to write to a file on disk when logging.
+		/// </summary>
 		public bool WriteToFile;
+
+		/// <summary>
+		/// Path to log file to write to.
+		/// Only used if WriteToFile is true.
+		/// </summary>
 		public string LogFilePath;
+
+		/// <summary>
+		/// Interval in seconds to flush the log to disk.
+		/// Only used if WriteToFile is true.
+		/// </summary>
 		public int LogFileFlushIntervalSeconds;
+
+		/// <summary>
+		/// Size of buffer for writing to disk in bytes.
+		/// Only used if WriteToFile is true.
+		/// </summary>
 		public int LogFileBufferSizeBytes;
 
+		/// <summary>
+		/// Whether or not to write to the console when logging.
+		/// </summary>
 		public bool WriteToConsole;
 
+		/// <summary>
+		/// Whether or not to write to an application-specified buffer.
+		/// </summary>
 		public bool WriteToBuffer;
+
+		/// <summary>
+		/// Lock for writing to the application-specified buffer.
+		/// Only used if WriteToBuffer is true.
+		/// </summary>
 		public object BufferLock;
+
+		/// <summary>
+		/// Application-specified buffer.
+		/// Only used if WriteToBuffer is true.
+		/// </summary>
 		public LinkedList<LogMessage> Buffer;
+
+		/// <summary>
+		/// Maximum number of messages to log into the application-specified buffer.
+		/// Only used if WriteToBuffer is true.
+		/// </summary>
 		public int BufferSize;
 
+		/// <summary>
+		/// Optional custom action to be invoked when logging.
+		/// Intended to be used to route log messages to application-specific handlers.
+		/// </summary>
 		public Action<LogMessage> CustomLogAction;
 	}
 
@@ -239,7 +288,10 @@ public class Logger : IDisposable
 		}
 
 		WriteToConsole = config.WriteToConsole;
-		LogQueue = new BlockingCollection<LogMessage>(QueueCapacity);
+		if (config.QueueCapacity.HasValue)
+			LogQueue = new BlockingCollection<LogMessage>(config.QueueCapacity.Value);
+		else
+			LogQueue = new BlockingCollection<LogMessage>();
 
 		if (config.WriteToBuffer)
 		{
