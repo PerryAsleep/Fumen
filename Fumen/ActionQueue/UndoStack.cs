@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Fumen;
 
 /// <summary>
-/// A stack with methods to Push, Pop, and Repush elements.
+/// A stack with methods to Push, Pop, and Re-push elements.
 /// When Popping an element, the UndoStack will still maintain the element internally
 /// so that it can be Repushed later to support redoing undone operations.
 /// UndoStack uses an underlying circular buffer to allow an unbounded number of
@@ -62,7 +62,7 @@ public sealed class UndoStack<T>
 	/// <param name="size">The size of the buffer.</param>
 	/// <param name="resetUnreachableElements">
 	/// Whether or not unreachable elements should be reset when adding an element to the buffer
-	/// that causes future repushable elements to become unreachable. For reference types, this will
+	/// that causes future re-pushable elements to become unreachable. For reference types, this will
 	/// allow the garbage collector to reclaim unreachable element memory.
 	/// </param>
 	public UndoStack(int size, bool resetUnreachableElements)
@@ -266,7 +266,7 @@ public sealed class UndoStack<T>
 	}
 
 	/// <summary>
-	/// Repushes the most recently Popped element of the UndoStack that has not been Repushed
+	/// Re-pushes the most recently Popped element of the UndoStack that has not been Repushed
 	/// back onto the UndoStack
 	/// </summary>
 	/// <param name="val">
