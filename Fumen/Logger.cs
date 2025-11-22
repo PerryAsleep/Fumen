@@ -91,8 +91,11 @@ public class Logger : IDisposable
 		public LogLevel Level = LogLevel.Info;
 
 		/// <summary>
-		/// Optional queue capacity for messages. If specified then messages enqueued
-		/// while the queue is full will block until the next write occurs.
+		/// Optional queue capacity for messages. If specified and zero then the queue
+		/// is ignored and messages are logged immediately. Otherwise, if unspecified
+		/// a queue with no upper-bound will be used. Otherwise, if specified and
+		/// greater than zero, a queue with an explicit capacity will be used. While
+		/// the queue is full, new messages will block until the next write occurs.
 		/// </summary>
 		public int? QueueCapacity;
 
@@ -288,10 +291,24 @@ public class Logger : IDisposable
 		}
 
 		WriteToConsole = config.WriteToConsole;
-		if (config.QueueCapacity.HasValue)
-			LogQueue = new BlockingCollection<LogMessage>(config.QueueCapacity.Value);
+		if (!config.QueueCapacity.HasValue || (config.QueueCapacity.HasValue && config.QueueCapacity.Value > 0))
+		{
+			if (config.QueueCapacity.HasValue)
+				LogQueue = new BlockingCollection<LogMessage>(config.QueueCapacity.Value);
+			else
+				LogQueue = new BlockingCollection<LogMessage>();
+
+			// Start a Task to write enqueued messages to the StreamWriter.
+			WriteQueueTask = Task.Factory.StartNew(
+				WriteQueue,
+				CancellationToken.None,
+				TaskCreationOptions.LongRunning,
+				TaskScheduler.Default);
+		}
 		else
-			LogQueue = new BlockingCollection<LogMessage>();
+		{
+			LogQueue = null;
+		}
 
 		if (config.WriteToBuffer)
 		{
@@ -301,13 +318,6 @@ public class Logger : IDisposable
 		}
 
 		CustomLogAction = config.CustomLogAction;
-
-		// Start a Task to write enqueued messages to the StreamWriter.
-		WriteQueueTask = Task.Factory.StartNew(
-			WriteQueue,
-			CancellationToken.None,
-			TaskCreationOptions.LongRunning,
-			TaskScheduler.Default);
 
 		// Start a timer to flush the StreamWriter to disk periodically.
 		if (config.WriteToFile)
@@ -334,14 +344,19 @@ public class Logger : IDisposable
 	}
 
 	/// <summary>
-	/// Logs a message by enqueueing it for write to the underlying stream.
+	/// Logs a message by either enqueueing to the underlying stream or writing it directly.
 	/// </summary>
 	/// <param name="message">Message to log.</param>
 	private void Log(LogMessage message)
 	{
 		try
 		{
-			LogQueue.Add(message);
+			// If we were configured with a queue, then enqueue the message for writing later.
+			if (LogQueue != null)
+				LogQueue.Add(message);
+			// Otherwise, write it immediately.
+			else
+				WriteMessage(message);
 		}
 		catch (Exception)
 		{
@@ -367,35 +382,42 @@ public class Logger : IDisposable
 	private void WriteQueue()
 	{
 		foreach (var message in LogQueue.GetConsumingEnumerable())
+			WriteMessage(message);
+	}
+
+	/// <summary>
+	/// Writes the given message.
+	/// </summary>
+	/// <param name="message">Message to write.</param>
+	private void WriteMessage(LogMessage message)
+	{
+		var messageStr = WriteToConsole || StreamWriter != null ? message.ToString() : null;
+
+		// Write to the console, if configured to do so.
+		if (WriteToConsole)
+			Console.WriteLine(messageStr);
+
+		// Write to the StreamWriter for writing to a file, if configured to do so.
+		if (StreamWriter != null)
 		{
-			var messageStr = WriteToConsole || StreamWriter != null ? message.ToString() : null;
-
-			// Write to the console, if configured to do so.
-			if (WriteToConsole)
-				Console.WriteLine(messageStr);
-
-			// Write to the StreamWriter for writing to a file, if configured to do so.
-			if (StreamWriter != null)
+			lock (StreamWriterLock)
 			{
-				lock (StreamWriterLock)
-				{
-					StreamWriter?.WriteLine(messageStr);
-				}
+				StreamWriter?.WriteLine(messageStr);
 			}
-
-			// Write to the provided Buffer, if configured to do so.
-			if (Buffer != null)
-			{
-				lock (BufferLock)
-				{
-					while (Buffer.Count >= BufferSize)
-						Buffer.RemoveLast();
-					Buffer.AddFirst(message);
-				}
-			}
-
-			// Write to the custom logging action, if configured to do so.
-			CustomLogAction?.Invoke(message);
 		}
+
+		// Write to the provided Buffer, if configured to do so.
+		if (Buffer != null)
+		{
+			lock (BufferLock)
+			{
+				while (Buffer.Count >= BufferSize)
+					Buffer.RemoveLast();
+				Buffer.AddFirst(message);
+			}
+		}
+
+		// Write to the custom logging action, if configured to do so.
+		CustomLogAction?.Invoke(message);
 	}
 }
