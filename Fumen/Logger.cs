@@ -222,6 +222,7 @@ public class Logger : IDisposable
 	public static void Shutdown()
 	{
 		Instance?.Dispose();
+		Instance = null;
 	}
 
 	/// <summary>
