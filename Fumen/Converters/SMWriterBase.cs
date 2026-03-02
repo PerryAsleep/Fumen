@@ -214,6 +214,11 @@ public abstract class SMWriterBase
 		/// If false, write from the Chart's Attack Events.
 		/// </summary>
 		public bool WriteAttacksFromExtras = false;
+
+		/// <summary>
+		/// If true and WriteAttacksFromExtras is false, use the fallback Chart for writing Attacks.
+		/// </summary>
+		public bool WriteAttacksFromFallbackChart = true;
 	}
 
 	/// <summary>
@@ -1250,7 +1255,7 @@ public abstract class SMWriterBase
 			return;
 		}
 
-		if (Config.FallbackChart != null)
+		if (Config.WriteAttacksFromFallbackChart && Config.FallbackChart != null)
 		{
 			WriteChartPropertyAttacks(Config.FallbackChart, stepmaniaOmitted);
 			return;

@@ -1510,7 +1510,7 @@ public static class SMCommon
 				if (nextAttackIndex >= newAttacks.Count)
 					break;
 				nextAttack = newAttacks[nextAttackIndex];
-				shouldSetRowOnNextEvent = i >= allEvents.Count || allEvents[i + 1].TimeSeconds >= nextAttack.TimeSeconds;
+				shouldSetRowOnNextEvent = i >= allEvents.Count - 1 || allEvents[i + 1].TimeSeconds >= nextAttack.TimeSeconds;
 			}
 
 			if (nextAttackIndex >= newAttacks.Count)
