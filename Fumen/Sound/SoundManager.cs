@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Concentus.Structs;
 using FMOD;
 
 namespace Fumen;
@@ -116,7 +118,7 @@ public class SoundManager
 	/// <returns>System sample rate.</returns>
 	public uint GetSampleRate()
 	{
-		ErrCheck(System.getSoftwareFormat(out var sampleRate, out var _, out var _));
+		ErrCheck(System.getSoftwareFormat(out var sampleRate, out _, out _));
 		return (uint)sampleRate;
 	}
 
@@ -134,7 +136,7 @@ public class SoundManager
 		numChannels = 0;
 		samples = null;
 
-		if (!ErrCheck(sound.getDefaults(out var soundFrequency, out var _)))
+		if (!ErrCheck(sound.getDefaults(out var soundFrequency, out _)))
 			return false;
 		var inputSampleRate = (uint)soundFrequency;
 		if (!ErrCheck(sound.getLength(out var inputLength, TIMEUNIT.PCMBYTES)))
@@ -292,7 +294,7 @@ public class SoundManager
 	private static unsafe bool FillSamples(Sound sound, uint sampleRate, float[] samples, int numChannels,
 		CancellationToken token)
 	{
-		if (!ErrCheck(sound.getDefaults(out var soundFrequency, out var _)))
+		if (!ErrCheck(sound.getDefaults(out var soundFrequency, out _)))
 			return false;
 		var inputSampleRate = (uint)soundFrequency;
 		if (!ErrCheck(sound.getLength(out var inputLength, TIMEUNIT.PCMBYTES)))
@@ -344,57 +346,16 @@ public class SoundManager
 			}
 			else
 			{
-				// To resample we perform four point hermite spline interpolation.
-				// Set up data for storing the source points for resampling.
-				const int numHermitePoints = 4;
-				var hermiteTimeRange = 1.0f / inputSampleRate;
-				var hermitePoints = new float[numHermitePoints];
-				var maxInputSampleIndex = len1 - bytesPerSample;
+				// Parse the raw sound data into float samples at the input sample rate so we can resample it.
+				var inputLengthSamples = totalNumInputSamples * (uint)numChannels;
+				var inputFloats = new float[inputLengthSamples];
+				for (var i = 0; i < inputLengthSamples; i++)
+					inputFloats[i] = parseSample(i * bytesPerChannelPerSample);
 
-				var sampleIndex = 0;
-				while (sampleIndex < totalNumOutputSamples)
-				{
-					// Determine the time of the desired sample.
-					var t = (double)sampleIndex / sampleRate;
-					// Find the start of the four points in the original data corresponding to this time
-					// so we can use them for hermite spline interpolation. Note the minus 1 here is to
-					// account for four samples. The floor and the minus one result in getting the sample
-					// two indexes preceding the desired time.
-					var startInputSampleIndex = (int)(t * inputSampleRate) - 1;
-					// Determine the time of the x1 sample in order to find the normalized time.
-					var x1Time = (double)(startInputSampleIndex + 1) / inputSampleRate;
-					// Determine the normalized time for the interpolation.
-					var normalizedTime = (float)((t - x1Time) / hermiteTimeRange);
-
-					for (var channel = 0; channel < numChannels; channel++)
-					{
-						var inputChannelOffset = channel * bytesPerChannelPerSample;
-
-						// Get all four input points for the interpolation.
-						for (var hermiteIndex = 0; hermiteIndex < numHermitePoints; hermiteIndex++)
-						{
-							// Get the input index. We need to clamp as it is expected at the ends for the range to exceed the
-							// range of the input data.
-							var inputIndex = Math.Clamp(
-								(startInputSampleIndex + hermiteIndex) * bytesPerSample + inputChannelOffset,
-								0, maxInputSampleIndex);
-							// Parse the sample at this index.
-							// This often results in redundant parses, but in practice optimizing them out isn't a big gain,
-							// and it adds a lot of complexity. The main perf hit is InterpolateHermite.
-							hermitePoints[hermiteIndex] = parseSample(inputIndex);
-						}
-
-						// Now that all four samples are known, interpolate them and store the result.
-						samples[sampleIndex * numChannels + channel] = Interpolation.HermiteInterpolate(hermitePoints[0],
-							hermitePoints[1], hermitePoints[2], hermitePoints[3], normalizedTime);
-					}
-
-					sampleIndex++;
-
-					// Periodically check for cancellation.
-					if (sampleIndex % 524288 == 0)
-						token.ThrowIfCancellationRequested();
-				}
+				// Resample to the target sample rate and copy into the output buffer.
+				var resampled = ResampleFloat(inputFloats, numChannels, inputSampleRate, sampleRate, token);
+				var copyLength = Math.Min(resampled.Length, samples.Length);
+				Array.Copy(resampled, 0, samples, 0, copyLength);
 			}
 		}
 		finally
@@ -405,7 +366,383 @@ public class SoundManager
 		return true;
 	}
 
+	/// <summary>
+	/// Resamples interleaved float PCM data from one sample rate to another using four-point
+	/// Hermite spline interpolation.
+	/// </summary>
+	/// <param name="input">Input interleaved float PCM samples.</param>
+	/// <param name="numChannels">Number of interleaved channels.</param>
+	/// <param name="inputSampleRate">Sample rate of the input data.</param>
+	/// <param name="outputSampleRate">Desired output sample rate.</param>
+	/// <param name="token">CancellationToken for cancelling the work.</param>
+	/// <returns>Resampled interleaved float PCM samples.</returns>
+	public static float[] ResampleFloat(float[] input, int numChannels, uint inputSampleRate, uint outputSampleRate,
+		CancellationToken token)
+	{
+		if (inputSampleRate == outputSampleRate)
+			return input;
+
+		var totalNumInputSamples = (uint)(input.Length / numChannels);
+		var sampleRateRatio = (double)outputSampleRate / inputSampleRate;
+		var totalNumOutputSamples = (uint)(totalNumInputSamples * sampleRateRatio);
+		var outputLength = totalNumOutputSamples * (uint)numChannels;
+		var output = new float[outputLength];
+
+		// To resample we perform four point hermite spline interpolation.
+		// Set up data for storing the source points for resampling.
+		const int numHermitePoints = 4;
+		var hermiteTimeRange = 1.0f / inputSampleRate;
+		var hermitePoints = new float[numHermitePoints];
+		var maxInputSampleIndex = input.Length - numChannels;
+
+		var sampleIndex = 0;
+		while (sampleIndex < totalNumOutputSamples)
+		{
+			// Determine the time of the desired sample.
+			var t = (double)sampleIndex / outputSampleRate;
+			// Find the start of the four points in the original data corresponding to this time
+			// so we can use them for hermite spline interpolation. Note the minus 1 here is to
+			// account for four samples. The floor and the minus one result in getting the sample
+			// two indexes preceding the desired time.
+			var startInputSampleIndex = (int)(t * inputSampleRate) - 1;
+			// Determine the time of the x1 sample in order to find the normalized time.
+			var x1Time = (double)(startInputSampleIndex + 1) / inputSampleRate;
+			// Determine the normalized time for the interpolation.
+			var normalizedTime = (float)((t - x1Time) / hermiteTimeRange);
+
+			for (var channel = 0; channel < numChannels; channel++)
+			{
+				// Get all four input points for the interpolation.
+				for (var hermiteIndex = 0; hermiteIndex < numHermitePoints; hermiteIndex++)
+				{
+					// Get the input index. We need to clamp as it is expected at the ends for the range to exceed the
+					// range of the input data.
+					var inputIndex = Math.Clamp(
+						(startInputSampleIndex + hermiteIndex) * numChannels + channel,
+						0, maxInputSampleIndex);
+					hermitePoints[hermiteIndex] = input[inputIndex];
+				}
+
+				// Now that all four samples are known, interpolate them and store the result.
+				output[sampleIndex * numChannels + channel] = Interpolation.HermiteInterpolate(
+					hermitePoints[0], hermitePoints[1], hermitePoints[2], hermitePoints[3], normalizedTime);
+			}
+
+			sampleIndex++;
+
+			// Periodically check for cancellation.
+			if (sampleIndex % 524288 == 0)
+				token.ThrowIfCancellationRequested();
+		}
+
+		return output;
+	}
+
 	#endregion Resampling
+
+	#region Opus
+
+	/// <summary>
+	/// Checks if a file at the given path is an Ogg container with the Opus codec
+	/// by inspecting the first packet's magic bytes. This function involves synchronous
+	/// file I/O.
+	/// </summary>
+	/// <param name="filePath">Path to the file to check.</param>
+	/// <returns>True if the file is an Ogg file containing Opus audio.</returns>
+	private static bool IsOggOpus(string filePath)
+	{
+		try
+		{
+			var buf = new byte[128];
+			using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			var bytesRead = fs.Read(buf, 0, buf.Length);
+
+			// Verify OggS capture pattern.
+			if (bytesRead < 28 || buf[0] != 'O' || buf[1] != 'g' || buf[2] != 'g' || buf[3] != 'S')
+				return false;
+
+			// Segment count is at offset 26; first packet data starts after the segment table.
+			var numSegments = buf[26];
+			var packetOffset = 27 + numSegments;
+
+			if (bytesRead < packetOffset + 8)
+				return false;
+
+			// Check for "OpusHead" magic.
+			return buf[packetOffset] == 'O'
+			       && buf[packetOffset + 1] == 'p'
+			       && buf[packetOffset + 2] == 'u'
+			       && buf[packetOffset + 3] == 's'
+			       && buf[packetOffset + 4] == 'H'
+			       && buf[packetOffset + 5] == 'e'
+			       && buf[packetOffset + 6] == 'a'
+			       && buf[packetOffset + 7] == 'd';
+		}
+		catch (Exception e)
+		{
+			Logger.Warn($"Failed to check if file is Ogg Opus: {e}");
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Returns whether the given file should be decoded using the Opus decode path.
+	/// This is true if the file extension is .opus, or if the extension is .ogg/.oga
+	/// and the file contains Opus-encoded audio. This function involves synchronous
+	/// file I/O.
+	/// </summary>
+	/// <param name="filePath">Path to the audio file.</param>
+	/// <returns>True if the file should be decoded as Opus.</returns>
+	public static bool IsOpusFile(string filePath)
+	{
+		var extension = global::System.IO.Path.GetExtension(filePath)?.ToLowerInvariant();
+		if (extension == ".opus")
+			return true;
+		if (extension is ".ogg" or ".oga")
+			return IsOggOpus(filePath);
+		return false;
+	}
+
+	/// <summary>
+	/// Reads the channel count from the OpusHead header in an Ogg Opus file.
+	/// The channel count is at byte offset 9 within the OpusHead packet.
+	/// </summary>
+	/// <param name="stream">FileStream to the Opus audio file.</param>
+	/// <param name="channels">Channel count to set.</param>
+	/// <returns>True if the channels could be read and false otherwise.</returns>
+	private static bool GetOpusChannelCount(FileStream stream, out int channels)
+	{
+		channels = 0;
+		try
+		{
+			stream.Seek(0, SeekOrigin.Begin);
+
+			var buf = new byte[128];
+			var bytesRead = stream.Read(buf, 0, buf.Length);
+
+			if (bytesRead < 28)
+				return false;
+
+			var numSegments = buf[26];
+			var packetOffset = 27 + numSegments;
+
+			// OpusHead format: "OpusHead" (8 bytes) + version (1 byte) + channel count (1 byte)
+			if (bytesRead < packetOffset + 10)
+				return false;
+			if (buf[packetOffset] != 'O' || buf[packetOffset + 1] != 'p')
+				return false;
+
+			var channelCount = buf[packetOffset + 9];
+			channels = channelCount > 0 ? channelCount : 2;
+			return true;
+		}
+		catch (Exception)
+		{
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Reads all raw Opus audio packets from an Ogg container, skipping header and tags packets.
+	/// This replaces Concentus.OggFile's OpusOggReadStream which has a bug parsing OpusTags packets
+	/// spanning multiple Ogg pages (https://github.com/lostromb/concentus.oggfile/issues/6).
+	/// </summary>
+	/// <param name="stream">Seekable stream positioned at the start of the Ogg container.</param>
+	/// <returns>List of raw Opus packet byte arrays.</returns>
+	private static List<byte[]> ReadOggOpusPackets(FileStream stream)
+	{
+		var packets = new List<byte[]>();
+		var pageHeader = new byte[27];
+		byte[] segmentTable = null;
+		var headerPacketsSeen = 0;
+		byte[] continuationBuffer = null;
+
+		stream.Seek(0, SeekOrigin.Begin);
+
+		while (true)
+		{
+			// Read the fixed 27-byte Ogg page header.
+			var bytesRead = stream.Read(pageHeader, 0, 27);
+			if (bytesRead < 27)
+				break;
+
+			// Verify OggS capture pattern.
+			if (pageHeader[0] != 'O' || pageHeader[1] != 'g' || pageHeader[2] != 'g' || pageHeader[3] != 'S')
+				break;
+
+			var numSegments = pageHeader[26];
+
+			// Read the segment table.
+			if (segmentTable == null || segmentTable.Length < numSegments)
+				segmentTable = new byte[numSegments];
+			if (stream.Read(segmentTable, 0, numSegments) < numSegments)
+				break;
+
+			// Calculate total data size and read all page data.
+			var dataSize = 0;
+			for (var i = 0; i < numSegments; i++)
+				dataSize += segmentTable[i];
+
+			var pageData = new byte[dataSize];
+			if (dataSize > 0 && stream.Read(pageData, 0, dataSize) < dataSize)
+				break;
+
+			// Extract packets from the page data using the segment table.
+			var dataOffset = 0;
+			var packetStart = 0;
+			for (var i = 0; i < numSegments; i++)
+			{
+				dataOffset += segmentTable[i];
+
+				// A segment < 255 bytes signals the end of a packet.
+				if (segmentTable[i] < 255)
+				{
+					var packetLen = dataOffset - packetStart;
+					byte[] packet;
+
+					if (continuationBuffer != null)
+					{
+						// Append this segment to the continuation buffer.
+						packet = new byte[continuationBuffer.Length + packetLen];
+						Array.Copy(continuationBuffer, 0, packet, 0, continuationBuffer.Length);
+						Array.Copy(pageData, packetStart, packet, continuationBuffer.Length, packetLen);
+						continuationBuffer = null;
+					}
+					else
+					{
+						packet = new byte[packetLen];
+						Array.Copy(pageData, packetStart, packet, 0, packetLen);
+					}
+
+					packetStart = dataOffset;
+
+					// Skip the first two packets (OpusHead and OpusTags).
+					if (headerPacketsSeen < 2)
+					{
+						headerPacketsSeen++;
+						continue;
+					}
+
+					if (packet.Length > 0)
+						packets.Add(packet);
+				}
+			}
+
+			// If the last segment is 255, the packet continues on the next page.
+			if (numSegments > 0 && segmentTable[numSegments - 1] == 255)
+			{
+				var remaining = dataOffset - packetStart;
+				if (remaining > 0)
+				{
+					if (continuationBuffer != null)
+					{
+						var newBuf = new byte[continuationBuffer.Length + remaining];
+						Array.Copy(continuationBuffer, 0, newBuf, 0, continuationBuffer.Length);
+						Array.Copy(pageData, packetStart, newBuf, continuationBuffer.Length, remaining);
+						continuationBuffer = newBuf;
+					}
+					else
+					{
+						continuationBuffer = new byte[remaining];
+						Array.Copy(pageData, packetStart, continuationBuffer, 0, remaining);
+					}
+				}
+			}
+		}
+
+		return packets;
+	}
+
+	/// <summary>
+	/// Asynchronously decodes an Opus audio file to interleaved PCM float data.
+	/// </summary>
+	/// <param name="fileName">Path to the Opus audio file.</param>
+	/// <param name="targetSampleRate">Desired output sample rate.</param>
+	/// <param name="token">CancellationToken for cancelling the work.</param>
+	/// <returns>Tuple of (interleaved float PCM samples, number of channels).</returns>
+	public static async Task<(float[] Samples, int NumChannels)> DecodeOpusAsync(
+		string fileName, uint targetSampleRate, CancellationToken token)
+	{
+		return await Task.Run(() =>
+		{
+			try
+			{
+				// Opus always decodes at 48000 Hz.
+				const uint opusSampleRate = 48000;
+
+				List<byte[]> rawPackets;
+				int numChannels;
+				using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+				{
+					rawPackets = ReadOggOpusPackets(fileStream);
+					if (rawPackets.Count == 0)
+					{
+						throw new Exception($"Failed to read any Opus packets from {fileName}.");
+					}
+
+					// Read the channel count from the OpusHead header before creating the decoder.
+					if (!GetOpusChannelCount(fileStream, out numChannels))
+					{
+						throw new Exception("Could not determine channel count.");
+					}
+				}
+
+				token.ThrowIfCancellationRequested();
+
+				// Decode all raw Opus packets.
+#pragma warning disable CS0618 // Type or member is obsolete
+				var decoder = new OpusDecoder((int)opusSampleRate, numChannels);
+#pragma warning restore CS0618 // Type or member is obsolete
+				var allSamples = new List<float[]>();
+				var totalSamples = 0;
+				foreach (var rawPacket in rawPackets)
+				{
+					try
+					{
+						var numSamples = OpusPacketInfo.GetNumSamples(
+							(ReadOnlySpan<byte>)rawPacket, (int)opusSampleRate);
+						var floatPacket = new float[numSamples * numChannels];
+#pragma warning disable CS0618 // Type or member is obsolete
+						decoder.Decode(rawPacket, 0, rawPacket.Length, floatPacket, 0, numSamples);
+#pragma warning restore CS0618 // Type or member is obsolete
+						allSamples.Add(floatPacket);
+						totalSamples += floatPacket.Length;
+					}
+					catch (Exception e)
+					{
+						Logger.Warn($"Failed to decode Opus packet: {e}");
+					}
+				}
+
+				token.ThrowIfCancellationRequested();
+
+				// Combine all packets into a single buffer.
+				var samples = new float[totalSamples];
+				var offset = 0;
+				foreach (var packet in allSamples)
+				{
+					Array.Copy(packet, 0, samples, offset, packet.Length);
+					offset += packet.Length;
+				}
+
+				// Resample if the target sample rate differs from Opus's native 48000 Hz.
+				if (targetSampleRate != opusSampleRate)
+				{
+					samples = ResampleFloat(samples, numChannels, opusSampleRate, targetSampleRate, token);
+				}
+
+				return (samples, numChannels);
+			}
+			catch (Exception e)
+			{
+				Logger.Error($"Failed to decode opus file. {e}");
+			}
+
+			return (Array.Empty<float>(), 0);
+		}, token);
+	}
+
+	#endregion Opus
 
 	#region DSP
 

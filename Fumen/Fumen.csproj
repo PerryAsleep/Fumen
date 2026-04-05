@@ -9,4 +9,7 @@
 	<ItemGroup>
 		<Folder Include="Sound\fmod\lib\" />
 	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Concentus" Version="2.2.2" />
+	</ItemGroup>
 </Project>
