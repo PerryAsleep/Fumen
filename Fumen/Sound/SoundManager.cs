@@ -443,6 +443,17 @@ public class SoundManager
 	#region Opus
 
 	/// <summary>
+	/// Returns whether the given file path has an Opus audio extension.
+	/// </summary>
+	public static bool HasOpusExtension(string path)
+	{
+		if (string.IsNullOrEmpty(path))
+			return false;
+		var ext = global::System.IO.Path.GetExtension(path).ToLowerInvariant();
+		return ext == ".opus";
+	}
+
+	/// <summary>
 	/// Checks if a file at the given path is an Ogg container with the Opus codec
 	/// by inspecting the first packet's magic bytes. This function involves synchronous
 	/// file I/O.
