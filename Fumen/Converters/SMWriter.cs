@@ -61,8 +61,12 @@ public class SMWriter : SMWriterBase
 				if (Config.Song.Extras.TryGetExtra(TagLastBeatHint, out object _, MatchesSourceFileFormatType()))
 					WriteSongPropertyFromExtras(TagLastBeatHint);
 				WriteSongPropertyFromExtras(TagSelectable);
-				if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
+
+				if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object tempo, MatchesSourceFileFormatType()))
+				{
+					if (!(tempo is string tempoString && string.IsNullOrEmpty(tempoString) && Config.OmitEmptyDisplayBpm))
+						WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
+				}
 
 				// Custom properties. Always write these if they are present.
 				if (Config.CustomProperties != null)

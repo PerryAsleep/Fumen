@@ -84,8 +84,11 @@ public class SSCWriter : SMWriterBase
 				WriteSongProperty(TagSampleStart, Config.Song.PreviewSampleStart.ToString(SMDoubleFormat));
 				WriteSongProperty(TagSampleLength, Config.Song.PreviewSampleLength.ToString(SMDoubleFormat));
 				WriteSongPropertyFromExtras(TagSelectable);
-				if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object _, MatchesSourceFileFormatType()))
-					WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
+				if (Config.Song.Extras.TryGetExtra(TagDisplayBPM, out object tempo, MatchesSourceFileFormatType()))
+				{
+					if (!(tempo is string tempoString && string.IsNullOrEmpty(tempoString) && Config.OmitEmptyDisplayBpm))
+						WriteSongPropertyFromExtras(TagDisplayBPM, false, false);
+				}
 
 				// Custom properties. Always write these if they are present.
 				if (Config.CustomProperties?.CustomSongProperties != null)
@@ -237,7 +240,9 @@ public class SSCWriter : SMWriterBase
 		WriteChartPropertyFromExtras(chart, TagSampleLength, true, false);
 		WriteChartPropertyFromExtras(chart, TagSelectable, true, false);
 		WriteChartPropertyAttacks(chart);
-		WriteChartProperty(chart, TagDisplayBPM, chart.Tempo, false, false);
+
+		if (!string.IsNullOrEmpty(chart.Tempo) || !Config.OmitEmptyDisplayBpm)
+			WriteChartProperty(chart, TagDisplayBPM, chart.Tempo, false, false);
 
 		// Write all the notes.
 		WriteChartNotesValueStart(chart);

@@ -219,6 +219,11 @@ public abstract class SMWriterBase
 		/// If true and WriteAttacksFromExtras is false, use the fallback Chart for writing Attacks.
 		/// </summary>
 		public bool WriteAttacksFromFallbackChart = true;
+
+		/// <summary>
+		/// If true and the display BPM string is empty, omit the Display BPM field entirely.
+		/// </summary>
+		public bool OmitEmptyDisplayBpm = false;
 	}
 
 	/// <summary>
