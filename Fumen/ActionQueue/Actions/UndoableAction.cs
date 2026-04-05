@@ -1,5 +1,4 @@
-﻿using Fumen;
-using static System.Diagnostics.Debug;
+﻿using static System.Diagnostics.Debug;
 
 namespace Fumen;
 
