@@ -24,26 +24,32 @@ public static class FumenExtensions
 {
 	private const float MinFloatDelta = 0.0000001f;
 
-	public static bool FloatEquals(this float f, float other)
+	extension(float f)
 	{
-		// TODO: This should be using similar logic to DoubleEquals but in the version of
-		// dot net currently in use SingleToInt32Bits is not available.
-		return f - MinFloatDelta <= other && f + MinFloatDelta >= other;
+		public bool FloatEquals(float other)
+		{
+			// TODO: This should be using similar logic to DoubleEquals but in the version of
+			// dot net currently in use SingleToInt32Bits is not available.
+			return f - MinFloatDelta <= other && f + MinFloatDelta >= other;
+		}
+
+		public bool FloatEquals(float other, float epsilon)
+		{
+			return Math.Abs(f - other) <= epsilon;
+		}
 	}
 
-	public static bool FloatEquals(this float f, float other, float epsilon)
+	extension(double d)
 	{
-		return Math.Abs(f - other) <= epsilon;
-	}
+		public bool DoubleEquals(double other)
+		{
+			return HasMinimalDifference(d, other, 1);
+		}
 
-	public static bool DoubleEquals(this double d, double other)
-	{
-		return HasMinimalDifference(d, other, 1);
-	}
-
-	public static bool DoubleEquals(this double d, double other, double epsilon)
-	{
-		return Math.Abs(d - other) <= epsilon;
+		public bool DoubleEquals(double other, double epsilon)
+		{
+			return Math.Abs(d - other) <= epsilon;
+		}
 	}
 
 	/// <summary>

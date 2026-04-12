@@ -131,7 +131,7 @@ public class TestIntervalTree
 		Assert.IsTrue(t.IsValid());
 
 		// Negative ranges are not supported.
-		Assert.ThrowsException<ArgumentException>(() => t.Insert(0.0, 10, 9));
+		Assert.Throws<ArgumentException>(() => t.Insert(0.0, 10, 9));
 		Assert.IsTrue(t.IsValid());
 	}
 
@@ -457,7 +457,7 @@ public class TestIntervalTree
 			// advanced to the starting element.
 			var e = t.Find(0, 0, interval);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MovePrev());
 			Assert.AreEqual(0, e.Current);
 			Assert.IsFalse(e.MovePrev());
@@ -466,7 +466,7 @@ public class TestIntervalTree
 			// in descending order through the tree.
 			e = t.Last();
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			for (var i = num * dMax - 1; i >= 0; i--)
 			{
 				Assert.IsTrue(e.MovePrev());
@@ -551,7 +551,7 @@ public class TestIntervalTree
 
 				// Deleting unset enumerator should throw an exception and not delete a value.
 				Assert.IsFalse(e.IsCurrentValid());
-				Assert.ThrowsException<InvalidOperationException>(e.Delete);
+				Assert.Throws<InvalidOperationException>(e.Delete);
 				Assert.AreEqual(num * dMax, t.GetCount());
 
 				// Deleting a set enumerator should delete a value and unset the enumerator.
@@ -674,7 +674,7 @@ public class TestIntervalTree
 				{
 					var e = t.Find(v, i, i + interval);
 					Assert.IsNotNull(e);
-					Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+					Assert.Throws<InvalidOperationException>(() => e.Current);
 					Assert.IsTrue(e.MoveNext());
 					Assert.AreEqual(v, e.Current);
 					v++;
@@ -786,12 +786,12 @@ public class TestIntervalTree
 			// should be returned.
 			var e = t.FindGreatestPreceding(num);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(maxValue, e.Current);
 			e = t.FindGreatestPreceding(num, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(maxValue, e.Current);
 
@@ -802,7 +802,7 @@ public class TestIntervalTree
 			// should be returned.
 			e = t.FindGreatestPreceding(0, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(dMax - 1, e.Current);
 
@@ -814,7 +814,7 @@ public class TestIntervalTree
 				var expected = (i - 1) / 2 * dMax + (dMax - 1);
 				e = t.FindGreatestPreceding(i);
 				Assert.IsNotNull(e);
-				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+				Assert.Throws<InvalidOperationException>(() => e.Current);
 				Assert.IsTrue(e.MoveNext());
 				Assert.AreEqual(expected, e.Current);
 
@@ -822,7 +822,7 @@ public class TestIntervalTree
 				expected = i / 2 * dMax + (dMax - 1);
 				e = t.FindGreatestPreceding(i, true);
 				Assert.IsNotNull(e);
-				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+				Assert.Throws<InvalidOperationException>(() => e.Current);
 				Assert.IsTrue(e.MoveNext());
 				Assert.AreEqual(expected, e.Current);
 			}
@@ -857,12 +857,12 @@ public class TestIntervalTree
 			// Finding with low less than least low should least value.
 			var e = t.FindLeastFollowing(-1);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(0, e.Current);
 			e = t.FindLeastFollowing(-1, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(0, e.Current);
 
@@ -877,7 +877,7 @@ public class TestIntervalTree
 			// should be returned.
 			e = t.FindLeastFollowing(num - 2, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(firstValueAtGreatestLow, e.Current);
 
@@ -889,7 +889,7 @@ public class TestIntervalTree
 				var expected = (i / 2 + 1) * dMax;
 				e = t.FindLeastFollowing(i);
 				Assert.IsNotNull(e);
-				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+				Assert.Throws<InvalidOperationException>(() => e.Current);
 				Assert.IsTrue(e.MoveNext());
 				Assert.AreEqual(expected, e.Current);
 
@@ -897,7 +897,7 @@ public class TestIntervalTree
 				expected = i == 0 ? 0 : ((i - 1) / 2 + 1) * dMax;
 				e = t.FindLeastFollowing(i, true);
 				Assert.IsNotNull(e);
-				Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+				Assert.Throws<InvalidOperationException>(() => e.Current);
 				Assert.IsTrue(e.MoveNext());
 				Assert.AreEqual(expected, e.Current);
 			}

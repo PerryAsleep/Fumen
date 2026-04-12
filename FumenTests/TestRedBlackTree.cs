@@ -170,7 +170,7 @@ public class TestRedBlackTree
 		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
-		Assert.ThrowsException<ArgumentException>(() => t.Insert(value));
+		Assert.Throws<ArgumentException>(() => t.Insert(value));
 		Assert.AreEqual(1, t.GetCount());
 		Assert.IsTrue(t.IsValid());
 
@@ -376,7 +376,7 @@ public class TestRedBlackTree
 		// advanced to the starting element.
 		var e = t.Find(0);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MovePrev());
 		Assert.AreEqual(0, e.Current);
 		Assert.IsFalse(e.MovePrev());
@@ -385,7 +385,7 @@ public class TestRedBlackTree
 		// in descending order through the tree.
 		e = t.Find(9);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		for (var i = 9; i >= 0; i--)
 		{
 			Assert.IsTrue(e.MovePrev());
@@ -432,7 +432,7 @@ public class TestRedBlackTree
 
 		// Deleting unset enumerator should throw an exception and not delete a value.
 		Assert.IsFalse(e.IsCurrentValid());
-		Assert.ThrowsException<InvalidOperationException>(e.Delete);
+		Assert.Throws<InvalidOperationException>(e.Delete);
 		Assert.AreEqual(10, t.GetCount());
 
 		// Deleting a set enumerator should delete a value and unset the enumerator.
@@ -529,7 +529,7 @@ public class TestRedBlackTree
 		{
 			var e = t.Find(i);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(i, e.Current);
 		}
@@ -577,7 +577,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(0, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -590,7 +590,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max + 1);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -603,7 +603,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max + 1, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -616,7 +616,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max - 2, e.Current);
 	}
@@ -629,7 +629,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -648,7 +648,7 @@ public class TestRedBlackTree
 				expected -= 1;
 			var e = t.FindGreatestPreceding(i);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 
@@ -658,7 +658,7 @@ public class TestRedBlackTree
 				expected -= 1;
 			e = t.FindGreatestPreceding(i, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 		}
@@ -695,7 +695,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(new BoxedInt(0), true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
 	}
@@ -708,7 +708,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(new BoxedInt(max + 1));
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
 	}
@@ -721,7 +721,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(new BoxedInt(max + 1), true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
 	}
@@ -734,7 +734,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(new BoxedInt(max));
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max - 2));
 	}
@@ -747,7 +747,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(new BoxedInt(max), true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
 	}
@@ -766,7 +766,7 @@ public class TestRedBlackTree
 				expected -= 1;
 			var e = t.FindGreatestPreceding(new BoxedInt(i));
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
 
@@ -776,7 +776,7 @@ public class TestRedBlackTree
 				expected -= 1;
 			e = t.FindGreatestPreceding(new BoxedInt(i), true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
 		}
@@ -813,7 +813,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(0, CustomIntCompare, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -826,7 +826,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max + 1, CustomIntCompare);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -839,7 +839,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max + 1, CustomIntCompare, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -852,7 +852,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max, CustomIntCompare);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max - 2, e.Current);
 	}
@@ -865,7 +865,7 @@ public class TestRedBlackTree
 
 		var e = t.FindGreatestPreceding(max, CustomIntCompare, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -884,7 +884,7 @@ public class TestRedBlackTree
 				expected -= 1;
 			var e = t.FindGreatestPreceding(i, CustomIntCompare);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 
@@ -894,7 +894,7 @@ public class TestRedBlackTree
 				expected -= 1;
 			e = t.FindGreatestPreceding(i, CustomIntCompare, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 		}
@@ -914,7 +914,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(-1);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -926,7 +926,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(-1, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -938,7 +938,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(0);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(2, e.Current);
 	}
@@ -950,7 +950,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(0, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -990,7 +990,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(max, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -1009,7 +1009,7 @@ public class TestRedBlackTree
 				expected += 1;
 			var e = t.FindLeastFollowing(i);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 
@@ -1019,7 +1019,7 @@ public class TestRedBlackTree
 				expected += 1;
 			e = t.FindLeastFollowing(i, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 		}
@@ -1032,7 +1032,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(new BoxedInt(-1));
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
 	}
@@ -1044,7 +1044,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(new BoxedInt(-1), true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
 	}
@@ -1056,7 +1056,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(new BoxedInt(0));
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(2.0));
 	}
@@ -1068,7 +1068,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(new BoxedInt(0), true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(0.0));
 	}
@@ -1108,7 +1108,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(new BoxedInt(max), true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.IsTrue(e.Current!.GetValue().DoubleEquals(max));
 	}
@@ -1127,7 +1127,7 @@ public class TestRedBlackTree
 				expected += 1;
 			var e = t.FindLeastFollowing(new BoxedInt(i));
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
 
@@ -1137,7 +1137,7 @@ public class TestRedBlackTree
 				expected += 1;
 			e = t.FindLeastFollowing(new BoxedInt(i), true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.IsTrue(e.Current!.GetValue().DoubleEquals(expected));
 		}
@@ -1150,7 +1150,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(-1, CustomIntCompare);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -1162,7 +1162,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(-1, CustomIntCompare, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -1174,7 +1174,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(0, CustomIntCompare);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(2, e.Current);
 	}
@@ -1186,7 +1186,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(0, CustomIntCompare, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(0, e.Current);
 	}
@@ -1226,7 +1226,7 @@ public class TestRedBlackTree
 
 		var e = t.FindLeastFollowing(max, CustomIntCompare, true);
 		Assert.IsNotNull(e);
-		Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+		Assert.Throws<InvalidOperationException>(() => e.Current);
 		Assert.IsTrue(e.MoveNext());
 		Assert.AreEqual(max, e.Current);
 	}
@@ -1245,7 +1245,7 @@ public class TestRedBlackTree
 				expected += 1;
 			var e = t.FindLeastFollowing(i, CustomIntCompare);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 
@@ -1255,7 +1255,7 @@ public class TestRedBlackTree
 				expected += 1;
 			e = t.FindLeastFollowing(i, CustomIntCompare, true);
 			Assert.IsNotNull(e);
-			Assert.ThrowsException<InvalidOperationException>(() => e.Current);
+			Assert.Throws<InvalidOperationException>(() => e.Current);
 			Assert.IsTrue(e.MoveNext());
 			Assert.AreEqual(expected, e.Current);
 		}

@@ -1,6 +1,6 @@
-﻿using Fumen;
+﻿using System;
+using Fumen;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 
 namespace FumenTests;
 
@@ -10,11 +10,11 @@ public class TestUndoStack
 	[TestMethod]
 	public void TestValidSize()
 	{
-		Assert.ThrowsException<ArgumentOutOfRangeException>(() => new UndoStack<int>(-1, true));
-		Assert.ThrowsException<ArgumentOutOfRangeException>(() => new UndoStack<int>(0, true));
+		Assert.Throws<ArgumentOutOfRangeException>(() => new UndoStack<int>(-1, true));
+		Assert.Throws<ArgumentOutOfRangeException>(() => new UndoStack<int>(0, true));
 		var us = new UndoStack<int>(1, true);
-		Assert.ThrowsException<ArgumentOutOfRangeException>(() => us.Resize(-1));
-		Assert.ThrowsException<ArgumentOutOfRangeException>(() => us.Resize(0));
+		Assert.Throws<ArgumentOutOfRangeException>(() => us.Resize(-1));
+		Assert.Throws<ArgumentOutOfRangeException>(() => us.Resize(0));
 		us.Resize(1);
 	}
 

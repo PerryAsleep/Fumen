@@ -21,7 +21,7 @@ public abstract class CancellableTask<TInput, TOutput> where TOutput : class
 	/// <summary>
 	/// Object to lock for managing multiple calls.
 	/// </summary>
-	private readonly object Lock = new();
+	private readonly Lock Lock = new();
 
 	/// <summary>
 	/// The state from the most recent call to Start.

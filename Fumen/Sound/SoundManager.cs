@@ -711,7 +711,7 @@ public class SoundManager
 					try
 					{
 						var numSamples = OpusPacketInfo.GetNumSamples(
-							(ReadOnlySpan<byte>)rawPacket, (int)opusSampleRate);
+							rawPacket.AsSpan(), (int)opusSampleRate);
 						var floatPacket = new float[numSamples * numChannels];
 #pragma warning disable CS0618 // Type or member is obsolete
 						decoder.Decode(rawPacket, 0, rawPacket.Length, floatPacket, 0, numSamples);

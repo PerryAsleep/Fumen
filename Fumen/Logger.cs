@@ -185,7 +185,7 @@ public class Logger : IDisposable
 	/// <summary>
 	/// Object for locking the StreamWriter.
 	/// </summary>
-	private readonly object StreamWriterLock = new();
+	private readonly Lock StreamWriterLock = new();
 
 	/// <summary>
 	/// Whether or not to write to the console when logging.
