@@ -65,7 +65,7 @@ public class Interpolation
 	}
 
 	/// <summary>
-	/// Return a logarithmicly interpolated value between the given start and end values based on the given
+	/// Return a logarithmically interpolated value between the given start and end values based on the given
 	/// current time with respect to the given start and end times.
 	/// The returned value will be clamped to be within the range defined by the given start and end values.
 	/// Note that logarithmic values approach infinity as their inputs approach 0.
@@ -77,7 +77,7 @@ public class Interpolation
 	}
 
 	/// <summary>
-	/// Return a logarithmicly interpolated value between the given start and end values based on the given
+	/// Return a logarithmically interpolated value between the given start and end values based on the given
 	/// current time with respect to the given start and end times.
 	/// The returned value will be clamped to be within the range defined by the given start and end values.
 	/// Note that logarithmic values approach infinity as their inputs approach 0.

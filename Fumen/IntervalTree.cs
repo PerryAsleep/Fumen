@@ -2,6 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 
+// ReSharper disable GrammarMistakeInComment
+// ReSharper considers "low key" a grammar mistake.
+
 namespace Fumen;
 
 /// <summary>

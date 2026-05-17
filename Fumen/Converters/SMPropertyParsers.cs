@@ -759,8 +759,8 @@ public class ScrollRateInterpolationPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var interpolationDatas = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
-			foreach (var interpolationData in interpolationDatas)
+			var interpolationDataEntries = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
+			foreach (var interpolationData in interpolationDataEntries)
 			{
 				var kvp = interpolationData.Split('=');
 				if (kvp.Length != 4)
@@ -841,8 +841,8 @@ public class ComboPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var comboDatas = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
-			foreach (var comboData in comboDatas)
+			var comboDataEntries = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
+			foreach (var comboData in comboDataEntries)
 			{
 				var kvp = comboData.Split('=');
 

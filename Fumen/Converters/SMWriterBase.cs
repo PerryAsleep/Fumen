@@ -28,16 +28,16 @@ public abstract class SMWriterBase
 		UseSourceExtraOriginalMeasurePosition,
 
 		/// <summary>
-		/// Use the least common multiple of the sub-divisions. This will write the
-		/// least number of lines for the notes in the measure. This may write sub-divisions
+		/// Use the least common multiple of the subdivisions. This will write the
+		/// least number of lines for the notes in the measure. This may write subdivisions
 		/// that the stepmania editor does not support (like 24).
 		/// </summary>
 		UseLeastCommonMultiple,
 
 		/// <summary>
-		/// Use the least common multiple of the sub-divisions but do not write anything
-		/// that the stepmania editor does not support. This will increase the sub-division
-		/// if it is not supported the next supported sub-division. For example this will
+		/// Use the least common multiple of the subdivisions but do not write anything
+		/// that the stepmania editor does not support. This will increase the subdivision
+		/// if it is not supported the next supported subdivision. For example this will
 		/// bump 24 to 48.
 		/// </summary>
 		UseLeastCommonMultipleFromStepmaniaEditor,
@@ -249,7 +249,7 @@ public abstract class SMWriterBase
 	private class MeasureData
 	{
 		/// <summary>
-		/// Least common multiple of note beat sub-divisions for all notes in this measure.
+		/// Least common multiple of note beat subdivisions for all notes in this measure.
 		/// Used for writing the correct number of blank lines in the file.
 		/// </summary>
 		public int LCM = 1;
@@ -1414,7 +1414,7 @@ public abstract class SMWriterBase
 		// This helps maintain spacing for charts which were not written in Stepmania and
 		// use technically unsupported spacing (like 14 notes per measure).
 		var linesPerBeat = 1;
-		var measureCharsDY = 0;
+		var measureCharsDy = 0;
 		switch (Config.MeasureSpacingBehavior)
 		{
 			case MeasureSpacingBehavior.UseSourceExtraOriginalMeasurePosition:
@@ -1436,11 +1436,11 @@ public abstract class SMWriterBase
 						}
 
 						// Every note must also have the same denominator (number of lines in the measure).
-						if (measureCharsDY == 0)
+						if (measureCharsDy == 0)
 						{
-							measureCharsDY = f.Denominator;
+							measureCharsDy = f.Denominator;
 						}
-						else if (measureCharsDY != f.Denominator)
+						else if (measureCharsDy != f.Denominator)
 						{
 							Logger.Error($"Notes in measure {measureIndex} have inconsistent SubDivision denominators."
 							             + " These must all be equal when using UseSourceExtraOriginalMeasurePosition MeasureSpacingBehavior.");
@@ -1451,7 +1451,7 @@ public abstract class SMWriterBase
 				// Still treat blank measures as 4 lines.
 				else
 				{
-					measureCharsDY = NumBeatsPerMeasure;
+					measureCharsDy = NumBeatsPerMeasure;
 				}
 
 				break;
@@ -1459,7 +1459,7 @@ public abstract class SMWriterBase
 			case MeasureSpacingBehavior.UseLeastCommonMultiple:
 			{
 				linesPerBeat = measureData.LCM;
-				measureCharsDY = NumBeatsPerMeasure * linesPerBeat;
+				measureCharsDy = NumBeatsPerMeasure * linesPerBeat;
 				break;
 			}
 			case MeasureSpacingBehavior.UseLeastCommonMultipleFromStepmaniaEditor:
@@ -1472,7 +1472,7 @@ public abstract class SMWriterBase
 					return;
 				}
 
-				measureCharsDY = NumBeatsPerMeasure * linesPerBeat;
+				measureCharsDy = NumBeatsPerMeasure * linesPerBeat;
 				break;
 			}
 		}
@@ -1498,7 +1498,7 @@ public abstract class SMWriterBase
 					return;
 				}
 
-				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
+				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDy)
 				{
 					Logger.Error($"Note has invalid position {GetPositionForLogging(measureNote.IntegerPosition)}.");
 					return;
@@ -1521,7 +1521,7 @@ public abstract class SMWriterBase
 			}
 
 			// Write the remainder of the measure
-			while (i < measureCharsDY * (chart.NumInputs + 1))
+			while (i < measureCharsDy * (chart.NumInputs + 1))
 			{
 				if ((i + 1) % (chart.NumInputs + 1) == 0)
 					sb.Append('\n');
@@ -1541,8 +1541,8 @@ public abstract class SMWriterBase
 		{
 			// Set up a grid of characters to write.
 			// TODO: Support keysound tagging.
-			var measureCharsDX = chart.NumInputs;
-			var measureChars = new char[measureCharsDX, measureCharsDY];
+			var measureCharsDx = chart.NumInputs;
+			var measureChars = new char[measureCharsDx, measureCharsDy];
 
 			// Populate characters in the grid based on the events of the measure.
 			foreach (var measureNote in measureData.Notes)
@@ -1561,7 +1561,7 @@ public abstract class SMWriterBase
 					return;
 				}
 
-				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDY)
+				if (measureEventPositionInMeasure < 0 || measureEventPositionInMeasure >= measureCharsDy)
 				{
 					Logger.Error($"Note has invalid position {GetPositionForLogging(measureNote.IntegerPosition)}.");
 					return;
@@ -1574,9 +1574,9 @@ public abstract class SMWriterBase
 			// Write the measure of accumulated characters.
 			if (!measureData.FirstMeasure)
 				StreamWriter.WriteLine(",");
-			for (var y = 0; y < measureCharsDY; y++)
+			for (var y = 0; y < measureCharsDy; y++)
 			{
-				for (var x = 0; x < measureCharsDX; x++)
+				for (var x = 0; x < measureCharsDx; x++)
 				{
 					StreamWriter.Write(measureChars[x, y] == '\0'
 						? NoteChars[(int)NoteType.None]

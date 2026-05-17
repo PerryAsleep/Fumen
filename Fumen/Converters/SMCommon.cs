@@ -557,21 +557,21 @@ public static class SMCommon
 	}
 
 	/// <summary>
-	/// Given a desired sub-division for a position within a beat, return the lowest possible
-	/// sub-division that should be used. This is necessary to convert some valid sub-divisions
-	/// which are not supported like 64th note triplets (sub-division 24) into a higher
-	/// sub-division which is supported, like 192nd notes (sub-division 48).
-	/// If no possible valid sub-division exists, return false.
+	/// Given a desired subdivision for a position within a beat, return the lowest possible
+	/// subdivision that should be used. This is necessary to convert some valid subdivisions
+	/// which are not supported like 64th note triplets (subdivision 24) into a higher
+	/// subdivision which is supported, like 192nd notes (subdivision 48).
+	/// If no possible valid subdivision exists, return false.
 	/// </summary>
 	/// <param name="desiredSubDivision">
-	/// The desired sub-division to use. In practice, the least common multiple of the reduced
-	/// sub-divisions for all notes in a particular measure.
+	/// The desired subdivision to use. In practice, the least common multiple of the reduced
+	/// subdivisions for all notes in a particular measure.
 	/// </param>
 	/// <param name="lowestValidSMSubDivision">
-	/// Out parameter to hold the lowest valid sub-division which stepmania supports.
+	/// Out parameter to hold the lowest valid subdivision which stepmania supports.
 	/// </param>
 	/// <returns>
-	/// True if a valid sub-division was found and false otherwise.
+	/// True if a valid subdivision was found and false otherwise.
 	/// </returns>
 	public static bool GetLowestValidSMSubDivision(int desiredSubDivision, out int lowestValidSMSubDivision)
 	{

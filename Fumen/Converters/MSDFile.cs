@@ -89,7 +89,7 @@ public class MSDFile
 			var i = 0;
 			var bufferLen = buffer.Length;
 			var parsingValue = false;
-			var currentValueSB = new StringBuilder();
+			var currentValueSb = new StringBuilder();
 			while (i < bufferLen)
 			{
 				// Parse comments.
@@ -107,16 +107,16 @@ public class MSDFile
 					// The ValueStartMarker must be the first non-whitespace character on the line to be
 					// considered as an intentional start to a new value after a missing ValueEndMarker.
 					var valueStartMarkerFirstCharOnLine = false;
-					var j = currentValueSB.Length - 1;
+					var j = currentValueSb.Length - 1;
 					if (j > 0)
 					{
 						valueStartMarkerFirstCharOnLine = true;
-						var c = currentValueSB[j];
+						var c = currentValueSb[j];
 						while (j > 0 && c != '\r' && c != '\n')
 						{
 							if (c == ' ' || c == '\t')
 							{
-								c = currentValueSB[--j];
+								c = currentValueSb[--j];
 							}
 							else
 							{
@@ -128,13 +128,13 @@ public class MSDFile
 
 					if (!valueStartMarkerFirstCharOnLine)
 					{
-						currentValueSB.Append(buffer[i++]);
+						currentValueSb.Append(buffer[i++]);
 						continue;
 					}
 
 					// Add the final param for the current value, trimming all whitespace that preceded
 					// the ValueEndMarker.
-					Values[^1].Params.Add(currentValueSB.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
+					Values[^1].Params.Add(currentValueSb.ToString().TrimEnd(SMCommon.SMAllWhiteSpace));
 					// Finish parsing the value, but continue to start parsing the new value below.
 					parsingValue = false;
 				}
@@ -159,7 +159,7 @@ public class MSDFile
 				// Handle ending a parameter.
 				if (buffer[i] == ParamMarker || buffer[i] == ValueEndMarker)
 				{
-					Values[^1].Params.Add(currentValueSB.Length > 0 ? currentValueSB.ToString() : "");
+					Values[^1].Params.Add(currentValueSb.Length > 0 ? currentValueSb.ToString() : "");
 					// Continue to start parsing a new parameter below.
 				}
 
@@ -167,7 +167,7 @@ public class MSDFile
 				if (buffer[i] == ParamMarker || buffer[i] == ValueStartMarker)
 				{
 					i++;
-					currentValueSB.Clear();
+					currentValueSb.Clear();
 					continue;
 				}
 
@@ -183,12 +183,12 @@ public class MSDFile
 				if (buffer[i] == EscapeMarker)
 					i++;
 				if (i < bufferLen)
-					currentValueSB.Append(buffer[i++]);
+					currentValueSb.Append(buffer[i++]);
 			}
 
 			// Add final parameter.
 			if (parsingValue)
-				Values[^1].Params.Add(currentValueSB.ToString());
+				Values[^1].Params.Add(currentValueSb.ToString());
 		}, token);
 
 		return true;
