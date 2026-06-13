@@ -1,4 +1,4 @@
-﻿namespace Fumen;
+namespace Fumen;
 
 public class MathUtils
 {
@@ -36,5 +36,11 @@ public class MathUtils
 		value |= value >> 16;
 		value++;
 		return value;
+	}
+
+	/// <returns>The ceiling of a divided by b.</returns>
+	public static uint CeilDiv(uint a, uint b)
+	{
+		return (a + b - 1u) / b;
 	}
 }
