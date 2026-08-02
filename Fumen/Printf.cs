@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Text;
 
 namespace Fumen;
@@ -138,7 +139,7 @@ public static class Printf
 				if (IsNumeric(arg))
 				{
 					var number = Convert.ToInt64(arg);
-					return FormatNumber(Math.Abs(number).ToString(), spec, number < 0);
+					return FormatNumber(Math.Abs(number).ToString(CultureInfo.InvariantCulture), spec, number < 0);
 				}
 
 				break;
@@ -148,7 +149,7 @@ public static class Printf
 				if (IsNumeric(arg))
 				{
 					var number = Convert.ToUInt64(arg);
-					return FormatNumber(number.ToString(), spec);
+					return FormatNumber(number.ToString(CultureInfo.InvariantCulture), spec);
 				}
 
 				break;
@@ -159,7 +160,7 @@ public static class Printf
 				{
 					var number = Convert.ToDouble(arg);
 					var format = "F" + (spec.Precision ?? 6);
-					var numStr = Math.Abs(number).ToString(format);
+					var numStr = Math.Abs(number).ToString(format, CultureInfo.InvariantCulture);
 					return FormatNumber(numStr, spec, number < 0);
 				}
 
@@ -171,8 +172,8 @@ public static class Printf
 				if (IsNumeric(arg))
 				{
 					var number = Convert.ToDouble(arg);
-					var format = spec.Specifier + (spec.Precision ?? 6).ToString();
-					var numStr = Math.Abs(number).ToString(format);
+					var format = spec.Specifier + (spec.Precision ?? 6).ToString(CultureInfo.InvariantCulture);
+					var numStr = Math.Abs(number).ToString(format, CultureInfo.InvariantCulture);
 					return FormatNumber(numStr, spec, number < 0);
 				}
 
@@ -184,8 +185,8 @@ public static class Printf
 				if (IsNumeric(arg))
 				{
 					var number = Convert.ToDouble(arg);
-					var format = spec.Specifier + (spec.Precision ?? 6).ToString();
-					var numStr = Math.Abs(number).ToString(format);
+					var format = spec.Specifier + (spec.Precision ?? 6).ToString(CultureInfo.InvariantCulture);
+					var numStr = Math.Abs(number).ToString(format, CultureInfo.InvariantCulture);
 					return FormatNumber(numStr, spec, number < 0);
 				}
 
@@ -198,7 +199,7 @@ public static class Printf
 				{
 					var number = Convert.ToInt64(arg);
 					var format = spec.Specifier.ToString();
-					var numStr = Math.Abs(number).ToString(format);
+					var numStr = Math.Abs(number).ToString(format, CultureInfo.InvariantCulture);
 					if (spec.Flags.Contains('#') && number != 0)
 						numStr = "0" + spec.Specifier + numStr;
 					return FormatNumber(numStr, spec, number < 0);

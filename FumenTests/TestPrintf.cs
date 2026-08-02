@@ -1,4 +1,5 @@
-﻿using Fumen;
+﻿using System.Globalization;
+using Fumen;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FumenTests;
@@ -44,6 +45,22 @@ public class TestPrintf
 		Assert.AreEqual("+3.14", Printf.Sprintf("%+.2f", 3.14159));
 		Assert.AreEqual("003.14", Printf.Sprintf("%06.2f", 3.14159));
 		Assert.AreEqual("3.14  ", Printf.Sprintf("%-6.2f", 3.14159));
+	}
+
+	[TestMethod]
+	public void TestFloatFormattingInvariantCulture()
+	{
+		var previousCulture = CultureInfo.CurrentCulture;
+		try
+		{
+			CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+			Assert.AreEqual("3.142", Printf.Sprintf("%.3f", 3.14159));
+			Assert.AreEqual("123.456", Printf.Sprintf("%g", 123.456));
+		}
+		finally
+		{
+			CultureInfo.CurrentCulture = previousCulture;
+		}
 	}
 
 	[TestMethod]
