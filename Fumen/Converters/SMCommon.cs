@@ -460,6 +460,8 @@ public static class SMCommon
 
 	public static ChartProperties GetChartProperties(string chartTypeString)
 	{
+		if (string.IsNullOrEmpty(chartTypeString))
+			return null;
 		if (TryGetChartType(chartTypeString, out var chartType))
 			return GetChartProperties(chartType);
 		return null;

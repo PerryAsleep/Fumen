@@ -595,7 +595,7 @@ public class ListFractionPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var fractionEntries = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
+			var fractionEntries = value.Params[1].Trim().Split((char[])[','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var fractionEntry in fractionEntries)
 			{
 				var fractionParts = fractionEntry.Split('=');
@@ -679,7 +679,7 @@ public class CSVListAtTimePropertyParser<T> : PropertyParser where T : IConverti
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var pairs = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
+			var pairs = value.Params[1].Trim().Split((char[])[','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var pair in pairs)
 			{
 				var kvp = pair.Split('=');
@@ -759,7 +759,7 @@ public class ScrollRateInterpolationPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var interpolationDataEntries = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
+			var interpolationDataEntries = value.Params[1].Trim().Split((char[])[','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var interpolationData in interpolationDataEntries)
 			{
 				var kvp = interpolationData.Split('=');
@@ -841,7 +841,7 @@ public class ComboPropertyParser : PropertyParser
 
 		if (!string.IsNullOrEmpty(rawStr))
 		{
-			var comboDataEntries = value.Params[1].Trim().Split((char[]) [','], StringSplitOptions.RemoveEmptyEntries);
+			var comboDataEntries = value.Params[1].Trim().Split((char[])[','], StringSplitOptions.RemoveEmptyEntries);
 			foreach (var comboData in comboDataEntries)
 			{
 				var kvp = comboData.Split('=');
@@ -1459,11 +1459,18 @@ public class ChartNotesPropertyParser : NotesPropertyParser
 		// Record whether this chart was written under NOTES or NOTES2.
 		Chart.Extras.AddSourceExtra(TagFumenNotesType, PropertyName, true);
 
+		if (string.IsNullOrEmpty(Chart.Type))
+		{
+			Logger?.Error(
+				$"{PropertyName}: Failed to parse {PropertyName}. This chart has no {TagStepsType}. This chart will be ignored.");
+			return true;
+		}
+
 		var properties = GetChartProperties(Chart.Type);
 		if (properties == null)
 		{
 			Logger?.Error(
-				$"{PropertyName}: Failed to parse {TagFumenNotesType}. {TagStepsType} must be set to a type with a known number of players. Could not determine player count for '{Chart.Type}'. This chart will be ignored.");
+				$"{PropertyName}: Failed to parse {PropertyName}. {TagStepsType} must be set to a type with a known number of players. Could not determine player count for '{Chart.Type}'. This chart will be ignored.");
 			return true;
 		}
 
